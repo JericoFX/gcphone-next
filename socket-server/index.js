@@ -1,3 +1,5 @@
+// Implements: OPT-03 – SQLite mejorado con cleanup y flush inmediato
+
 import fs from 'node:fs';
 import path from 'node:path';
 import initSqlJs from 'sql.js';
@@ -7,6 +9,8 @@ import jwt from 'jsonwebtoken';
 const port = Number(process.env.PORT || 3001);
 const jwtSecret = process.env.JWT_SECRET || '';
 const sqlitePath = path.resolve(process.env.SQLITE_PATH || './chat.db');
+const MAX_MESSAGES_PER_ROOM = Number(process.env.MAX_MESSAGES_PER_ROOM || 1000);
+const MESSAGE_RETENTION_DAYS = Number(process.env.MESSAGE_RETENTION_DAYS || 7);
 
 const SQL = await initSqlJs({});
 const db = (() => {
@@ -30,13 +34,48 @@ CREATE INDEX IF NOT EXISTS idx_messages_room_time ON messages(room, created_at D
 `);
 
 let flushTimer = null;
+let pendingFlushImmediate = false;
+
+function flushDb() {
+  if (flushTimer) {
+    clearTimeout(flushTimer);
+    flushTimer = null;
+  }
+  pendingFlushImmediate = false;
+  const data = db.export();
+  fs.writeFileSync(sqlitePath, Buffer.from(data));
+}
+
 function flushDbSoon() {
+  if (pendingFlushImmediate) return;
   if (flushTimer) return;
   flushTimer = setTimeout(() => {
     flushTimer = null;
-    const data = db.export();
-    fs.writeFileSync(sqlitePath, Buffer.from(data));
+    flushDb();
   }, 300);
+}
+
+function flushDbImmediate() {
+  pendingFlushImmediate = true;
+  flushDb();
+}
+
+function cleanupOldMessages(room) {
+  const countResult = db.exec('SELECT COUNT(*) as cnt FROM messages WHERE room = ?', [room]);
+  const count = Number(countResult?.[0]?.values?.[0]?.[0] || 0);
+  if (count > MAX_MESSAGES_PER_ROOM) {
+    const deleteThreshold = count - MAX_MESSAGES_PER_ROOM;
+    db.run(
+      `DELETE FROM messages WHERE rowid IN (SELECT rowid FROM messages WHERE room = ? ORDER BY created_at ASC LIMIT ?)`,
+      [room, deleteThreshold]
+    );
+  }
+}
+
+function cleanupOldMessagesGlobal() {
+  const cutoff = Date.now() - (MESSAGE_RETENTION_DAYS * 24 * 60 * 60 * 1000);
+  db.run('DELETE FROM messages WHERE created_at < ?', [cutoff]);
+  flushDbSoon();
 }
 
 function insertMessage(room, senderPhone, senderName, content, createdAt) {
@@ -45,6 +84,7 @@ function insertMessage(room, senderPhone, senderName, content, createdAt) {
     [room, senderPhone, senderName, content, createdAt]
   );
   const row = db.exec('SELECT last_insert_rowid() as id');
+  cleanupOldMessages(room);
   flushDbSoon();
   return Number(row?.[0]?.values?.[0]?.[0] || 0);
 }
@@ -75,6 +115,8 @@ const io = new Server(port, {
     origin: '*',
   },
   transports: ['websocket'],
+  pingTimeout: 60000,
+  pingInterval: 25000,
 });
 
 io.use((socket, next) => {
@@ -193,9 +235,16 @@ io.on('connection', (socket) => {
 });
 
 process.on('SIGINT', () => {
-  const data = db.export();
-  fs.writeFileSync(sqlitePath, Buffer.from(data));
+  flushDbImmediate();
   process.exit(0);
 });
+
+process.on('SIGTERM', () => {
+  flushDbImmediate();
+  process.exit(0);
+});
+
+cleanupOldMessagesGlobal();
+setInterval(cleanupOldMessagesGlobal, 60 * 60 * 1000);
 
 console.log(`gcphone socket server listening on ${port}`);

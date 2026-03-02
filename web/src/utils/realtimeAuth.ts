@@ -6,7 +6,16 @@ export interface LiveKitTokenResponse {
   url?: string;
   roomName?: string;
   identity?: string;
+  maxDuration?: number;
   error?: string;
+}
+
+export function fetchLiveKitToken(roomName: string, publish = true, maxDuration?: number) {
+  return fetchNui<LiveKitTokenResponse>(
+    'livekitGetToken',
+    { roomName, publish, maxDuration: maxDuration ?? 300 },
+    { success: false, error: 'TOKEN_ERROR' }
+  );
 }
 
 export interface SocketTokenResponse {
@@ -14,14 +23,6 @@ export interface SocketTokenResponse {
   token?: string;
   host?: string;
   error?: string;
-}
-
-export function fetchLiveKitToken(roomName: string, publish = true) {
-  return fetchNui<LiveKitTokenResponse>(
-    'livekitGetToken',
-    { roomName, publish },
-    { success: false, error: 'TOKEN_ERROR' }
-  );
 }
 
 export function fetchSocketToken() {

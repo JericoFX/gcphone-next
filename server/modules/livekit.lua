@@ -1,5 +1,9 @@
+-- Implements: OPT-01 – Eliminar busy-wait, OPT-04 – Cleanup requests pendientes
+
 local PendingTokenRequests = {}
 local LastTokenRequestId = 0
+local REQUEST_TIMEOUT_MS = 7000
+local CLEANUP_INTERVAL_MS = 30000
 
 local function SafeString(value, maxLen)
     if type(value) ~= 'string' then return nil end
@@ -19,45 +23,32 @@ local function NextRequestId()
     return LastTokenRequestId
 end
 
-local function RequestLiveKitToken(source, roomName, identity, participantName, grants)
-    local requestId = NextRequestId()
-    local p = promise.new()
-    PendingTokenRequests[requestId] = p
-
-    TriggerEvent('gcphone:livekit:requestToken', source, requestId, roomName, identity, participantName, grants)
-
-    local startedAt = GetGameTimer()
-    while PendingTokenRequests[requestId] do
-        if GetGameTimer() - startedAt > 7000 then
-            PendingTokenRequests[requestId] = nil
-            return nil, 'TOKEN_TIMEOUT'
+local function CleanupExpiredRequests()
+    local now = GetGameTimer()
+    for id, data in pairs(PendingTokenRequests) do
+        if now - data.createdAt > REQUEST_TIMEOUT_MS then
+            data.p:resolve({ ok = false, error = 'TOKEN_TIMEOUT' })
+            PendingTokenRequests[id] = nil
         end
-        Wait(0)
     end
-
-    local result = Citizen.Await(p)
-    if type(result) == 'table' and result.ok then
-        return result.token, nil
-    end
-    if type(result) == 'table' and result.error then
-        return nil, result.error
-    end
-    return nil, 'TOKEN_ERROR'
+    SetTimeout(CLEANUP_INTERVAL_MS, CleanupExpiredRequests)
 end
+
+SetTimeout(CLEANUP_INTERVAL_MS, CleanupExpiredRequests)
 
 AddEventHandler('gcphone:livekit:tokenResponse', function(requestId, token, errorCode)
     local id = tonumber(requestId)
     if not id then return end
-    local p = PendingTokenRequests[id]
-    if not p then return end
+    local data = PendingTokenRequests[id]
+    if not data then return end
     PendingTokenRequests[id] = nil
 
     if type(token) == 'string' and token ~= '' then
-        p:resolve({ ok = true, token = token })
+        data.p:resolve({ ok = true, token = token })
         return
     end
 
-    p:resolve({ ok = false, error = type(errorCode) == 'string' and errorCode or 'TOKEN_ERROR' })
+    data.p:resolve({ ok = false, error = type(errorCode) == 'string' and errorCode or 'TOKEN_ERROR' })
 end)
 
 lib.callback.register('gcphone:livekit:getToken', function(source, data)
@@ -66,6 +57,7 @@ lib.callback.register('gcphone:livekit:getToken', function(source, data)
         return { success = false, error = 'INVALID_SOURCE' }
     end
 
+    
     local roomName = SafeString(type(data) == 'table' and data.roomName or nil, 80)
     if not roomName then
         return { success = false, error = 'INVALID_ROOM' }
@@ -73,6 +65,7 @@ lib.callback.register('gcphone:livekit:getToken', function(source, data)
 
     local identity = SafeString('player:' .. tostring(identifier), 64)
     local participantName = SafeString(GetName(source) or ('player-' .. tostring(source)), 64)
+    local maxDuration = tonumber(data and data.maxDuration) or 300
 
     local grants = {
         canPublish = not (type(data) == 'table' and data.publish == false),
@@ -80,16 +73,29 @@ lib.callback.register('gcphone:livekit:getToken', function(source, data)
         canPublishData = true,
     }
 
-    local token, err = RequestLiveKitToken(source, roomName, identity, participantName, grants)
-    if not token then
-        return { success = false, error = err or 'TOKEN_ERROR' }
+    
+    local requestId = NextRequestId()
+    local p = promise.new()
+    PendingTokenRequests[requestId] = {
+        p = p,
+        createdAt = GetGameTimer(),
+    }
+    
+    TriggerEvent('gcphone:livekit:requestToken', source, requestId, roomName, identity, participantName, grants)
+
+    
+    local result = Citizen.Await(p)
+    if type(result) == 'table' and result.ok then
+        return {
+            success = true,
+            url = tostring(GetConvar('livekit_host', tostring((Config.LiveKit and Config.LiveKit.Host) or ''))),
+            token = result.token,
+            roomName = roomName,
+            identity = identity,
+            maxDuration = maxDuration,
+        }
     end
 
-    return {
-        success = true,
-        url = tostring(GetConvar('livekit_host', tostring((Config.LiveKit and Config.LiveKit.Host) or ''))),
-        token = token,
-        roomName = roomName,
-        identity = identity,
-    }
+    
+    return { success = false, error = result and result.error or 'TOKEN_ERROR' }
 end)

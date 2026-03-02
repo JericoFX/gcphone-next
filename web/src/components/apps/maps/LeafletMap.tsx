@@ -37,7 +37,7 @@ const GTACRS: L.CRS = L.extend({}, L.CRS.Simple, {
 const GTA_MAP_BOUNDS: L.LatLngBoundsExpression = [
   [-4000, -4000],
   [4000, 4000],
-];
+]
 
 const gtaToLatLng = (x: number, y: number): [number, number] => [y, x];
 const latLngToGta = (latLng: L.LatLng): [number, number] => [latLng.lng, latLng.lat];
@@ -53,7 +53,7 @@ export function LeafletMap(props: Props) {
       html: `<span class="${kind === 'manual' ? styles.mapMarkerManual : styles.mapMarkerShared}"></span>`,
       iconSize: [20, 20],
       iconAnchor: [10, 10],
-    });
+    })
 
   createEffect(() => {
     if (!mapElement || map) return;
@@ -67,48 +67,48 @@ export function LeafletMap(props: Props) {
       maxBoundsViscosity: 1,
       attributionControl: false,
       zoomControl: true,
-    });
+    })
 
-    L.imageOverlay('./gta-map.jpeg', GTA_MAP_BOUNDS).addTo(map);
+    L.imageOverlay('./gta-map.jpeg', GTA_MAP_BOUNDS).addTo(map)
 
     map.on('click', (event: L.LeafletMouseEvent) => {
-      const [x, y] = latLngToGta(event.latlng);
-      props.onPickCoords?.(x, y);
-    });
-  });
+      const [x, y] = latLngToGta(event.latlng)
+      props.onPickCoords?.(x, y)
+    })
+  })
 
   createEffect(() => {
-    if (!map) return;
+    if (!map) return
 
     for (const pin of props.pins) {
-      if (markers.has(pin.id)) continue;
-      const marker = L.marker(gtaToLatLng(pin.x, pin.y), { icon: makeIcon(pin.kind) });
-      marker.bindTooltip(pin.label, { direction: 'top' });
-      marker.on('click', () => props.onPinClick?.(pin));
-      marker.addTo(map);
-      markers.set(pin.id, marker);
+      if (markers.has(pin.id)) continue
+      const marker = L.marker(gtaToLatLng(pin.x, pin.y), { icon: makeIcon(pin.kind) })
+      marker.bindTooltip(pin.label, { direction: 'top' })
+      marker.on('click', () => props.onPinClick?.(pin))
+      marker.addTo(map)
+      markers.set(pin.id, marker)
     }
 
-    const validIds = new Set(props.pins.map((pin) => pin.id));
+    const validIds = new Set(props.pins.map((pin) => pin.id))
     markers.forEach((marker, id) => {
-      if (validIds.has(id)) return;
-      marker.removeFrom(map!);
-      markers.delete(id);
-    });
-  });
+      if (validIds.has(id)) return
+      marker.removeFrom(map!)
+      markers.delete(id)
+    })
+  })
 
   createEffect(() => {
-    if (!map || props.pins.length === 0) return;
-    const first = props.pins[0];
-    map.setView(gtaToLatLng(first.x, first.y), 4);
-  });
+    if (!map || props.pins.length === 0) return
+    const first = props.pins[0]
+    map.setView(gtaToLatLng(first.x, first.y), 4)
+  })
 
   onCleanup(() => {
-    markers.forEach((marker) => marker.remove());
-    markers.clear();
-    if (map) map.remove();
-    map = null;
-  });
+    markers.forEach((marker) => marker.remove())
+    markers.clear()
+    if (map) map.remove()
+    map = null
+  })
 
-  return <div ref={mapElement} class={styles.mapCanvas} />;
+  return <div ref={mapElement} class={styles.mapCanvas} />
 }

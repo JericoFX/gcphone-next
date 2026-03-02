@@ -87,7 +87,7 @@ function normalizeLayout(layout?: Partial<AppLayout> | null): AppLayout {
 export const PhoneProvider: ParentComponent = (props) => {
   const [state, setState] = createStore<PhoneState>({
     visible: false,
-    locked: false,
+    locked: true,
     initialized: false,
     settings: { ...defaultSettings },
     appLayout: { ...defaultLayout }
@@ -103,6 +103,7 @@ export const PhoneProvider: ParentComponent = (props) => {
     },
     hide: () => {
       setState('visible', false);
+      setState('locked', true);
     },
     toggle: () => {
       setState('visible', v => !v);

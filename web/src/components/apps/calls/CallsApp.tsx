@@ -8,7 +8,7 @@ import { SkeletonList } from '../../shared/ui/SkeletonList';
 import { ActionSheet } from '../../shared/ui/ActionSheet';
 import { useNotifications } from '../../../store/notifications';
 import { fetchLiveKitToken } from '../../../utils/realtimeAuth';
-import { connectLiveKit, disconnectLiveKit, setLiveKitCameraEnabled, setLiveKitMicrophoneEnabled } from '../../../utils/livekit';
+import { connectLiveKit, disconnectLiveKit, setLiveKitCameraEnabled, setLiveKitMicrophoneEnabled, getCallRemainingTime } from '../../../utils/livekit';
 import type { Call } from '../../../types';
 import styles from './CallsApp.module.scss';
 
@@ -249,14 +249,14 @@ export function CallsApp() {
 
     setVideoStatus('Conectando video...');
     const roomName = `call-${currentCall.id}`;
-    const tokenPayload = await fetchLiveKitToken(roomName, true);
+    const tokenPayload = await fetchLiveKitToken(roomName, true, 300);
     if (!tokenPayload?.success || !tokenPayload.token || !tokenPayload.url) {
       setVideoStatus('No se pudo iniciar video');
       return;
     }
 
     try {
-      await connectLiveKit(tokenPayload.url, tokenPayload.token, {
+      await connectLiveKit(tokenPayload.url, tokenPayload.token, tokenPayload.maxDuration || 300, {
         onParticipantConnected: (identity) => {
           upsertParticipant(identity);
         },
@@ -274,6 +274,10 @@ export function CallsApp() {
         },
         onLocalTrackUnpublished: ({ participantIdentity, trackSid }) => {
           removeTrack(participantIdentity, trackSid);
+        },
+        onCallTimeout: () => {
+          setVideoStatus('Limite de tiempo alcanzado');
+          resetCallUi();
         },
       });
 
@@ -518,24 +522,39 @@ function ActiveCallView(props: { callInfo: any; videoMode: boolean; videoStatus:
   const [duration, setDuration] = createSignal(0);
   const [muted, setMuted] = createSignal(false);
   const [speaker, setSpeaker] = createSignal(false);
-  
+  const [remainingTime, setRemainingTime] = createSignal<number | null>(null);
+
   let timer: number | undefined;
-  
+  let countdownTimer: number | undefined;
+
   createEffect(() => {
-    timer = window.setInterval(() => {
-      setDuration(prev => prev + 1);
+    timer = setInterval(() => {
+      setDuration((d) => d + 1);
     }, 1000);
+
+    countdownTimer = setInterval(() => {
+      const remaining = getCallRemainingTime();
+      setRemainingTime(remaining && remaining > 0 ? remaining : 0);
+    }, 1000);
+
     onCleanup(() => {
-      if (timer) window.clearInterval(timer);
+      if (timer) clearInterval(timer);
+      if (countdownTimer) clearInterval(countdownTimer);
     });
   });
-  
+
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  };
-  
+  }
+
+  const formatRemainingTime = (seconds: number) => {
+    if (!seconds || seconds <= 0) return ''
+    if (seconds < 60) return `${seconds}s`
+    return `${Math.floor(seconds / 60)}:${(seconds % 60).toString().padStart(2, '0')}`
+  }
+
   return (
     <div class={styles.activeCall}>
       <Show when={props.videoMode}>
@@ -559,28 +578,32 @@ function ActiveCallView(props: { callInfo: any; videoMode: boolean; videoStatus:
         <div class={styles.name}>
           {props.callInfo?.receiverNum || 'Llamando...'}
         </div>
+        <Show when={remainingTime() !== null && remainingTime()! > 0 && remainingTime()! <= 60 && props.videoMode}>
+          <div class={styles.callTimer}>
+            <span class={styles.timerWarning}>Limite: {formatRemainingTime(remainingTime()!)}</span>
+          </div>
+        </Show>
         <div class={styles.status}>
           {formatDuration(duration())}
         </div>
       </div>
-      
+
       <div class={styles.callActions}>
-        <button 
+        <button
           class={styles.actionBtn}
           classList={{ [styles.active]: muted() }}
           onClick={() => {
-            const next = !muted();
-            setMuted(next);
-            void props.onToggleMute(next);
+            setMuted(!muted())
+            void props.onToggleMute(!muted())
           }}
         >
           <span class={styles.icon}><img src="./img/icons_ios/mic-off.svg" alt="Silenciar" /></span>
           <span class={styles.label}>Silenciar</span>
         </button>
-        <button 
+        <button
           class={styles.actionBtn}
           classList={{ [styles.active]: speaker() }}
-          onClick={() => setSpeaker(prev => !prev)}
+          onClick={() => setSpeaker(!speaker())}
         >
           <span class={styles.icon}><img src="./img/icons_ios/speaker.svg" alt="Altavoz" /></span>
           <span class={styles.label}>Altavoz</span>
@@ -598,10 +621,10 @@ function ActiveCallView(props: { callInfo: any; videoMode: boolean; videoStatus:
       <Show when={!props.videoMode}>
         <button class={styles.startVideoBtn} onClick={props.onStartVideo}>Iniciar video</button>
       </Show>
-      
+
       <button class={styles.endCallBtn} onClick={props.onEnd}>
         <img src="./img/icons_ios/phone-end.svg" alt="Colgar" />
       </button>
     </div>
-  );
+  )
 }

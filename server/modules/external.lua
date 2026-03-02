@@ -55,6 +55,58 @@ local function HttpGetJson(url)
     return Citizen.Await(p)
 end
 
+local function ExtractYoutubeId(url)
+    if type(url) ~= 'string' then return nil end
+    local patterns = {
+        'youtube%.com/watch%?v=([a-zA-Z0-9_-]{11})',
+        'youtu%.be/([a-zA-Z0-9_-]{11})',
+        'youtube%.com/embed/([a-zA-Z0-9_-]{11})',
+        'youtube%.com/v/([a-zA-Z0-9_-]{11})',
+    }
+    for _, pattern in ipairs(patterns) do
+        local id = url:match(pattern)
+        if id then return id end
+    end
+    return nil
+end
+
+lib.callback.register('gcphone:music:searchITunes', function(source, data)
+    if not CanSearch(source) then return {} end
+    local query = type(data) == 'table' and SanitizeQuery(data.query or '', 80) or ''
+    if query == '' then return {} end
+    if not (Config.Music and Config.Music.Enabled) then return {} end
+
+    local url = ('https://itunes.apple.com/search?term=%s&media=music&limit=%d&country=US'):format(
+        UrlEncode(query),
+        Config.Music.MaxResults or 12
+    )
+    
+    local payload = HttpGetJson(url)
+    if type(payload) ~= 'table' or type(payload.results) ~= 'table' then return {} end
+
+    local out = {}
+    local count = 0
+    for i = 1, #payload.results do
+        local item = payload.results[i]
+        if type(item) == 'table' and item.trackId and item.trackName then
+            local youtubeId = ExtractYoutubeId(item.trackViewUrl or '')
+            count = count + 1
+            out[count] = {
+                id = tostring(item.trackId),
+                title = SanitizeQuery(tostring(item.trackName or ''), 80),
+                artist = SanitizeQuery(tostring(item.artistName or 'Desconocido'), 40),
+                thumbnail = tostring(item.artworkUrl100 or item.artworkUrl60 or ''):gsub('100x100', '300x300'),
+                duration = math.floor((tonumber(item.trackTimeMillis) or 0) / 1000),
+                previewUrl = tostring(item.previewUrl or ''),
+                youtubeId = youtubeId,
+            }
+            if count >= (Config.Music.MaxResults or 12) then break end
+        end
+    end
+
+    return out
+end)
+
 lib.callback.register('gcphone:music:searchCatalog', function(source, data)
     if not CanSearch(source) then return {} end
     local query = type(data) == 'table' and SanitizeQuery(data.query or '', 80) or ''

@@ -29,6 +29,9 @@ client_scripts {
     'client/camera.lua',
     'client/calls.lua',
     'client/proximity.lua',
+    'client/location_tracking.lua',
+    'client/phone_drop.lua',
+    'client/music.lua',
 }
 
 server_scripts {
@@ -54,6 +57,9 @@ server_scripts {
     'server/modules/storage.lua',
     'server/modules/livekit.lua',
     'server/modules/socket.lua',
+    'server/modules/location_tracking.lua',
+    'server/modules/phone_drop.lua',
+    'server/modules/music.lua',
 }
 
 dependencies {

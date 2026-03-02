@@ -74,10 +74,7 @@ export function LockScreen() {
 
       <div class={styles.statusBar}>
         <span>{formatTime(currentTime())}</span>
-        <div class={styles.statusIcons}>
-          <span>📶</span>
-          <span>🔋</span>
-        </div>
+     
       </div>
 
       <div class={styles.timeContainer}>

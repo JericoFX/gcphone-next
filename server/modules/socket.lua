@@ -1,5 +1,9 @@
+-- Implements: OPT-01 – Eliminar busy-wait, OPT-04 – Cleanup requests pendientes
+
 local PendingSocketTokenRequests = {}
 local LastSocketTokenRequestId = 0
+local REQUEST_TIMEOUT_MS = 7000
+local CLEANUP_INTERVAL_MS = 30000
 
 local function NextRequestId()
     LastSocketTokenRequestId = LastSocketTokenRequestId + 1
@@ -9,45 +13,32 @@ local function NextRequestId()
     return LastSocketTokenRequestId
 end
 
-local function RequestSocketToken(phone, name)
-    local requestId = NextRequestId()
-    local p = promise.new()
-    PendingSocketTokenRequests[requestId] = p
-
-    TriggerEvent('gcphone:socket:requestToken', requestId, phone, name)
-
-    local startedAt = GetGameTimer()
-    while PendingSocketTokenRequests[requestId] do
-        if GetGameTimer() - startedAt > 7000 then
-            PendingSocketTokenRequests[requestId] = nil
-            return nil, 'TOKEN_TIMEOUT'
+local function CleanupExpiredRequests()
+    local now = GetGameTimer()
+    for id, data in pairs(PendingSocketTokenRequests) do
+        if now - data.createdAt > REQUEST_TIMEOUT_MS then
+            data.p:resolve({ ok = false, error = 'TOKEN_TIMEOUT' })
+            PendingSocketTokenRequests[id] = nil
         end
-        Wait(0)
     end
-
-    local result = Citizen.Await(p)
-    if type(result) == 'table' and result.ok then
-        return result.token, nil
-    end
-    if type(result) == 'table' and result.error then
-        return nil, result.error
-    end
-    return nil, 'TOKEN_ERROR'
+    SetTimeout(CLEANUP_INTERVAL_MS, CleanupExpiredRequests)
 end
+
+SetTimeout(CLEANUP_INTERVAL_MS, CleanupExpiredRequests)
 
 AddEventHandler('gcphone:socket:tokenResponse', function(requestId, token, errorCode)
     local id = tonumber(requestId)
     if not id then return end
-    local p = PendingSocketTokenRequests[id]
-    if not p then return end
+    local data = PendingSocketTokenRequests[id]
+    if not data then return end
     PendingSocketTokenRequests[id] = nil
 
     if type(token) == 'string' and token ~= '' then
-        p:resolve({ ok = true, token = token })
+        data.p:resolve({ ok = true, token = token })
         return
     end
 
-    p:resolve({ ok = false, error = type(errorCode) == 'string' and errorCode or 'TOKEN_ERROR' })
+    data.p:resolve({ ok = false, error = type(errorCode) == 'string' and errorCode or 'TOKEN_ERROR' })
 end)
 
 lib.callback.register('gcphone:socket:getToken', function(source)
@@ -61,15 +52,24 @@ lib.callback.register('gcphone:socket:getToken', function(source)
         return { success = false, error = 'PHONE_NOT_FOUND' }
     end
 
-    local token, err = RequestSocketToken(phone, GetName(source) or phone)
-    if not token then
-        return { success = false, error = err or 'TOKEN_ERROR' }
+    local requestId = NextRequestId()
+    local p = promise.new()
+    PendingSocketTokenRequests[requestId] = {
+        p = p,
+        createdAt = GetGameTimer(),
+    }
+
+    TriggerEvent('gcphone:socket:requestToken', requestId, phone, GetName(source) or phone)
+
+    local result = Citizen.Await(p)
+    if type(result) == 'table' and result.ok then
+        local host = tostring(GetConvar('gcphone_socket_host', tostring((Config.Socket and Config.Socket.Host) or '')))
+        return {
+            success = true,
+            host = host,
+            token = result.token,
+        }
     end
 
-    local host = tostring(GetConvar('gcphone_socket_host', tostring((Config.Socket and Config.Socket.Host) or '')))
-    return {
-        success = true,
-        host = host,
-        token = token,
-    }
+    return { success = false, error = result and result.error or 'TOKEN_ERROR' }
 end)

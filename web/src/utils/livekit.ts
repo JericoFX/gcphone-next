@@ -1,12 +1,21 @@
 import { Room, RoomEvent, VideoPresets, Track } from 'livekit-client';
 
 let room: Room | null = null;
+let callTimeoutId: ReturnType<typeof setTimeout> | null = null;
+let callStartTime: number | null = null;
+let maxDuration: number = 0;
 
 export function getLiveKitRoom() {
   return room;
 }
 
-export async function connectLiveKit(url: string, token: string, handlers?: {
+export function getCallRemainingTime(): number {
+  if (!callStartTime || maxDuration <= 0) return 0;
+  const elapsed = Math.floor((Date.now() - callStartTime) / 1000);
+  return Math.max(0, maxDuration - elapsed);
+}
+
+export async function connectLiveKit(url: string, token: string, maxDurationSeconds?: number, handlers?: {
   onParticipantConnected?: (identity: string) => void;
   onParticipantDisconnected?: (identity: string) => void;
   onTrackSubscribed?: (payload: {
@@ -31,11 +40,20 @@ export async function connectLiveKit(url: string, token: string, handlers?: {
     trackSid: string;
     kind: 'audio' | 'video';
   }) => void;
+  onCallTimeout?: () => void;
 }) {
   if (room) {
     room.disconnect();
     room = null;
   }
+
+  if (callTimeoutId) {
+    clearTimeout(callTimeoutId);
+    callTimeoutId = null;
+  }
+
+  callStartTime = Date.now();
+  maxDuration = (maxDurationSeconds && maxDurationSeconds > 0) ? maxDurationSeconds : 300;
 
   room = new Room({
     adaptiveStream: true,
@@ -99,6 +117,11 @@ export async function connectLiveKit(url: string, token: string, handlers?: {
       });
     });
 
+  callTimeoutId = setTimeout(() => {
+    handlers?.onCallTimeout?.();
+    disconnectLiveKit();
+  }, maxDuration * 1000);
+
   await room.connect(url, token);
   return room;
 }
@@ -115,6 +138,14 @@ export async function setLiveKitMicrophoneEnabled(enabled: boolean) {
 
 export function disconnectLiveKit() {
   if (!room) return;
+  
+  if (callTimeoutId) {
+    clearTimeout(callTimeoutId);
+    callTimeoutId = null;
+  }
+  
   room.disconnect();
   room = null;
+  callStartTime = null;
+  maxDuration = 0;
 }

@@ -33,10 +33,6 @@ export default defineConfig({
       '@assets': resolve(__dirname, 'src/assets'),
     },
   },
-  server: {
-    port: 3000,
-    strictPort: true,
-    hmr: true,
-  },
+
   base: './',
 });

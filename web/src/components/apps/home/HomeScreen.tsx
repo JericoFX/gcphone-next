@@ -148,8 +148,7 @@ export function HomeScreen() {
           <button class={styles.editBtn} onClick={() => setEditing((v) => !v)}>
             {editing() ? 'OK' : 'Editar'}
           </button>
-          <span>📶</span>
-          <span>🔋</span>
+
         </div>
       </div>
       

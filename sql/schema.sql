@@ -367,6 +367,25 @@ CREATE TABLE IF NOT EXISTS `phone_dropped` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================
+-- LIVE LOCATION SHARING
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS `phone_live_locations` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `sender_phone` VARCHAR(15) NOT NULL,
+    `sender_name` VARCHAR(100) NOT NULL,
+    `recipient_phone` VARCHAR(15) NOT NULL,
+    `x` FLOAT NOT NULL,
+    `y` FLOAT NOT NULL,
+    `expires_at` TIMESTAMP NOT NULL,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    KEY `idx_sender` (`sender_phone`),
+    KEY `idx_recipient` (`recipient_phone`),
+    KEY `idx_expires` (`expires_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================
 -- TRIGGERS (AUTO COUNTERS)
 -- ============================================================
 

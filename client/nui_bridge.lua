@@ -328,6 +328,37 @@ RegisterNUICallback('musicSearchCatalog', function(data, cb)
     end, data or {})
 end)
 
+RegisterNUICallback('musicSearchITunes', function(data, cb)
+    lib.callback('gcphone:music:searchITunes', false, function(results)
+        cb(results or {})
+    end, data or {})
+end)
+
+RegisterNUICallback('musicPlay', function(data, cb)
+    TriggerEvent('gcphone:music:playFromNUI', data)
+    cb(true)
+end)
+
+RegisterNUICallback('musicPause', function(_, cb)
+    TriggerEvent('gcphone:music:pauseFromNUI')
+    cb(true)
+end)
+
+RegisterNUICallback('musicResume', function(_, cb)
+    TriggerEvent('gcphone:music:resumeFromNUI')
+    cb(true)
+end)
+
+RegisterNUICallback('musicStop', function(_, cb)
+    TriggerEvent('gcphone:music:stopFromNUI')
+    cb(true)
+end)
+
+RegisterNUICallback('musicSetVolume', function(data, cb)
+    TriggerEvent('gcphone:music:setVolumeFromNUI', data.volume)
+    cb(true)
+end)
+
 RegisterNUICallback('wavechatSearchGifs', function(data, cb)
     lib.callback('gcphone:wavechat:searchGifs', false, function(results)
         cb(results or {})

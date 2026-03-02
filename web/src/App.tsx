@@ -1,6 +1,7 @@
 import { Show, onMount, onCleanup, createSignal, createMemo } from 'solid-js';
-import { PhoneProvider, ContactsProvider, MessagesProvider, NotificationsProvider, useNotifications, usePhone } from './store';
+import { PhoneProvider, ContactsProvider, MessagesProvider, NotificationsProvider, MusicProvider, useNotifications, usePhone } from './store';
 import { PhoneFrame } from './components/Phone/PhoneFrame';
+import { LockScreen } from './components/LockScreen/LockScreen';
 import { ContactRequestNotification } from './components/shared/ContactRequest/ContactRequest';
 import { PhoneNotificationBanner } from './components/shared/notifications/PhoneNotificationBanner';
 import { fetchNui } from './utils/fetchNui';
@@ -35,10 +36,14 @@ function PhoneContent() {
   return (
     <div class="gcphone-app" classList={{ [themeClass()]: true }}>
       <Show when={phoneState.visible}>
-        <PhoneFrame>
-          <PhoneFrame.Router />
-          <ContactRequestNotification />
-        </PhoneFrame>
+        <Show when={phoneState.locked} fallback={
+          <PhoneFrame>
+            <PhoneFrame.Router />
+            <ContactRequestNotification />
+          </PhoneFrame>
+        }>
+          <LockScreen />
+        </Show>
       </Show>
 
       <Show when={!phoneState.visible && notifications.current}>
@@ -106,7 +111,9 @@ export function App() {
       <NotificationsProvider>
         <ContactsProvider>
           <MessagesProvider>
-            <PhoneContent />
+            <MusicProvider>
+              <PhoneContent />
+            </MusicProvider>
           </MessagesProvider>
         </ContactsProvider>
       </NotificationsProvider>

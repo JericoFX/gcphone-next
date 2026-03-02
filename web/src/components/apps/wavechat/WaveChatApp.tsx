@@ -240,6 +240,19 @@ export function WaveChatApp() {
     })();
   });
 
+  const loadRecentHistory = async (groupId: number) => {
+    const history = await getWaveRecent(String(groupId), 120);
+    if (!history?.success || !history.messages) return;
+    const mapped: WaveChatGroupMessage[] = history.messages.map((msg) => ({
+      id: msg.id,
+      group_id: groupId,
+      sender_number: msg.senderPhone,
+      message: msg.content,
+      created_at: new Date(msg.createdAt).toISOString(),
+    }));
+    setGroupMessages((prev) => ({ ...prev, [groupId]: mapped }));
+  };
+
   onMount(() => {
     void (async () => {
       const auth = await fetchSocketToken();
@@ -297,6 +310,17 @@ export function WaveChatApp() {
           }
         },
         onDisconnect: () => setSocketReady(false),
+        onReconnect: () => {
+          setSocketReady(true);
+          const groupId = selectedGroupId();
+          if (groupId) {
+            joinWaveRoom(String(groupId));
+            void loadRecentHistory(groupId);
+          }
+        },
+        onReconnectFailed: () => {
+          setSocketReady(false);
+        },
       });
 
       setSocketReady(true);

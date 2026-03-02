@@ -58,11 +58,27 @@ Config.Calls = {
 Config.LiveKit = {
     Enabled = true,
     Host = 'ws://127.0.0.1:7880',
+    MaxCallDurationSeconds = 300,
 }
 
 Config.Socket = {
     Enabled = false,
     Host = 'ws://127.0.0.1:3001',
+}
+
+Config.LiveLocation = {
+    Enabled = true,
+    UpdateIntervalSeconds = 10,
+    MaxDurationMinutes = 15,
+}
+
+Config.Music = {
+    Enabled = true,
+    DefaultVolume = 0.15,
+    DefaultDistance = 15.0,
+    MaxDistance = 30.0,
+    MaxResults = 12,
+    UpdatePositionInterval = 300,
 }
 
 Config.Storage = {
