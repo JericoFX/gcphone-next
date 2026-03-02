@@ -1,0 +1,106 @@
+-- gcphone-next Bridge: QBCore/QBOX
+-- Provides framework abstraction layer
+
+local QBCore = nil
+local Framework = nil
+
+CreateThread(function()
+    while true do
+        if GetResourceState('qb-core') == 'started' then
+            QBCore = exports['qb-core']:GetCoreObject()
+            Framework = 'qbcore'
+            break
+        elseif GetResourceState('qbx_core') == 'started' then
+            QBCore = exports.qbx_core
+            Framework = 'qbox'
+            break
+        end
+        Wait(100)
+    end
+    
+    if Framework then
+        print(('[gcphone-next] Framework detected: %s'):format(Framework))
+    else
+        print('[gcphone-next] WARNING: No framework detected!')
+    end
+end)
+
+function GetPlayer(source)
+    if not QBCore then return nil end
+    return QBCore.Functions.GetPlayer(source)
+end
+
+function GetIdentifier(source)
+    local player = GetPlayer(source)
+    if not player then return nil end
+    return player.PlayerData.citizenid
+end
+
+function GetName(source)
+    local player = GetPlayer(source)
+    if not player then return nil end
+    local charinfo = player.PlayerData.charinfo
+    return charinfo.firstname .. ' ' .. charinfo.lastname
+end
+
+function GetMoney(source, accountType)
+    local player = GetPlayer(source)
+    if not player then return 0 end
+    accountType = accountType or 'bank'
+    return player.Functions.GetMoney(accountType) or 0
+end
+
+function AddMoney(source, amount, accountType, reason)
+    local player = GetPlayer(source)
+    if not player then return false end
+    accountType = accountType or 'bank'
+    reason = reason or 'gcphone'
+    return player.Functions.AddMoney(accountType, amount, reason)
+end
+
+function RemoveMoney(source, amount, accountType, reason)
+    local player = GetPlayer(source)
+    if not player then return false end
+    accountType = accountType or 'bank'
+    reason = reason or 'gcphone'
+    return player.Functions.RemoveMoney(accountType, amount, reason)
+end
+
+function GetJob(source)
+    local player = GetPlayer(source)
+    if not player then return nil end
+    return player.PlayerData.job
+end
+
+function GetSourceFromIdentifier(identifier)
+    if not QBCore then return nil end
+    
+    local players = QBCore.Functions.GetPlayers()
+    
+    for _, src in pairs(players) do
+        local player = QBCore.Functions.GetPlayer(src)
+        if player and player.PlayerData.citizenid == identifier then
+            return tonumber(src)
+        end
+    end
+    
+    return nil
+end
+
+function GetPhoneNumber(identifier)
+    if not identifier then return nil end
+    
+    return MySQL.scalar.await(
+        'SELECT phone_number FROM phone_numbers WHERE identifier = ?',
+        { identifier }
+    )
+end
+
+function GetIdentifierByPhone(phoneNumber)
+    if not phoneNumber then return nil end
+    
+    return MySQL.scalar.await(
+        'SELECT identifier FROM phone_numbers WHERE phone_number = ?',
+        { phoneNumber }
+    )
+end

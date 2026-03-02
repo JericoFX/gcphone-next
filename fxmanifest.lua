@@ -1,0 +1,65 @@
+fx_version 'cerulean'
+game 'gta5'
+
+author 'gcphone-next'
+description 'Modern FiveM Phone - SolidJS + ox_lib + oxmysql'
+version '2.0.0'
+
+lua54 'yes'
+
+ui_page 'web/dist/index.html'
+
+files {
+    'web/dist/**/*',
+    'web/dist/index.html',
+    
+    'shared/config.lua',
+    'shared/locales/*.lua',
+}
+
+shared_scripts {
+    '@ox_lib/init.lua',
+    'shared/config.lua',
+}
+
+client_scripts {
+    'client/main.lua',
+    'client/phone.lua',
+    'client/nui_bridge.lua',
+    'client/camera.lua',
+    'client/calls.lua',
+    'client/proximity.lua',
+}
+
+server_scripts {
+    'server/js/livekit.js',
+    'server/js/socket_auth.js',
+    '@oxmysql/lib/MySQL.lua',
+    'server/main.lua',
+    'server/bridge/qbcore.lua',
+    'server/modules/phone.lua',
+    'server/modules/contacts.lua',
+    'server/modules/messages.lua',
+    'server/modules/calls.lua',
+    'server/modules/gallery.lua',
+    'server/modules/bank.lua',
+    'server/modules/chirp.lua',
+    'server/modules/snap.lua',
+    'server/modules/garage.lua',
+    'server/modules/market.lua',
+    'server/modules/news.lua',
+    'server/modules/clips.lua',
+    'server/modules/proximity.lua',
+    'server/modules/external.lua',
+    'server/modules/storage.lua',
+    'server/modules/livekit.lua',
+    'server/modules/socket.lua',
+}
+
+dependencies {
+    '/server:5181',
+    '/onesync',
+    'ox_lib',
+    'oxmysql',
+    'qb-core',
+}

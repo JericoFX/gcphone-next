@@ -1,0 +1,501 @@
+.app {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: radial-gradient(120% 100% at 50% 0%, #f8fbff, var(--bg) 62%);
+}
+
+.thread {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: radial-gradient(120% 100% at 50% 0%, #f8fbff, var(--bg) 62%);
+}
+
+.nav {
+  height: 56px;
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  border-bottom: 1px solid var(--separator);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(246, 249, 255, 0.9));
+}
+
+.icon-btn {
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--tint) 12%, transparent);
+  color: var(--tint);
+  font-size: 22px;
+}
+
+.nav-title {
+  flex: 1;
+  text-align: center;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.tabs {
+  margin: 8px;
+  border-radius: 12px;
+  padding: 3px;
+  background: rgba(118, 128, 148, 0.16);
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+}
+
+.tab-btn {
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-2);
+  height: 30px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.tab-active {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow-1);
+}
+
+.list {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.conversation-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--separator);
+  background: var(--surface);
+
+  &.selected {
+    background: color-mix(in srgb, var(--tint) 10%, var(--surface));
+  }
+}
+
+.avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  flex: 0 0 auto;
+}
+
+.info {
+  flex: 1;
+  min-width: 0;
+}
+
+.top-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.time {
+  font-size: 11px;
+  color: var(--text-3);
+}
+
+.preview-row {
+  margin-top: 3px;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.preview-text {
+  flex: 1;
+  font-size: 12px;
+  color: var(--text-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.status-item,
+.call-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--separator);
+  background: var(--surface);
+}
+
+.status-btn {
+  border: none;
+  border-radius: 999px;
+  height: 28px;
+  padding: 0 12px;
+  background: var(--tint);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.delete-conversation-btn {
+  border: none;
+  border-radius: 999px;
+  height: 26px;
+  padding: 0 10px;
+  background: #ffeef0;
+  color: #ce4343;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.call-direction {
+  min-width: 58px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-3);
+}
+
+.unread-badge {
+  min-width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  padding: 0 5px;
+  background: var(--tint);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.messages-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+}
+
+.bubble {
+  max-width: 82%;
+  margin-bottom: 8px;
+  padding: 8px 10px;
+  border-radius: 14px;
+  clear: both;
+
+  &.sent {
+    float: right;
+    background: var(--tint);
+    color: #fff;
+  }
+
+  &.received {
+    float: left;
+    background: color-mix(in srgb, var(--tint) 8%, var(--surface));
+    color: var(--text);
+  }
+}
+
+.message-text {
+  font-size: 14px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.map-btn {
+  margin-top: 6px;
+  height: 24px;
+  border: none;
+  border-radius: 8px;
+  padding: 0 8px;
+  font-size: 11px;
+  font-weight: 700;
+  background: color-mix(in srgb, var(--tint) 16%, var(--surface));
+  color: var(--tint);
+}
+
+.message-time {
+  display: block;
+  margin-top: 4px;
+  font-size: 10px;
+  opacity: 0.8;
+  text-align: right;
+}
+
+.media-preview {
+  width: 180px;
+  max-width: 100%;
+  border-radius: 10px;
+  margin-top: 6px;
+  object-fit: cover;
+  display: block;
+}
+
+.audio-preview {
+  width: 220px;
+  max-width: 100%;
+  margin-top: 6px;
+  display: block;
+}
+
+.attachment-preview {
+  margin: 8px;
+  border-radius: 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  img {
+    width: 64px;
+    height: 64px;
+    border-radius: 8px;
+    object-fit: cover;
+  }
+
+  video {
+    width: 120px;
+    height: 68px;
+    border-radius: 8px;
+    object-fit: cover;
+  }
+
+  button {
+    height: 28px;
+    border: none;
+    border-radius: 8px;
+    padding: 0 10px;
+    background: color-mix(in srgb, var(--danger) 14%, var(--surface));
+    color: var(--danger);
+    font-size: 11px;
+    font-weight: 700;
+  }
+}
+
+.input-container {
+  margin: 8px;
+  border-radius: 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 6px;
+
+  input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    height: 30px;
+    padding: 0 8px;
+    font-size: 13px;
+    color: var(--text);
+    &:focus {
+      outline: none;
+    }
+  }
+}
+
+.attach-btn,
+.send-btn {
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--tint) 9%, var(--surface));
+  color: var(--tint);
+}
+
+.send-btn {
+  background: var(--tint);
+  color: #fff;
+}
+
+.voice-row {
+  margin: 0 8px 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.voice-btn,
+.voice-btn-stop {
+  height: 28px;
+  border: none;
+  border-radius: 8px;
+  padding: 0 10px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.voice-btn {
+  background: color-mix(in srgb, var(--tint) 12%, var(--surface));
+  color: var(--tint);
+}
+
+.voice-btn-stop {
+  background: #ffe9ee;
+  color: #c73d58;
+}
+
+.voice-uploading {
+  font-size: 11px;
+  color: var(--text-3);
+  font-weight: 700;
+}
+
+.gif-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.42);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 130;
+}
+
+.gif-panel {
+  width: 92%;
+  max-height: 78%;
+  border-radius: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.gif-header {
+  height: 44px;
+  border-bottom: 1px solid var(--separator);
+  padding: 0 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  button {
+    border: none;
+    background: color-mix(in srgb, var(--tint) 10%, var(--surface));
+    border-radius: 8px;
+    height: 28px;
+    padding: 0 10px;
+    font-size: 11px;
+    font-weight: 700;
+  }
+}
+
+.gif-search-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px;
+  padding: 8px;
+
+  input {
+    height: 32px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0 8px;
+    font-size: 12px;
+  }
+
+  button {
+    border: none;
+    border-radius: 8px;
+    height: 32px;
+    background: var(--tint);
+    color: #fff;
+    padding: 0 12px;
+    font-size: 11px;
+    font-weight: 700;
+  }
+}
+
+.gif-grid {
+  padding: 8px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  overflow-y: auto;
+}
+
+.gif-item {
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--surface-2);
+  aspect-ratio: 1;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+.gif-empty {
+  padding: 18px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+.groups-head-row {
+  display: flex;
+  justify-content: flex-end;
+  padding: 8px 12px 0;
+}
+
+.group-thread {
+  margin: 8px 10px 10px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  padding: 8px;
+  display: grid;
+  gap: 8px;
+}
+
+.group-msg-row {
+  display: grid;
+  gap: 2px;
+  padding: 6px 8px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--tint) 7%, var(--surface));
+
+  strong {
+    font-size: 11px;
+    color: var(--text-2);
+  }
+
+  span {
+    font-size: 13px;
+    color: var(--text);
+    word-break: break-word;
+  }
+}
+
+.group-typing-row {
+  font-size: 11px;
+  color: var(--text-3);
+  padding: 0 2px;
+  font-weight: 700;
+}

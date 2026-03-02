@@ -1,0 +1,29 @@
+{
+  "name": "gcphone-next",
+  "version": "2.0.0",
+  "description": "Modern FiveM Phone - SolidJS",
+  "type": "module",
+  "scripts": {
+    "dev": "bunx --bun vite",
+    "build": "bunx --bun vite build",
+    "preview": "bunx --bun vite preview",
+    "typecheck": "tsc --noEmit",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui"
+  },
+  "dependencies": {
+    "leaflet": "^1.9.4",
+    "livekit-client": "^2.15.3",
+    "socket.io-client": "^4.8.1",
+    "solid-js": "^1.9.11"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.55.1",
+    "@types/leaflet": "^1.9.21",
+    "@types/node": "^25.3.3",
+    "sass": "^1.97.3",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.1",
+    "vite-plugin-solid": "^2.11.10"
+  }
+}

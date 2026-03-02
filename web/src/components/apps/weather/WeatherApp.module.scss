@@ -1,0 +1,27 @@
+.hero {
+  border-radius: var(--r-xl);
+  padding: 20px;
+  background: linear-gradient(135deg, #58a2ff, #8ecbff);
+  color: #fff;
+  margin-bottom: 10px;
+  border: 1px solid color-mix(in srgb, #58a2ff 55%, #bfe0ff);
+  box-shadow: var(--shadow-2);
+}
+
+.city {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.temp {
+  font-size: 48px;
+  font-weight: 800;
+  line-height: 1;
+  margin-top: 6px;
+}
+
+.condition {
+  margin-top: 6px;
+  font-size: 14px;
+  font-weight: 600;
+}

@@ -1,0 +1,27 @@
+.gcphone-app {
+  width: 100vw;
+  height: 100vh;
+  position: fixed;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.notification-preview-shell {
+  position: absolute;
+  right: 14px;
+  bottom: 20px;
+  width: 296px;
+  height: 112px;
+  border-radius: 22px 22px 14px 14px;
+  overflow: hidden;
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.5);
+  pointer-events: auto;
+}
+
+.notification-preview-top {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(180deg, #1f2938 0%, #111722 100%);
+}

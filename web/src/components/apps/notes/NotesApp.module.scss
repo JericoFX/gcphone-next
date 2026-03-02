@@ -1,0 +1,42 @@
+.list {
+  display: grid;
+  gap: 8px;
+}
+
+.card {
+  border-radius: var(--r-lg);
+  padding: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: var(--shadow-1);
+
+  strong {
+    display: block;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  p {
+    margin: 6px 0;
+    font-size: 12px;
+    color: var(--text-2);
+    white-space: pre-wrap;
+  }
+}
+
+.actions,
+.editor-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.editor {
+  padding: 12px;
+  display: grid;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-1);
+}

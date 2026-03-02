@@ -1,0 +1,51 @@
+:root {
+  --phone-width: 326px;
+  --phone-height: 742px;
+  --phone-screen-top: 100px;
+  --phone-screen-bottom: 100px;
+  
+  --color-primary: #0b81ff;
+  --color-primary-dark: #0066cc;
+  --color-background: #ffffff;
+  --color-surface: #e9e9eb;
+  --color-surface-dark: #f5f5f5;
+  --color-sms-me: #e9e9eb;
+  --color-sms-other: #0b81ff;
+  --color-danger: #ee3838;
+  --color-success: #34c759;
+  --color-warning: #ff9500;
+  --color-text: #000000;
+  --color-text-secondary: #959595;
+  --color-text-tertiary: #c7c7cc;
+  --color-border: #c6c6c8;
+  
+  --font-family: "SF Pro Display", "SF Pro Text", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font-size-xs: 12px;
+  --font-size-sm: 14px;
+  --font-size-base: 17px;
+  --font-size-lg: 20px;
+  --font-size-xl: 24px;
+  --font-size-xxl: 34px;
+  
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 12px;
+  --spacing-lg: 16px;
+  --spacing-xl: 24px;
+  --spacing-xxl: 32px;
+  
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-xxl: 20px;
+  --radius-full: 50%;
+  
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.12);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 20px rgba(0, 0, 0, 0.15);
+  
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.25s ease;
+  --transition-slow: 0.4s ease;
+}

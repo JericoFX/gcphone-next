@@ -1,0 +1,94 @@
+/* Konsta-inspired controls adapted for gcphone-next */
+
+:root {
+  --ui-primary: #0b81ff;
+  --ui-surface: #ffffff;
+  --ui-border: #d8deea;
+  --ui-text: #1a2233;
+  --ui-muted: #67738b;
+  --ui-ripple-opacity: 0.15;
+}
+
+.k-btn {
+  position: relative;
+  overflow: hidden;
+  border: none;
+  border-radius: 12px;
+  height: 38px;
+  padding: 0 12px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  background: var(--ui-primary);
+  transition: transform 140ms ease, filter 180ms ease, opacity 180ms ease;
+
+  &:active {
+    transform: translateY(1px);
+    filter: brightness(0.95);
+  }
+}
+
+.k-btn-outline {
+  color: var(--ui-primary);
+  background: transparent;
+  border: 1px solid var(--ui-primary);
+}
+
+.k-btn-tonal {
+  color: var(--ui-primary);
+  background: rgba(11, 129, 255, 0.12);
+}
+
+.k-list {
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-border);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.k-list-item {
+  min-height: 48px;
+  padding: 10px 12px;
+  border-bottom: 1px solid #eef2f8;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--ui-text);
+  font-size: 13px;
+  font-weight: 600;
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.k-touch-ripple {
+  position: relative;
+  overflow: hidden;
+}
+
+.k-touch-ripple::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  background: radial-gradient(circle, rgba(255, 255, 255, var(--ui-ripple-opacity)) 10%, transparent 10.01%);
+  background-repeat: no-repeat;
+  background-position: 50%;
+  transform: scale(10);
+}
+
+.k-touch-ripple:active::after {
+  animation: k-touch-ripple-out 300ms forwards;
+}
+
+@keyframes k-touch-ripple-out {
+  from {
+    opacity: 1;
+    transform: scale(0);
+  }
+  to {
+    opacity: 0;
+    transform: scale(10);
+  }
+}

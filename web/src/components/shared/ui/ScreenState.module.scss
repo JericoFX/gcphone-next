@@ -1,0 +1,36 @@
+.state-wrap {
+  min-height: 220px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-align: center;
+  color: #62708a;
+}
+
+.loader {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 3px solid #d6e0ef;
+  border-top-color: #0b81ff;
+  animation: spin 850ms linear infinite;
+}
+
+.title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #2a3550;
+}
+
+.desc {
+  max-width: 220px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}

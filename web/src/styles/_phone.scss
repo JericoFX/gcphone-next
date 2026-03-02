@@ -1,0 +1,126 @@
+@use './mixins' as *;
+
+.phone-wrapper {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 500px;
+  height: 1000px;
+  pointer-events: auto;
+}
+
+.phone-coque {
+  position: absolute;
+  z-index: 999;
+  width: 394px;
+  height: 800px;
+  top: 71px;
+  left: 15px;
+  pointer-events: none;
+  background-size: cover;
+  background-repeat: no-repeat;
+}
+
+.phone-screen {
+  overflow: hidden;
+  position: absolute;
+  background-color: white;
+  width: var(--phone-width);
+  height: var(--phone-height);
+  bottom: 100px;
+  left: 50px;
+  display: flex;
+  flex-direction: column;
+}
+
+.phone-info-bar {
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--spacing-md);
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  
+  .time {
+    font-weight: 600;
+  }
+  
+  .icons {
+    display: flex;
+    gap: var(--spacing-xs);
+    align-items: center;
+  }
+}
+
+.phone-title {
+  display: flex;
+  align-items: center;
+  height: 64px;
+  padding: 0 var(--spacing-lg);
+  background-color: var(--color-surface);
+  
+  .btn-back {
+    width: 42px;
+    height: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-primary);
+    border: none;
+    background: transparent;
+    border-radius: var(--radius-full);
+    font-size: var(--font-size-xl);
+    margin-right: var(--spacing-sm);
+    
+    &:hover {
+      background-color: rgba(0, 0, 0, 0.05);
+    }
+  }
+  
+  .title-text {
+    flex: 1;
+    font-size: var(--font-size-xl);
+    font-weight: 600;
+    color: var(--color-text);
+  }
+}
+
+.phone-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  @include custom-scrollbar;
+}
+
+.phone-nav {
+  display: flex;
+  height: 56px;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+  background-color: rgba(255, 255, 255, 0.9);
+  
+  .nav-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    color: var(--color-text-secondary);
+    background: transparent;
+    border: none;
+    font-size: var(--font-size-xs);
+    
+    .icon {
+      font-size: 20px;
+    }
+    
+    &.active {
+      color: var(--color-primary);
+    }
+    
+    &:hover {
+      background-color: rgba(0, 0, 0, 0.03);
+    }
+  }
+}

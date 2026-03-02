@@ -1,0 +1,24 @@
+.timer-card {
+  padding: 12px;
+  display: grid;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-1);
+}
+
+.big-clock {
+  font-size: 34px;
+  font-weight: 800;
+  text-align: center;
+  color: var(--text);
+  letter-spacing: 0.04em;
+  padding: 8px 0;
+}
+
+.actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}

@@ -1,0 +1,24 @@
+.app-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  img {
+    width: 30px;
+    height: 30px;
+    border-radius: 7px;
+    object-fit: cover;
+  }
+}
+
+.search-wrap {
+  margin-bottom: 8px;
+}
+
+.progress-text {
+  width: 52px;
+  text-align: right;
+  font-size: 12px;
+  font-weight: 700;
+  color: #0b81ff;
+}

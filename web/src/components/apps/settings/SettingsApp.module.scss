@@ -1,0 +1,114 @@
+.wallpaper-card {
+  padding: 10px;
+}
+
+.wallpaper-item {
+  aspect-ratio: 9 / 19;
+  border: 2px solid transparent;
+  border-radius: 10px;
+  overflow: hidden;
+  padding: 0;
+  background: transparent;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+.selected {
+  border-color: var(--tint);
+}
+
+.inline-form {
+  padding: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pin-card {
+  padding: 10px;
+  display: grid;
+  gap: 8px;
+}
+
+.ok,
+.error {
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.ok {
+  background: color-mix(in srgb, var(--success) 16%, var(--surface));
+  color: var(--success);
+}
+
+.error {
+  background: color-mix(in srgb, var(--danger) 16%, var(--surface));
+  color: var(--danger);
+}
+
+.notification-card {
+  padding: 8px;
+  display: grid;
+  gap: 6px;
+}
+
+.notification-row {
+  display: grid;
+  grid-template-columns: 24px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  padding: 4px 6px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--surface) 88%, var(--surface-2));
+}
+
+.notification-icon {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+}
+
+.notification-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.notification-badge {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: #ff3b30;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.notification-ok {
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: #34c759;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.clear-all-btn {
+  margin-top: 4px;
+  width: 100%;
+}

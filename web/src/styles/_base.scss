@@ -1,0 +1,47 @@
+@use './mixins' as *;
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-family);
+  font-size: var(--font-size-base);
+  font-weight: 400;
+  color: var(--color-text);
+  background-color: transparent;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  
+  &:focus {
+    outline: none;
+  }
+}
+
+input, textarea {
+  font-family: inherit;
+  
+  &:focus {
+    outline: none;
+  }
+}
+
+a {
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+@include custom-scrollbar;
