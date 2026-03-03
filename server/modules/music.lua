@@ -1,3 +1,5 @@
+-- Creado/Modificado por JericoFX
+
 local ActiveMusicBySource = {}
 local LastMusicActionBySource = {}
 local LastSearchBySource = {}
@@ -131,7 +133,6 @@ local function GetPipedApiBaseUrl()
 end
 
 local function BuildYoutubeSearchUrl(query, maxResults)
-    -- Verified: https://developers.google.com/youtube/v3/docs/search/list uses part, q, type, maxResults and key.
     local apiKey = GetYoutubeApiKey()
     if apiKey == '' then return nil end
 
@@ -143,7 +144,6 @@ local function ResolveYoutubeAudioStream(videoId)
     local baseUrl = GetPipedApiBaseUrl()
     if baseUrl == '' then return nil end
 
-    -- Verified: https://docs.piped.video/docs/api-documentation/ endpoint /streams/:videoId returns audioStreams.
     local payload = HttpGetJson(('%s/streams/%s'):format(baseUrl, UrlEncode(videoId)))
     if type(payload) ~= 'table' or type(payload.audioStreams) ~= 'table' then
         return nil
@@ -239,7 +239,6 @@ local function PlayForSource(source, data)
 
     local soundName = BuildSoundName(source)
 
-    -- Verified: https://github.com/Xogy/xsound server API: PlayUrlPos(source, name, url, volume, vec, loop).
     exports['xsound']:PlayUrlPos(-1, soundName, streamUrl, volume, coords, false)
     exports['xsound']:Distance(-1, soundName, distance)
     exports['xsound']:setVolumeMax(-1, soundName, volume)

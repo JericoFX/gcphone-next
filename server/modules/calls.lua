@@ -1,3 +1,5 @@
+-- Creado/Modificado por JericoFX
+
 local ActiveCalls = {}
 local CallHistory = {}
 local LastCallId = 10

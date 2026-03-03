@@ -1,3 +1,5 @@
+-- Creado/Modificado por JericoFX
+
 local PendingSocketTokenRequests = {}
 local LastSocketTokenRequestId = 0
 local REQUEST_TIMEOUT_MS = 7000

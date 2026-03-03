@@ -1,6 +1,4 @@
--- gcphone-next Server Module: News
--- News with live streaming support
--- Verified: ox_lib callback pattern
+-- Creado/Modificado por JericoFX
 
 local function SanitizeText(value, maxLength)
     if type(value) ~= 'string' then return '' end

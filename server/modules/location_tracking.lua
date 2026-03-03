@@ -1,5 +1,4 @@
--- OPT-10: Live Location Sharing Server Module
--- Handles live location tracking between contacts
+-- Creado/Modificado por JericoFX
 
 local MySQL = exports.oxmysql
 

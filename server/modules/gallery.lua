@@ -1,6 +1,4 @@
--- gcphone-next Server Module: Gallery
--- Handles photo storage and management
--- Verified: ox_lib callback pattern
+-- Creado/Modificado por JericoFX
 
 lib.callback.register('gcphone:getGallery', function(source)
     local identifier = GetIdentifier(source)

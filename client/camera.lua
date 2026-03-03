@@ -1,5 +1,4 @@
--- gcphone-next Client: Camera
--- Handles in-game camera for photos and live camera sessions
+-- Creado/Modificado por JericoFX
 
 local takePhoto = false
 local frontCam = false
@@ -35,7 +34,6 @@ local function ClampPercent(value)
 end
 
 local function TryApplyCamFov(fov)
-    -- TODO: Verify against https://docs.fivem.net/natives/?_0xB13C14F66A00D047 for device-specific camera behavior
     local cam = GetRenderingCam()
     if cam and cam ~= 0 and cam ~= -1 then
         SetCamFov(cam, fov)
@@ -72,7 +70,6 @@ local function ApplyCameraSettings()
         ClearTimecycleModifier()
     end
 
-    -- Softer curve to avoid over-blur in gameplay camera
     SetTimecycleModifierStrength(cameraSession.blur / 140.0)
     frontCam = cameraSession.selfie
     CellCamActivateSelfieMode(frontCam)

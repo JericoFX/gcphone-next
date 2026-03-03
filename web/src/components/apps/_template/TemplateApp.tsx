@@ -1,6 +1,3 @@
-// Template de App para GCPhone Next
-// Copia este archivo y renómbralo para crear una nueva app
-
 import { createSignal, For, Show } from 'solid-js';
 import { AppScaffold, AppFAB, AppTabs } from '@/components/shared/layout';
 import { usePhoneKeyHandler } from '@/hooks/usePhoneKeyHandler';
@@ -22,36 +19,29 @@ export function TemplateApp() {
   const [showModal, setShowModal] = createSignal(false);
   const [newItemName, setNewItemName] = createSignal('');
 
-  // Hook para manejar teclas del telefono
   usePhoneKeyHandler({
     Backspace: () => {
-      // Logica personalizada para Backspace (opcional)
-      // Si no se define, por defecto hace router.goBack()
     },
   });
 
-  // Hook para cargar datos asincronos
   const { data: items, loading, error, execute: reload } = useAsyncData<TemplateItem[]>(
     () => fetchNui('getTemplateItems', undefined, []),
     { initialData: [] }
   );
 
-  // Tabs de ejemplo
   const tabs: TabItem[] = [
     { id: 'all', label: 'Todos', icon: './img/icons_ios/grid.svg' },
     { id: 'favorites', label: 'Favoritos', icon: './img/icons_ios/star-fill.svg' },
   ];
 
-  // Items filtrados por tab
   const filteredItems = () => {
     const all = items() || [];
     if (activeTab() === 'favorites') {
-      return all.slice(0, 2); // Simular favoritos
+      return all.slice(0, 2);
     }
     return all;
   };
 
-  // Handler para crear nuevo item
   const handleCreate = async () => {
     if (!newItemName().trim()) return;
     await fetchNui('createTemplateItem', { name: newItemName() });
@@ -101,7 +91,6 @@ export function TemplateApp() {
         </Show>
       <AppFAB onClick={() => setShowModal(true)} />
 
-      {/* Modal simple usando clases iOS */}
       <Show when={showModal()}>
         <div class={modalStyles.overlay} onClick={() => setShowModal(false)}>
           <div class={modalStyles.modal} onClick={(e) => e.stopPropagation()}>
@@ -131,7 +120,6 @@ export function TemplateApp() {
   );
 }
 
-// Estilos inline para el modal (puedes moverlos a un .module.scss)
 const modalStyles = {
   overlay: 'fixed inset-0 bg-black/50 flex items-center justify-center z-50',
   modal: 'bg-[var(--surface)] rounded-2xl p-4 w-[90%] max-w-[280px]',

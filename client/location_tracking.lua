@@ -1,5 +1,4 @@
--- OPT-10: Live Location Sharing Client Module
--- Handles periodic position updates for live location sharing
+-- Creado/Modificado por JericoFX
 
 local isSharingLocation = false
 local configSeconds = (Config and Config.LiveLocation and tonumber(Config.LiveLocation.UpdateIntervalSeconds)) or 10
@@ -47,8 +46,6 @@ RegisterNetEvent('gcphone:liveLocation:started', function(data)
 end)
 
 RegisterNetEvent('gcphone:liveLocation:updated', function(data)
-    -- Este evento es para que el frontend sepa que hay una actualización
-    -- La UI consultará getActive para obtener las coordenadas actualizadas
 end)
 
 RegisterNUICallback('startLiveLocation', function(data, cb)

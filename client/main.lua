@@ -1,5 +1,4 @@
--- gcphone-next Client Main
--- Entry point and initialization
+-- Creado/Modificado por JericoFX
 
 PhoneState = {
     isOpen = false,

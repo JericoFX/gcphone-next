@@ -1,5 +1,4 @@
--- OPT-11: Phone Drop Client Module
--- Handles dropping/picking up phones in the world
+-- Creado/Modificado por JericoFX
 
 local currentDroppedPhones = {}
 local phoneObjects = {}
@@ -92,7 +91,7 @@ CreateThread(function()
                         position = 'left-center'
                     })
                     
-                    if IsControlJustReleased(0, 38) then -- E key
+                    if IsControlJustReleased(0, 38) then
                         local action = lib.inputDialog('Telefono encontrado', {
                             {
                                 type = 'select',

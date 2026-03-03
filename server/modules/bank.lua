@@ -1,6 +1,4 @@
--- gcphone-next Server Module: Bank
--- Handles banking operations
--- Verified: ox_lib callback pattern
+-- Creado/Modificado por JericoFX
 
 lib.callback.register('gcphone:getBankBalance', function(source)
     local identifier = GetIdentifier(source)
@@ -14,7 +12,7 @@ lib.callback.register('gcphone:getBankTransactions', function(source)
     local identifier = GetIdentifier(source)
     if not identifier then return {} end
     
-    return {} -- TODO: Implement transaction history from QBCore
+    return {}
 end)
 
 lib.callback.register('gcphone:transferMoney', function(source, data)

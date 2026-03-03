@@ -1,3 +1,5 @@
+-- Creado/Modificado por JericoFX
+
 local isPlaying = false
 local isPaused = false
 local currentUrl = nil

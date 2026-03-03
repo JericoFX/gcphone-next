@@ -1,5 +1,4 @@
--- gcphone-next Bridge: QBCore/QBOX
--- Provides framework abstraction layer
+-- Creado/Modificado por JericoFX
 
 local QBCore = nil
 local Framework = nil

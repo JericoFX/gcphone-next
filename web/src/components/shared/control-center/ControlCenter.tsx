@@ -7,111 +7,6 @@ import styles from './ControlCenter.module.scss';
 
 type TileId = 'airplane' | 'dnd' | 'data' | 'silent' | 'gps' | 'preview';
 
-/*
- * DISABLED: Pull gesture system
- * Moved to Settings for future enable.
- * To re-enable: uncomment the pull zone JSX and handlers below.
- * TODO: Add settings toggle to enable/disable pull gestures
- */
-
-/*
-const DRAG_THRESHOLD = 45;
-
-const [dragProgress, setDragProgress] = createSignal(0);
-const [activeDragZone, setActiveDragZone] = createSignal<'left' | 'right' | null>(null);
-
-let isDragging = false;
-let dragStartY = 0;
-let currentDragY = 0;
-let hasMoved = false;
-
-const handlePullZonePointerDown = (e: PointerEvent, zone: 'left' | 'right') => {
-  isDragging = true;
-  hasMoved = false;
-  dragStartY = e.clientY;
-  currentDragY = e.clientY;
-  setActiveDragZone(zone);
-  (e.target as HTMLElement).setPointerCapture(e.pointerId);
-};
-
-const handlePullZonePointerMove = (e: PointerEvent) => {
-  if (!isDragging) return;
-  
-  currentDragY = e.clientY;
-  const deltaY = currentDragY - dragStartY;
-  
-  if (Math.abs(deltaY) > 5) {
-    hasMoved = true;
-  }
-  
-  const progress = Math.min(1, Math.max(0, deltaY / DRAG_THRESHOLD));
-  setDragProgress(progress);
-};
-
-const handlePullZonePointerUp = (e: PointerEvent) => {
-  if (!isDragging) return;
-  
-  const deltaY = currentDragY - dragStartY;
-  const zone = activeDragZone();
-  
-  if (deltaY >= DRAG_THRESHOLD) {
-    if (zone === 'left') {
-      notificationsActions.setNotificationCenterOpen(true);
-    } else if (zone === 'right') {
-      notificationsActions.setControlCenterOpen(true);
-    }
-  }
-  
-  isDragging = false;
-  hasMoved = false;
-  setDragProgress(0);
-  setActiveDragZone(null);
-};
-
-// Pull zone JSX (disabled)
-<div class={styles.topPullZone} data-testid="pull-zone">
-  <div
-    class={styles.pullHalf}
-    classList={{ [styles.pullHalfActive]: activeDragZone() === 'left' }}
-    data-testid="notification-center-toggle"
-    onPointerDown={(e) => handlePullZonePointerDown(e, 'left')}
-    onPointerMove={handlePullZonePointerMove}
-    onPointerUp={handlePullZonePointerUp}
-    onPointerCancel={handlePullZonePointerUp}
-  >
-    <div 
-      class={styles.pullIndicator} 
-      classList={{ [styles.pullIndicatorVisible]: activeDragZone() === 'left' }}
-      style={{ opacity: dragProgress() * 1.2 }}
-    >
-      <span class={styles.pullIcon}>↓</span>
-      <span class={styles.pullLabel}>Notificaciones</span>
-    </div>
-  </div>
-  <div
-    class={styles.pullHalf}
-    classList={{ [styles.pullHalfActive]: activeDragZone() === 'right' }}
-    data-testid="control-center-toggle"
-    onPointerDown={(e) => handlePullZonePointerDown(e, 'right')}
-    onPointerMove={handlePullZonePointerMove}
-    onPointerUp={handlePullZonePointerUp}
-    onPointerCancel={handlePullZonePointerUp}
-  >
-    <div 
-      class={styles.pullIndicator} 
-      classList={{ [styles.pullIndicatorVisible]: activeDragZone() === 'right' }}
-      style={{ opacity: dragProgress() * 1.2 }}
-    >
-      <span class={styles.pullIcon}>↓</span>
-      <span class={styles.pullLabel}>Control</span>
-    </div>
-  </div>
-  <div 
-    class={styles.pullHintGrabber}
-    classList={{ [styles.pullHintGrabberActive]: activeDragZone() !== null }}
-  />
-</div>
-*/
 
 export function ControlCenter() {
   const [notifications, notificationsActions] = useNotifications();
@@ -266,12 +161,6 @@ export function ControlCenter() {
 
   return (
     <>
-      {/*
-        DISABLED: Pull gesture system
-        To re-enable, uncomment the pull zone JSX in the comment block above
-        and remove this comment.
-      */}
-
       <Show when={notifications.notificationCenterOpen}>
         <div class={styles.overlay} data-testid="notification-center-sheet" onClick={() => notificationsActions.setNotificationCenterOpen(false)}>
           <div

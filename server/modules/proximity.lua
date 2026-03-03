@@ -1,6 +1,4 @@
--- gcphone-next Server Module: Proximity
--- Handles sharing via proximity (ox_target)
--- Verified: ox_lib callback pattern
+-- Creado/Modificado por JericoFX
 
 lib.callback.register('gcphone:proximity:shareContact', function(source, data)
     local identifier = GetIdentifier(source)
@@ -74,7 +72,7 @@ lib.callback.register('gcphone:proximity:shareLocation', function(source, data)
     
     local name = GetName(source)
     
-    local expiresAt = os.time() + 300 -- 5 minutes
+    local expiresAt = os.time() + 300
     
     MySQL.insert.await(
         'INSERT INTO phone_shared_locations (from_identifier, to_identifier, x, y, z, message, expires_at) VALUES (?, ?, ?, ?, ?, ?, FROM_UNIXTIME(?))',

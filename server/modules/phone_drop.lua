@@ -1,5 +1,4 @@
--- OPT-11: Phone Drop Server Module
--- Handles dropping and picking up phones
+-- Creado/Modificado por JericoFX
 
 local PICKUP_DISTANCE = 2.0
 

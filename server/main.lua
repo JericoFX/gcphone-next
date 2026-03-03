@@ -1,5 +1,4 @@
--- gcphone-next Server Main
--- Entry point and initialization
+-- Creado/Modificado por JericoFX
 
 local Bridge = nil
 

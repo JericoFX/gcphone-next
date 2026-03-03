@@ -1,3 +1,5 @@
+-- Creado/Modificado por JericoFX
+
 local function GeneratePhoneNumber()
     local prefix = Config.Phone.NumberPrefix[math.random(1, #Config.Phone.NumberPrefix)]
     local suffix = math.random(1000, 9999)

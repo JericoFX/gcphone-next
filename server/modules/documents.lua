@@ -1,3 +1,5 @@
+-- Creado/Modificado por JericoFX
+
 local function SafeString(value, maxLen)
     if type(value) ~= 'string' then return nil end
     local trimmed = value:gsub('%s+', ' '):gsub('^%s+', ''):gsub('%s+$', '')

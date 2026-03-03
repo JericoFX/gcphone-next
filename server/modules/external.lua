@@ -1,3 +1,5 @@
+-- Creado/Modificado por JericoFX
+
 local function SanitizeQuery(value, maxLength)
     if type(value) ~= 'string' then return '' end
     local text = value:gsub('[%c]', '')

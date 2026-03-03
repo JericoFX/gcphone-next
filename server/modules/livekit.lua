@@ -1,4 +1,4 @@
--- Implements: OPT-01 – Eliminar busy-wait, OPT-04 – Cleanup requests pendientes
+-- Creado/Modificado por JericoFX
 
 local PendingTokenRequests = {}
 local LastTokenRequestId = 0

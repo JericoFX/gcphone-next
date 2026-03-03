@@ -1,3 +1,5 @@
+-- Creado/Modificado por JericoFX
+
 local function SanitizeText(value, maxLength)
     if type(value) ~= 'string' then return '' end
     local text = value:gsub('[%z\1-\31\127]', '')

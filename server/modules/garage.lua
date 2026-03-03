@@ -1,6 +1,4 @@
--- gcphone-next Server Module: Garage
--- Vehicle management
--- Verified: ox_lib callback pattern
+-- Creado/Modificado por JericoFX
 
 lib.callback.register('gcphone:getGarage', function(source)
     local identifier = GetIdentifier(source)

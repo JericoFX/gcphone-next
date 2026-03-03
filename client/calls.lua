@@ -1,5 +1,4 @@
--- gcphone-next Client: Calls
--- Handles WebRTC calls and voice/video
+-- Creado/Modificado por JericoFX
 
 local inCall = false
 local useRTC = false
@@ -19,7 +18,6 @@ end
 local function SetCallVoice(callId)
     if not callId then return end
     if usingPmaVoice then
-        -- Verified: AvarianKnight/pma-voice client/module/phone.lua export setCallChannel(call)
         exports['pma-voice']:setCallChannel(callId)
         return
     end
@@ -30,7 +28,6 @@ end
 
 local function ResetCallVoice()
     if usingPmaVoice then
-        -- Verified: AvarianKnight/pma-voice client/module/phone.lua setCallChannel(0) removes from call
         exports['pma-voice']:setCallChannel(0)
         return
     end

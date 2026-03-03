@@ -1,5 +1,4 @@
--- gcphone-next Client: Proximity
--- Handles ox_target for sharing via proximity
+-- Creado/Modificado por JericoFX
 
 local ox_target = exports.ox_target
 
@@ -57,7 +56,7 @@ ox_target:addGlobalPlayer({
     {
         name = 'gcphone_shareLocation',
         icon = 'fa-solid fa-location-dot',
-        label = 'Compartir ubicación',
+        label = 'Compartir ubicacion',
         distance = Config.Proximity.ShareLocationDistance,
         canInteract = function(entity, distance)
             return IsPhoneOpenSafe() and distance <= Config.Proximity.ShareLocationDistance
@@ -69,7 +68,7 @@ ox_target:addGlobalPlayer({
             
             lib.callback('gcphone:proximity:shareLocation', false, function(success)
                 if success then
-                    lib.notify({ title = 'Ubicación enviada', type = 'success' })
+                    lib.notify({ title = 'Ubicacion enviada', type = 'success' })
                 end
             end, {
                 targetServerId = targetServerId,
@@ -82,7 +81,7 @@ ox_target:addGlobalPlayer({
     {
         name = 'gcphone_addFriend',
         icon = 'fa-solid fa-user-plus',
-        label = 'Añadir a redes sociales',
+        label = 'Anadir a redes sociales',
         distance = Config.Proximity.FriendRequestDistance,
         canInteract = function(entity, distance)
             return IsPhoneOpenSafe() and distance <= Config.Proximity.FriendRequestDistance
@@ -113,7 +112,7 @@ RegisterNUICallback('sendFriendRequest', function(data, cb)
     lib.callback('gcphone:proximity:sendFriendRequest', false, function(success, msg)
         if success then
             if msg == 'accepted' then
-                lib.notify({ title = '¡Ahora son amigos!', type = 'success' })
+                lib.notify({ title = 'Ahora son amigos!', type = 'success' })
             else
                 lib.notify({ title = 'Solicitud enviada', type = 'success' })
             end
@@ -159,8 +158,8 @@ RegisterNetEvent('gcphone:receiveSharedLocation', function(data)
     })
     
     lib.notify({ 
-        title = 'Ubicación recibida',
-        description = data.from .. ' te ha compartido su ubicación',
+        title = 'Ubicacion recibida',
+        description = data.from .. ' te ha compartido su ubicacion',
         type = 'info'
     })
 end)
@@ -192,8 +191,8 @@ RegisterNetEvent('gcphone:receiveSharedPost', function(data)
     })
     
     lib.notify({ 
-        title = 'Publicación compartida',
-        description = data.from .. ' te ha compartido una publicación',
+        title = 'Publicacion compartida',
+        description = data.from .. ' te ha compartido una publicacion',
         type = 'info'
     })
 end)

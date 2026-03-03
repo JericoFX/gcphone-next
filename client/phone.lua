@@ -1,5 +1,4 @@
--- gcphone-next Client: Phone UI Control
--- Handles phone open/close, NUI focus, and keyboard controls
+-- Creado/Modificado por JericoFX
 
 local KeyOpenClose = Config.Phone.KeyOpen
 local menuIsOpen = false

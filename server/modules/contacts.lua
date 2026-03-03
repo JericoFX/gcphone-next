@@ -1,6 +1,4 @@
--- gcphone-next Server Module: Contacts
--- Handles contact CRUD operations
--- Verified: ox_lib callback pattern
+-- Creado/Modificado por JericoFX
 
 local function GetContacts(identifier)
     if not identifier then return {} end

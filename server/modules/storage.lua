@@ -1,3 +1,5 @@
+-- Creado/Modificado por JericoFX
+
 local function SafeText(value, maxLen)
     if type(value) ~= 'string' then return nil end
     local text = value:gsub('[%z\1-\31\127]', ''):gsub('^%s+', ''):gsub('%s+$', '')

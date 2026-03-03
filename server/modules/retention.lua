@@ -1,3 +1,5 @@
+-- Creado/Modificado por JericoFX
+
 local function ClampNumber(value, minValue, maxValue, fallback)
     local num = tonumber(value)
     if not num then return fallback end

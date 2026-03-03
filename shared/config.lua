@@ -1,18 +1,11 @@
--- gcphone-next Configuration
--- Verified: QBCore compatible config
-
 Config = Config or {}
-
--- Phone Settings
 Config.Phone = {
-    KeyOpen = 288,              -- F1 - Key to open phone
-    KeyTakeCall = 38,           -- E - Key to take call from fixe phone
+    KeyOpen = 288,
+    KeyTakeCall = 38,
     
-    -- Phone number generation
-    NumberFormat = 'XXX-XXXX',  -- Format: 555-1234
+    NumberFormat = 'XXX-XXXX',
     NumberPrefix = { 555, 556, 557, 558, 559 },
-    
-    -- Default settings for new phones
+
     DefaultSettings = {
         wallpaper = './img/background/back001.jpg',
         ringtone = 'ring.ogg',
@@ -23,19 +16,16 @@ Config.Phone = {
         language = 'es',
         audioProfile = 'normal',
     },
-    
-    -- Warning message when SMS is full
+
     WarningMessageCount = 100,
 }
 
--- Contacts Settings
 Config.Contacts = {
     MaxContacts = 200,
     AllowSharing = true,
-    ProximityDistance = 3.0,    -- meters
+    ProximityDistance = 3.0,
 }
 
--- Messages Settings  
 Config.Messages = {
     MaxMessages = 500,
     MaxMessageLength = 500,
@@ -43,13 +33,11 @@ Config.Messages = {
     AllowPhotos = true,
 }
 
--- Calls Settings
 Config.Calls = {
-    UseWebRTC = true,           -- Enable WebRTC for voice/video
-    MaxCallDuration = 3600,     -- 1 hour max
-    HiddenNumberPrefix = '#',   -- Prefix to hide caller ID
-    
-    -- WebRTC Configuration
+    UseWebRTC = true,
+    MaxCallDuration = 3600,
+    HiddenNumberPrefix = '#',
+
     RTCConfig = {
         iceServers = {
             { urls = 'stun:stun.l.google.com:19302' },
@@ -150,45 +138,39 @@ Config.Storage = {
     MaxVideoDurationSeconds = 60,
 }
 
--- Gallery Settings
 Config.Gallery = {
     MaxPhotos = 100,
-    MaxPhotoSize = 5242880,     -- 5MB
+    MaxPhotoSize = 5242880,
     AllowedFormats = { 'jpg', 'jpeg', 'png', 'gif', 'webp' },
-    UploadUrl = '',             -- Set screenshot upload endpoint for camera captures
-    UploadField = 'files[]',    -- Multipart field name for screenshot-basic
+    UploadUrl = '',
+    UploadField = 'files[]',
 }
 
--- Bank Settings
 Config.Bank = {
-    TransferFee = 0,            -- Fee for transfers
+    TransferFee = 0,
     MaxTransferAmount = 1000000,
 }
 
--- Chirp (Twitter clone) Settings
 Config.Chirp = {
     MaxTweetLength = 280,
     MaxTweetsPerDay = 100,
     AllowMedia = true,
 }
 
--- Snap (Instagram clone) Settings
 Config.Snap = {
-    StoryDuration = 86400,      -- 24 hours in seconds
+    StoryDuration = 86400,
     MaxPostsPerDay = 50,
     AllowLive = true,
-    MaxLiveDuration = 3600,     -- 1 hour
+    MaxLiveDuration = 3600,
 }
 
--- Garage Settings
 Config.Garage = {
     MaxVehicles = 20,
 }
 
--- Market (Classifieds) Settings
 Config.Market = {
     MaxListings = 10,
-    ListingDuration = 604800,   -- 7 days in seconds
+    ListingDuration = 604800,
     MaxPhotos = 5,
     Categories = {
         { id = 'vehicles', label = 'Vehículos', icon = '🚗' },
@@ -199,11 +181,10 @@ Config.Market = {
     },
 }
 
--- News Settings
 Config.News = {
     MaxArticlesPerDay = 20,
     AllowLive = true,
-    MaxLiveDuration = 3600,     -- 1 hour
+    MaxLiveDuration = 3600,
     Categories = {
         { id = 'general', label = 'General', icon = '📰' },
         { id = 'urgent', label = 'Urgente', icon = '⚠️' },
@@ -213,14 +194,12 @@ Config.News = {
     },
 }
 
--- Proximity Settings (ox_target)
 Config.Proximity = {
     ShareContactDistance = 3.0,
     ShareLocationDistance = 5.0,
     FriendRequestDistance = 5.0,
 }
 
--- Fixe Phones (public phones)
 Config.FixePhone = {
     ['911'] = { 
         name = 'Central de Emergencias', 
@@ -232,14 +211,12 @@ Config.FixePhone = {
     },
 }
 
--- Sound files
 Config.Sounds = {
     Ringtones = { 'ring.ogg', 'ring2.ogg', 'iphone11.ogg', 'casa_papel.ogg', 'bella_ciao.ogg' },
     MessageSound = 'Menu_Accept',
     MessageSoundSet = 'Phone_SoundSet_Default',
 }
 
--- API Settings (for wallpapers)
 Config.APIs = {
     Unsplash = {
         Enabled = false,
@@ -259,7 +236,6 @@ Config.APIs = {
     },
 }
 
--- Framework detection
-Config.Framework = 'qbcore'     -- 'qbcore' or 'qbox' or 'esx'
+Config.Framework = 'qbcore'
 
 return Config

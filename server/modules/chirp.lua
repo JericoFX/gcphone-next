@@ -1,6 +1,4 @@
--- gcphone-next Server Module: Chirp
--- Twitter-like social media
--- Verified: ox_lib callback pattern
+-- Creado/Modificado por JericoFX
 
 local function SanitizeText(value, maxLength)
     if type(value) ~= 'string' then return '' end

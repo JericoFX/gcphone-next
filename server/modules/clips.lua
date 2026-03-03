@@ -1,5 +1,4 @@
--- gcphone-next Server Module: Clips
--- Short-video feed (video-only)
+-- Creado/Modificado por JericoFX
 
 local function SanitizeText(value, maxLength)
     if type(value) ~= 'string' then return '' end

@@ -1,3 +1,5 @@
+-- Creado/Modificado por JericoFX
+
 local LastRoomActionBySource = {}
 
 local function SanitizeText(value, maxLength)
