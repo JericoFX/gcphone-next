@@ -1,0 +1,56 @@
+.grid {
+  display: grid;
+  gap: 10px;
+}
+
+.docCard {
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(12, 18, 31, 0.9);
+  color: #eef6ff;
+  padding: 10px;
+  display: grid;
+  gap: 4px;
+
+  p {
+    margin: 0;
+    font-size: 12px;
+    color: rgba(231, 241, 255, 0.9);
+  }
+
+  button {
+    justify-self: end;
+    border: none;
+    border-radius: 8px;
+    padding: 4px 8px;
+    background: rgba(255, 110, 110, 0.2);
+    color: #ffdede;
+    font-size: 11px;
+    font-weight: 700;
+  }
+}
+
+.topRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  strong {
+    font-size: 13px;
+  }
+
+  span {
+    font-size: 10px;
+    border-radius: 999px;
+    padding: 3px 8px;
+    background: rgba(125, 166, 255, 0.25);
+    color: #d6e8ff;
+  }
+}
+
+.code {
+  margin-top: 3px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 11px;
+  color: #b9d8ff;
+}

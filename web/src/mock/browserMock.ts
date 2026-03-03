@@ -10,6 +10,7 @@ interface BrowserMockState {
   lockCode: string;
   coque: string;
   theme: 'auto' | 'light' | 'dark';
+  audioProfile: 'normal' | 'street' | 'vehicle' | 'silent';
   contacts: Contact[];
   messages: Message[];
   calls: Call[];
@@ -30,6 +31,7 @@ const state: BrowserMockState = {
   lockCode: '1234',
   coque: 'sin_funda.png',
   theme: 'light',
+  audioProfile: 'normal',
   contacts: [
     { id: 1, display: 'Maria Garcia', number: '555-1111', favorite: true },
     { id: 2, display: 'Juan Perez', number: '555-2222', favorite: false },
@@ -68,8 +70,8 @@ const state: BrowserMockState = {
     { id: 2, description: 'Transferencia enviada', amount: -1200, time: nowIso() },
   ],
   appLayout: {
-    home: ['contacts', 'messages', 'calls', 'settings', 'gallery', 'camera', 'bank', 'wavechat', 'music', 'chirp', 'snap', 'clips', 'darkrooms', 'yellowpages', 'market', 'news', 'garage', 'clock', 'notes', 'maps', 'weather'],
-    menu: []
+    home: ['contacts', 'messages', 'calls', 'settings', 'gallery', 'camera', 'bank', 'wallet', 'documents', 'wavechat', 'music', 'chirp', 'snap', 'clips', 'darkrooms', 'yellowpages', 'market', 'news', 'garage', 'clock', 'notes', 'maps', 'weather'],
+    menu: ['appstore']
   },
   airplaneMode: false,
 };
@@ -90,6 +92,19 @@ const phonePayload = () => ({
   lockCode: state.lockCode,
   coque: state.coque,
   theme: state.theme,
+  audioProfile: state.audioProfile,
+  appLayout: state.appLayout,
+  enabledApps: [...state.appLayout.home, ...state.appLayout.menu],
+  featureFlags: {
+    appstore: true,
+    wavechat: true,
+    darkrooms: true,
+    clips: true,
+    wallet: true,
+    documents: true,
+    music: true,
+    yellowpages: true,
+  },
 });
 
 let nextContactId = 4;
@@ -308,6 +323,14 @@ export function handleBrowserNui<T = unknown>(eventName: string, data?: unknown)
     const nextTheme = String(payload.theme || state.theme);
     if (nextTheme === 'auto' || nextTheme === 'light' || nextTheme === 'dark') {
       state.theme = nextTheme;
+    }
+    return true as T;
+  }
+
+  if (eventName === 'setAudioProfile') {
+    const nextProfile = String(payload.audioProfile || state.audioProfile);
+    if (nextProfile === 'normal' || nextProfile === 'street' || nextProfile === 'vehicle' || nextProfile === 'silent') {
+      state.audioProfile = nextProfile;
     }
     return true as T;
   }
@@ -577,6 +600,39 @@ export function handleBrowserNui<T = unknown>(eventName: string, data?: unknown)
   }
 
   if (eventName === 'chirpDeleteTweet') {
+    return { success: true } as T;
+  }
+
+  if (eventName === 'walletGetState') {
+    return {
+      balance: state.balance,
+      cards: [
+        { id: 1, label: 'Debito principal', last4: '1024', color: '#324A7A' },
+        { id: 2, label: 'Card secundaria', last4: '7782', color: '#6E4A8A' },
+      ],
+      transactions: [
+        { id: 1, amount: 2400, type: 'in', title: 'Pago recibido', created_at: nowIso() },
+        { id: 2, amount: 700, type: 'out', title: 'Transferencia enviada', created_at: nowIso() },
+      ],
+    } as T;
+  }
+
+  if (eventName === 'walletTransfer') {
+    return { success: true, balance: Math.max(0, state.balance - Number(payload.amount || 0)) } as T;
+  }
+
+  if (eventName === 'walletAddCard' || eventName === 'walletRemoveCard') {
+    return { success: true } as T;
+  }
+
+  if (eventName === 'documentsGetList') {
+    return [
+      { id: 1, doc_type: 'id', title: 'DNI Digital', holder_name: 'Mock User', holder_number: '555-1234', expires_at: '2028-01-10', verification_code: 'AB12CD34', created_at: nowIso() },
+      { id: 2, doc_type: 'license', title: 'Licencia', holder_name: 'Mock User', holder_number: 'LIC-1088', expires_at: '2027-09-18', verification_code: 'ZX98QR17', created_at: nowIso() },
+    ] as T;
+  }
+
+  if (eventName === 'documentsCreate' || eventName === 'documentsDelete') {
     return { success: true } as T;
   }
 

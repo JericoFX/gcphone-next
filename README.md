@@ -47,6 +47,11 @@ Core:
 - `setr gcphone_music_piped_api_url "https://pipedapi.kavin.rocks"`
 - `setr gcphone_retention_days "7"`
 - `setr gcphone_retention_interval_minutes "30"`
+- `setr gcphone_feature_wallet "1"`
+- `setr gcphone_feature_documents "1"`
+- `setr gcphone_feature_darkrooms "1"`
+- `setr gcphone_feature_appstore "1"`
+- `setr gcphone_feature_music "1"`
 
 LiveKit:
 
@@ -219,6 +224,15 @@ Features:
 For existing servers, run:
 
 - `sql/migration_20260303_darkrooms_upgrade.sql`
+
+## Wallet + Documents
+
+New core apps included:
+
+- `Wallet` (local balance, cards, transfers)
+- `Documents` (ID/license/permit style docs with verification code)
+
+Both are enabled with feature flags by default and use server-side SQL tables.
 
 ## App scaffold for external devs
 

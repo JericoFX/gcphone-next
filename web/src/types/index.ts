@@ -47,6 +47,18 @@ export interface PhoneSettings {
   lockCode: string;
   coque: string;
   theme: 'auto' | 'light' | 'dark';
+  audioProfile?: 'normal' | 'street' | 'vehicle' | 'silent';
+}
+
+export interface PhoneFeatureFlags {
+  appstore: boolean;
+  wavechat: boolean;
+  darkrooms: boolean;
+  clips: boolean;
+  wallet: boolean;
+  documents: boolean;
+  music: boolean;
+  yellowpages: boolean;
 }
 
 export interface PhoneState {
@@ -55,6 +67,8 @@ export interface PhoneState {
   initialized: boolean;
   settings: PhoneSettings;
   appLayout: AppLayout;
+  enabledApps: string[];
+  featureFlags: PhoneFeatureFlags;
 }
 
 export interface PhoneNotification {

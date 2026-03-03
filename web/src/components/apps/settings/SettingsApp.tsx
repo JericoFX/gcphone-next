@@ -198,6 +198,43 @@ export function SettingsApp() {
             <span class="ios-chip">{Math.round(phoneState.settings.volume * 100)}%</span>
           </div>
 
+          <div class="ios-section-title">Perfil de audio</div>
+          <div class="ios-list">
+            <div class="ios-row">
+              <span class="ios-label">Contexto</span>
+              <div class="ios-segment">
+                <button
+                  class="ios-segment-btn"
+                  classList={{ 'ios-segment-btn-active': (phoneState.settings.audioProfile || 'normal') === 'normal' }}
+                  onClick={() => phoneActions.setAudioProfile('normal')}
+                >
+                  Normal
+                </button>
+                <button
+                  class="ios-segment-btn"
+                  classList={{ 'ios-segment-btn-active': (phoneState.settings.audioProfile || 'normal') === 'street' }}
+                  onClick={() => phoneActions.setAudioProfile('street')}
+                >
+                  Calle
+                </button>
+                <button
+                  class="ios-segment-btn"
+                  classList={{ 'ios-segment-btn-active': (phoneState.settings.audioProfile || 'normal') === 'vehicle' }}
+                  onClick={() => phoneActions.setAudioProfile('vehicle')}
+                >
+                  Vehiculo
+                </button>
+                <button
+                  class="ios-segment-btn"
+                  classList={{ 'ios-segment-btn-active': (phoneState.settings.audioProfile || 'normal') === 'silent' }}
+                  onClick={() => phoneActions.setAudioProfile('silent')}
+                >
+                  Silencio
+                </button>
+              </div>
+            </div>
+          </div>
+
           <div class="ios-section-title">Tono</div>
           <div class="ios-list">
             <For each={ringtones}>
@@ -232,7 +269,7 @@ export function SettingsApp() {
         <Show when={tab() === 'advanced'}>
           <div class="ios-section-title">Notificaciones por App</div>
           <div class={`ios-card ${styles.notificationCard}`}>
-            <For each={APP_DEFINITIONS}>
+            <For each={APP_DEFINITIONS.filter((app) => phoneState.enabledApps.includes(app.id))}>
               {(app) => {
                 const unreadCount = notificationsActions.getUnreadCount(app.id);
                 return (

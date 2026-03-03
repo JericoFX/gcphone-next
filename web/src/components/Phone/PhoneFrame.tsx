@@ -45,6 +45,9 @@ const lazyApps = {
   messages: lazy(() => import('../apps/messages/MessagesApp').then(m => ({ default: m.MessagesApp }))),
   settings: lazy(() => import('../apps/settings/SettingsApp').then(m => ({ default: m.SettingsApp }))),
   bank: lazy(() => import('../apps/bank/BankApp').then(m => ({ default: m.BankApp }))),
+  wallet: lazy(() => import('../apps/wallet/WalletApp').then(m => ({ default: m.WalletApp }))),
+  documents: lazy(() => import('../apps/documents/DocumentsApp').then(m => ({ default: m.DocumentsApp }))),
+  appstore: lazy(() => import('../apps/appstore/AppStoreApp').then(m => ({ default: m.AppStoreApp }))),
   gallery: lazy(() => import('../apps/gallery/GalleryApp').then(m => ({ default: m.GalleryApp }))),
   chirp: lazy(() => import('../apps/chirp/ChirpApp').then(m => ({ default: m.ChirpApp }))),
   snap: lazy(() => import('../apps/snap/SnapApp').then(m => ({ default: m.SnapApp }))),
@@ -69,6 +72,9 @@ const APP_NAMES: Record<string, string> = {
   messages: 'Mensajes',
   settings: 'Ajustes',
   bank: 'Banco',
+  wallet: 'Wallet',
+  documents: 'Documentos',
+  appstore: 'App Store',
   gallery: 'Galeria',
   chirp: 'Chirp',
   snap: 'Snap',
@@ -215,6 +221,8 @@ function Router() {
 
   const renderRoute = (route: AppRoute) => {
     if (route === 'home') return <HomeScreen />;
+
+    if (!phoneState.enabledApps.includes(route)) return <HomeScreen />;
     
     const LazyApp = lazyApps[route as keyof typeof lazyApps];
     

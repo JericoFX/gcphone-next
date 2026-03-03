@@ -1,0 +1,58 @@
+.balanceCard {
+  border-radius: 18px;
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: linear-gradient(145deg, rgba(46, 59, 87, 0.95), rgba(27, 35, 52, 0.95));
+  color: #f6f9ff;
+  display: grid;
+  gap: 8px;
+
+  strong {
+    font-size: 25px;
+    letter-spacing: -0.02em;
+  }
+}
+
+.actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.cardsGrid {
+  display: grid;
+  gap: 8px;
+}
+
+.cardItem {
+  border-radius: 14px;
+  padding: 10px;
+  color: #fff;
+  display: grid;
+  gap: 4px;
+
+  span {
+    font-size: 12px;
+    opacity: 0.88;
+  }
+
+  button {
+    justify-self: end;
+    border: none;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.16);
+    color: #fff;
+    font-size: 11px;
+    padding: 4px 8px;
+  }
+}
+
+.in {
+  color: #55d18b;
+  font-weight: 700;
+}
+
+.out {
+  color: #ff8a8a;
+  font-weight: 700;
+}

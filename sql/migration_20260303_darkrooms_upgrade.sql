@@ -79,6 +79,54 @@ ALTER TABLE `phone_darkrooms_comments`
     ADD COLUMN IF NOT EXISTS `media_url` VARCHAR(500) DEFAULT NULL AFTER `content`,
     ADD COLUMN IF NOT EXISTS `is_anonymous` TINYINT(1) DEFAULT 0 AFTER `media_url`;
 
+ALTER TABLE `phone_numbers`
+    ADD COLUMN IF NOT EXISTS `audio_profile` VARCHAR(16) DEFAULT 'normal' AFTER `theme`;
+
+CREATE TABLE IF NOT EXISTS `phone_wallets` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `identifier` VARCHAR(50) NOT NULL UNIQUE,
+    `balance` DECIMAL(12,2) DEFAULT 0,
+    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    KEY `idx_wallet_identifier` (`identifier`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `phone_wallet_cards` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `identifier` VARCHAR(50) NOT NULL,
+    `label` VARCHAR(32) NOT NULL,
+    `last4` CHAR(4) NOT NULL,
+    `color` VARCHAR(20) DEFAULT '#2E3B57',
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    KEY `idx_wallet_cards_identifier` (`identifier`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `phone_wallet_transactions` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `identifier` VARCHAR(50) NOT NULL,
+    `amount` DECIMAL(12,2) NOT NULL,
+    `type` ENUM('in','out','adjust') NOT NULL,
+    `title` VARCHAR(64) DEFAULT NULL,
+    `target_phone` VARCHAR(15) DEFAULT NULL,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    KEY `idx_wallet_tx_identifier` (`identifier`),
+    KEY `idx_wallet_tx_created` (`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `phone_documents` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `identifier` VARCHAR(50) NOT NULL,
+    `doc_type` VARCHAR(24) NOT NULL,
+    `title` VARCHAR(64) NOT NULL,
+    `holder_name` VARCHAR(64) NOT NULL,
+    `holder_number` VARCHAR(20) DEFAULT NULL,
+    `expires_at` VARCHAR(24) DEFAULT NULL,
+    `verification_code` VARCHAR(20) NOT NULL,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    KEY `idx_documents_identifier` (`identifier`),
+    KEY `idx_documents_type` (`doc_type`),
+    KEY `idx_documents_code` (`verification_code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 ALTER TABLE `phone_messages`
     ADD INDEX IF NOT EXISTS `idx_phone_messages_time` (`time`);
 ALTER TABLE `phone_chat_group_messages`

@@ -1,5 +1,6 @@
 import { For, Show, createEffect, createSignal, onCleanup } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
+import { usePhone } from '../../../store/phone';
 import { fetchNui } from '../../../utils/fetchNui';
 import styles from './MusicApp.module.scss';
 
@@ -31,6 +32,7 @@ const DEFAULT_THUMB = './img/icons_ios/music.svg';
 
 export function MusicApp() {
   const router = useRouter();
+  const [phoneState] = usePhone();
 
   const [query, setQuery] = createSignal('');
   const [searching, setSearching] = createSignal(false);
@@ -139,7 +141,7 @@ export function MusicApp() {
     await fetchNui('musicPlay', {
       videoId: track.videoId,
       title: track.title,
-      volume: volume() / 100,
+      volume: applyAudioProfile(volume() / 100),
       distance: distance(),
     });
 
@@ -161,7 +163,7 @@ export function MusicApp() {
     await fetchNui('musicPlay', {
       url,
       title: 'URL manual',
-      volume: volume() / 100,
+      volume: applyAudioProfile(volume() / 100),
       distance: distance(),
     });
 
@@ -206,9 +208,17 @@ export function MusicApp() {
 
     if (!isPlaying()) return;
     await fetchNui('musicSetVolume', {
-      volume: nextVolume / 100,
+      volume: applyAudioProfile(nextVolume / 100),
       distance: nextDistance,
     });
+  };
+
+  const applyAudioProfile = (baseVolume: number) => {
+    const profile = phoneState.settings.audioProfile || 'normal';
+    if (profile === 'silent') return 0;
+    if (profile === 'street') return Math.min(1, baseVolume * 1.2);
+    if (profile === 'vehicle') return Math.min(1, baseVolume * 1.1);
+    return baseVolume;
   };
 
   return (

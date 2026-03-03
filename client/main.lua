@@ -21,6 +21,7 @@ CreateThread(function()
             PhoneState.volume = data.volume
             PhoneState.lockCode = data.lockCode
             PhoneState.coque = data.coque
+            PhoneState.audioProfile = data.audioProfile
             
             SendNUIMessage({
                 action = 'initPhone',
@@ -37,6 +38,7 @@ RegisterNetEvent('gcphone:init', function(data)
     PhoneState.volume = data.volume
     PhoneState.lockCode = data.lockCode
     PhoneState.coque = data.coque
+    PhoneState.audioProfile = data.audioProfile
     
     SendNUIMessage({
         action = 'initPhone',

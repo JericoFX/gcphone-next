@@ -46,6 +46,8 @@ server_scripts {
     'server/modules/calls.lua',
     'server/modules/gallery.lua',
     'server/modules/bank.lua',
+    'server/modules/wallet.lua',
+    'server/modules/documents.lua',
     'server/modules/chirp.lua',
     'server/modules/snap.lua',
     'server/modules/garage.lua',

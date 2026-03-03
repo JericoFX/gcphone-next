@@ -12,12 +12,17 @@ const APP_CATEGORY: Record<string, StoreTab> = {
   snap: 'social',
   market: 'social',
   news: 'social',
+  darkrooms: 'social',
+  clips: 'social',
+  yellowpages: 'social',
   contacts: 'core',
   messages: 'core',
   calls: 'core',
   settings: 'core',
   gallery: 'core',
   bank: 'core',
+  wallet: 'core',
+  documents: 'core',
   appstore: 'core',
   garage: 'utility',
   clock: 'utility',
@@ -60,6 +65,7 @@ export function AppStoreApp() {
     const q = query().trim().toLowerCase();
 
     return APP_DEFINITIONS.filter((app) => app.id !== 'appstore')
+      .filter((app) => phoneState.enabledApps.includes(app.id))
       .filter((app) => {
         const cat = APP_CATEGORY[app.id] || 'utility';
         if (tab() !== 'all' && cat !== tab()) return false;

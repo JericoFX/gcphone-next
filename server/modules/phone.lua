@@ -45,10 +45,15 @@ local AllowedApps = {
     gallery = true,
     camera = true,
     bank = true,
+    wallet = true,
+    documents = true,
+    appstore = true,
     wavechat = true,
     music = true,
     chirp = true,
     snap = true,
+    clips = true,
+    darkrooms = true,
     yellowpages = true,
     market = true,
     news = true,
@@ -60,13 +65,61 @@ local AllowedApps = {
 }
 
 local DefaultLayout = {
-    home = { 'contacts', 'messages', 'calls', 'settings', 'gallery', 'camera', 'bank', 'wavechat', 'music', 'chirp', 'snap', 'yellowpages', 'market', 'news', 'garage', 'clock', 'notes', 'maps', 'weather' },
-    menu = {}
+    home = { 'contacts', 'messages', 'calls', 'settings', 'gallery', 'camera', 'bank', 'wallet', 'documents', 'wavechat', 'music', 'chirp', 'snap', 'clips', 'darkrooms', 'yellowpages', 'market', 'news', 'garage', 'clock', 'notes', 'maps', 'weather' },
+    menu = { 'appstore' }
 }
 
-local function NormalizeLayout(layout)
+local function GetFeatureFlags()
+    local defaults = Config.Features or {}
+
+    local function resolveConvarBool(name, fallback)
+        local raw = GetConvar(name, fallback and '1' or '0')
+        return raw == '1' or raw == 'true' or raw == 'TRUE'
+    end
+
+    return {
+        appstore = resolveConvarBool('gcphone_feature_appstore', defaults.AppStore ~= false),
+        wavechat = resolveConvarBool('gcphone_feature_wavechat', defaults.WaveChat ~= false),
+        darkrooms = resolveConvarBool('gcphone_feature_darkrooms', defaults.DarkRooms ~= false),
+        clips = resolveConvarBool('gcphone_feature_clips', defaults.Clips ~= false),
+        wallet = resolveConvarBool('gcphone_feature_wallet', defaults.Wallet ~= false),
+        documents = resolveConvarBool('gcphone_feature_documents', defaults.Documents ~= false),
+        music = resolveConvarBool('gcphone_feature_music', defaults.Music ~= false),
+        yellowpages = resolveConvarBool('gcphone_feature_yellowpages', defaults.YellowPages ~= false),
+    }
+end
+
+local function BuildEnabledApps(flags)
+    local enabled = {}
+    for appId, _ in pairs(AllowedApps) do
+        enabled[appId] = true
+    end
+
+    if not flags.appstore then enabled.appstore = nil end
+    if not flags.wavechat then enabled.wavechat = nil end
+    if not flags.darkrooms then enabled.darkrooms = nil end
+    if not flags.clips then enabled.clips = nil end
+    if not flags.wallet then enabled.wallet = nil end
+    if not flags.documents then enabled.documents = nil end
+    if not flags.music then enabled.music = nil end
+    if not flags.yellowpages then enabled.yellowpages = nil end
+
+    return enabled
+end
+
+local function EnabledList(enabledApps)
+    local out = {}
+    for appId, active in pairs(enabledApps) do
+        if active then table.insert(out, appId) end
+    end
+    table.sort(out)
+    return out
+end
+
+local function NormalizeLayout(layout, enabledApps)
+    enabledApps = enabledApps or AllowedApps
     if type(layout) ~= 'table' then
-        return DefaultLayout
+        layout = DefaultLayout
     end
 
     local used = {}
@@ -78,7 +131,7 @@ local function NormalizeLayout(layout)
     local function pushUnique(listName, values)
         if type(values) ~= 'table' then return end
         for _, appId in ipairs(values) do
-            if type(appId) == 'string' and AllowedApps[appId] and not used[appId] then
+            if type(appId) == 'string' and enabledApps[appId] and not used[appId] then
                 table.insert(result[listName], appId)
                 used[appId] = true
             end
@@ -89,14 +142,14 @@ local function NormalizeLayout(layout)
     pushUnique('menu', layout.menu)
 
     for _, appId in ipairs(DefaultLayout.home) do
-        if not used[appId] then
+        if enabledApps[appId] and not used[appId] then
             table.insert(result.home, appId)
             used[appId] = true
         end
     end
 
     for _, appId in ipairs(DefaultLayout.menu) do
-        if not used[appId] then
+        if enabledApps[appId] and not used[appId] then
             table.insert(result.menu, appId)
             used[appId] = true
         end
@@ -133,7 +186,7 @@ local function GetOrCreatePhone(source)
     local imei = GenerateIMEI()
     
     MySQL.insert.await(
-        'INSERT INTO phone_numbers (identifier, phone_number, imei, wallpaper, ringtone, volume, lock_code, coque, theme) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        'INSERT INTO phone_numbers (identifier, phone_number, imei, wallpaper, ringtone, volume, lock_code, coque, theme, audio_profile) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
         { 
             identifier, 
             phoneNumber, 
@@ -143,7 +196,8 @@ local function GetOrCreatePhone(source)
             Config.Phone.DefaultSettings.volume,
             Config.Phone.DefaultSettings.lockCode,
             Config.Phone.DefaultSettings.coque,
-            Config.Phone.DefaultSettings.theme
+            Config.Phone.DefaultSettings.theme,
+            Config.Phone.DefaultSettings.audioProfile or 'normal'
         }
     )
     
@@ -156,6 +210,15 @@ end
 lib.callback.register('gcphone:getPhoneData', function(source)
     local phone = GetOrCreatePhone(source)
     if not phone then return nil end
+
+    local featureFlags = GetFeatureFlags()
+    local enabledApps = BuildEnabledApps(featureFlags)
+    local layoutRaw = MySQL.scalar.await(
+        'SELECT layout_json FROM phone_layouts WHERE identifier = ?',
+        { phone.identifier }
+    )
+    local savedLayout = layoutRaw and layoutRaw ~= '' and json.decode(layoutRaw) or nil
+    local appLayout = NormalizeLayout(savedLayout, enabledApps)
     
     return {
         phoneNumber = phone.phone_number,
@@ -165,7 +228,11 @@ lib.callback.register('gcphone:getPhoneData', function(source)
         volume = phone.volume,
         lockCode = phone.lock_code,
         coque = phone.coque,
-        theme = phone.theme or 'light'
+        theme = phone.theme or 'light',
+        audioProfile = phone.audio_profile or 'normal',
+        appLayout = appLayout,
+        enabledApps = EnabledList(enabledApps),
+        featureFlags = featureFlags,
     }
 end)
 
@@ -253,9 +320,26 @@ lib.callback.register('gcphone:setTheme', function(source, data)
     return true
 end)
 
+lib.callback.register('gcphone:setAudioProfile', function(source, data)
+    local identifier = GetIdentifier(source)
+    if not identifier then return false end
+    local profile = SafeString(type(data) == 'table' and data.audioProfile or nil, 16)
+    if profile ~= 'normal' and profile ~= 'street' and profile ~= 'vehicle' and profile ~= 'silent' then
+        return false
+    end
+
+    MySQL.update.await(
+        'UPDATE phone_numbers SET audio_profile = ? WHERE identifier = ?',
+        { profile, identifier }
+    )
+
+    return true
+end)
+
 lib.callback.register('gcphone:getAppLayout', function(source)
     local identifier = GetIdentifier(source)
-    if not identifier then return DefaultLayout end
+    local enabledApps = BuildEnabledApps(GetFeatureFlags())
+    if not identifier then return NormalizeLayout(DefaultLayout, enabledApps) end
 
     local layoutRaw = MySQL.scalar.await(
         'SELECT layout_json FROM phone_layouts WHERE identifier = ?',
@@ -263,18 +347,18 @@ lib.callback.register('gcphone:getAppLayout', function(source)
     )
 
     if not layoutRaw or layoutRaw == '' then
-        return DefaultLayout
+        return NormalizeLayout(DefaultLayout, enabledApps)
     end
 
     local decoded = json.decode(layoutRaw)
-    return NormalizeLayout(decoded)
+    return NormalizeLayout(decoded, enabledApps)
 end)
 
 lib.callback.register('gcphone:setAppLayout', function(source, layout)
     local identifier = GetIdentifier(source)
     if not identifier then return false end
 
-    local normalized = NormalizeLayout(layout)
+    local normalized = NormalizeLayout(layout, BuildEnabledApps(GetFeatureFlags()))
     local encoded = json.encode(normalized)
 
     MySQL.insert.await(
@@ -310,6 +394,13 @@ RegisterNetEvent('QBCore:Server:PlayerLoaded', function(Player)
     
     local phone = GetOrCreatePhone(Player.PlayerData.source)
     if phone then
+        local featureFlags = GetFeatureFlags()
+        local enabledApps = BuildEnabledApps(featureFlags)
+        local layoutRaw = MySQL.scalar.await(
+            'SELECT layout_json FROM phone_layouts WHERE identifier = ?',
+            { phone.identifier }
+        )
+        local savedLayout = layoutRaw and layoutRaw ~= '' and json.decode(layoutRaw) or nil
         TriggerClientEvent('gcphone:init', Player.PlayerData.source, {
             phoneNumber = phone.phone_number,
             wallpaper = phone.wallpaper,
@@ -317,7 +408,11 @@ RegisterNetEvent('QBCore:Server:PlayerLoaded', function(Player)
             volume = phone.volume,
             lockCode = phone.lock_code,
             coque = phone.coque,
-            theme = phone.theme or 'light'
+            theme = phone.theme or 'light',
+            audioProfile = phone.audio_profile or 'normal',
+            appLayout = NormalizeLayout(savedLayout, enabledApps),
+            enabledApps = EnabledList(enabledApps),
+            featureFlags = featureFlags,
         })
     end
 end)

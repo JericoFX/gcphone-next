@@ -20,6 +20,7 @@ Config.Phone = {
         lockCode = '0000',
         coque = 'funda_negra.png',
         theme = 'light',
+        audioProfile = 'normal',
     },
     
     -- Warning message when SMS is full
@@ -79,6 +80,26 @@ Config.Music = {
     MaxDistance = 30.0,
     MaxResults = 12,
     UpdatePositionInterval = 300,
+}
+
+Config.Features = {
+    AppStore = true,
+    WaveChat = true,
+    DarkRooms = true,
+    Clips = true,
+    Wallet = true,
+    Documents = true,
+    Music = true,
+    YellowPages = true,
+}
+
+Config.Wallet = {
+    InitialBalance = 2500,
+    MaxTransferAmount = 500000,
+}
+
+Config.Documents = {
+    AllowCustomTitle = true,
 }
 
 Config.Storage = {

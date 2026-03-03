@@ -9,7 +9,7 @@ import {
 import { createStore } from 'solid-js/store';
 import { fetchNui } from '../utils/fetchNui';
 import { useNuiCustomEvent } from '../utils/useNui';
-import type { AppLayout, PhoneSettings, PhoneState } from '../types';
+import type { AppLayout, PhoneFeatureFlags, PhoneSettings, PhoneState } from '../types';
 import { APP_IDS, DEFAULT_HOME_APPS, DEFAULT_MENU_APPS } from '../config/apps';
 import { isEnvBrowser } from '../utils/misc';
 
@@ -25,6 +25,7 @@ interface PhoneContextValue {
     setRingtone: (ringtone: string) => void;
     setVolume: (volume: number) => void;
     setTheme: (theme: 'auto' | 'light' | 'dark') => void;
+    setAudioProfile: (audioProfile: 'normal' | 'street' | 'vehicle' | 'silent') => void;
     setLockCode: (code: string) => void;
     setCoque: (coque: string) => void;
     loadAppLayout: () => Promise<void>;
@@ -45,7 +46,19 @@ const defaultSettings: PhoneSettings = {
   volume: 0.5,
   lockCode: '0000',
   coque: 'sin_funda.png',
-  theme: 'light'
+  theme: 'light',
+  audioProfile: 'normal'
+};
+
+const defaultFeatureFlags: PhoneFeatureFlags = {
+  appstore: true,
+  wavechat: true,
+  darkrooms: true,
+  clips: true,
+  wallet: true,
+  documents: true,
+  music: true,
+  yellowpages: true,
 };
 
 const defaultLayout: AppLayout = {
@@ -53,7 +66,8 @@ const defaultLayout: AppLayout = {
   menu: [...DEFAULT_MENU_APPS]
 };
 
-function normalizeLayout(layout?: Partial<AppLayout> | null): AppLayout {
+function normalizeLayout(layout?: Partial<AppLayout> | null, enabledApps: string[] = APP_IDS): AppLayout {
+  const available = new Set(enabledApps);
   const home = Array.isArray(layout?.home) ? layout.home.filter((id): id is string => typeof id === 'string') : [];
   const menu = Array.isArray(layout?.menu) ? layout.menu.filter((id): id is string => typeof id === 'string') : [];
 
@@ -62,18 +76,19 @@ function normalizeLayout(layout?: Partial<AppLayout> | null): AppLayout {
   const used = new Set<string>();
 
   for (const id of home) {
-    if (!APP_IDS.includes(id) || used.has(id)) continue;
+    if (!APP_IDS.includes(id) || !available.has(id) || used.has(id)) continue;
     uniqueHome.push(id);
     used.add(id);
   }
 
   for (const id of menu) {
-    if (!APP_IDS.includes(id) || used.has(id)) continue;
+    if (!APP_IDS.includes(id) || !available.has(id) || used.has(id)) continue;
     uniqueMenu.push(id);
     used.add(id);
   }
 
   for (const id of APP_IDS) {
+    if (!available.has(id)) continue;
     if (!used.has(id)) {
       if (DEFAULT_HOME_APPS.includes(id)) uniqueHome.push(id);
       else uniqueMenu.push(id);
@@ -87,17 +102,53 @@ function normalizeLayout(layout?: Partial<AppLayout> | null): AppLayout {
   };
 }
 
+function normalizeFeatureFlags(input?: Partial<PhoneFeatureFlags> | null): PhoneFeatureFlags {
+  return {
+    appstore: input?.appstore !== false,
+    wavechat: input?.wavechat !== false,
+    darkrooms: input?.darkrooms !== false,
+    clips: input?.clips !== false,
+    wallet: input?.wallet !== false,
+    documents: input?.documents !== false,
+    music: input?.music !== false,
+    yellowpages: input?.yellowpages !== false,
+  };
+}
+
+function enabledAppsFromFlags(flags: PhoneFeatureFlags): string[] {
+  const byFlag: Record<keyof PhoneFeatureFlags, string[]> = {
+    appstore: ['appstore'],
+    wavechat: ['wavechat'],
+    darkrooms: ['darkrooms'],
+    clips: ['clips'],
+    wallet: ['wallet'],
+    documents: ['documents'],
+    music: ['music'],
+    yellowpages: ['yellowpages'],
+  };
+
+  const blocked = new Set<string>();
+  (Object.keys(byFlag) as Array<keyof PhoneFeatureFlags>).forEach((key) => {
+    if (flags[key]) return;
+    byFlag[key].forEach((id) => blocked.add(id));
+  });
+
+  return APP_IDS.filter((id) => !blocked.has(id));
+}
+
 export const PhoneProvider: ParentComponent = (props) => {
   const [state, setState] = createStore<PhoneState>({
     visible: false,
     locked: true,
     initialized: false,
     settings: { ...defaultSettings },
-    appLayout: { ...defaultLayout }
+    appLayout: { ...defaultLayout },
+    enabledApps: [...APP_IDS],
+    featureFlags: { ...defaultFeatureFlags },
   });
 
-  const setLayout = (layout?: Partial<AppLayout> | null) => {
-    setState('appLayout', normalizeLayout(layout));
+  const setLayout = (layout?: Partial<AppLayout> | null, enabledApps = state.enabledApps) => {
+    setState('appLayout', normalizeLayout(layout, enabledApps));
   };
   
   const actions = {
@@ -137,6 +188,10 @@ export const PhoneProvider: ParentComponent = (props) => {
       setState('settings', 'theme', theme);
       fetchNui('setTheme', { theme });
     },
+    setAudioProfile: (audioProfile: 'normal' | 'street' | 'vehicle' | 'silent') => {
+      setState('settings', 'audioProfile', audioProfile);
+      fetchNui('setAudioProfile', { audioProfile });
+    },
     setLockCode: (code: string) => {
       setState('settings', 'lockCode', code);
       fetchNui('setLockCode', { code });
@@ -147,7 +202,7 @@ export const PhoneProvider: ParentComponent = (props) => {
     },
     loadAppLayout: async () => {
       const layout = await fetchNui<AppLayout | null>('getAppLayout', {});
-      setLayout(layout);
+      setLayout(layout, state.enabledApps);
     },
     saveAppLayout: async () => {
       await fetchNui('setAppLayout', { layout: state.appLayout });
@@ -184,9 +239,16 @@ export const PhoneProvider: ParentComponent = (props) => {
     }
   };
   
-  useNuiCustomEvent<PhoneSettings>('phone:init', (data) => {
+  useNuiCustomEvent<PhoneSettings & { appLayout?: AppLayout; enabledApps?: string[]; featureFlags?: Partial<PhoneFeatureFlags> }>('phone:init', (data) => {
+    const flags = normalizeFeatureFlags(data?.featureFlags);
+    const enabledApps = Array.isArray(data?.enabledApps) && data.enabledApps.length > 0
+      ? data.enabledApps.filter((id): id is string => typeof id === 'string' && APP_IDS.includes(id))
+      : enabledAppsFromFlags(flags);
+
     batch(() => {
       setState('initialized', true);
+      setState('featureFlags', flags);
+      setState('enabledApps', enabledApps);
       setState('settings', {
         phoneNumber: data.phoneNumber || '',
           wallpaper: data.wallpaper || defaultSettings.wallpaper,
@@ -194,15 +256,24 @@ export const PhoneProvider: ParentComponent = (props) => {
           volume: data.volume ?? defaultSettings.volume,
           lockCode: data.lockCode || defaultSettings.lockCode,
           coque: data.coque || defaultSettings.coque,
-          theme: data.theme || defaultSettings.theme
+          theme: data.theme || defaultSettings.theme,
+          audioProfile: data.audioProfile || defaultSettings.audioProfile,
         });
+      setLayout(data?.appLayout || defaultLayout, enabledApps);
       });
   });
-  
-  useNuiCustomEvent<PhoneSettings>('phone:show', (data) => {
+
+  useNuiCustomEvent<PhoneSettings & { appLayout?: AppLayout; enabledApps?: string[]; featureFlags?: Partial<PhoneFeatureFlags> }>('phone:show', (data) => {
+    const flags = normalizeFeatureFlags(data?.featureFlags || state.featureFlags);
+    const enabledApps = Array.isArray(data?.enabledApps) && data.enabledApps.length > 0
+      ? data.enabledApps.filter((id): id is string => typeof id === 'string' && APP_IDS.includes(id))
+      : state.enabledApps;
+
     batch(() => {
       setState('visible', true);
       setState('initialized', true);
+      setState('featureFlags', flags);
+      setState('enabledApps', enabledApps);
       if (data) {
         setState('settings', {
           phoneNumber: data.phoneNumber || state.settings.phoneNumber,
@@ -211,9 +282,11 @@ export const PhoneProvider: ParentComponent = (props) => {
            volume: data.volume ?? state.settings.volume,
            lockCode: data.lockCode || state.settings.lockCode,
            coque: data.coque || state.settings.coque,
-           theme: data.theme || state.settings.theme
-         });
-       }
+           theme: data.theme || state.settings.theme,
+           audioProfile: data.audioProfile || state.settings.audioProfile,
+          });
+        setLayout(data.appLayout || state.appLayout, enabledApps);
+        }
      });
   });
   
