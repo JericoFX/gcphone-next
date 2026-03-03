@@ -1,6 +1,6 @@
 import { For, ParentComponent, Show, createContext, createEffect, createMemo, createSignal, onCleanup, useContext, lazy, Suspense } from 'solid-js';
 import type { JSX } from 'solid-js';
-import { usePhone } from '../../store/phone';
+import { usePhone, usePhoneState } from '../../store/phone';
 import { HomeScreen } from '../apps/home/HomeScreen';
 import { AppPlaceholder } from '../shared/ui/AppPlaceholder';
 import { PhoneNotificationBanner } from '../shared/notifications/PhoneNotificationBanner';
@@ -217,6 +217,7 @@ export const PhoneFrame: ParentComponent & { Router: () => JSX.Element } = (prop
 };
 
 function Router() {
+  const phoneState = usePhoneState();
   const { currentRoute, direction, openApps } = useRouter();
 
   const renderRoute = (route: AppRoute) => {

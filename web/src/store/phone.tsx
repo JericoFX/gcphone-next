@@ -25,6 +25,7 @@ interface PhoneContextValue {
     setRingtone: (ringtone: string) => void;
     setVolume: (volume: number) => void;
     setTheme: (theme: 'auto' | 'light' | 'dark') => void;
+    setLanguage: (language: 'es' | 'en' | 'pt' | 'fr') => void;
     setAudioProfile: (audioProfile: 'normal' | 'street' | 'vehicle' | 'silent') => void;
     setLockCode: (code: string) => void;
     setCoque: (coque: string) => void;
@@ -47,6 +48,7 @@ const defaultSettings: PhoneSettings = {
   lockCode: '0000',
   coque: 'sin_funda.png',
   theme: 'light',
+  language: 'es',
   audioProfile: 'normal'
 };
 
@@ -113,6 +115,11 @@ function normalizeFeatureFlags(input?: Partial<PhoneFeatureFlags> | null): Phone
     music: input?.music !== false,
     yellowpages: input?.yellowpages !== false,
   };
+}
+
+function normalizeLanguage(value?: string | null): 'es' | 'en' | 'pt' | 'fr' {
+  if (value === 'en' || value === 'pt' || value === 'fr') return value;
+  return 'es';
 }
 
 function enabledAppsFromFlags(flags: PhoneFeatureFlags): string[] {
@@ -188,6 +195,11 @@ export const PhoneProvider: ParentComponent = (props) => {
       setState('settings', 'theme', theme);
       fetchNui('setTheme', { theme });
     },
+    setLanguage: (language: 'es' | 'en' | 'pt' | 'fr') => {
+      setState('settings', 'language', language);
+      window.localStorage.setItem('gcphone:language', language);
+      fetchNui('setLanguage', { language });
+    },
     setAudioProfile: (audioProfile: 'normal' | 'street' | 'vehicle' | 'silent') => {
       setState('settings', 'audioProfile', audioProfile);
       fetchNui('setAudioProfile', { audioProfile });
@@ -257,6 +269,7 @@ export const PhoneProvider: ParentComponent = (props) => {
           lockCode: data.lockCode || defaultSettings.lockCode,
           coque: data.coque || defaultSettings.coque,
           theme: data.theme || defaultSettings.theme,
+          language: normalizeLanguage(data.language || window.localStorage.getItem('gcphone:language')),
           audioProfile: data.audioProfile || defaultSettings.audioProfile,
         });
       setLayout(data?.appLayout || defaultLayout, enabledApps);
@@ -280,10 +293,11 @@ export const PhoneProvider: ParentComponent = (props) => {
            wallpaper: data.wallpaper || state.settings.wallpaper,
            ringtone: data.ringtone || state.settings.ringtone,
            volume: data.volume ?? state.settings.volume,
-           lockCode: data.lockCode || state.settings.lockCode,
-           coque: data.coque || state.settings.coque,
-           theme: data.theme || state.settings.theme,
-           audioProfile: data.audioProfile || state.settings.audioProfile,
+            lockCode: data.lockCode || state.settings.lockCode,
+            coque: data.coque || state.settings.coque,
+            theme: data.theme || state.settings.theme,
+            language: normalizeLanguage(data.language || state.settings.language || window.localStorage.getItem('gcphone:language')),
+            audioProfile: data.audioProfile || state.settings.audioProfile,
           });
         setLayout(data.appLayout || state.appLayout, enabledApps);
         }

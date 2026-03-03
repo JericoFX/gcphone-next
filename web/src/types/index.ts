@@ -47,6 +47,7 @@ export interface PhoneSettings {
   lockCode: string;
   coque: string;
   theme: 'auto' | 'light' | 'dark';
+  language?: 'es' | 'en' | 'pt' | 'fr';
   audioProfile?: 'normal' | 'street' | 'vehicle' | 'silent';
 }
 

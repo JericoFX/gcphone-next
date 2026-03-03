@@ -3,6 +3,7 @@ import { useRouter } from '../../Phone/PhoneFrame';
 import { fetchNui } from '../../../utils/fetchNui';
 import { AppScaffold } from '../../shared/layout';
 import { useAppCache } from '../../../hooks';
+import { MediaLightbox } from '../../shared/ui/MediaLightbox';
 import { VirtualList } from '../../shared/ui/VirtualList';
 import styles from './DarkRoomsApp.module.scss';
 
@@ -40,10 +41,15 @@ interface Comment {
   created_at: string;
 }
 
+const roomTag = (room: Pick<Room, 'slug' | 'name'>) => {
+  const base = (room.slug || room.name || 'sala').replace(/^#/, '').trim();
+  return `#${base}`;
+};
+
 const isVideo = (url?: string) => !!url && /\.(mp4|webm|mov|m3u8)(\?|$)/i.test(url);
 const isAudio = (url?: string) => !!url && /\.(mp3|ogg|wav|m4a|aac)(\?|$)/i.test(url);
 
-function MediaBlock(props: { url?: string; compact?: boolean }) {
+function MediaBlock(props: { url?: string; compact?: boolean; onOpen?: (url: string) => void }) {
   if (!props.url) return null;
   if (isVideo(props.url)) {
     return <video class={props.compact ? styles.compactMedia : styles.media} src={props.url} controls playsinline preload="metadata" />;
@@ -51,7 +57,7 @@ function MediaBlock(props: { url?: string; compact?: boolean }) {
   if (isAudio(props.url)) {
     return <audio class={styles.audio} src={props.url} controls preload="metadata" />;
   }
-  return <img class={props.compact ? styles.compactMedia : styles.media} src={props.url} alt="adjunto" loading="lazy" />;
+  return <img class={props.compact ? styles.compactMedia : styles.media} src={props.url} alt="adjunto" loading="lazy" onClick={() => props.onOpen?.(props.url!)} />;
 }
 
 export function DarkRoomsApp() {
@@ -83,8 +89,9 @@ export function DarkRoomsApp() {
 
   const [joinPasswordMode, setJoinPasswordMode] = createSignal<Room | null>(null);
   const [joinPassword, setJoinPassword] = createSignal('');
+  const [viewerUrl, setViewerUrl] = createSignal<string | null>(null);
 
-  const [status, setStatus] = createSignal('Salas tematicas estilo foro. No es chat en vivo.');
+  const [status, setStatus] = createSignal('Tablones anonimos estilo comunidad. No es chat en vivo.');
   const cache = useAppCache('darkrooms');
   const isSelectedRoomId = createSelector(() => selectedRoom()?.id ?? -1);
 
@@ -128,7 +135,7 @@ export function DarkRoomsApp() {
     const normalizedPosts = Array.isArray(roomPosts) ? roomPosts : [];
     if (!cached) cache.set(cacheKey, normalizedPosts, 12000);
     setPosts(normalizedPosts);
-    setStatus(`${room.name}: ${room.description || 'Sala activa'}`);
+    setStatus(`${roomTag(room)} · ${room.description || 'Sala activa'}`);
   };
 
   const confirmJoinProtectedRoom = async () => {
@@ -278,7 +285,7 @@ export function DarkRoomsApp() {
   });
 
   return (
-    <AppScaffold title="Dark Rooms" subtitle="Foros privados/publicos" onBack={() => router.goBack()} bodyClass={styles.body}>
+    <AppScaffold title="Dark Rooms" subtitle="Comunidades con posts y votos" onBack={() => router.goBack()} bodyClass={styles.body}>
       <div class={styles.statusBar}>{status()}</div>
 
       <div class={styles.roomsRow}>
@@ -286,7 +293,10 @@ export function DarkRoomsApp() {
           {(room) => (
             <button class={styles.roomChip} classList={{ [styles.roomChipActive]: isSelectedRoomId(room.id) }} onClick={() => void openRoom(room)}>
               <span>{room.icon || '🌙'}</span>
-              <strong>{room.name}</strong>
+              <div class={styles.roomMeta}>
+                <strong>{roomTag(room)}</strong>
+                <small>{Number(room.posts || 0)} posts · {Number(room.members || 0)} miembros</small>
+              </div>
               <Show when={Number(room.has_password || 0) === 1}><em>🔒</em></Show>
             </button>
           )}
@@ -297,7 +307,7 @@ export function DarkRoomsApp() {
       <Show when={showCreateRoom()}>
         <div class={styles.createRoomCard}>
           <input type="text" placeholder="Nombre de sala" value={roomName()} onInput={(e) => setRoomName(e.currentTarget.value)} />
-          <input type="text" placeholder="Slug (ej: zona-oscura)" value={roomSlug()} onInput={(e) => setRoomSlug(e.currentTarget.value)} />
+          <input type="text" placeholder="Slug (ej: mercado / vehiculos)" value={roomSlug()} onInput={(e) => setRoomSlug(e.currentTarget.value)} />
           <input type="text" placeholder="Emoji (ej: 🌙)" value={roomIcon()} onInput={(e) => setRoomIcon(e.currentTarget.value)} />
           <textarea placeholder="Descripcion" value={roomDescription()} onInput={(e) => setRoomDescription(e.currentTarget.value)} />
           <input type="password" placeholder="Clave opcional" value={roomPassword()} onInput={(e) => setRoomPassword(e.currentTarget.value)} />
@@ -333,13 +343,13 @@ export function DarkRoomsApp() {
                 <article class={styles.commentCard}>
                   <strong>{comment.author_name}</strong>
                   <p>{comment.content}</p>
-                  <MediaBlock url={comment.media_url} compact />
+                  <MediaBlock url={comment.media_url} compact onOpen={setViewerUrl} />
                 </article>
               )}
             </VirtualList>
           </div>
           <div class={styles.commentComposer}>
-            <input type="text" value={commentText()} onInput={(e) => setCommentText(e.currentTarget.value)} placeholder="Responder" />
+            <input type="text" value={commentText()} onInput={(e) => setCommentText(e.currentTarget.value)} placeholder="Responder al hilo" />
             <input type="text" value={commentMediaUrl()} onInput={(e) => setCommentMediaUrl(e.currentTarget.value)} placeholder="URL adjunto (opcional)" />
             <div class={styles.commentTools}>
               <button onClick={() => void pickCommentAttachment()}>Galeria</button>
@@ -350,8 +360,8 @@ export function DarkRoomsApp() {
         </div>
       }>
         <div class={styles.composer}>
-          <input type="text" placeholder="Titulo del post" value={title()} onInput={(e) => setTitle(e.currentTarget.value)} />
-          <textarea placeholder="Escribe tu aporte para la sala" value={content()} onInput={(e) => setContent(e.currentTarget.value)} />
+          <input type="text" placeholder="Titulo descriptivo del hilo" value={title()} onInput={(e) => setTitle(e.currentTarget.value)} />
+          <textarea placeholder="Cuenta contexto, evidencia o propuesta para la comunidad" value={content()} onInput={(e) => setContent(e.currentTarget.value)} />
           <input type="text" placeholder="URL adjunto (imagen/video/audio)" value={postMediaUrl()} onInput={(e) => setPostMediaUrl(e.currentTarget.value)} />
           <div class={styles.composerTools}>
             <button onClick={() => void pickPostAttachment()}>Galeria</button>
@@ -365,11 +375,14 @@ export function DarkRoomsApp() {
             {(post) => (
               <article class={styles.postCard}>
                 <div class={styles.postHeader}>
-                  <strong>{post.title}</strong>
+                  <div class={styles.postTitleWrap}>
+                    <small>{roomTag(selectedRoom() || { slug: 'general', name: 'General' })}</small>
+                    <strong>{post.title}</strong>
+                  </div>
                   <span>{post.author_name}</span>
                 </div>
                 <p>{post.content}</p>
-                <MediaBlock url={post.media_url} />
+                <MediaBlock url={post.media_url} onOpen={setViewerUrl} />
                 <div class={styles.postActions}>
                   <button onClick={() => void votePost(post.id, 1)} classList={{ [styles.voted]: post.my_vote === 1 }}>▲</button>
                   <span>{post.score}</span>
@@ -381,6 +394,7 @@ export function DarkRoomsApp() {
           </VirtualList>
         </div>
       </Show>
+      <MediaLightbox url={viewerUrl()} onClose={() => setViewerUrl(null)} />
     </AppScaffold>
   );
 }

@@ -3,6 +3,7 @@ import { useRouter } from '../../Phone/PhoneFrame';
 import { fetchNui } from '../../../utils/fetchNui';
 import { sanitizeMediaUrl, sanitizeText } from '../../../utils/sanitize';
 import { ActionSheet } from '../../shared/ui/ActionSheet';
+import { MediaLightbox } from '../../shared/ui/MediaLightbox';
 import styles from './MarketApp.module.scss';
 
 interface MarketListing {
@@ -26,6 +27,7 @@ export function MarketApp() {
   const [category, setCategory] = createSignal('general');
   const [photoUrl, setPhotoUrl] = createSignal('');
   const [showAttachSheet, setShowAttachSheet] = createSignal(false);
+  const [viewerUrl, setViewerUrl] = createSignal<string | null>(null);
 
   const load = async () => {
     const data = await fetchNui<MarketListing[]>('marketGetListings', { category: 'all', limit: 50, offset: 0 }, []);
@@ -166,7 +168,7 @@ export function MarketApp() {
               <input type="text" placeholder="URL foto" value={photoUrl()} onInput={(e) => setPhotoUrl(sanitizeMediaUrl(e.currentTarget.value))} />
             </div>
             <Show when={photoUrl()}>
-              <img class={styles.photoPreview} src={photoUrl()} alt="foto" />
+              <img class={styles.photoPreview} src={photoUrl()} alt="foto" onClick={() => setViewerUrl(photoUrl())} />
             </Show>
             <input type="text" placeholder="Categoria" value={category()} onInput={(e) => setCategory(sanitizeText(e.currentTarget.value, 30))} />
             <div class={styles.actions}>
@@ -188,6 +190,7 @@ export function MarketApp() {
           { label: 'Quitar adjunto', tone: 'danger', onClick: () => { setPhotoUrl(''); } },
         ]}
       />
+      <MediaLightbox url={viewerUrl()} onClose={() => setViewerUrl(null)} />
     </div>
   );
 }

@@ -6,6 +6,7 @@ import { fetchNui } from '../../../utils/fetchNui';
 import { generateColorForString, timeAgo } from '../../../utils/misc';
 import { resolveMediaType, sanitizeMediaUrl, sanitizeText } from '../../../utils/sanitize';
 import { ActionSheet } from '../../shared/ui/ActionSheet';
+import { MediaLightbox } from '../../shared/ui/MediaLightbox';
 import { SkeletonList } from '../../shared/ui/SkeletonList';
 import { VirtualList } from '../../shared/ui/VirtualList';
 import styles from './MessagesApp.module.scss';
@@ -27,6 +28,7 @@ export function MessagesApp() {
   const [selectedConversation, setSelectedConversation] = createSignal<string | null>(null);
   const [messageInput, setMessageInput] = createSignal('');
   const [attachmentUrl, setAttachmentUrl] = createSignal<string | null>(null);
+  const [viewerUrl, setViewerUrl] = createSignal<string | null>(null);
   const [selectedIndex, setSelectedIndex] = createSignal(-1);
 
   const getMediaUrl = (msg: any): string | undefined => sanitizeMediaUrl(msg.mediaUrl || msg.media_url) || undefined;
@@ -213,6 +215,7 @@ export function MessagesApp() {
           onSendLocation={sendLocationText}
           onOpenCoords={(x, y) => router.navigate('maps', { x, y })}
           onClearAttachment={() => setAttachmentUrl(null)}
+          onOpenViewer={setViewerUrl}
           getMediaUrl={getMediaUrl}
           onBack={() => setSelectedConversation(null)}
           onDeleteConversation={() => void deleteConversation(selectedConversation()!)}
@@ -266,6 +269,7 @@ export function MessagesApp() {
         <button class={styles.fab} onClick={openNewChat}>+</button>
         </div>
       </Show>
+      <MediaLightbox url={viewerUrl()} onClose={() => setViewerUrl(null)} />
     </div>
   );
 }
@@ -284,6 +288,7 @@ function ConversationView(props: {
   onSendLocation: () => void;
   onOpenCoords: (x: number, y: number) => void;
   onClearAttachment: () => void;
+  onOpenViewer: (url: string | null) => void;
   getMediaUrl: (msg: any) => string | undefined;
   onBack: () => void;
   onDeleteConversation: () => void;
@@ -331,7 +336,7 @@ function ConversationView(props: {
               </Show>
               <Show when={props.getMediaUrl(msg)}>
                 <Show when={resolveMediaType(props.getMediaUrl(msg)) === 'image'}>
-                  <img class={styles.messageImage} src={props.getMediaUrl(msg)!} alt="adjunto" />
+                  <img class={styles.messageImage} src={props.getMediaUrl(msg)!} alt="adjunto" onClick={() => props.onOpenViewer(props.getMediaUrl(msg) || null)} />
                 </Show>
                 <Show when={resolveMediaType(props.getMediaUrl(msg)) === 'video'}>
                   <video class={styles.messageImage} src={props.getMediaUrl(msg)!} controls playsinline preload="metadata" />
@@ -350,7 +355,7 @@ function ConversationView(props: {
       <Show when={props.attachmentUrl}>
         <div class={styles.attachmentPreview}>
           <Show when={resolveMediaType(props.attachmentUrl || undefined) === 'image'}>
-            <img src={props.attachmentUrl!} alt="adjunto" />
+            <img src={props.attachmentUrl!} alt="adjunto" onClick={() => props.onOpenViewer(props.attachmentUrl)} />
           </Show>
           <Show when={resolveMediaType(props.attachmentUrl || undefined) === 'video'}>
             <video src={props.attachmentUrl!} controls playsinline preload="metadata" />

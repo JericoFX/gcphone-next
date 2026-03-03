@@ -105,6 +105,12 @@ RegisterNUICallback('setTheme', function(data, cb)
     end, data)
 end)
 
+RegisterNUICallback('setLanguage', function(data, cb)
+    lib.callback('gcphone:setLanguage', false, function(success)
+        cb(success)
+    end, data)
+end)
+
 RegisterNUICallback('setAudioProfile', function(data, cb)
     lib.callback('gcphone:setAudioProfile', false, function(success)
         cb(success)

@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS `phone_numbers` (
     `lock_code` VARCHAR(10) DEFAULT '0000',
     `coque` VARCHAR(50) DEFAULT 'sin_funda.png',
     `theme` VARCHAR(10) DEFAULT 'light',
+    `language` VARCHAR(8) DEFAULT 'es',
     `audio_profile` VARCHAR(16) DEFAULT 'normal',
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -549,7 +550,10 @@ ALTER TABLE `phone_numbers`
 ADD COLUMN IF NOT EXISTS `theme` VARCHAR(10) DEFAULT 'light' AFTER `coque`;
 
 ALTER TABLE `phone_numbers`
-ADD COLUMN IF NOT EXISTS `audio_profile` VARCHAR(16) DEFAULT 'normal' AFTER `theme`;
+ADD COLUMN IF NOT EXISTS `language` VARCHAR(8) DEFAULT 'es' AFTER `theme`;
+
+ALTER TABLE `phone_numbers`
+ADD COLUMN IF NOT EXISTS `audio_profile` VARCHAR(16) DEFAULT 'normal' AFTER `language`;
 
 CREATE TABLE IF NOT EXISTS `phone_wallets` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,

@@ -80,7 +80,10 @@ ALTER TABLE `phone_darkrooms_comments`
     ADD COLUMN IF NOT EXISTS `is_anonymous` TINYINT(1) DEFAULT 0 AFTER `media_url`;
 
 ALTER TABLE `phone_numbers`
-    ADD COLUMN IF NOT EXISTS `audio_profile` VARCHAR(16) DEFAULT 'normal' AFTER `theme`;
+    ADD COLUMN IF NOT EXISTS `language` VARCHAR(8) DEFAULT 'es' AFTER `theme`;
+
+ALTER TABLE `phone_numbers`
+    ADD COLUMN IF NOT EXISTS `audio_profile` VARCHAR(16) DEFAULT 'normal' AFTER `language`;
 
 CREATE TABLE IF NOT EXISTS `phone_wallets` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,

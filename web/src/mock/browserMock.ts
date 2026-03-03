@@ -10,6 +10,7 @@ interface BrowserMockState {
   lockCode: string;
   coque: string;
   theme: 'auto' | 'light' | 'dark';
+  language: 'es' | 'en' | 'pt' | 'fr';
   audioProfile: 'normal' | 'street' | 'vehicle' | 'silent';
   contacts: Contact[];
   messages: Message[];
@@ -21,6 +22,8 @@ interface BrowserMockState {
   airplaneMode: boolean;
 }
 
+type GalleryEntry = BrowserMockState['gallery'][number];
+
 const nowIso = () => new Date().toISOString();
 
 const state: BrowserMockState = {
@@ -31,6 +34,7 @@ const state: BrowserMockState = {
   lockCode: '1234',
   coque: 'sin_funda.png',
   theme: 'light',
+  language: 'es',
   audioProfile: 'normal',
   contacts: [
     { id: 1, display: 'Maria Garcia', number: '555-1111', favorite: true },
@@ -92,6 +96,7 @@ const phonePayload = () => ({
   lockCode: state.lockCode,
   coque: state.coque,
   theme: state.theme,
+  language: state.language,
   audioProfile: state.audioProfile,
   appLayout: state.appLayout,
   enabledApps: [...state.appLayout.home, ...state.appLayout.menu],
@@ -327,6 +332,14 @@ export function handleBrowserNui<T = unknown>(eventName: string, data?: unknown)
     return true as T;
   }
 
+  if (eventName === 'setLanguage') {
+    const next = String(payload.language || state.language);
+    if (next === 'es' || next === 'en' || next === 'pt' || next === 'fr') {
+      state.language = next;
+    }
+    return true as T;
+  }
+
   if (eventName === 'setAudioProfile') {
     const nextProfile = String(payload.audioProfile || state.audioProfile);
     if (nextProfile === 'normal' || nextProfile === 'street' || nextProfile === 'vehicle' || nextProfile === 'silent') {
@@ -404,7 +417,7 @@ export function handleBrowserNui<T = unknown>(eventName: string, data?: unknown)
   if (eventName === 'storeMediaUrl') {
     const url = String(payload.url || '');
     if (!url) return { success: false } as T;
-    const row = {
+    const row: GalleryEntry = {
       id: nextPhotoId++,
       url,
       type: url.includes('.mp4') || url.includes('.webm') || url.includes('.mov') ? 'video' : 'image',
@@ -415,7 +428,7 @@ export function handleBrowserNui<T = unknown>(eventName: string, data?: unknown)
   }
 
   if (eventName === 'takePhoto') {
-    const photo = {
+    const photo: GalleryEntry = {
       id: nextPhotoId++,
       url: `./img/background/back00${Math.floor(Math.random() * 3) + 1}.jpg`,
       type: 'image' as const,
@@ -426,7 +439,7 @@ export function handleBrowserNui<T = unknown>(eventName: string, data?: unknown)
   }
 
   if (eventName === 'captureCameraVideoSession') {
-    const clip = {
+    const clip: GalleryEntry = {
       id: nextPhotoId++,
       url: 'https://samplelib.com/lib/preview/mp4/sample-5s.mp4',
       type: 'video' as const,
@@ -638,9 +651,9 @@ export function handleBrowserNui<T = unknown>(eventName: string, data?: unknown)
 
   if (eventName === 'darkroomsGetRooms') {
     return [
-      { id: 1, slug: 'general', name: 'General', description: 'Todo sobre la ciudad', icon: '🌙', members: 42, posts: 12, has_password: 0, is_member: 1 },
-      { id: 2, slug: 'mercado', name: 'Mercado', description: 'Compra/venta y trabajos', icon: '💼', members: 23, posts: 9, has_password: 1, is_member: 0 },
-      { id: 3, slug: 'vehiculos', name: 'Vehiculos', description: 'Mecanica y carreras', icon: '🏁', members: 18, posts: 5, has_password: 0, is_member: 1 },
+      { id: 1, slug: 'general', name: '#General', description: 'Tablon central de la ciudad', icon: '🌙', members: 42, posts: 12, has_password: 0, is_member: 1 },
+      { id: 2, slug: 'mercado', name: '#Mercado', description: 'Compra/venta y oportunidades', icon: '💼', members: 23, posts: 9, has_password: 1, is_member: 0 },
+      { id: 3, slug: 'vehiculos', name: '#Vehiculos', description: 'Mecanica, meets y carreras', icon: '🏁', members: 18, posts: 5, has_password: 0, is_member: 1 },
     ] as T;
   }
 

@@ -4,6 +4,7 @@ import { fetchNui } from '../../../utils/fetchNui';
 import { timeAgo } from '../../../utils/misc';
 import { resolveMediaType, sanitizeMediaUrl, sanitizeText } from '../../../utils/sanitize';
 import { ActionSheet } from '../../shared/ui/ActionSheet';
+import { MediaLightbox } from '../../shared/ui/MediaLightbox';
 import styles from './NewsApp.module.scss';
 
 interface NewsArticle {
@@ -27,6 +28,7 @@ export function NewsApp() {
   const [category, setCategory] = createSignal('general');
   const [liveArticleId, setLiveArticleId] = createSignal<number | null>(null);
   const [showAttachSheet, setShowAttachSheet] = createSignal(false);
+  const [viewerUrl, setViewerUrl] = createSignal<string | null>(null);
 
   const load = async () => {
     const data = await fetchNui<NewsArticle[]>('newsGetArticles', { category: selectedCategory(), limit: 50, offset: 0 }, []);
@@ -160,7 +162,7 @@ export function NewsApp() {
               <strong>{article.title}</strong>
               <Show when={(article as any).media_url || (article as any).mediaUrl}>
                 <Show when={resolveMediaType((article as any).media_url || (article as any).mediaUrl) === 'image'}>
-                  <img class={styles.articleMedia} src={(article as any).media_url || (article as any).mediaUrl} alt="media" />
+                  <img class={styles.articleMedia} src={(article as any).media_url || (article as any).mediaUrl} alt="media" onClick={(e) => { e.stopPropagation(); setViewerUrl((article as any).media_url || (article as any).mediaUrl); }} />
                 </Show>
                 <Show when={resolveMediaType((article as any).media_url || (article as any).mediaUrl) === 'video'}>
                   <video class={styles.articleMedia} src={(article as any).media_url || (article as any).mediaUrl} controls playsinline preload="metadata" />
@@ -186,7 +188,7 @@ export function NewsApp() {
             </div>
             <Show when={mediaUrl()}>
               <Show when={resolveMediaType(mediaUrl()) === 'image'}>
-                <img class={styles.articleMedia} src={mediaUrl()} alt="preview" />
+                <img class={styles.articleMedia} src={mediaUrl()} alt="preview" onClick={() => setViewerUrl(mediaUrl())} />
               </Show>
               <Show when={resolveMediaType(mediaUrl()) === 'video'}>
                 <video class={styles.articleMedia} src={mediaUrl()} controls playsinline preload="metadata" />
@@ -214,6 +216,7 @@ export function NewsApp() {
       />
 
       <button class={styles.fab} onClick={() => setShowCompose(true)}>+</button>
+      <MediaLightbox url={viewerUrl()} onClose={() => setViewerUrl(null)} />
     </div>
   );
 }

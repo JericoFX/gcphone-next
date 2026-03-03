@@ -1,4 +1,4 @@
-import { Show, onMount, onCleanup, createSignal, createMemo } from 'solid-js';
+import { Show, onMount, onCleanup, createSignal, createMemo, createEffect } from 'solid-js';
 import { PhoneProvider, ContactsProvider, MessagesProvider, NotificationsProvider, useNotifications, usePhone } from './store';
 import { PhoneFrame } from './components/Phone/PhoneFrame';
 import { LockScreen } from './components/LockScreen/LockScreen';
@@ -31,6 +31,12 @@ function PhoneContent() {
     if (theme === 'dark') return 'theme-dark';
     if (theme === 'light') return 'theme-light';
     return prefersDark() ? 'theme-dark' : 'theme-light';
+  });
+
+  createEffect(() => {
+    const lang = phoneState.settings.language || 'es';
+    document.documentElement.lang = lang;
+    window.localStorage.setItem('gcphone:language', lang);
   });
 
   return (

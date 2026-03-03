@@ -182,6 +182,39 @@ export function SettingsApp() {
                 </button>
               </div>
             </div>
+            <div class="ios-row">
+              <span class="ios-label">Idioma</span>
+              <div class="ios-segment">
+                <button
+                  class="ios-segment-btn"
+                  classList={{ 'ios-segment-btn-active': (phoneState.settings.language || 'es') === 'es' }}
+                  onClick={() => phoneActions.setLanguage('es')}
+                >
+                  ES
+                </button>
+                <button
+                  class="ios-segment-btn"
+                  classList={{ 'ios-segment-btn-active': (phoneState.settings.language || 'es') === 'en' }}
+                  onClick={() => phoneActions.setLanguage('en')}
+                >
+                  EN
+                </button>
+                <button
+                  class="ios-segment-btn"
+                  classList={{ 'ios-segment-btn-active': (phoneState.settings.language || 'es') === 'pt' }}
+                  onClick={() => phoneActions.setLanguage('pt')}
+                >
+                  PT
+                </button>
+                <button
+                  class="ios-segment-btn"
+                  classList={{ 'ios-segment-btn-active': (phoneState.settings.language || 'es') === 'fr' }}
+                  onClick={() => phoneActions.setLanguage('fr')}
+                >
+                  FR
+                </button>
+              </div>
+            </div>
           </div>
         </Show>
 

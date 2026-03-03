@@ -89,6 +89,13 @@ local function GetFeatureFlags()
     }
 end
 
+local function SafeLanguage(value)
+    if value == 'es' or value == 'en' or value == 'pt' or value == 'fr' then
+        return value
+    end
+    return nil
+end
+
 local function BuildEnabledApps(flags)
     local enabled = {}
     for appId, _ in pairs(AllowedApps) do
@@ -186,7 +193,7 @@ local function GetOrCreatePhone(source)
     local imei = GenerateIMEI()
     
     MySQL.insert.await(
-        'INSERT INTO phone_numbers (identifier, phone_number, imei, wallpaper, ringtone, volume, lock_code, coque, theme, audio_profile) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        'INSERT INTO phone_numbers (identifier, phone_number, imei, wallpaper, ringtone, volume, lock_code, coque, theme, language, audio_profile) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
         { 
             identifier, 
             phoneNumber, 
@@ -197,6 +204,7 @@ local function GetOrCreatePhone(source)
             Config.Phone.DefaultSettings.lockCode,
             Config.Phone.DefaultSettings.coque,
             Config.Phone.DefaultSettings.theme,
+            Config.Phone.DefaultSettings.language or 'es',
             Config.Phone.DefaultSettings.audioProfile or 'normal'
         }
     )
@@ -229,6 +237,7 @@ lib.callback.register('gcphone:getPhoneData', function(source)
         lockCode = phone.lock_code,
         coque = phone.coque,
         theme = phone.theme or 'light',
+        language = phone.language or 'es',
         audioProfile = phone.audio_profile or 'normal',
         appLayout = appLayout,
         enabledApps = EnabledList(enabledApps),
@@ -315,6 +324,20 @@ lib.callback.register('gcphone:setTheme', function(source, data)
     MySQL.update.await(
         'UPDATE phone_numbers SET theme = ? WHERE identifier = ?',
         { theme, identifier }
+    )
+
+    return true
+end)
+
+lib.callback.register('gcphone:setLanguage', function(source, data)
+    local identifier = GetIdentifier(source)
+    if not identifier then return false end
+    local language = SafeLanguage(type(data) == 'table' and data.language or nil)
+    if not language then return false end
+
+    MySQL.update.await(
+        'UPDATE phone_numbers SET language = ? WHERE identifier = ?',
+        { language, identifier }
     )
 
     return true
@@ -409,6 +432,7 @@ RegisterNetEvent('QBCore:Server:PlayerLoaded', function(Player)
             lockCode = phone.lock_code,
             coque = phone.coque,
             theme = phone.theme or 'light',
+            language = phone.language or 'es',
             audioProfile = phone.audio_profile or 'normal',
             appLayout = NormalizeLayout(savedLayout, enabledApps),
             enabledApps = EnabledList(enabledApps),

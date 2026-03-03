@@ -20,6 +20,7 @@ Config.Phone = {
         lockCode = '0000',
         coque = 'funda_negra.png',
         theme = 'light',
+        language = 'es',
         audioProfile = 'normal',
     },
     
