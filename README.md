@@ -10,6 +10,11 @@ Upstream project:
 This fork modernizes the architecture while respecting upstream license terms and attribution.
 
 ---
+## Images
+
+![Captura de pantalla_3-3-2026_141826_localhost](https://github.com/user-attachments/assets/54695d8c-2f70-4c7a-b5be-873634229f96)
+
+![Video](https://files.fm/f/tgdtdgzwnn)
 
 ## What is this
 
