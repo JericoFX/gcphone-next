@@ -7,11 +7,7 @@ local nearestPhone = nil
 
 local function CreatePhoneObject(coords)
     local model = "prop_npc_phone_01"
-    RequestModel(model)
-    
-    while not HasModelLoaded(model) do
-        Wait(100)
-    end
+    lib.requestModel(model)
     
     local phoneObj = CreateObject(model, coords.x, coords.y, coords.z, false, false, false)
     SetEntityAsMissionEntity(phoneObj, true, false)
