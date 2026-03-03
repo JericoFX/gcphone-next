@@ -82,7 +82,8 @@ CREATE TABLE IF NOT EXISTS `phone_chat_group_messages` (
     `media_url` VARCHAR(500) DEFAULT NULL,
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (`group_id`) REFERENCES `phone_chat_groups`(`id`) ON DELETE CASCADE,
-    KEY `idx_group_created` (`group_id`, `created_at`)
+    KEY `idx_group_created` (`group_id`, `created_at`),
+    KEY `idx_created_at` (`created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Call history
@@ -255,7 +256,9 @@ CREATE TABLE IF NOT EXISTS `phone_market` (
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     KEY `idx_identifier` (`identifier`),
     KEY `idx_category` (`category`),
-    KEY `idx_status` (`status`)
+    KEY `idx_status` (`status`),
+    KEY `idx_created` (`created_at`),
+    KEY `idx_expires` (`expires_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- News
@@ -289,6 +292,74 @@ CREATE TABLE IF NOT EXISTS `phone_clips_posts` (
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (`account_id`) REFERENCES `phone_snap_accounts`(`id`) ON DELETE CASCADE,
     KEY `idx_account` (`account_id`),
+    KEY `idx_created` (`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Dark Rooms (forum-style rooms)
+CREATE TABLE IF NOT EXISTS `phone_darkrooms_rooms` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `slug` VARCHAR(40) NOT NULL UNIQUE,
+    `name` VARCHAR(60) NOT NULL,
+    `description` VARCHAR(220) DEFAULT NULL,
+    `icon` VARCHAR(4) DEFAULT '🌙',
+    `password_hash` CHAR(64) DEFAULT NULL,
+    `created_by` VARCHAR(50) DEFAULT NULL,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    KEY `idx_slug` (`slug`),
+    KEY `idx_password_hash` (`password_hash`),
+    KEY `idx_created` (`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `phone_darkrooms_members` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `room_id` INT NOT NULL,
+    `identifier` VARCHAR(50) NOT NULL,
+    `role` ENUM('member', 'moderator') DEFAULT 'member',
+    `joined_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (`room_id`) REFERENCES `phone_darkrooms_rooms`(`id`) ON DELETE CASCADE,
+    UNIQUE KEY `idx_room_member` (`room_id`, `identifier`),
+    KEY `idx_identifier` (`identifier`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `phone_darkrooms_posts` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `room_id` INT NOT NULL,
+    `author_identifier` VARCHAR(50) NOT NULL,
+    `author_name` VARCHAR(64) NOT NULL,
+    `title` VARCHAR(140) NOT NULL,
+    `content` TEXT NOT NULL,
+    `media_url` VARCHAR(500) DEFAULT NULL,
+    `is_anonymous` TINYINT(1) DEFAULT 0,
+    `score` INT DEFAULT 0,
+    `comments_count` INT DEFAULT 0,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (`room_id`) REFERENCES `phone_darkrooms_rooms`(`id`) ON DELETE CASCADE,
+    KEY `idx_room_created` (`room_id`, `created_at`),
+    KEY `idx_created` (`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `phone_darkrooms_votes` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `post_id` INT NOT NULL,
+    `identifier` VARCHAR(50) NOT NULL,
+    `value` TINYINT NOT NULL,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (`post_id`) REFERENCES `phone_darkrooms_posts`(`id`) ON DELETE CASCADE,
+    UNIQUE KEY `idx_post_voter` (`post_id`, `identifier`),
+    KEY `idx_identifier` (`identifier`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `phone_darkrooms_comments` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `post_id` INT NOT NULL,
+    `author_identifier` VARCHAR(50) NOT NULL,
+    `author_name` VARCHAR(64) NOT NULL,
+    `content` TEXT NOT NULL,
+    `media_url` VARCHAR(500) DEFAULT NULL,
+    `is_anonymous` TINYINT(1) DEFAULT 0,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (`post_id`) REFERENCES `phone_darkrooms_posts`(`id`) ON DELETE CASCADE,
+    KEY `idx_post_created` (`post_id`, `created_at`),
     KEY `idx_created` (`created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

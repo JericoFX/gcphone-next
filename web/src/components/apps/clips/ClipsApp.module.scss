@@ -2,21 +2,25 @@
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: radial-gradient(120% 100% at 50% 0%, #f9fbff, var(--bg) 62%);
+  background:
+    radial-gradient(110% 70% at 0% -20%, rgba(70, 181, 255, 0.24), transparent 60%),
+    radial-gradient(120% 80% at 100% 0%, rgba(255, 97, 152, 0.22), transparent 64%),
+    linear-gradient(180deg, #101928 0%, #0c1422 48%, #0a111d 100%);
 }
 
 .header {
   height: 64px;
   display: flex;
   align-items: center;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(246, 249, 255, 0.9));
-  border-bottom: 1px solid var(--separator);
+  background: linear-gradient(180deg, rgba(9, 15, 27, 0.94), rgba(14, 20, 34, 0.9));
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   padding: 0 12px;
 
   h1 {
     margin: 0 auto;
     font-size: var(--fs-title3);
     font-weight: 760;
+    color: #f1f8ff;
   }
 }
 
@@ -25,15 +29,15 @@
   height: 36px;
   border: none;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--tint) 12%, transparent);
-  color: var(--tint);
+  background: rgba(255, 255, 255, 0.12);
+  color: #e5f0ff;
   font-size: 24px;
 }
 
 .composer {
-  background: var(--surface);
+  background: rgba(8, 14, 26, 0.9);
   padding: 10px;
-  border: 1px solid var(--border);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   display: grid;
   gap: 8px;
   margin: 10px;
@@ -42,10 +46,12 @@
   input {
     width: 100%;
     height: 36px;
-    border: 1px solid var(--border);
+    border: 1px solid rgba(255, 255, 255, 0.16);
     border-radius: var(--r-md);
     padding: 0 10px;
     font-size: 13px;
+    background: rgba(19, 28, 47, 0.9);
+    color: #eaf2ff;
   }
 }
 
@@ -78,7 +84,7 @@
 
 .hint {
   font-size: 11px;
-  color: var(--text-3);
+  color: rgba(215, 228, 246, 0.7);
 }
 
 .feed {
@@ -88,9 +94,9 @@
 }
 
 .card {
-  background: var(--surface);
+  background: rgba(9, 15, 28, 0.88);
   border-radius: var(--r-lg);
-  border: 1px solid var(--border);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   overflow: hidden;
   margin-bottom: 10px;
 
@@ -104,6 +110,7 @@
     margin: 0;
     padding: 8px 10px;
     font-size: 13px;
+    color: rgba(228, 240, 255, 0.9);
   }
 }
 
@@ -111,7 +118,7 @@
   padding: 8px 10px;
   font-size: 12px;
   font-weight: 700;
-  color: var(--text);
+  color: #f2f8ff;
 }
 
 .actions {

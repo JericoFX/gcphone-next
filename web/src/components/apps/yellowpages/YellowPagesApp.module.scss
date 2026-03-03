@@ -2,21 +2,25 @@
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: radial-gradient(120% 100% at 50% 0%, #f9fbff, var(--bg) 62%);
+  background:
+    radial-gradient(100% 70% at 0% -18%, rgba(255, 203, 88, 0.28), transparent 58%),
+    radial-gradient(120% 90% at 100% 0%, rgba(255, 241, 170, 0.18), transparent 62%),
+    linear-gradient(180deg, #1f252f 0%, #1a212b 55%, #161d26 100%);
 }
 
 .header {
   height: 56px;
   display: flex;
   align-items: center;
-  border-bottom: 1px solid var(--separator);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.09);
   padding: 0 10px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(246, 249, 255, 0.9));
+  background: linear-gradient(180deg, rgba(24, 29, 37, 0.95), rgba(29, 36, 46, 0.88));
 
   h1 {
     margin: 0 auto;
     font-size: var(--fs-title3);
     font-weight: 760;
+    color: #fff7d0;
   }
 }
 
@@ -26,8 +30,8 @@
   height: 36px;
   border: none;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--tint) 12%, transparent);
-  color: var(--tint);
+  background: rgba(255, 216, 90, 0.18);
+  color: #ffe8a8;
   font-size: 22px;
 }
 
@@ -41,19 +45,20 @@
 
 .card {
   border-radius: var(--r-lg);
-  background: var(--surface);
-  border: 1px solid var(--border);
+  background: rgba(25, 31, 40, 0.88);
+  border: 1px solid rgba(255, 240, 176, 0.24);
   padding: 10px;
   box-shadow: var(--shadow-1);
 
   strong {
     font-size: 14px;
+    color: #fff8de;
   }
 
   p {
     margin: 6px 0;
     font-size: 12px;
-    color: var(--text-2);
+    color: rgba(249, 236, 186, 0.82);
   }
 }
 
@@ -69,14 +74,14 @@
   display: flex;
   justify-content: space-between;
   font-size: 11px;
-  color: var(--text-3);
+  color: rgba(255, 235, 171, 0.72);
   font-weight: 700;
 }
 
 .modal {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.4);
+  background: rgba(0, 0, 0, 0.56);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -85,8 +90,8 @@
 .modal-content {
   width: 92%;
   border-radius: 14px;
-  background: var(--surface);
-  border: 1px solid var(--border);
+  background: rgba(24, 30, 40, 0.98);
+  border: 1px solid rgba(255, 226, 120, 0.24);
   padding: 12px;
   display: grid;
   gap: 8px;
@@ -94,14 +99,17 @@
   h2 {
     margin: 0;
     font-size: 16px;
+    color: #ffe9a8;
   }
 
   input,
   textarea {
-    border: 1px solid var(--border);
+    border: 1px solid rgba(255, 237, 181, 0.22);
     border-radius: var(--r-md);
     padding: 8px 10px;
     font-size: 12px;
+    background: rgba(16, 21, 29, 0.9);
+    color: #fff2c7;
   }
 
   textarea {
@@ -120,7 +128,8 @@
     height: 34px;
     border-radius: 10px;
     font-weight: 700;
-    background: var(--surface-2);
+    background: rgba(255, 228, 132, 0.18);
+    color: #ffe6a0;
   }
 }
 
@@ -135,12 +144,12 @@
     padding: 0 8px;
     font-size: 11px;
     font-weight: 700;
-    background: var(--surface-2);
-    color: var(--text-2);
+    background: rgba(255, 224, 114, 0.2);
+    color: #ffe3a0;
   }
 }
 
 .primary {
-  background: var(--tint) !important;
-  color: #fff;
+  background: linear-gradient(135deg, #ffbf3f, #ff9b2f) !important;
+  color: #2d1b00;
 }

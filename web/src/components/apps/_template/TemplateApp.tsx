@@ -2,7 +2,7 @@
 // Copia este archivo y renómbralo para crear una nueva app
 
 import { createSignal, For, Show } from 'solid-js';
-import { AppLayout, AppHeader, AppBody, AppFooter, AppFAB, AppTabs } from '@/components/shared/layout';
+import { AppScaffold, AppFAB, AppTabs } from '@/components/shared/layout';
 import { usePhoneKeyHandler } from '@/hooks/usePhoneKeyHandler';
 import { useAsyncData } from '@/hooks/useAsyncData';
 import { ScreenState } from '@/components/shared/ui/ScreenState';
@@ -61,13 +61,12 @@ export function TemplateApp() {
   };
 
   return (
-    <AppLayout>
-      <AppHeader
-        title="Template App"
-        action={{ icon: '+', onClick: () => setShowModal(true) }}
-      />
-
-      <AppBody>
+    <AppScaffold
+      title="Template App"
+      action={{ icon: '+', onClick: () => setShowModal(true) }}
+      footer={tabs.length > 1 ? <AppTabs tabs={tabs} active={activeTab()} onChange={setActiveTab} /> : undefined}
+      footerFixed
+    >
         <Show when={loading()}>
           <SkeletonList rows={6} avatar />
         </Show>
@@ -100,14 +99,6 @@ export function TemplateApp() {
             </For>
           </ScreenState>
         </Show>
-      </AppBody>
-
-      <Show when={tabs.length > 1}>
-        <AppFooter fixed>
-          <AppTabs tabs={tabs} active={activeTab()} onChange={setActiveTab} />
-        </AppFooter>
-      </Show>
-
       <AppFAB onClick={() => setShowModal(true)} />
 
       {/* Modal simple usando clases iOS */}
@@ -136,7 +127,7 @@ export function TemplateApp() {
           </div>
         </div>
       </Show>
-    </AppLayout>
+    </AppScaffold>
   );
 }
 

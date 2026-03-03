@@ -9,3 +9,5 @@ export type { UseAsyncDataOptions } from './useAsyncData';
 
 export { useListNavigation } from './useListNavigation';
 export type { UseListNavigationOptions } from './useListNavigation';
+
+export { useAppCache } from './useAppCache';

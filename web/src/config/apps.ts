@@ -20,6 +20,7 @@ export const APP_DEFINITIONS: AppDefinition[] = [
   { id: 'chirp', name: 'Chirp', icon: './img/icons_ios/chirp.svg', route: 'chirp', defaultHome: true },
   { id: 'snap', name: 'Snap', icon: './img/icons_ios/snap.svg', route: 'snap', defaultHome: true },
   { id: 'clips', name: 'Clips', icon: './img/icons_ios/clips.svg', route: 'clips', defaultHome: true },
+  { id: 'darkrooms', name: 'DarkRooms', icon: './img/icons_ios/darkrooms.svg', route: 'darkrooms', defaultHome: true },
   { id: 'yellowpages', name: 'Amarillas', icon: './img/icons_ios/yellowpages.svg', route: 'yellowpages', defaultHome: true },
   { id: 'market', name: 'Market', icon: './img/icons_ios/market.svg', route: 'market', defaultHome: true },
   { id: 'news', name: 'Noticias', icon: './img/icons_ios/news.svg', route: 'news', defaultHome: true },

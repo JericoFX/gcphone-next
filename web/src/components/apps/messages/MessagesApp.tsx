@@ -1,4 +1,4 @@
-import { createSignal, For, Show, createEffect, onCleanup, onMount } from 'solid-js';
+import { createMemo, createSelector, createSignal, For, Show, createEffect, onCleanup, onMount } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { useMessages } from '../../../store/messages';
 import { useContacts } from '../../../store/contacts';
@@ -7,6 +7,7 @@ import { generateColorForString, timeAgo } from '../../../utils/misc';
 import { resolveMediaType, sanitizeMediaUrl, sanitizeText } from '../../../utils/sanitize';
 import { ActionSheet } from '../../shared/ui/ActionSheet';
 import { SkeletonList } from '../../shared/ui/SkeletonList';
+import { VirtualList } from '../../shared/ui/VirtualList';
 import styles from './MessagesApp.module.scss';
 
 function extractCoords(text?: string): { x: number; y: number } | null {
@@ -30,7 +31,7 @@ export function MessagesApp() {
 
   const getMediaUrl = (msg: any): string | undefined => sanitizeMediaUrl(msg.mediaUrl || msg.media_url) || undefined;
   
-  const conversations = () => {
+  const conversations = createMemo(() => {
     const convos: Map<string, { number: string; display: string; lastMessage: any; unread: number }> = new Map();
     
     for (const msg of messagesState.messages) {
@@ -59,7 +60,21 @@ export function MessagesApp() {
     return Array.from(convos.values()).sort(
       (a, b) => new Date(b.lastMessage.time).getTime() - new Date(a.lastMessage.time).getTime()
     );
-  };
+  });
+
+  const isSelectedConversationIndex = createSelector(selectedIndex);
+
+  createEffect(() => {
+    const maxIndex = conversations().length - 1;
+    if (maxIndex < 0) {
+      setSelectedIndex(-1);
+      return;
+    }
+
+    if (selectedIndex() > maxIndex) {
+      setSelectedIndex(maxIndex);
+    }
+  });
   
   createEffect(() => {
     const handleKeyUp = (e: CustomEvent<string>) => {
@@ -212,37 +227,39 @@ export function MessagesApp() {
         </div>
         <div class="ios-content">
         <div class={styles.conversationList}>
-          <Show when={messagesState.loading} fallback={<For each={conversations()}>
-            {(convo, index) => (
-              <div
-                class={styles.conversationItem}
-                classList={{ [styles.selected]: selectedIndex() === index() }}
-                onClick={() => openConversation(convo.number)}
-              >
-                <div 
-                  class={styles.avatar}
-                  style={{ 'background-color': generateColorForString(convo.number) }}
-                >
-                  {convo.display.charAt(0).toUpperCase()}
-                </div>
-                <div class={styles.info}>
-                  <div class={styles.topRow}>
-                    <span class={styles.name}>{convo.display}</span>
-                    <span class={styles.time}>{timeAgo(convo.lastMessage.time)}</span>
+          <Show
+            when={messagesState.loading}
+            fallback={
+              <VirtualList items={conversations} itemHeight={78} overscan={5}>
+                {(convo, index) => (
+                  <div
+                    class={styles.conversationItem}
+                    classList={{ [styles.selected]: isSelectedConversationIndex(index()) }}
+                    onClick={() => openConversation(convo.number)}
+                  >
+                    <div class={styles.avatar} style={{ 'background-color': generateColorForString(convo.number) }}>
+                      {convo.display.charAt(0).toUpperCase()}
+                    </div>
+                    <div class={styles.info}>
+                      <div class={styles.topRow}>
+                        <span class={styles.name}>{convo.display}</span>
+                        <span class={styles.time}>{timeAgo(convo.lastMessage.time)}</span>
+                      </div>
+                      <div class={styles.preview}>
+                        <Show when={convo.unread > 0}>
+                          <span class={styles.unreadBadge}>{convo.unread}</span>
+                        </Show>
+                        <span class={styles.message}>{getMediaUrl(convo.lastMessage) ? 'Adjunto multimedia' : convo.lastMessage.message}</span>
+                      </div>
+                    </div>
+                    <button class={styles.deleteConversationBtn} onClick={(e) => { e.stopPropagation(); void deleteConversation(convo.number); }}>
+                      Borrar
+                    </button>
                   </div>
-                  <div class={styles.preview}>
-                    <Show when={convo.unread > 0}>
-                      <span class={styles.unreadBadge}>{convo.unread}</span>
-                    </Show>
-                     <span class={styles.message}>{getMediaUrl(convo.lastMessage) ? 'Adjunto multimedia' : convo.lastMessage.message}</span>
-                  </div>
-                </div>
-                <button class={styles.deleteConversationBtn} onClick={(e) => { e.stopPropagation(); void deleteConversation(convo.number); }}>
-                  Borrar
-                </button>
-              </div>
-            )}
-          </For>}>
+                )}
+              </VirtualList>
+            }
+          >
             <SkeletonList rows={6} avatar />
           </Show>
         </div>

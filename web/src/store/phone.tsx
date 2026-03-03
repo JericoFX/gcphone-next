@@ -3,7 +3,8 @@ import {
   useContext, 
   ParentComponent,
   onMount,
-  batch
+  batch,
+  createMemo
 } from 'solid-js';
 import { createStore } from 'solid-js/store';
 import { fetchNui } from '../utils/fetchNui';
@@ -34,6 +35,8 @@ interface PhoneContextValue {
 }
 
 const PhoneContext = createContext<PhoneContextValue>();
+const PhoneStateContext = createContext<PhoneState>();
+const PhoneActionsContext = createContext<PhoneContextValue['actions']>();
 
 const defaultSettings: PhoneSettings = {
   phoneNumber: '',
@@ -215,7 +218,10 @@ export const PhoneProvider: ParentComponent = (props) => {
   });
   
   useNuiCustomEvent<void>('phone:hide', () => {
-    setState('visible', false);
+    batch(() => {
+      setState('visible', false);
+      setState('locked', true);
+    });
   });
   
   onMount(() => {
@@ -227,9 +233,13 @@ export const PhoneProvider: ParentComponent = (props) => {
   });
   
   return (
-    <PhoneContext.Provider value={{ state, actions }}>
-      {props.children}
-    </PhoneContext.Provider>
+    <PhoneActionsContext.Provider value={actions}>
+      <PhoneStateContext.Provider value={state}>
+        <PhoneContext.Provider value={createMemo(() => ({ state, actions }))()}>
+          {props.children}
+        </PhoneContext.Provider>
+      </PhoneStateContext.Provider>
+    </PhoneActionsContext.Provider>
   );
 };
 
@@ -242,17 +252,17 @@ export function usePhone() {
 }
 
 export function usePhoneState() {
-  const context = useContext(PhoneContext);
+  const context = useContext(PhoneStateContext);
   if (!context) {
     throw new Error('usePhoneState must be used within PhoneProvider');
   }
-  return context.state;
+  return context;
 }
 
 export function usePhoneActions() {
-  const context = useContext(PhoneContext);
+  const context = useContext(PhoneActionsContext);
   if (!context) {
     throw new Error('usePhoneActions must be used within PhoneProvider');
   }
-  return context.actions;
+  return context;
 }

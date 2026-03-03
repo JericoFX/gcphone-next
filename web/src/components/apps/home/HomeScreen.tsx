@@ -1,4 +1,4 @@
-import { createMemo, createSignal, For, Show, createEffect, onMount, onCleanup } from 'solid-js';
+import { createMemo, createSelector, createSignal, For, Show, createEffect, onMount, onCleanup, untrack } from 'solid-js';
 import { usePhone } from '../../../store/phone';
 import { useNotifications } from '../../../store/notifications';
 import { useRouter } from '../../Phone/PhoneFrame';
@@ -13,9 +13,12 @@ export function HomeScreen() {
   const [selectedApp, setSelectedApp] = createSignal(-1);
   const [editing, setEditing] = createSignal(false);
   const [draggingId, setDraggingId] = createSignal<string | null>(null);
+  const [dragOverIndex, setDragOverIndex] = createSignal<number | null>(null);
   const [desktopPage, setDesktopPage] = createSignal(0);
   const [touchStartX, setTouchStartX] = createSignal<number | null>(null);
   const [pageTransition, setPageTransition] = createSignal<'next' | 'prev' | null>(null);
+  const [openFolderId, setOpenFolderId] = createSignal<string | null>(null);
+  const [musicNowPlaying, setMusicNowPlaying] = createSignal('Sin musica');
 
   const APPS_PER_PAGE = 12;
 
@@ -26,6 +29,22 @@ export function HomeScreen() {
   );
 
   const pageCount = createMemo(() => Math.max(1, Math.ceil(homeApps().length / APPS_PER_PAGE)));
+  const isSelected = createSelector(selectedApp);
+  const isDragOverIndex = createSelector(dragOverIndex);
+  const isDraggingApp = createSelector(draggingId);
+
+  const folderGroups = createMemo(() => {
+    const socialSet = new Set(['messages', 'wavechat', 'chirp', 'snap', 'clips', 'darkrooms']);
+    const utilitySet = new Set(['camera', 'gallery', 'maps', 'weather', 'clock', 'notes', 'settings']);
+
+    const socialApps = homeApps().filter((app) => socialSet.has(app.id));
+    const utilityApps = homeApps().filter((app) => utilitySet.has(app.id));
+
+    return [
+      { id: 'social', name: 'Social', icon: '💬', apps: socialApps },
+      { id: 'utility', name: 'Utilidades', icon: '🧰', apps: utilityApps },
+    ].filter((group) => group.apps.length > 0);
+  });
 
   const visibleApps = createMemo(() => {
     const start = desktopPage() * APPS_PER_PAGE;
@@ -61,6 +80,15 @@ export function HomeScreen() {
     timer = setInterval(() => {
       setCurrentTime(new Date());
     }, 1000);
+
+    setMusicNowPlaying(window.localStorage.getItem('gcphone:musicNowPlaying') || 'Sin musica');
+
+    const onMusicStorage = () => {
+      setMusicNowPlaying(window.localStorage.getItem('gcphone:musicNowPlaying') || 'Sin musica');
+    };
+
+    window.addEventListener('storage', onMusicStorage);
+    onCleanup(() => window.removeEventListener('storage', onMusicStorage));
   });
   
   onCleanup(() => {
@@ -101,6 +129,9 @@ export function HomeScreen() {
           }
           break;
         case 'Backspace':
+          if (openFolderId()) {
+            setOpenFolderId(null);
+          }
           break;
       }
     };
@@ -125,7 +156,7 @@ export function HomeScreen() {
   };
   
   const openApp = (app: { id: string; route: string }) => {
-    if (editing()) return;
+    if (untrack(editing)) return;
     notificationsActions.markAppAsRead(app.id);
     router.navigate(app.route);
   };
@@ -138,6 +169,7 @@ export function HomeScreen() {
     phoneActions.reorderApp('home', id, globalIndex);
 
     setDraggingId(null);
+    setDragOverIndex(null);
   };
   
   return (
@@ -155,6 +187,31 @@ export function HomeScreen() {
       <div class={styles.homeTime}>
         <div class={styles.timeLarge}>{formatTime(currentTime())}</div>
         <div class={styles.date}>{formatDate(currentTime())}</div>
+      </div>
+
+      <div class={styles.widgetsRow}>
+        <button class={styles.widgetCard} onClick={() => router.navigate('weather')}>
+          <span class={styles.widgetLabel}>Clima</span>
+          <strong>{currentTime().toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}</strong>
+          <small>Ver pronostico rapido</small>
+        </button>
+        <button class={styles.widgetCard} onClick={() => router.navigate('music')}>
+          <span class={styles.widgetLabel}>Now Playing</span>
+          <strong>{musicNowPlaying()}</strong>
+          <small>Toca para abrir Musica</small>
+        </button>
+      </div>
+
+      <div class={styles.foldersRow}>
+        <For each={folderGroups()}>
+          {(group) => (
+            <button class={styles.folderPill} onClick={() => setOpenFolderId(group.id)}>
+              <span>{group.icon}</span>
+              <strong>{group.name}</strong>
+              <em>{group.apps.length}</em>
+            </button>
+          )}
+        </For>
       </div>
       
       <div
@@ -175,16 +232,22 @@ export function HomeScreen() {
           {(app, index) => (
             <div
               class={styles.appSlot}
+              classList={{ [styles.appSlotDropTarget]: isDragOverIndex(index()) }}
               onDragOver={(e) => e.preventDefault()}
+              onDragEnter={() => setDragOverIndex(index())}
+              onDragLeave={() => setDragOverIndex((current) => (current === index() ? null : current))}
               onDrop={() => dropAt(index())}
             >
               <button
                 class={styles.appIcon}
                 data-testid={`home-app-${app.id}`}
-                classList={{ [styles.selected]: selectedApp() === index(), [styles.jiggle]: editing() }}
+                classList={{ [styles.selected]: isSelected(index()), [styles.jiggle]: editing(), [styles.appIconDragging]: isDraggingApp(app.id) }}
                 draggable
                 onDragStart={() => setDraggingId(app.id)}
-                onDragEnd={() => setDraggingId(null)}
+                onDragEnd={() => {
+                  setDraggingId(null);
+                  setDragOverIndex(null);
+                }}
                 onClick={() => openApp(app)}
               >
                 <img src={app.icon} alt={app.name} />
@@ -203,7 +266,14 @@ export function HomeScreen() {
           )}
         </For>
         <Show when={editing()}>
-          <div class={styles.homeDropZone} onDragOver={(e) => e.preventDefault()} onDrop={() => dropAt(visibleApps().length)} />
+          <div
+            class={styles.homeDropZone}
+            classList={{ [styles.appSlotDropTarget]: isDragOverIndex(visibleApps().length) }}
+            onDragOver={(e) => e.preventDefault()}
+            onDragEnter={() => setDragOverIndex(visibleApps().length)}
+            onDragLeave={() => setDragOverIndex((current) => (current === visibleApps().length ? null : current))}
+            onDrop={() => dropAt(visibleApps().length)}
+          />
         </Show>
       </div>
 
@@ -216,6 +286,38 @@ export function HomeScreen() {
         </div>
         <button class={styles.pageBtn} data-testid="desktop-page-next" onClick={() => goToPage(desktopPage() + 1)}>›</button>
       </div>
+
+      <Show when={openFolderId()}>
+        {(folderId) => {
+          const folder = () => folderGroups().find((group) => group.id === folderId()) || null;
+          return (
+            <div class={styles.folderOverlay} onClick={() => setOpenFolderId(null)}>
+              <div class={styles.folderPanel} onClick={(e) => e.stopPropagation()}>
+                <div class={styles.folderHeader}>
+                  <strong>{folder()?.name || 'Carpeta'}</strong>
+                  <button onClick={() => setOpenFolderId(null)}>Cerrar</button>
+                </div>
+                <div class={styles.folderGrid}>
+                  <For each={folder()?.apps || []}>
+                    {(app) => (
+                      <button
+                        class={styles.folderApp}
+                        onClick={() => {
+                          setOpenFolderId(null);
+                          openApp(app);
+                        }}
+                      >
+                        <img src={app.icon} alt={app.name} />
+                        <span>{app.name}</span>
+                      </button>
+                    )}
+                  </For>
+                </div>
+              </div>
+            </div>
+          );
+        }}
+      </Show>
     </div>
   );
 }

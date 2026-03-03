@@ -47,6 +47,12 @@ export function MusicApp() {
   const [busyAction, setBusyAction] = createSignal(false);
   const [status, setStatus] = createSignal('Busca una pista y reproduccela para toda la zona.');
 
+  const persistNowPlaying = (title: string) => {
+    const value = title?.trim() || 'Sin musica';
+    window.localStorage.setItem('gcphone:musicNowPlaying', value);
+    window.dispatchEvent(new StorageEvent('storage', { key: 'gcphone:musicNowPlaying', newValue: value }));
+  };
+
   const applyServerState = (payload?: MusicStatePayload) => {
     if (!payload || typeof payload !== 'object') return;
 
@@ -62,7 +68,9 @@ export function MusicApp() {
     }
 
     if (typeof payload.title === 'string' && payload.title.trim()) {
-      setNowPlaying(payload.title.trim());
+      const track = payload.title.trim();
+      setNowPlaying(track);
+      persistNowPlaying(track);
     }
 
     if (typeof payload.volume === 'number') {
@@ -136,6 +144,7 @@ export function MusicApp() {
     });
 
     setNowPlaying(track.title || 'YouTube');
+    persistNowPlaying(track.title || 'YouTube');
     setIsPlaying(true);
     setIsPaused(false);
     setStatus('Transmitiendo para jugadores cercanos.');
@@ -157,6 +166,7 @@ export function MusicApp() {
     });
 
     setNowPlaying('URL manual');
+    persistNowPlaying('URL manual');
     setIsPlaying(true);
     setIsPaused(false);
     setStatus('Transmitiendo para jugadores cercanos.');
@@ -185,6 +195,7 @@ export function MusicApp() {
     setIsPlaying(false);
     setIsPaused(false);
     setNowPlaying('Sin reproduccion activa');
+    persistNowPlaying('Sin musica');
     setStatus('Detenido.');
     setBusyAction(false);
   };

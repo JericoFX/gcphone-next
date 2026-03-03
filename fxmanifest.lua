@@ -60,6 +60,8 @@ server_scripts {
     'server/modules/location_tracking.lua',
     'server/modules/phone_drop.lua',
     'server/modules/music.lua',
+    'server/modules/retention.lua',
+    'server/modules/darkrooms.lua',
 }
 
 dependencies {

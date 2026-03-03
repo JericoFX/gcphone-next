@@ -68,7 +68,7 @@ const state: BrowserMockState = {
     { id: 2, description: 'Transferencia enviada', amount: -1200, time: nowIso() },
   ],
   appLayout: {
-    home: ['contacts', 'messages', 'calls', 'settings', 'gallery', 'camera', 'bank', 'wavechat', 'music', 'chirp', 'snap', 'yellowpages', 'market', 'news', 'garage', 'clock', 'notes', 'maps', 'weather'],
+    home: ['contacts', 'messages', 'calls', 'settings', 'gallery', 'camera', 'bank', 'wavechat', 'music', 'chirp', 'snap', 'clips', 'darkrooms', 'yellowpages', 'market', 'news', 'garage', 'clock', 'notes', 'maps', 'weather'],
     menu: []
   },
   airplaneMode: false,
@@ -577,6 +577,55 @@ export function handleBrowserNui<T = unknown>(eventName: string, data?: unknown)
   }
 
   if (eventName === 'chirpDeleteTweet') {
+    return { success: true } as T;
+  }
+
+  if (eventName === 'darkroomsGetRooms') {
+    return [
+      { id: 1, slug: 'general', name: 'General', description: 'Todo sobre la ciudad', icon: '🌙', members: 42, posts: 12, has_password: 0, is_member: 1 },
+      { id: 2, slug: 'mercado', name: 'Mercado', description: 'Compra/venta y trabajos', icon: '💼', members: 23, posts: 9, has_password: 1, is_member: 0 },
+      { id: 3, slug: 'vehiculos', name: 'Vehiculos', description: 'Mecanica y carreras', icon: '🏁', members: 18, posts: 5, has_password: 0, is_member: 1 },
+    ] as T;
+  }
+
+  if (eventName === 'darkroomsJoinRoom') {
+    if (payload.roomId === 2 && !payload.password) {
+      return { success: false, error: 'PASSWORD_REQUIRED' } as T;
+    }
+    if (payload.roomId === 2 && payload.password !== '1234') {
+      return { success: false, error: 'INVALID_PASSWORD' } as T;
+    }
+    return { success: true } as T;
+  }
+
+  if (eventName === 'darkroomsCreateRoom') {
+    return { success: true, roomId: Math.floor(Math.random() * 900 + 100) } as T;
+  }
+
+  if (eventName === 'darkroomsGetPosts') {
+    const roomId = Number(payload.roomId || 1);
+    return [
+      { id: roomId * 10 + 1, room_id: roomId, author_name: 'Anonimo', title: 'Guia rapida de la sala', content: 'Comparte info util y evita spam.', media_url: './img/background/neon.jpg', score: 7, comments_count: 2, my_vote: 0, created_at: nowIso() },
+      { id: roomId * 10 + 2, room_id: roomId, author_name: 'NeoRP', title: 'Idea para evento comunitario', content: 'Podemos organizar meetup semanal en Legion.', media_url: '', score: 12, comments_count: 3, my_vote: 1, created_at: nowIso() },
+    ] as T;
+  }
+
+  if (eventName === 'darkroomsCreatePost') {
+    return { success: true } as T;
+  }
+
+  if (eventName === 'darkroomsVotePost') {
+    return { success: true, score: Math.floor(Math.random() * 20), myVote: Number(payload.vote || 0) } as T;
+  }
+
+  if (eventName === 'darkroomsGetComments') {
+    return [
+      { id: 1, post_id: Number(payload.postId || 0), author_name: 'Mod LS', content: 'Mantengan el hilo ordenado.', media_url: '', created_at: nowIso() },
+      { id: 2, post_id: Number(payload.postId || 0), author_name: 'Civ-21', content: 'Gracias por el aporte.', media_url: './img/background/back002.jpg', created_at: nowIso() },
+    ] as T;
+  }
+
+  if (eventName === 'darkroomsCreateComment') {
     return { success: true } as T;
   }
 

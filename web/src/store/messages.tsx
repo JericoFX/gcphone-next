@@ -25,6 +25,14 @@ type MessagesStore = [MessagesState, MessagesActions];
 
 const MessagesContext = createContext<MessagesStore>();
 
+function countUnread(messages: Message[]) {
+  let unread = 0;
+  for (const msg of messages) {
+    if (!msg.isRead && msg.owner === 0) unread++;
+  }
+  return unread;
+}
+
 export const MessagesProvider: ParentComponent = (props) => {
   const [state, setState] = createStore<MessagesState>({
     messages: [],
@@ -36,11 +44,13 @@ export const MessagesProvider: ParentComponent = (props) => {
     fetch: async () => {
       setState('loading', true);
       const messages = await fetchNui<Message[]>('getMessages', undefined, []);
-      setState('messages', messages || []);
-      setState('loading', false);
-      
-      const unread = (messages || []).filter(m => !m.isRead && m.owner === 0).length;
-      setState('unreadCount', unread);
+      const list = messages || [];
+      const unread = countUnread(list);
+      batch(() => {
+        setState('messages', list);
+        setState('unreadCount', unread);
+        setState('loading', false);
+      });
     },
     
     getConversation: (phoneNumber: string) => {
@@ -71,6 +81,7 @@ export const MessagesProvider: ParentComponent = (props) => {
           const idx = m.findIndex(msg => msg.id === messageId);
           if (idx >= 0) m.splice(idx, 1);
         }));
+        setState('unreadCount', countUnread(state.messages));
         return true;
       }
       return false;
@@ -80,7 +91,10 @@ export const MessagesProvider: ParentComponent = (props) => {
       const result = await fetchNui<{ success: boolean }>('deleteConversation', { phoneNumber });
       
       if (result?.success) {
-        setState('messages', m => m.filter(msg => msg.transmitter !== phoneNumber && msg.receiver !== phoneNumber));
+        batch(() => {
+          setState('messages', m => m.filter(msg => msg.transmitter !== phoneNumber && msg.receiver !== phoneNumber));
+          setState('unreadCount', countUnread(state.messages));
+        });
         return true;
       }
       return false;
@@ -90,16 +104,16 @@ export const MessagesProvider: ParentComponent = (props) => {
       const result = await fetchNui<{ success: boolean }>('markAsRead', { phoneNumber });
       
       if (result?.success) {
-        setState('messages', produce(m => {
-          for (const msg of m) {
-            if (msg.transmitter === phoneNumber && msg.owner === 0) {
-              msg.isRead = true;
+        batch(() => {
+          setState('messages', produce(m => {
+            for (const msg of m) {
+              if (msg.transmitter === phoneNumber && msg.owner === 0) {
+                msg.isRead = true;
+              }
             }
-          }
-        }));
-        
-        const unread = state.messages.filter(m => !m.isRead && m.owner === 0).length;
-        setState('unreadCount', unread);
+          }));
+          setState('unreadCount', countUnread(state.messages));
+        });
         return true;
       }
       return false;
@@ -124,9 +138,10 @@ export const MessagesProvider: ParentComponent = (props) => {
   });
   
   useNuiCustomEvent<Message[]>('messagesUpdated', (messages) => {
-    setState('messages', messages);
-    const unread = messages.filter(m => !m.isRead && m.owner === 0).length;
-    setState('unreadCount', unread);
+    batch(() => {
+      setState('messages', messages);
+      setState('unreadCount', countUnread(messages));
+    });
   });
   
   onMount(() => {

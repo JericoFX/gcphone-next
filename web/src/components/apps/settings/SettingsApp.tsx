@@ -156,11 +156,32 @@ export function SettingsApp() {
 
           <div class="ios-section-title">Tema</div>
           <div class="ios-list">
-            <SettingToggle
-              label="Modo oscuro"
-              active={phoneState.settings.theme === 'dark'}
-              onClick={() => phoneActions.setTheme(phoneState.settings.theme === 'dark' ? 'light' : 'dark')}
-            />
+            <div class="ios-row">
+              <span class="ios-label">Apariencia</span>
+              <div class="ios-segment">
+                <button
+                  class="ios-segment-btn"
+                  classList={{ 'ios-segment-btn-active': phoneState.settings.theme === 'auto' }}
+                  onClick={() => phoneActions.setTheme('auto')}
+                >
+                  Auto
+                </button>
+                <button
+                  class="ios-segment-btn"
+                  classList={{ 'ios-segment-btn-active': phoneState.settings.theme === 'light' }}
+                  onClick={() => phoneActions.setTheme('light')}
+                >
+                  Claro
+                </button>
+                <button
+                  class="ios-segment-btn"
+                  classList={{ 'ios-segment-btn-active': phoneState.settings.theme === 'dark' }}
+                  onClick={() => phoneActions.setTheme('dark')}
+                >
+                  Oscuro
+                </button>
+              </div>
+            </div>
           </div>
         </Show>
 

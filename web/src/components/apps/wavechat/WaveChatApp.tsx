@@ -1,4 +1,4 @@
-import { createSignal, For, Show, createEffect, onCleanup, onMount } from 'solid-js';
+import { createMemo, createSelector, createSignal, For, Show, createEffect, onCleanup, onMount } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { useMessages } from '../../../store/messages';
 import { useContacts } from '../../../store/contacts';
@@ -9,6 +9,7 @@ import { resolveMediaType, sanitizeMediaUrl, sanitizeText } from '../../../utils
 import { fetchSocketToken } from '../../../utils/realtimeAuth';
 import { connectWaveSocket, disconnectWaveSocket, getWaveRecent, isWaveSocketConnected, joinWaveRoom, leaveWaveRoom, sendWaveMessage, sendWaveTyping, type WaveSocketMessage } from '../../../utils/socket';
 import { ActionSheet } from '../../shared/ui/ActionSheet';
+import { VirtualList } from '../../shared/ui/VirtualList';
 import styles from './WaveChatApp.module.scss';
 
 interface GifResult {
@@ -123,7 +124,7 @@ export function WaveChatApp() {
     }
   };
 
-  const conversations = () => {
+  const conversations = createMemo(() => {
     const convos: Map<string, { number: string; display: string; lastMessage: any; unread: number }> = new Map();
 
     for (const msg of messagesState.messages) {
@@ -152,7 +153,22 @@ export function WaveChatApp() {
     return Array.from(convos.values()).sort(
       (a, b) => new Date(b.lastMessage.time).getTime() - new Date(a.lastMessage.time).getTime(),
     );
-  };
+  });
+
+  const isSelectedConversationIndex = createSelector(selectedIndex);
+  const isSelectedGroup = createSelector(selectedGroupId);
+
+  createEffect(() => {
+    const maxIndex = conversations().length - 1;
+    if (maxIndex < 0) {
+      setSelectedIndex(-1);
+      return;
+    }
+
+    if (selectedIndex() > maxIndex) {
+      setSelectedIndex(maxIndex);
+    }
+  });
 
   const searchGifs = async () => {
     const query = sanitizeText(gifQuery(), 80);
@@ -533,11 +549,11 @@ export function WaveChatApp() {
 
         <div class={styles.list}>
           <Show when={activeTab() === 'chats'}>
-            <For each={conversations()}>
+            <VirtualList items={conversations} itemHeight={78} overscan={5}>
               {(convo, index) => (
                 <div
                   class={styles.conversationItem}
-                  classList={{ [styles.selected]: selectedIndex() === index() }}
+                  classList={{ [styles.selected]: isSelectedConversationIndex(index()) }}
                   onClick={() => openConversation(convo.number)}
                 >
                   <div class={styles.avatar} style={{ 'background-color': generateColorForString(convo.number) }}>
@@ -562,7 +578,7 @@ export function WaveChatApp() {
                   </button>
                 </div>
               )}
-            </For>
+            </VirtualList>
           </Show>
 
           <Show when={activeTab() === 'status'}>
@@ -601,11 +617,11 @@ export function WaveChatApp() {
             <div class={styles.groupsHeadRow}>
               <button class={styles.statusBtn} onClick={() => void createGroup()}>Crear grupo</button>
             </div>
-            <For each={groups()}>
+            <VirtualList items={groups} itemHeight={74} overscan={4}>
               {(group) => (
                 <button
                   class={styles.conversationItem}
-                  classList={{ [styles.selected]: selectedGroupId() === group.id }}
+                  classList={{ [styles.selected]: isSelectedGroup(group.id) }}
                   onClick={() => {
                     setSelectedGroupId(group.id);
                     void loadGroupMessages(group.id);
@@ -623,7 +639,7 @@ export function WaveChatApp() {
                   </div>
                 </button>
               )}
-            </For>
+            </VirtualList>
 
             <Show when={selectedGroupId()}>
               <div class={styles.groupThread}>
