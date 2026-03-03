@@ -1,6 +1,7 @@
 -- Creado/Modificado por JericoFX
 
 local MySQL = exports.oxmysql
+local USE_SQL_CLEANUP_EVENTS = GetConvar('gcphone_sql_cleanup_events', '0') == '1'
 
 local function GetPlayerByPhone(phoneNumber)
     if not phoneNumber then return nil end
@@ -24,7 +25,14 @@ local function CleanExpiredLocations()
     MySQL.query_async('DELETE FROM phone_live_locations WHERE expires_at < NOW()')
 end
 
-SetTimeout(60000, CleanExpiredLocations)
+if not USE_SQL_CLEANUP_EVENTS then
+    CreateThread(function()
+        while true do
+            Wait(60000)
+            CleanExpiredLocations()
+        end
+    end)
+end
 
 lib.callback.register('gcphone:liveLocation:start', function(source, data)
     local identifier = GetIdentifier(source)

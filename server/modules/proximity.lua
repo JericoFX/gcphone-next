@@ -1,5 +1,7 @@
 -- Creado/Modificado por JericoFX
 
+local USE_SQL_CLEANUP_EVENTS = GetConvar('gcphone_sql_cleanup_events', '0') == '1'
+
 lib.callback.register('gcphone:proximity:shareContact', function(source, data)
     local identifier = GetIdentifier(source)
     if not identifier then return false, 'Invalid source' end
@@ -261,12 +263,14 @@ lib.callback.register('gcphone:proximity:sharePost', function(source, data)
     return true
 end)
 
-CreateThread(function()
-    while true do
-        Wait(60000)
-        
-        MySQL.execute.await(
-            'DELETE FROM phone_shared_locations WHERE expires_at IS NOT NULL AND expires_at < NOW()'
-        )
-    end
-end)
+if not USE_SQL_CLEANUP_EVENTS then
+    CreateThread(function()
+        while true do
+            Wait(60000)
+
+            MySQL.execute.await(
+                'DELETE FROM phone_shared_locations WHERE expires_at IS NOT NULL AND expires_at < NOW()'
+            )
+        end
+    end)
+end

@@ -1,5 +1,7 @@
 -- Creado/Modificado por JericoFX
 
+local USE_SQL_CLEANUP_EVENTS = GetConvar('gcphone_sql_cleanup_events', '0') == '1'
+
 local function ClampNumber(value, minValue, maxValue, fallback)
     local num = tonumber(value)
     if not num then return fallback end
@@ -70,6 +72,10 @@ end
 CreateThread(function()
     Wait(3000)
     EnsureRetentionIndexes()
+
+    if USE_SQL_CLEANUP_EVENTS then
+        return
+    end
 
     while true do
         PurgeOldRows()
