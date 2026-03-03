@@ -2,8 +2,9 @@
 
 local currentDroppedPhones = {}
 local phoneObjects = {}
-local isNearPhone = false
-local nearestPhone = nil
+local phonePoints = {}
+local uiPhoneId = nil
+local interactionBusy = false
 
 local function CreatePhoneObject(coords)
     local model = "prop_npc_phone_01"
@@ -27,6 +28,141 @@ local function RemovePhoneObject(phoneId)
         DeleteEntity(phoneObjects[phoneId])
         phoneObjects[phoneId] = nil
     end
+end
+
+local function RemovePhonePoint(phoneId)
+    local point = phonePoints[phoneId]
+    if not point then return end
+
+    point:remove()
+    phonePoints[phoneId] = nil
+
+    if uiPhoneId == phoneId then
+        uiPhoneId = nil
+        lib.hideTextUI()
+    end
+end
+
+local function HandlePhoneInteraction(phoneId)
+    if interactionBusy then return end
+
+    interactionBusy = true
+
+    local action = lib.inputDialog('Telefono encontrado', {
+        {
+            type = 'select',
+            label = 'Accion',
+            required = true,
+            options = {
+                { value = 'inspect', label = 'Ver metadata' },
+                { value = 'unlock', label = 'Intentar PIN (pericia)' },
+            }
+        }
+    })
+
+    if not action or not action[1] then
+        interactionBusy = false
+        return
+    end
+
+    if action[1] == 'inspect' then
+        lib.callback('gcphone:getPhoneInfo', false, function(result)
+            if result and result.success and result.phone then
+                lib.alertDialog({
+                    header = 'Telefono Encontrado',
+                    content = ('Propietario: %s\nNumero: %s\nIMEI: %s'):format(
+                        result.phone.owner,
+                        result.phone.phoneNumber,
+                        result.phone.imei
+                    ),
+                    centered = true
+                })
+            end
+
+            interactionBusy = false
+        end, { phoneId = phoneId })
+
+        return
+    end
+
+    if action[1] == 'unlock' then
+        local pinInput = lib.inputDialog('Intentar desbloqueo', {
+            {
+                type = 'input',
+                label = 'PIN de 4 digitos',
+                placeholder = '0000',
+                required = true,
+                min = 4,
+                max = 4,
+            }
+        })
+
+        if not pinInput or not pinInput[1] then
+            interactionBusy = false
+            return
+        end
+
+        lib.callback('gcphone:unlockDroppedPhone', false, function(result)
+            if result and result.success then
+                lib.alertDialog({
+                    header = 'Pericia completada',
+                    content = ('Propietario: %s\n\n%s'):format(result.phone.owner or 'N/A', result.report or 'Sin datos'),
+                    centered = true,
+                    size = 'lg'
+                })
+            else
+                lib.notify({
+                    title = 'PIN incorrecto',
+                    description = 'No se pudo desbloquear el dispositivo',
+                    type = 'error'
+                })
+            end
+
+            interactionBusy = false
+        end, {
+            phoneId = phoneId,
+            pin = tostring(pinInput[1] or '')
+        })
+
+        return
+    end
+
+    interactionBusy = false
+end
+
+local function CreatePhonePoint(phoneId, coords)
+    RemovePhonePoint(phoneId)
+
+    local point = lib.points.new({
+        coords = vec3(coords.x, coords.y, coords.z),
+        distance = 2.0,
+        phoneId = phoneId,
+    })
+
+    function point:onExit()
+        if uiPhoneId == self.phoneId then
+            uiPhoneId = nil
+            lib.hideTextUI()
+        end
+    end
+
+    function point:nearby()
+        if not self.isClosest then return end
+
+        uiPhoneId = self.phoneId
+
+        if not lib.isTextUIOpen() then
+            lib.showTextUI('[E] Examinar telefono', {
+                position = 'left-center'
+            })
+        end
+
+        if self.currentDistance < 2.0 and IsControlJustReleased(0, 38) then
+            HandlePhoneInteraction(self.phoneId)
+        end
+    end
+
+    phonePoints[phoneId] = point
 end
 
 RegisterCommand('tiratelefono', function()
@@ -54,11 +190,13 @@ RegisterNetEvent('gcphone:phoneDropped', function(data)
     
     local phoneObj = CreatePhoneObject(data.coords)
     phoneObjects[data.phoneId] = phoneObj
+    CreatePhonePoint(data.phoneId, data.coords)
 end)
 
 RegisterNetEvent('gcphone:phonePickedUp', function(phoneId)
     if not phoneId then return end
     
+    RemovePhonePoint(phoneId)
     RemovePhoneObject(phoneId)
     currentDroppedPhones[phoneId] = nil
 end)
@@ -70,113 +208,41 @@ RegisterNUICallback('getPhoneMetadata', function(_, cb)
 end)
 
 CreateThread(function()
-    while true do
-        Wait(500)
-        
-        local ped = PlayerPedId()
-        local pedCoords = GetEntityCoords(ped)
-        isNearPhone = false
-        nearestPhone = nil
-        
-        for phoneId, phoneData in pairs(currentDroppedPhones) do
-            if phoneObjects[phoneId] and DoesEntityExist(phoneObjects[phoneId]) then
-                local phoneCoords = GetEntityCoords(phoneObjects[phoneId])
-                local distance = #(pedCoords - phoneCoords)
-                
-                if distance < 2.0 then
-                    isNearPhone = true
-                    nearestPhone = phoneId
-                    
-                    lib.showTextUI('[E] Examinar telefono', {
-                        position = 'left-center'
-                    })
-                    
-                    if IsControlJustReleased(0, 38) then
-                        local action = lib.inputDialog('Telefono encontrado', {
-                            {
-                                type = 'select',
-                                label = 'Accion',
-                                required = true,
-                                options = {
-                                    { value = 'inspect', label = 'Ver metadata' },
-                                    { value = 'unlock', label = 'Intentar PIN (pericia)' },
-                                }
-                            }
-                        })
+    Wait(500)
 
-                        if not action or not action[1] then
-                            goto continue
-                        end
+    lib.callback('gcphone:getDroppedPhones', false, function(result)
+        if not result or not result.success or type(result.phones) ~= 'table' then return end
 
-                        if action[1] == 'inspect' then
-                            lib.callback('gcphone:getPhoneInfo', false, function(result)
-                                if result and result.success and result.phone then
-                                    lib.alertDialog({
-                                        header = 'Telefono Encontrado',
-                                        content = ('Propietario: %s\nNumero: %s\nIMEI: %s'):format(
-                                            result.phone.owner,
-                                            result.phone.phoneNumber,
-                                            result.phone.imei
-                                        ),
-                                        centered = true
-                                    })
-                                end
-                            end, { phoneId = phoneId })
-                        end
+        for i = 1, #result.phones do
+            local phoneData = result.phones[i]
 
-                        if action[1] == 'unlock' then
-                            local pinInput = lib.inputDialog('Intentar desbloqueo', {
-                                {
-                                    type = 'input',
-                                    label = 'PIN de 4 digitos',
-                                    placeholder = '0000',
-                                    required = true,
-                                    min = 4,
-                                    max = 4,
-                                }
-                            })
+            if phoneData and phoneData.phoneId and phoneData.coords then
+                if not currentDroppedPhones[phoneData.phoneId] then
+                    currentDroppedPhones[phoneData.phoneId] = phoneData
+                end
 
-                            if not pinInput or not pinInput[1] then
-                                goto continue
-                            end
+                if not phoneObjects[phoneData.phoneId] then
+                    phoneObjects[phoneData.phoneId] = CreatePhoneObject(phoneData.coords)
+                end
 
-                            lib.callback('gcphone:unlockDroppedPhone', false, function(result)
-                                if result and result.success then
-                                    lib.alertDialog({
-                                        header = 'Pericia completada',
-                                        content = ('Propietario: %s\n\n%s'):format(result.phone.owner or 'N/A', result.report or 'Sin datos'),
-                                        centered = true,
-                                        size = 'lg'
-                                    })
-                                else
-                                    lib.notify({
-                                        title = 'PIN incorrecto',
-                                        description = 'No se pudo desbloquear el dispositivo',
-                                        type = 'error'
-                                    })
-                                end
-                            end, {
-                                phoneId = phoneId,
-                                pin = tostring(pinInput[1] or '')
-                            })
-                        end
-                    end
-                    ::continue::
-                    break
+                if not phonePoints[phoneData.phoneId] then
+                    CreatePhonePoint(phoneData.phoneId, phoneData.coords)
                 end
             end
         end
-        
-        if not isNearPhone then
-            lib.hideTextUI()
-        end
-    end
+    end)
 end)
 
 AddEventHandler('onResourceStop', function(resourceName)
     if GetCurrentResourceName() == resourceName then
+        for phoneId, _ in pairs(phonePoints) do
+            RemovePhonePoint(phoneId)
+        end
+
         for phoneId, _ in pairs(phoneObjects) do
             RemovePhoneObject(phoneId)
         end
+
+        lib.hideTextUI()
     end
 end)

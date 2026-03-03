@@ -1,6 +1,39 @@
 -- Creado/Modificado por JericoFX
 
 local PICKUP_DISTANCE = 2.0
+local droppedPhones = {}
+
+local function BuildDroppedPhonePayload(row)
+    if not row or not row.phone_id then return nil end
+
+    local x = tonumber(row.coords_x)
+    local y = tonumber(row.coords_y)
+    local z = tonumber(row.coords_z)
+
+    if not x or not y or not z then return nil end
+
+    return {
+        phoneId = tostring(row.phone_id),
+        coords = { x = x, y = y, z = z }
+    }
+end
+
+local function LoadDroppedPhones()
+    local rows = MySQL.query.await(
+        'SELECT phone_id, coords_x, coords_y, coords_z FROM phone_dropped WHERE picked_up = 0'
+    ) or {}
+
+    droppedPhones = {}
+
+    for i = 1, #rows do
+        local payload = BuildDroppedPhonePayload(rows[i])
+        if payload then
+            droppedPhones[payload.phoneId] = payload
+        end
+    end
+end
+
+LoadDroppedPhones()
 
 local function SafeText(value, maxLen)
     if type(value) ~= 'string' then return '' end
@@ -115,10 +148,31 @@ lib.callback.register('gcphone:dropPhone', function(source)
         { phoneId, identifier, phoneData.phone_number, phoneData.imei, coords.x, coords.y, coords.z }
     )
 
+    local payload = {
+        phoneId = phoneId,
+        coords = { x = coords.x, y = coords.y, z = coords.z }
+    }
+
+    droppedPhones[phoneId] = payload
+    TriggerClientEvent('gcphone:phoneDropped', -1, payload)
+
     return {
         success = true,
         phoneId = phoneId,
-        coords = { x = coords.x, y = coords.y, z = coords.z }
+        coords = payload.coords,
+    }
+end)
+
+lib.callback.register('gcphone:getDroppedPhones', function()
+    local list = {}
+
+    for _, phoneData in pairs(droppedPhones) do
+        list[#list + 1] = phoneData
+    end
+
+    return {
+        success = true,
+        phones = list,
     }
 end)
 
@@ -141,6 +195,9 @@ lib.callback.register('gcphone:pickupPhone', function(source, data)
         'UPDATE phone_dropped SET picked_up = 1 WHERE phone_id = ?',
         { phoneId }
     )
+
+    droppedPhones[phoneId] = nil
+    TriggerClientEvent('gcphone:phonePickedUp', -1, phoneId)
 
     local ownerName = GetName(source) or 'Desconocido'
 
