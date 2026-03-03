@@ -355,7 +355,10 @@ RegisterNUICallback('musicStop', function(_, cb)
 end)
 
 RegisterNUICallback('musicSetVolume', function(data, cb)
-    TriggerEvent('gcphone:music:setVolumeFromNUI', data.volume)
+    TriggerEvent('gcphone:music:setVolumeFromNUI', {
+        volume = data and data.volume,
+        distance = data and data.distance,
+    })
     cb(true)
 end)
 

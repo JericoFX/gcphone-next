@@ -1,109 +1,69 @@
---[[
-    Client-side music system using xSound API
-    Handles: Play, Pause, Resume, Stop, Volume, Distance (3D positional audio)
-]]
-
-local xSound = exports['xsound']
-local SOUND_NAME = 'gcphone_music_' .. GetPlayerServerId(PlayerId())
 local isPlaying = false
+local isPaused = false
 local currentUrl = nil
 
-local function GetPlayerPosition()
-    local ped = PlayerPedId()
-    local coords = GetEntityCoords(ped)
-    return coords
-end
+RegisterNetEvent('gcphone:music:playFromNUI', function(data)
+    TriggerServerEvent('gcphone:music:play', data)
 
-local function UpdateSoundPosition()
-    if not isPlaying then return end
-    local pos = GetPlayerPosition()
-    xSound:Position(SOUND_NAME, pos)
-end
-
-CreateThread(function()
-    while true do
-        Wait(300)
-        UpdateSoundPosition()
+    if type(data) == 'table' then
+        currentUrl = type(data.url) == 'string' and data.url or currentUrl
     end
-end)
-
-RegisterNUICallback('musicPlay', function(data, cb)
-    if not data or type(data.url) ~= 'string' then
-        cb({ success = false })
-        return
-    end
-
-    local url = data.url:match('^%s*(.-)%s*$')
-    if url == '' then
-        cb({ success = false })
-        return
-    end
-
-    if xSound:soundExists(SOUND_NAME) then
-        xSound:Destroy(SOUND_NAME)
-    end
-
-    local volume = tonumber(data.volume) or 0.5
-    local distance = tonumber(data.distance) or 15
-    local pos = GetPlayerPosition()
-
-    xSound:PlayUrlPos(SOUND_NAME, url, volume, pos, false)
-    xSound:Distance(SOUND_NAME, distance)
-
     isPlaying = true
-    currentUrl = url
-
-    cb({ success = true })
+    isPaused = false
 end)
 
-RegisterNUICallback('musicPause', function(_, cb)
-    if xSound:soundExists(SOUND_NAME) and xSound:isPlaying(SOUND_NAME) then
-        xSound:Pause(SOUND_NAME)
-        isPlaying = false
+RegisterNetEvent('gcphone:music:pauseFromNUI', function()
+    TriggerServerEvent('gcphone:music:pause')
+    if isPlaying then
+        isPaused = true
     end
-    cb({ success = true })
 end)
 
-RegisterNUICallback('musicResume', function(_, cb)
-    if xSound:soundExists(SOUND_NAME) and xSound:isPaused(SOUND_NAME) then
-        xSound:Resume(SOUND_NAME)
-        isPlaying = true
+RegisterNetEvent('gcphone:music:resumeFromNUI', function()
+    TriggerServerEvent('gcphone:music:resume')
+    if isPlaying then
+        isPaused = false
     end
-    cb({ success = true })
 end)
 
-RegisterNUICallback('musicStop', function(_, cb)
-    if xSound:soundExists(SOUND_NAME) then
-        xSound:Destroy(SOUND_NAME)
-    end
+RegisterNetEvent('gcphone:music:stopFromNUI', function()
+    TriggerServerEvent('gcphone:music:stop')
     isPlaying = false
+    isPaused = false
     currentUrl = nil
-    cb({ success = true })
 end)
 
-RegisterNUICallback('musicSetVolume', function(data, cb)
-    if not xSound:soundExists(SOUND_NAME) then
-        cb({ success = false })
-        return
-    end
-
-    local volume = tonumber(data.volume) or 0.5
-    local distance = tonumber(data.distance) or 15
-
-    xSound:setVolumeMax(SOUND_NAME, volume)
-    xSound:Distance(SOUND_NAME, distance)
-
-    cb({ success = true })
+RegisterNetEvent('gcphone:music:setVolumeFromNUI', function(payload)
+    TriggerServerEvent('gcphone:music:setVolume', payload)
 end)
 
-AddEventHandler('playerDropped', function()
-    if xSound:soundExists(SOUND_NAME) then
-        xSound:Destroy(SOUND_NAME)
+RegisterNetEvent('gcphone:music:setState', function(state)
+    if type(state) ~= 'table' then return end
+
+    if state.isPlaying ~= nil then
+        isPlaying = state.isPlaying and true or false
     end
+
+    if state.isPaused ~= nil then
+        isPaused = state.isPaused and true or false
+    end
+
+    if type(state.url) == 'string' and state.url ~= '' then
+        currentUrl = state.url
+    end
+
+    SendNUIMessage({
+        action = 'musicStateUpdated',
+        data = state,
+    })
 end)
 
 exports('isPlayingMusic', function()
     return isPlaying
+end)
+
+exports('isMusicPaused', function()
+    return isPaused
 end)
 
 exports('getCurrentMusicUrl', function()

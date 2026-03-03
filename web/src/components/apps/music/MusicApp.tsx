@@ -1,309 +1,331 @@
-import { createSignal, createEffect, onCleanup } from 'solid-js';
+import { For, Show, createEffect, createSignal, onCleanup } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { fetchNui } from '../../../utils/fetchNui';
+import styles from './MusicApp.module.scss';
+
+interface SearchItem {
+  videoId: string;
+  title: string;
+  channel?: string;
+  thumbnail?: string;
+  url?: string;
+}
+
+interface SearchResponse {
+  success?: boolean;
+  error?: string;
+  results?: SearchItem[];
+}
+
+interface MusicStatePayload {
+  success?: boolean;
+  error?: string;
+  isPlaying?: boolean;
+  isPaused?: boolean;
+  title?: string;
+  volume?: number;
+  distance?: number;
+}
+
+const DEFAULT_THUMB = './img/icons_ios/music.svg';
 
 export function MusicApp() {
   const router = useRouter();
-  const [url, setUrl] = createSignal('');
-  const [volume, setVolume] = createSignal(50);
-  const [distance, setDistance] = createSignal(15);
+
+  const [query, setQuery] = createSignal('');
+  const [searching, setSearching] = createSignal(false);
+  const [searchError, setSearchError] = createSignal('');
+  const [results, setResults] = createSignal<SearchItem[]>([]);
+
+  const [manualUrl, setManualUrl] = createSignal('');
+  const [nowPlaying, setNowPlaying] = createSignal('Sin reproduccion activa');
   const [isPlaying, setIsPlaying] = createSignal(false);
-  const [isLoading, setIsLoading] = createSignal(false);
+  const [isPaused, setIsPaused] = createSignal(false);
+
+  const [volume, setVolume] = createSignal(15);
+  const [distance, setDistance] = createSignal(15);
+  const [busyAction, setBusyAction] = createSignal(false);
+  const [status, setStatus] = createSignal('Busca una pista y reproduccela para toda la zona.');
+
+  const applyServerState = (payload?: MusicStatePayload) => {
+    if (!payload || typeof payload !== 'object') return;
+
+    if (typeof payload.isPlaying === 'boolean') {
+      setIsPlaying(payload.isPlaying);
+      if (!payload.isPlaying) {
+        setIsPaused(false);
+      }
+    }
+
+    if (typeof payload.isPaused === 'boolean') {
+      setIsPaused(payload.isPaused);
+    }
+
+    if (typeof payload.title === 'string' && payload.title.trim()) {
+      setNowPlaying(payload.title.trim());
+    }
+
+    if (typeof payload.volume === 'number') {
+      setVolume(Math.round(Math.max(0, Math.min(1, payload.volume)) * 100));
+    }
+
+    if (typeof payload.distance === 'number') {
+      setDistance(Math.round(Math.max(5, Math.min(80, payload.distance))));
+    }
+
+    if (payload.error) {
+      setStatus(`Error: ${payload.error}`);
+    }
+  };
 
   createEffect(() => {
     const onKey = (e: CustomEvent<string>) => {
       if (e.detail === 'Backspace') router.goBack();
     };
+
+    const onMessage = (event: MessageEvent<{ action?: string; data?: MusicStatePayload }>) => {
+      if (event?.data?.action !== 'musicStateUpdated') return;
+      applyServerState(event.data.data);
+      setBusyAction(false);
+    };
+
     window.addEventListener('phone:keyUp', onKey as EventListener);
-    onCleanup(() => window.removeEventListener('phone:keyUp', onKey as EventListener));
+    window.addEventListener('message', onMessage as EventListener);
+
+    onCleanup(() => {
+      window.removeEventListener('phone:keyUp', onKey as EventListener);
+      window.removeEventListener('message', onMessage as EventListener);
+    });
   });
 
-  const handleVolumeChange = (val: number) => {
-    setVolume(val);
-    const newDistance = Math.round(5 + (val / 100) * 45);
-    setDistance(newDistance);
-    if (isPlaying()) {
-      fetchNui('musicSetVolume', { volume: val / 100, distance: newDistance });
+  const searchCatalog = async () => {
+    const term = query().trim();
+    if (!term) {
+      setSearchError('Escribe algo para buscar.');
+      setResults([]);
+      return;
     }
+
+    setSearching(true);
+    setSearchError('');
+
+    const response = await fetchNui<SearchResponse>('musicSearchCatalog', { query: term, limit: 12 });
+
+    setSearching(false);
+
+    if (!response || response.success === false) {
+      setResults([]);
+      setSearchError(response?.error || 'No se pudo consultar YouTube.');
+      return;
+    }
+
+    const list = Array.isArray(response.results) ? response.results : [];
+    setResults(list);
+    setSearchError(list.length === 0 ? 'Sin resultados.' : '');
   };
 
-  const handlePlay = async () => {
-    const link = url().trim();
-    if (!link) return;
-    setIsLoading(true);
-    await fetchNui('musicPlay', { url: link, volume: volume() / 100, distance: distance() });
-    setIsLoading(false);
+  const playFromResult = async (track: SearchItem) => {
+    setBusyAction(true);
+    setStatus('Resolviendo stream y enviando al servidor...');
+
+    await fetchNui('musicPlay', {
+      videoId: track.videoId,
+      title: track.title,
+      volume: volume() / 100,
+      distance: distance(),
+    });
+
+    setNowPlaying(track.title || 'YouTube');
     setIsPlaying(true);
+    setIsPaused(false);
+    setStatus('Transmitiendo para jugadores cercanos.');
+    setBusyAction(false);
   };
 
-  const handlePause = () => {
-    fetchNui('musicPause');
-    setIsPlaying(false);
-  };
+  const playManual = async () => {
+    const url = manualUrl().trim();
+    if (!url) return;
 
-  const handleResume = () => {
-    fetchNui('musicResume');
+    setBusyAction(true);
+    setStatus('Enviando URL al servidor...');
+
+    await fetchNui('musicPlay', {
+      url,
+      title: 'URL manual',
+      volume: volume() / 100,
+      distance: distance(),
+    });
+
+    setNowPlaying('URL manual');
     setIsPlaying(true);
+    setIsPaused(false);
+    setStatus('Transmitiendo para jugadores cercanos.');
+    setBusyAction(false);
   };
 
-  const handleStop = () => {
-    fetchNui('musicStop');
+  const pause = async () => {
+    setBusyAction(true);
+    await fetchNui('musicPause');
+    setIsPaused(true);
+    setStatus('Pausado.');
+    setBusyAction(false);
+  };
+
+  const resume = async () => {
+    setBusyAction(true);
+    await fetchNui('musicResume');
+    setIsPaused(false);
+    setStatus('Reproduciendo.');
+    setBusyAction(false);
+  };
+
+  const stop = async () => {
+    setBusyAction(true);
+    await fetchNui('musicStop');
     setIsPlaying(false);
-    setUrl('');
+    setIsPaused(false);
+    setNowPlaying('Sin reproduccion activa');
+    setStatus('Detenido.');
+    setBusyAction(false);
+  };
+
+  const syncAudioControls = async (nextVolume: number, nextDistance: number) => {
+    setVolume(nextVolume);
+    setDistance(nextDistance);
+
+    if (!isPlaying()) return;
+    await fetchNui('musicSetVolume', {
+      volume: nextVolume / 100,
+      distance: nextDistance,
+    });
   };
 
   return (
-    <div style={{
-      height: '100%',
-      background: 'linear-gradient(180deg, #1a1a2e 0%, #16213e 100%)',
-      display: 'flex',
-      'flex-direction': 'column',
-      padding: '16px',
-      'box-sizing': 'border-box',
-    }}>
-      <div style={{
-        display: 'flex',
-        'align-items': 'center',
-        'margin-bottom': '24px',
-        gap: '12px',
-      }}>
-        <button
-          onClick={() => router.goBack()}
-          style={{
-            background: 'rgba(255,255,255,0.1)',
-            border: 'none',
-            'border-radius': '12px',
-            width: '36px',
-            height: '36px',
-            color: '#fff',
-            'font-size': '20px',
-            cursor: 'pointer',
-            display: 'flex',
-            'align-items': 'center',
-            'justify-content': 'center',
-          }}
-        >
+    <div class="ios-page">
+      <div class={`ios-nav ${styles.nav}`}>
+        <button class="ios-icon-btn" onClick={() => router.goBack()}>
           ‹
         </button>
-        <h1 style={{
-          color: '#fff',
-          'font-size': '22px',
-          'font-weight': '600',
-          margin: '0',
-        }}>
-          Musica
-        </h1>
+        <div class="ios-nav-title">Musica</div>
       </div>
 
-      <div style={{
-        background: 'rgba(255,255,255,0.08)',
-        'border-radius': '16px',
-        padding: '20px',
-        'margin-bottom': '16px',
-      }}>
-        <div style={{
-          display: 'flex',
-          'align-items': 'center',
-          gap: '10px',
-          'margin-bottom': '20px',
-        }}>
-          <div style={{
-            width: '48px',
-            height: '48px',
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            'border-radius': '14px',
-            display: 'flex',
-            'align-items': 'center',
-            'justify-content': 'center',
-            'font-size': '24px',
-          }}>
-            🎵
+      <div class={`ios-content ${styles.content}`}>
+        <section class={styles.hero}>
+          <div class={styles.heroBackdrop} />
+          <div class={styles.heroText}>
+            <div class={styles.kicker}>Servidor</div>
+            <h2>{nowPlaying()}</h2>
+            <p>{status()}</p>
           </div>
-          <div style={{ flex: '1' }}>
-            <div style={{ color: 'rgba(255,255,255,0.5)', 'font-size': '12px', 'margin-bottom': '4px' }}>
-              {isPlaying() ? 'Reproduciendo' : 'Pega un link de YouTube'}
-            </div>
-            <div style={{
-              color: '#fff',
-              'font-size': '14px',
-              'white-space': 'nowrap',
-              overflow: 'hidden',
-              'text-overflow': 'ellipsis',
-              'max-width': '200px',
-            }}>
-              {url() || 'Sin URL'}
-            </div>
+        </section>
+
+        <section class="ios-list">
+          <div class="ios-row">
+            <span class="ios-label">Buscar en YouTube</span>
           </div>
-        </div>
-
-        <input
-          type="text"
-          placeholder="https://youtube.com/watch?v=..."
-          value={url()}
-          onInput={(e) => setUrl(e.currentTarget.value)}
-          disabled={isPlaying()}
-          style={{
-            width: '100%',
-            padding: '12px 14px',
-            'border-radius': '12px',
-            border: '1px solid rgba(255,255,255,0.15)',
-            background: 'rgba(0,0,0,0.3)',
-            color: '#fff',
-            'font-size': '14px',
-            'box-sizing': 'border-box',
-            outline: 'none',
-          }}
-        />
-      </div>
-
-      <div style={{
-        display: 'flex',
-        'justify-content': 'center',
-        gap: '12px',
-        'margin-bottom': '24px',
-      }}>
-        {!isPlaying() ? (
-          <button
-            onClick={handlePlay}
-            disabled={!url().trim() || isLoading()}
-            style={{
-              width: '64px',
-              height: '64px',
-              'border-radius': '50%',
-              border: 'none',
-              background: url().trim()
-                ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-                : 'rgba(255,255,255,0.2)',
-              color: '#fff',
-              'font-size': '28px',
-              cursor: url().trim() ? 'pointer' : 'not-allowed',
-              display: 'flex',
-              'align-items': 'center',
-              'justify-content': 'center',
-              opacity: url().trim() ? 1 : 0.5,
-              transition: 'transform 0.15s ease',
-            }}
-          >
-            {isLoading() ? '⏳' : '▶'}
-          </button>
-        ) : (
-          <>
-            <button
-              onClick={handlePause}
-              style={{
-                width: '56px',
-                height: '56px',
-                'border-radius': '50%',
-                border: 'none',
-                background: 'rgba(255,255,255,0.15)',
-                color: '#fff',
-                'font-size': '22px',
-                cursor: 'pointer',
-                display: 'flex',
-                'align-items': 'center',
-                'justify-content': 'center',
-              }}
-            >
-              ⏸
+          <div class={styles.searchRow}>
+            <input
+              class={`ios-input ${styles.searchInput}`}
+              type="text"
+              placeholder="Ej: Daft Punk - One More Time"
+              value={query()}
+              onInput={(e) => setQuery(e.currentTarget.value)}
+            />
+            <button class="ios-primary-btn" disabled={searching()} onClick={searchCatalog}>
+              {searching() ? 'Buscando...' : 'Buscar'}
             </button>
-            <button
-              onClick={handleResume}
-              style={{
-                width: '56px',
-                height: '56px',
-                'border-radius': '50%',
-                border: 'none',
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                color: '#fff',
-                'font-size': '22px',
-                cursor: 'pointer',
-                display: 'flex',
-                'align-items': 'center',
-                'justify-content': 'center',
-              }}
-            >
-              ▶
+          </div>
+          <Show when={searchError()}>
+            <div class={styles.error}>{searchError()}</div>
+          </Show>
+        </section>
+
+        <Show when={results().length > 0}>
+          <section class={styles.results}>
+            <For each={results()}>
+              {(item) => (
+                <button class={styles.track} onClick={() => playFromResult(item)} disabled={busyAction()}>
+                  <img src={item.thumbnail || DEFAULT_THUMB} alt={item.title} loading="lazy" />
+                  <div class={styles.trackMeta}>
+                    <div class={styles.trackTitle}>{item.title}</div>
+                    <div class={styles.trackChannel}>{item.channel || 'Canal sin nombre'}</div>
+                  </div>
+                  <div class={styles.trackAction}>Play</div>
+                </button>
+              )}
+            </For>
+          </section>
+        </Show>
+
+        <section class="ios-list">
+          <div class="ios-row">
+            <span class="ios-label">URL manual</span>
+          </div>
+          <div class={styles.searchRow}>
+            <input
+              class={`ios-input ${styles.searchInput}`}
+              type="text"
+              placeholder="https://youtube.com/watch?v=..."
+              value={manualUrl()}
+              onInput={(e) => setManualUrl(e.currentTarget.value)}
+            />
+            <button class="ios-secondary-btn" disabled={!manualUrl().trim() || busyAction()} onClick={playManual}>
+              Enviar
             </button>
-          </>
-        )}
-        <button
-          onClick={handleStop}
-          disabled={!isPlaying()}
-          style={{
-            width: '56px',
-            height: '56px',
-            'border-radius': '50%',
-            border: 'none',
-            background: isPlaying() ? 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' : 'rgba(255,255,255,0.15)',
-            color: '#fff',
-            'font-size': '22px',
-            cursor: isPlaying() ? 'pointer' : 'not-allowed',
-            display: 'flex',
-            'align-items': 'center',
-            'justify-content': 'center',
-            opacity: isPlaying() ? 1 : 0.5,
-          }}
-        >
-          ⏹
-        </button>
-      </div>
+          </div>
+        </section>
 
-      <div style={{
-        background: 'rgba(255,255,255,0.08)',
-        'border-radius': '16px',
-        padding: '16px',
-      }}>
-        <div style={{ 'margin-bottom': '16px' }}>
-          <div style={{
-            display: 'flex',
-            'justify-content': 'space-between',
-            'align-items': 'center',
-            'margin-bottom': '8px',
-          }}>
-            <span style={{ color: 'rgba(255,255,255,0.7)', 'font-size': '13px' }}>Volumen</span>
-            <span style={{ color: '#fff', 'font-size': '14px', 'font-weight': '600' }}>{volume()}%</span>
+        <section class="ios-list">
+          <div class="ios-row">
+            <span class="ios-label">Controles</span>
           </div>
-          <input
-            type="range"
-            min="0"
-            max="100"
-            value={volume()}
-            onInput={(e) => handleVolumeChange(Number(e.currentTarget.value))}
-            style={{
-              width: '100%',
-              height: '6px',
-              'border-radius': '3px',
-              appearance: 'none',
-              background: `linear-gradient(to right, #667eea 0%, #764ba2 ${volume()}%, rgba(255,255,255,0.2) ${volume()}%)`,
-              cursor: 'pointer',
-            }}
-          />
-        </div>
 
-        <div>
-          <div style={{
-            display: 'flex',
-            'justify-content': 'space-between',
-            'align-items': 'center',
-            'margin-bottom': '8px',
-          }}>
-            <span style={{ color: 'rgba(255,255,255,0.7)', 'font-size': '13px' }}>Distancia 3D</span>
-            <span style={{ color: '#fff', 'font-size': '14px', 'font-weight': '600' }}>{distance()}m</span>
+          <div class={styles.controls}>
+            <button class="ios-secondary-btn" onClick={pause} disabled={!isPlaying() || isPaused() || busyAction()}>
+              Pausar
+            </button>
+            <button class="ios-primary-btn" onClick={resume} disabled={!isPlaying() || !isPaused() || busyAction()}>
+              Reanudar
+            </button>
+            <button class="ios-danger-btn" onClick={stop} disabled={!isPlaying() || busyAction()}>
+              Detener
+            </button>
           </div>
-          <div style={{
-            height: '6px',
-            'border-radius': '3px',
-            background: `linear-gradient(to right, #f093fb 0%, #f5576c ${(distance() - 5) / 45 * 100}%, rgba(255,255,255,0.2) ${(distance() - 5) / 45 * 100}%)`,
-          }} />
-          <div style={{
-            color: 'rgba(255,255,255,0.4)',
-            'font-size': '11px',
-            'margin-top': '6px',
-            'text-align': 'center',
-          }}>
-            Sube el volumen para aumentar el alcance
+
+          <div class={styles.sliderGroup}>
+            <div class={styles.sliderLabel}>
+              <span>Volumen</span>
+              <strong>{volume()}%</strong>
+            </div>
+            <input
+              class="ios-slider"
+              type="range"
+              min="0"
+              max="100"
+              value={volume()}
+              onInput={(e) => {
+                void syncAudioControls(Number(e.currentTarget.value), distance());
+              }}
+            />
           </div>
-        </div>
+
+          <div class={styles.sliderGroup}>
+            <div class={styles.sliderLabel}>
+              <span>Distancia 3D</span>
+              <strong>{distance()}m</strong>
+            </div>
+            <input
+              class="ios-slider"
+              type="range"
+              min="5"
+              max="30"
+              value={distance()}
+              onInput={(e) => {
+                void syncAudioControls(volume(), Number(e.currentTarget.value));
+              }}
+            />
+          </div>
+        </section>
       </div>
     </div>
   );

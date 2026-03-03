@@ -588,7 +588,46 @@ export function handleBrowserNui<T = unknown>(eventName: string, data?: unknown)
     return true as T;
   }
 
+  if (eventName === 'musicSearchCatalog' || eventName === 'musicSearchITunes') {
+    const term = String(payload.query || 'Track').trim() || 'Track';
+    return {
+      success: true,
+      results: [
+        {
+          videoId: 'dQw4w9WgXcQ',
+          title: `${term} - Live Session`,
+          channel: 'Mock Channel',
+          thumbnail: 'https://i.ytimg.com/vi/dQw4w9WgXcQ/mqdefault.jpg',
+          url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+        },
+        {
+          videoId: '9bZkp7q19f0',
+          title: `${term} - Remix`,
+          channel: 'Mock Studio',
+          thumbnail: 'https://i.ytimg.com/vi/9bZkp7q19f0/mqdefault.jpg',
+          url: 'https://www.youtube.com/watch?v=9bZkp7q19f0',
+        },
+      ],
+    } as T;
+  }
+
   if (eventName === 'musicPlay' || eventName === 'musicPause' || eventName === 'musicResume' || eventName === 'musicStop' || eventName === 'musicSetVolume') {
+    const actionMap: Record<string, { isPlaying?: boolean; isPaused?: boolean }> = {
+      musicPlay: { isPlaying: true, isPaused: false },
+      musicPause: { isPlaying: true, isPaused: true },
+      musicResume: { isPlaying: true, isPaused: false },
+      musicStop: { isPlaying: false, isPaused: false },
+      musicSetVolume: {},
+    };
+
+    emitMessage('musicStateUpdated', {
+      ...(actionMap[eventName] || {}),
+      title: typeof payload.title === 'string' && payload.title ? payload.title : 'Mock Track',
+      volume: typeof payload.volume === 'number' ? payload.volume : state.volume,
+      distance: typeof payload.distance === 'number' ? payload.distance : 15,
+      success: true,
+    });
+
     return { success: true } as T;
   }
 

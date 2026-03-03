@@ -64,6 +64,24 @@ Required convars:
 - `set livekit_api_key "your_key"`
 - `set livekit_api_secret "your_secret"`
 
+## Music App (YouTube + server audio)
+
+Music search is resolved server-side with YouTube Data API so API keys are never exposed to the NUI.
+
+Required convar:
+
+- `setr gcphone_youtube_api_key "your_google_api_key"`
+
+Optional convars:
+
+- `setr gcphone_music_piped_api_url "https://pipedapi.kavin.rocks"`
+
+Notes:
+
+- `gcphone-next` controls playback from the server module and broadcasts 3D audio via `xsound`.
+- Keep `xsound` started before `gcphone-next`.
+- Third-party attribution is documented in `THIRD_PARTY_NOTICES.md`.
+
 ## Socket server
 
 Standalone socket server lives in `socket-server/`.
