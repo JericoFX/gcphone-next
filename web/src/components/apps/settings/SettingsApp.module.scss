@@ -112,3 +112,15 @@
   margin-top: 4px;
   width: 100%;
 }
+
+.live-location-row {
+  align-items: center;
+}
+
+.live-location-status {
+  font-size: 12px;
+  color: var(--text-2);
+  background: color-mix(in srgb, var(--surface) 88%, var(--surface-2));
+  border-radius: 10px;
+  margin: 6px;
+}

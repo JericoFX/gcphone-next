@@ -1,4 +1,4 @@
-import { For, Show, batch, createEffect, createSignal, onCleanup } from 'solid-js';
+import { For, Show, batch, createEffect, createSignal, onCleanup, onMount } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { usePhone } from '../../../store/phone';
 import { useNotifications } from '../../../store/notifications';
@@ -44,6 +44,9 @@ export function SettingsApp() {
   const [status, setStatus] = createSignal<{ type: 'ok' | 'error'; text: string } | null>(null);
   const [haptics, setHaptics] = createSignal(true);
   const [animations, setAnimations] = createSignal(true);
+  const [liveLocationEnabled, setLiveLocationEnabled] = createSignal(false);
+  const [liveLocationInterval, setLiveLocationInterval] = createSignal<5 | 10>(10);
+  const [liveLocationStatus, setLiveLocationStatus] = createSignal('');
 
   createEffect(() => {
     const onKey = (e: CustomEvent<string>) => {
@@ -52,6 +55,62 @@ export function SettingsApp() {
     window.addEventListener('phone:keyUp', onKey as EventListener);
     onCleanup(() => window.removeEventListener('phone:keyUp', onKey as EventListener));
   });
+
+  onMount(async () => {
+    const persisted = window.localStorage.getItem('gcphone:liveLocationInterval');
+    if (persisted === '5') setLiveLocationInterval(5);
+    if (persisted === '10') setLiveLocationInterval(10);
+
+    const state = await fetchNui<{ success?: boolean; active?: boolean; intervalSeconds?: number }>('getLiveLocationState', {}, { success: false, active: false, intervalSeconds: 10 });
+    if (state?.success) {
+      setLiveLocationEnabled(Boolean(state.active));
+      if (state.intervalSeconds === 5 || state.intervalSeconds === 10) {
+        setLiveLocationInterval(state.intervalSeconds);
+      }
+    }
+  });
+
+  const updateLiveLocationInterval = async (seconds: 5 | 10) => {
+    setLiveLocationInterval(seconds);
+    window.localStorage.setItem('gcphone:liveLocationInterval', String(seconds));
+    await fetchNui('setLiveLocationInterval', { seconds });
+  };
+
+  const toggleLiveLocation = async () => {
+    if (liveLocationEnabled()) {
+      const response = await fetchNui<{ success?: boolean }>('stopLiveLocation', {}, { success: false });
+      if (response?.success) {
+        setLiveLocationEnabled(false);
+        setLiveLocationStatus('Ubicacion activa desactivada.');
+      }
+      return;
+    }
+
+    const contacts = await fetchNui<Array<{ number: string }>>('getContacts', {}, []);
+    const recipients = (contacts || [])
+      .map((row) => String(row?.number || '').trim())
+      .filter((value) => value.length > 0);
+
+    if (recipients.length === 0) {
+      setLiveLocationStatus('No tienes contactos para compartir.');
+      return;
+    }
+
+    await fetchNui('setLiveLocationInterval', { seconds: liveLocationInterval() });
+    const response = await fetchNui<{ success?: boolean; error?: string }>('startLiveLocation', {
+      recipients,
+      durationMinutes: 15,
+      updateIntervalSeconds: liveLocationInterval(),
+    }, { success: false });
+
+    if (response?.success) {
+      setLiveLocationEnabled(true);
+      setLiveLocationStatus(`Ubicacion activa habilitada cada ${liveLocationInterval()}s.`);
+      return;
+    }
+
+    setLiveLocationStatus(response?.error || 'No se pudo activar ubicacion activa.');
+  };
 
   const randomWallpaper = () => {
     const random = Math.floor(Math.random() * 1000);
@@ -333,6 +392,26 @@ export function SettingsApp() {
 
           <div class="ios-section-title">Sistema</div>
           <div class="ios-list">
+            <div class="ios-row">
+              <span class="ios-label">Compartir ubicacion activa</span>
+              <button class="ios-btn" classList={{ 'ios-btn-primary': liveLocationEnabled() }} onClick={() => void toggleLiveLocation()}>
+                {liveLocationEnabled() ? 'Activo' : 'Inactivo'}
+              </button>
+            </div>
+            <div class={`ios-row ${styles.liveLocationRow}`}>
+              <span class="ios-label">Frecuencia</span>
+              <div class="ios-segment">
+                <button class="ios-segment-btn" classList={{ 'ios-segment-btn-active': liveLocationInterval() === 5 }} onClick={() => void updateLiveLocationInterval(5)}>
+                  5s
+                </button>
+                <button class="ios-segment-btn" classList={{ 'ios-segment-btn-active': liveLocationInterval() === 10 }} onClick={() => void updateLiveLocationInterval(10)}>
+                  10s
+                </button>
+              </div>
+            </div>
+            <Show when={liveLocationStatus()}>
+              <div class={`ios-row ${styles.liveLocationStatus}`}>{liveLocationStatus()}</div>
+            </Show>
             <div class="ios-row">
               <span class="ios-label">Gestos superior noti/control</span>
               <span class="ios-value">Desactivado</span>

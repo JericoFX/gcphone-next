@@ -2,8 +2,17 @@
 -- Handles periodic position updates for live location sharing
 
 local isSharingLocation = false
-local updateInterval = 10000
+local configSeconds = (Config and Config.LiveLocation and tonumber(Config.LiveLocation.UpdateIntervalSeconds)) or 10
+local updateInterval = math.floor(math.max(5, configSeconds) * 1000)
 local locationThread = nil
+
+local function NormalizeIntervalMs(value)
+    local ms = tonumber(value) or 10000
+    if ms <= 5000 then
+        return 5000
+    end
+    return 10000
+end
 
 local function StartLocationUpdates()
     if locationThread then return end
@@ -43,6 +52,10 @@ RegisterNetEvent('gcphone:liveLocation:updated', function(data)
 end)
 
 RegisterNUICallback('startLiveLocation', function(data, cb)
+    if type(data) == 'table' then
+        updateInterval = NormalizeIntervalMs((tonumber(data.updateIntervalSeconds) or 10) * 1000)
+    end
+
     lib.callback('gcphone:liveLocation:start', false, function(result)
         if result and result.success then
             StartLocationUpdates()
@@ -62,4 +75,23 @@ RegisterNUICallback('getActiveLiveLocations', function(_, cb)
     lib.callback('gcphone:liveLocation:getActive', false, function(result)
         cb(result or { success = false, locations = {} })
     end)
+end)
+
+RegisterNUICallback('setLiveLocationInterval', function(data, cb)
+    local seconds = tonumber(type(data) == 'table' and data.seconds or nil)
+    if not seconds then
+        cb({ success = false, error = 'INVALID_INTERVAL' })
+        return
+    end
+
+    updateInterval = NormalizeIntervalMs(seconds * 1000)
+    cb({ success = true, intervalSeconds = math.floor(updateInterval / 1000) })
+end)
+
+RegisterNUICallback('getLiveLocationState', function(_, cb)
+    cb({
+        success = true,
+        active = isSharingLocation,
+        intervalSeconds = math.floor(updateInterval / 1000),
+    })
 end)

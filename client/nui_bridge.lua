@@ -525,6 +525,17 @@ RegisterNUICallback('setGPS', function(data, cb)
     cb(false)
 end)
 
+RegisterNUICallback('getPlayerCoords', function(_, cb)
+    local ped = PlayerPedId()
+    if not ped or ped <= 0 then
+        cb({ x = 0, y = 0 })
+        return
+    end
+
+    local coords = GetEntityCoords(ped)
+    cb({ x = coords.x or 0, y = coords.y or 0 })
+end)
+
 RegisterNUICallback('livekitGetToken', function(data, cb)
     lib.callback('gcphone:livekit:getToken', false, function(payload)
         cb(payload or { success = false, error = 'TOKEN_ERROR' })

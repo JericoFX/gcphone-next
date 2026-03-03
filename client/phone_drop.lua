@@ -93,20 +93,76 @@ CreateThread(function()
                     })
                     
                     if IsControlJustReleased(0, 38) then -- E key
-                        lib.callback('gcphone:getPhoneInfo', false, function(result)
-                            if result and result.success and result.phone then
-                                lib.alertDialog({
-                                    header = 'Telefono Encontrado',
-                                    content = ('Propietario: %s\nNumero: %s\nIMEI: %s'):format(
-                                        result.phone.owner,
-                                        result.phone.phoneNumber,
-                                        result.phone.imei
-                                    ),
-                                    centered = true
-                                })
+                        local action = lib.inputDialog('Telefono encontrado', {
+                            {
+                                type = 'select',
+                                label = 'Accion',
+                                required = true,
+                                options = {
+                                    { value = 'inspect', label = 'Ver metadata' },
+                                    { value = 'unlock', label = 'Intentar PIN (pericia)' },
+                                }
+                            }
+                        })
+
+                        if not action or not action[1] then
+                            goto continue
+                        end
+
+                        if action[1] == 'inspect' then
+                            lib.callback('gcphone:getPhoneInfo', false, function(result)
+                                if result and result.success and result.phone then
+                                    lib.alertDialog({
+                                        header = 'Telefono Encontrado',
+                                        content = ('Propietario: %s\nNumero: %s\nIMEI: %s'):format(
+                                            result.phone.owner,
+                                            result.phone.phoneNumber,
+                                            result.phone.imei
+                                        ),
+                                        centered = true
+                                    })
+                                end
+                            end, { phoneId = phoneId })
+                        end
+
+                        if action[1] == 'unlock' then
+                            local pinInput = lib.inputDialog('Intentar desbloqueo', {
+                                {
+                                    type = 'input',
+                                    label = 'PIN de 4 digitos',
+                                    placeholder = '0000',
+                                    required = true,
+                                    min = 4,
+                                    max = 4,
+                                }
+                            })
+
+                            if not pinInput or not pinInput[1] then
+                                goto continue
                             end
-                        end, { phoneId = phoneId })
+
+                            lib.callback('gcphone:unlockDroppedPhone', false, function(result)
+                                if result and result.success then
+                                    lib.alertDialog({
+                                        header = 'Pericia completada',
+                                        content = ('Propietario: %s\n\n%s'):format(result.phone.owner or 'N/A', result.report or 'Sin datos'),
+                                        centered = true,
+                                        size = 'lg'
+                                    })
+                                else
+                                    lib.notify({
+                                        title = 'PIN incorrecto',
+                                        description = 'No se pudo desbloquear el dispositivo',
+                                        type = 'error'
+                                    })
+                                end
+                            end, {
+                                phoneId = phoneId,
+                                pin = tostring(pinInput[1] or '')
+                            })
+                        end
                     end
+                    ::continue::
                     break
                 end
             end

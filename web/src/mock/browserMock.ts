@@ -117,6 +117,8 @@ let nextMessageId = 2;
 let nextPhotoId = 3;
 let nextCallId = 2;
 let started = false;
+let mockLiveLocationActive = false;
+let mockLiveLocationInterval = 10;
 
 export function setupBrowserMock() {
   if (started) return;
@@ -704,6 +706,44 @@ export function handleBrowserNui<T = unknown>(eventName: string, data?: unknown)
 
   if (eventName === 'setGPS') {
     return true as T;
+  }
+
+  if (eventName === 'getPlayerCoords') {
+    return { x: -268.42, y: -956.31 } as T;
+  }
+
+  if (eventName === 'setLiveLocationInterval') {
+    const seconds = Number(payload.seconds);
+    mockLiveLocationInterval = seconds <= 5 ? 5 : 10;
+    return { success: true, intervalSeconds: mockLiveLocationInterval } as T;
+  }
+
+  if (eventName === 'getLiveLocationState') {
+    return { success: true, active: mockLiveLocationActive, intervalSeconds: mockLiveLocationInterval } as T;
+  }
+
+  if (eventName === 'startLiveLocation') {
+    mockLiveLocationActive = true;
+    return { success: true } as T;
+  }
+
+  if (eventName === 'stopLiveLocation') {
+    mockLiveLocationActive = false;
+    return { success: true } as T;
+  }
+
+  if (eventName === 'getActiveLiveLocations') {
+    if (!mockLiveLocationActive) {
+      return { success: true, locations: [] } as T;
+    }
+
+    return {
+      success: true,
+      locations: [
+        { sender_phone: '555-1111', sender_name: 'Maria Garcia', x: -112.15, y: -1054.2 },
+        { sender_phone: '555-3333', sender_name: 'Ana Lopez', x: 241.02, y: -833.48 },
+      ],
+    } as T;
   }
 
   if (eventName === 'musicSearchCatalog' || eventName === 'musicSearchITunes') {
