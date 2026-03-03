@@ -1,32 +1,13 @@
-import { For, ParentComponent, Show, createContext, createEffect, createMemo, createSignal, onCleanup, useContext } from 'solid-js';
+import { For, ParentComponent, Show, createContext, createEffect, createMemo, createSignal, onCleanup, useContext, lazy, Suspense } from 'solid-js';
 import type { JSX } from 'solid-js';
 import { usePhone } from '../../store/phone';
 import { HomeScreen } from '../apps/home/HomeScreen';
-import { ContactsApp } from '../apps/contacts/ContactsApp';
-import { MessagesApp } from '../apps/messages/MessagesApp';
-import { CallsApp } from '../apps/calls/CallsApp';
-import { SettingsApp } from '../apps/settings/SettingsApp';
-import { BankApp } from '../apps/bank/BankApp';
-import { GalleryApp } from '../apps/gallery/GalleryApp';
-import { ChirpApp } from '../apps/chirp/ChirpApp';
-import { SnapApp } from '../apps/snap/SnapApp';
-import { ClipsApp } from '../apps/clips/ClipsApp';
-import { MarketApp } from '../apps/market/MarketApp';
-import { NewsApp } from '../apps/news/NewsApp';
-import { GarageApp } from '../apps/garage/GarageApp';
-import { ClockApp } from '../apps/clock/ClockApp';
-import { NotesApp } from '../apps/notes/NotesApp';
-import { MapsApp } from '../apps/maps/MapsApp';
-import { WeatherApp } from '../apps/weather/WeatherApp';
-import { WaveChatApp } from '../apps/wavechat/WaveChatApp';
-import { MusicApp } from '../apps/music/MusicApp';
-import { YellowPagesApp } from '../apps/yellowpages/YellowPagesApp';
-import { CameraApp } from '../apps/camera/CameraApp';
-import { APP_BY_ID } from '../../config/apps';
-import { isEnvBrowser } from '../../utils/misc';
+import { AppPlaceholder } from '../shared/ui/AppPlaceholder';
 import { PhoneNotificationBanner } from '../shared/notifications/PhoneNotificationBanner';
 import { ControlCenter } from '../shared/control-center/ControlCenter';
 import { useNotifications } from '../../store/notifications';
+import { APP_BY_ID } from '../../config/apps';
+import { isEnvBrowser } from '../../utils/misc';
 import styles from './PhoneFrame.module.scss';
 
 type AppRoute = string;
@@ -57,6 +38,52 @@ export function useRouter() {
   if (!context) throw new Error('useRouter must be used within PhoneFrame');
   return context;
 }
+
+const lazyApps = {
+  calls: lazy(() => import('../apps/calls/CallsApp').then(m => ({ default: m.CallsApp }))),
+  contacts: lazy(() => import('../apps/contacts/ContactsApp').then(m => ({ default: m.ContactsApp }))),
+  messages: lazy(() => import('../apps/messages/MessagesApp').then(m => ({ default: m.MessagesApp }))),
+  settings: lazy(() => import('../apps/settings/SettingsApp').then(m => ({ default: m.SettingsApp }))),
+  bank: lazy(() => import('../apps/bank/BankApp').then(m => ({ default: m.BankApp }))),
+  gallery: lazy(() => import('../apps/gallery/GalleryApp').then(m => ({ default: m.GalleryApp }))),
+  chirp: lazy(() => import('../apps/chirp/ChirpApp').then(m => ({ default: m.ChirpApp }))),
+  snap: lazy(() => import('../apps/snap/SnapApp').then(m => ({ default: m.SnapApp }))),
+  clips: lazy(() => import('../apps/clips/ClipsApp').then(m => ({ default: m.ClipsApp }))),
+  market: lazy(() => import('../apps/market/MarketApp').then(m => ({ default: m.MarketApp }))),
+  news: lazy(() => import('../apps/news/NewsApp').then(m => ({ default: m.NewsApp }))),
+  garage: lazy(() => import('../apps/garage/GarageApp').then(m => ({ default: m.GarageApp }))),
+  clock: lazy(() => import('../apps/clock/ClockApp').then(m => ({ default: m.ClockApp }))),
+  notes: lazy(() => import('../apps/notes/NotesApp').then(m => ({ default: m.NotesApp }))),
+  maps: lazy(() => import('../apps/maps/MapsApp').then(m => ({ default: m.MapsApp }))),
+  weather: lazy(() => import('../apps/weather/WeatherApp').then(m => ({ default: m.WeatherApp }))),
+  wavechat: lazy(() => import('../apps/wavechat/WaveChatApp').then(m => ({ default: m.WaveChatApp }))),
+  music: lazy(() => import('../apps/music/MusicApp').then(m => ({ default: m.MusicApp }))),
+  yellowpages: lazy(() => import('../apps/yellowpages/YellowPagesApp').then(m => ({ default: m.YellowPagesApp }))),
+  camera: lazy(() => import('../apps/camera/CameraApp').then(m => ({ default: m.CameraApp }))),
+};
+
+const APP_NAMES: Record<string, string> = {
+  calls: 'Llamadas',
+  contacts: 'Contactos',
+  messages: 'Mensajes',
+  settings: 'Ajustes',
+  bank: 'Banco',
+  gallery: 'Galeria',
+  chirp: 'Chirp',
+  snap: 'Snap',
+  clips: 'Clips',
+  market: 'Market',
+  news: 'Noticias',
+  garage: 'Garage',
+  clock: 'Reloj',
+  notes: 'Notas',
+  maps: 'Mapas',
+  weather: 'Clima',
+  wavechat: 'WaveChat',
+  music: 'Musica',
+  yellowpages: 'Amarillas',
+  camera: 'Camara',
+};
 
 export const PhoneFrame: ParentComponent & { Router: () => JSX.Element } = (props) => {
   const [phoneState] = usePhone();
@@ -186,26 +213,18 @@ function Router() {
 
   const renderRoute = (route: AppRoute) => {
     if (route === 'home') return <HomeScreen />;
-    if (route === 'contacts') return <ContactsApp />;
-    if (route.startsWith('messages')) return <MessagesApp />;
-    if (route === 'calls') return <CallsApp />;
-    if (route === 'settings') return <SettingsApp />;
-    if (route === 'gallery') return <GalleryApp />;
-    if (route === 'bank') return <BankApp />;
-    if (route === 'wavechat') return <WaveChatApp />;
-    if (route === 'music') return <MusicApp />;
-    if (route === 'chirp') return <ChirpApp />;
-    if (route === 'snap') return <SnapApp />;
-    if (route === 'clips') return <ClipsApp />;
-    if (route === 'yellowpages') return <YellowPagesApp />;
-    if (route === 'market') return <MarketApp />;
-    if (route === 'news') return <NewsApp />;
-    if (route === 'garage') return <GarageApp />;
-    if (route === 'clock') return <ClockApp />;
-    if (route === 'notes') return <NotesApp />;
-    if (route === 'maps') return <MapsApp />;
-    if (route === 'weather') return <WeatherApp />;
-    if (route === 'camera') return <CameraApp />;
+    
+    const LazyApp = lazyApps[route as keyof typeof lazyApps];
+    
+    if (LazyApp) {
+      const appName = APP_NAMES[route] || route;
+      return (
+        <Suspense fallback={<AppPlaceholder title={appName} rows={5} />}>
+          <LazyApp />
+        </Suspense>
+      );
+    }
+    
     return <HomeScreen />;
   };
 

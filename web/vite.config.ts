@@ -13,11 +13,29 @@ export default defineConfig({
     target: 'esnext',
     outDir: 'dist',
     emptyOutDir: true,
+    chunkSizeWarningLimit: 800,
     rollupOptions: {
       output: {
         entryFileNames: 'assets/[name].js',
         chunkFileNames: 'assets/[name].js',
         assetFileNames: 'assets/[name].[ext]',
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            return 'vendor';
+          }
+          if (id.includes('solid-js')) {
+            return 'vendor';
+          }
+          if (id.includes('components/shared') || id.includes('hooks/')) {
+            return 'shared';
+          }
+          if (id.includes('components/apps/')) {
+            const match = id.match(/components\/apps\/([^/]+)/);
+            if (match) {
+              return `app-${match[1]}`;
+            }
+          }
+        },
       },
     },
   },
@@ -33,6 +51,5 @@ export default defineConfig({
       '@assets': resolve(__dirname, 'src/assets'),
     },
   },
-
   base: './',
 });

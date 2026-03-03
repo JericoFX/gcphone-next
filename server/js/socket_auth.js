@@ -11,7 +11,15 @@ function sanitize(value, maxLen) {
   return value.replace(/[\x00-\x1F\x7F]/g, '').trim().slice(0, maxLen);
 }
 
-on('gcphone:socket:requestToken', (requestId, phone, name) => {
+function sanitizeGroups(groups) {
+  if (!Array.isArray(groups)) return [];
+  return groups
+    .map(g => String(g).replace(/[^0-9]/g, '').slice(0, 10))
+    .filter(g => g.length > 0)
+    .slice(0, 50);
+}
+
+on('gcphone:socket:requestToken', (requestId, phone, name, groups) => {
   const id = Number(requestId) || 0;
   if (!jwt) {
     emit('gcphone:socket:tokenResponse', id, '', 'JWT_SDK_NOT_INSTALLED');
@@ -31,9 +39,11 @@ on('gcphone:socket:requestToken', (requestId, phone, name) => {
     return;
   }
 
+  const safeGroups = sanitizeGroups(groups);
+
   try {
     const token = jwt.sign(
-      { phone: safePhone, name: safeName || safePhone },
+      { phone: safePhone, name: safeName || safePhone, groups: safeGroups },
       secret,
       { expiresIn: '10m' }
     );

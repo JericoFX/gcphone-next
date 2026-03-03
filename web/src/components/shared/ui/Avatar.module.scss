@@ -1,0 +1,75 @@
+.avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 700;
+  flex-shrink: 0;
+  overflow: hidden;
+  
+  &.xs {
+    width: 24px;
+    height: 24px;
+    font-size: 10px;
+  }
+  
+  &.sm {
+    width: 32px;
+    height: 32px;
+    font-size: 12px;
+  }
+  
+  &.lg {
+    width: 56px;
+    height: 56px;
+    font-size: 22px;
+  }
+  
+  &.xl {
+    width: 72px;
+    height: 72px;
+    font-size: 28px;
+  }
+  
+  &.clickable {
+    cursor: pointer;
+    transition: transform var(--dur-1, 120ms) var(--ease-standard, cubic-bezier(0.2, 0.8, 0.2, 1));
+    
+    &:active {
+      transform: scale(0.95);
+    }
+  }
+  
+  &.overflow {
+    background: var(--surface-3, #efeff4);
+    color: var(--text-2, rgba(17, 17, 17, 0.72));
+    font-size: var(--fs-caption1, 0.75rem);
+  }
+}
+
+.initial {
+  line-height: 1;
+}
+
+.image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.group {
+  display: flex;
+  flex-direction: row-reverse;
+  
+  .avatar {
+    margin-left: -8px;
+    border: 2px solid var(--surface, #ffffff);
+    
+    &:first-child {
+      margin-left: 0;
+    }
+  }
+}

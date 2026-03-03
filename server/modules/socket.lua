@@ -1,5 +1,3 @@
--- Implements: OPT-01 – Eliminar busy-wait, OPT-04 – Cleanup requests pendientes
-
 local PendingSocketTokenRequests = {}
 local LastSocketTokenRequestId = 0
 local REQUEST_TIMEOUT_MS = 7000
@@ -26,6 +24,20 @@ end
 
 SetTimeout(CLEANUP_INTERVAL_MS, CleanupExpiredRequests)
 
+local function GetUserGroupIds(identifier)
+    if not identifier then return {} end
+    local rows = MySQL.query.await(
+        'SELECT group_id FROM phone_chat_group_members WHERE identifier = ?',
+        { identifier }
+    )
+    if not rows then return {} end
+    local ids = {}
+    for _, row in ipairs(rows) do
+        table.insert(ids, tostring(row.group_id))
+    end
+    return ids
+end
+
 AddEventHandler('gcphone:socket:tokenResponse', function(requestId, token, errorCode)
     local id = tonumber(requestId)
     if not id then return end
@@ -42,6 +54,10 @@ AddEventHandler('gcphone:socket:tokenResponse', function(requestId, token, error
 end)
 
 lib.callback.register('gcphone:socket:getToken', function(source)
+    if Config.Socket and Config.Socket.Enabled == false then
+        return { success = false, error = 'SOCKET_DISABLED' }
+    end
+
     local identifier = GetIdentifier(source)
     if not identifier then
         return { success = false, error = 'INVALID_SOURCE' }
@@ -52,6 +68,8 @@ lib.callback.register('gcphone:socket:getToken', function(source)
         return { success = false, error = 'PHONE_NOT_FOUND' }
     end
 
+    local groupIds = GetUserGroupIds(identifier)
+
     local requestId = NextRequestId()
     local p = promise.new()
     PendingSocketTokenRequests[requestId] = {
@@ -59,7 +77,7 @@ lib.callback.register('gcphone:socket:getToken', function(source)
         createdAt = GetGameTimer(),
     }
 
-    TriggerEvent('gcphone:socket:requestToken', requestId, phone, GetName(source) or phone)
+    TriggerEvent('gcphone:socket:requestToken', requestId, phone, GetName(source) or phone, groupIds)
 
     local result = Citizen.Await(p)
     if type(result) == 'table' and result.ok then

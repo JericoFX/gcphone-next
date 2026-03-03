@@ -1,5 +1,5 @@
 import { Show, onMount, onCleanup, createSignal, createMemo } from 'solid-js';
-import { PhoneProvider, ContactsProvider, MessagesProvider, NotificationsProvider, MusicProvider, useNotifications, usePhone } from './store';
+import { PhoneProvider, ContactsProvider, MessagesProvider, NotificationsProvider, useNotifications, usePhone } from './store';
 import { PhoneFrame } from './components/Phone/PhoneFrame';
 import { LockScreen } from './components/LockScreen/LockScreen';
 import { ContactRequestNotification } from './components/shared/ContactRequest/ContactRequest';
@@ -111,9 +111,7 @@ export function App() {
       <NotificationsProvider>
         <ContactsProvider>
           <MessagesProvider>
-            <MusicProvider>
-              <PhoneContent />
-            </MusicProvider>
+            <PhoneContent />
           </MessagesProvider>
         </ContactsProvider>
       </NotificationsProvider>

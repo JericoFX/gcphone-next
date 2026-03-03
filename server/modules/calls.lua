@@ -5,6 +5,10 @@ local AirplaneModeBySource = {}
 local UsingPmaVoice = GetResourceState('pma-voice') == 'started'
 local LastCallStartBySource = {}
 
+local function SyncActiveCallsToGlobalState()
+    GlobalState.gcphoneActiveCalls = ActiveCalls
+end
+
 local function IsValidCallId(value)
     local callId = tonumber(value)
     if not callId then return nil end
@@ -208,6 +212,7 @@ lib.callback.register('gcphone:startCall', function(source, data)
             callData.receiverSrc = targetSource
             
             ActiveCalls[callId] = callData
+            SyncActiveCallsToGlobalState()
             
             TriggerClientEvent('gcphone:incomingCall', targetSource, {
                 id = callId,
@@ -219,6 +224,7 @@ lib.callback.register('gcphone:startCall', function(source, data)
     end
     
     ActiveCalls[callId] = callData
+    SyncActiveCallsToGlobalState()
     
     return {
         id = callId,
@@ -250,6 +256,7 @@ lib.callback.register('gcphone:acceptCall', function(source, data)
     callData.rtcAnswer = SanitizeCallSignal(data.rtcAnswer, 20000)
     
     ActiveCalls[callId] = callData
+    SyncActiveCallsToGlobalState()
     SetPlayerCallChannel(callData.transmitterSrc, callId)
     SetPlayerCallChannel(callData.receiverSrc, callId)
     
@@ -289,8 +296,10 @@ AddEventHandler('playerDropped', function()
             end
 
             ActiveCalls[callId] = nil
+            SyncActiveCallsToGlobalState()
         end
     end
+    SyncActiveCallsToGlobalState()
 end)
 
 RegisterNetEvent('gcphone:rejectCall', function(callId)
@@ -317,6 +326,7 @@ RegisterNetEvent('gcphone:rejectCall', function(callId)
     end
     
     ActiveCalls[callId] = nil
+    SyncActiveCallsToGlobalState()
 end)
 
 RegisterNetEvent('gcphone:endCall', function(callId)
@@ -342,6 +352,7 @@ RegisterNetEvent('gcphone:endCall', function(callId)
     end
     
     ActiveCalls[callId] = nil
+    SyncActiveCallsToGlobalState()
 end)
 
 RegisterNetEvent('gcphone:sendIceCandidate', function(callId, candidates)

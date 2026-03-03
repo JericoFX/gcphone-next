@@ -194,16 +194,6 @@ export function SettingsApp() {
               )}
             </For>
           </div>
-
-          <div class="ios-section-title">Musica</div>
-          <div class="ios-list">
-            <div class="ios-row">
-              <span class="ios-label">Volumen multimedia</span>
-              <button class="ios-btn" onClick={() => phoneActions.setVolume(Math.max(0, phoneState.settings.volume - 0.1))}>-</button>
-              <span class="ios-value">{Math.round(phoneState.settings.volume * 100)}%</span>
-              <button class="ios-btn" onClick={() => phoneActions.setVolume(Math.min(1, phoneState.settings.volume + 0.1))}>+</button>
-            </div>
-          </div>
         </Show>
 
         <Show when={tab() === 'security'}>

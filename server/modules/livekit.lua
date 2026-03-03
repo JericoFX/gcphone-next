@@ -23,6 +23,13 @@ local function NextRequestId()
     return LastTokenRequestId
 end
 
+local function IsParticipantOfCall(callId, source)
+    local calls = GlobalState.gcphoneActiveCalls or {}
+    local call = calls[callId]
+    if not call then return false end
+    return source == call.transmitterSrc or source == call.receiverSrc
+end
+
 local function CleanupExpiredRequests()
     local now = GetGameTimer()
     for id, data in pairs(PendingTokenRequests) do
@@ -52,15 +59,31 @@ AddEventHandler('gcphone:livekit:tokenResponse', function(requestId, token, erro
 end)
 
 lib.callback.register('gcphone:livekit:getToken', function(source, data)
+    if Config.LiveKit and Config.LiveKit.Enabled == false then
+        return { success = false, error = 'LIVEKIT_DISABLED' }
+    end
+
     local identifier = GetIdentifier(source)
     if not identifier then
         return { success = false, error = 'INVALID_SOURCE' }
     end
 
-    
     local roomName = SafeString(type(data) == 'table' and data.roomName or nil, 80)
     if not roomName then
         return { success = false, error = 'INVALID_ROOM' }
+    end
+
+    local callId = roomName:match('^call%-(%d+)$')
+    if not callId then
+        return { success = false, error = 'INVALID_ROOM_FORMAT' }
+    end
+    callId = tonumber(callId)
+    if not callId then
+        return { success = false, error = 'INVALID_CALL_ID' }
+    end
+
+    if not IsParticipantOfCall(callId, source) then
+        return { success = false, error = 'NOT_CALL_PARTICIPANT' }
     end
 
     local identity = SafeString('player:' .. tostring(identifier), 64)
@@ -73,17 +96,15 @@ lib.callback.register('gcphone:livekit:getToken', function(source, data)
         canPublishData = true,
     }
 
-    
     local requestId = NextRequestId()
     local p = promise.new()
     PendingTokenRequests[requestId] = {
         p = p,
         createdAt = GetGameTimer(),
     }
-    
+
     TriggerEvent('gcphone:livekit:requestToken', source, requestId, roomName, identity, participantName, grants)
 
-    
     local result = Citizen.Await(p)
     if type(result) == 'table' and result.ok then
         return {
@@ -96,6 +117,5 @@ lib.callback.register('gcphone:livekit:getToken', function(source, data)
         }
     end
 
-    
     return { success = false, error = result and result.error or 'TOKEN_ERROR' }
 end)

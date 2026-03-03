@@ -28,7 +28,7 @@ interface WaveChatGroup {
 }
 
 interface WaveChatGroupMessage {
-  id: number;
+  id: number | string;
   group_id: number;
   sender_number?: string;
   message: string;
@@ -115,18 +115,11 @@ export function WaveChatApp() {
     const groupId = selectedGroupId();
     const content = sanitizeText(groupMessageInput(), 800);
     if (!groupId || !content) return;
-    if (socketReady() && isWaveSocketConnected()) {
-      const ack = await sendWaveMessage(String(groupId), content);
-      if (ack?.success) {
-        setGroupMessageInput('');
-        sendWaveTyping(String(groupId), false);
-      }
-      return;
-    }
+
     const result = await fetchNui<{ success?: boolean; message?: WaveChatGroupMessage }>('wavechatSendGroupMessage', { groupId, message: content }, { success: false });
     if (result?.success) {
       setGroupMessageInput('');
-      await loadGroupMessages(groupId);
+      sendWaveTyping(String(groupId), false);
     }
   };
 
@@ -222,36 +215,12 @@ export function WaveChatApp() {
   createEffect(() => {
     const groupId = selectedGroupId();
     if (!groupId) return;
-    if (!socketReady() || !isWaveSocketConnected()) return;
-
-    joinWaveRoom(String(groupId));
-    onCleanup(() => leaveWaveRoom(String(groupId)));
-    void (async () => {
-      const history = await getWaveRecent(String(groupId), 120);
-      if (!history?.success || !history.messages) return;
-      const mapped: WaveChatGroupMessage[] = history.messages.map((msg) => ({
-        id: msg.id,
-        group_id: Number(groupId),
-        sender_number: msg.senderPhone,
-        message: msg.content,
-        created_at: new Date(msg.createdAt).toISOString(),
-      }));
-      setGroupMessages((prev) => ({ ...prev, [groupId]: mapped }));
-    })();
+    void loadGroupMessages(groupId);
+    if (socketReady() && isWaveSocketConnected()) {
+      joinWaveRoom(String(groupId));
+      onCleanup(() => leaveWaveRoom(String(groupId)));
+    }
   });
-
-  const loadRecentHistory = async (groupId: number) => {
-    const history = await getWaveRecent(String(groupId), 120);
-    if (!history?.success || !history.messages) return;
-    const mapped: WaveChatGroupMessage[] = history.messages.map((msg) => ({
-      id: msg.id,
-      group_id: groupId,
-      sender_number: msg.senderPhone,
-      message: msg.content,
-      created_at: new Date(msg.createdAt).toISOString(),
-    }));
-    setGroupMessages((prev) => ({ ...prev, [groupId]: mapped }));
-  };
 
   onMount(() => {
     void (async () => {
@@ -315,7 +284,6 @@ export function WaveChatApp() {
           const groupId = selectedGroupId();
           if (groupId) {
             joinWaveRoom(String(groupId));
-            void loadRecentHistory(groupId);
           }
         },
         onReconnectFailed: () => {

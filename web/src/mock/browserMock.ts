@@ -588,5 +588,9 @@ export function handleBrowserNui<T = unknown>(eventName: string, data?: unknown)
     return true as T;
   }
 
+  if (eventName === 'musicPlay' || eventName === 'musicPause' || eventName === 'musicResume' || eventName === 'musicStop' || eventName === 'musicSetVolume') {
+    return { success: true } as T;
+  }
+
   return undefined;
 }
