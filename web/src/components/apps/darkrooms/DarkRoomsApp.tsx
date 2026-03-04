@@ -5,6 +5,7 @@ import { AppScaffold } from '../../shared/layout';
 import { useAppCache } from '../../../hooks';
 import { MediaLightbox } from '../../shared/ui/MediaLightbox';
 import { VirtualList } from '../../shared/ui/VirtualList';
+import { Modal, ModalActions, ModalButton, FormField } from '../../shared/ui/Modal';
 import styles from './DarkRoomsApp.module.scss';
 
 interface Room {
@@ -288,48 +289,103 @@ export function DarkRoomsApp() {
     <AppScaffold title="Dark Rooms" subtitle="Comunidades con posts y votos" onBack={() => router.goBack()} bodyClass={styles.body}>
       <div class={styles.statusBar}>{status()}</div>
 
-      <div class={styles.roomsRow}>
+      <div class={styles.roomsList}>
         <For each={rooms()}>
           {(room) => (
-            <button class={styles.roomChip} classList={{ [styles.roomChipActive]: isSelectedRoomId(room.id) }} onClick={() => void openRoom(room)}>
-              <span>{room.icon || '🌙'}</span>
-              <div class={styles.roomMeta}>
-                <strong>{roomTag(room)}</strong>
-                <small>{Number(room.posts || 0)} posts · {Number(room.members || 0)} miembros</small>
+            <button 
+              class={styles.roomItem} 
+              classList={{ [styles.roomItemActive]: isSelectedRoomId(room.id) }} 
+              onClick={() => void openRoom(room)}
+            >
+              <div class={styles.roomIcon}>{room.icon || '🌙'}</div>
+              <div class={styles.roomInfo}>
+                <div class={styles.roomHeader}>
+                  <strong class={styles.roomName}>{roomTag(room)}</strong>
+                  <Show when={Number(room.has_password || 0) === 1}>
+                    <span class={styles.roomLock}>🔒</span>
+                  </Show>
+                </div>
+                <div class={styles.roomMeta}>
+                  <span>{Number(room.posts || 0)} posts</span>
+                  <span class={styles.roomMetaDot}>·</span>
+                  <span>{Number(room.members || 0)} miembros</span>
+                </div>
               </div>
-              <Show when={Number(room.has_password || 0) === 1}><em>🔒</em></Show>
             </button>
           )}
         </For>
-        <button class={styles.newRoomBtn} onClick={() => setShowCreateRoom(true)}>+ Sala</button>
+        <button class={styles.newRoomBtn} onClick={() => setShowCreateRoom(true)}>
+          <span class={styles.newRoomIcon}>+</span>
+          <span>Crear sala</span>
+        </button>
       </div>
 
-      <Show when={showCreateRoom()}>
-        <div class={styles.createRoomCard}>
-          <input type="text" placeholder="Nombre de sala" value={roomName()} onInput={(e) => setRoomName(e.currentTarget.value)} />
-          <input type="text" placeholder="Slug (ej: mercado / vehiculos)" value={roomSlug()} onInput={(e) => setRoomSlug(e.currentTarget.value)} />
-          <input type="text" placeholder="Emoji (ej: 🌙)" value={roomIcon()} onInput={(e) => setRoomIcon(e.currentTarget.value)} />
-          <textarea placeholder="Descripcion" value={roomDescription()} onInput={(e) => setRoomDescription(e.currentTarget.value)} />
-          <input type="password" placeholder="Clave opcional" value={roomPassword()} onInput={(e) => setRoomPassword(e.currentTarget.value)} />
-          <div class={styles.createRoomActions}>
-            <button onClick={() => setShowCreateRoom(false)}>Cancelar</button>
-            <button onClick={() => void createRoom()}>Crear</button>
-          </div>
+      <Modal 
+        open={showCreateRoom()} 
+        title="Crear Sala" 
+        onClose={() => setShowCreateRoom(false)}
+        size="md"
+      >
+        <FormField 
+          label="Nombre" 
+          value={roomName()} 
+          onChange={setRoomName} 
+          placeholder="Ej: Mercado de pulgas"
+        />
+        <FormField 
+          label="Slug" 
+          value={roomSlug()} 
+          onChange={setRoomSlug} 
+          placeholder="mercado (sin espacios)"
+        />
+        <FormField 
+          label="Icono" 
+          value={roomIcon()} 
+          onChange={setRoomIcon} 
+          placeholder="🌙"
+        />
+        <div class={styles.formField}>
+          <label class={styles.formLabel}>Descripcion</label>
+          <textarea
+            class={styles.formTextarea}
+            value={roomDescription()}
+            onInput={(e) => setRoomDescription(e.currentTarget.value)}
+            placeholder="De que trata esta sala?"
+            rows={3}
+          />
         </div>
-      </Show>
+        <FormField 
+          label="Clave de acceso (opcional)" 
+          value={roomPassword()} 
+          onChange={setRoomPassword} 
+          placeholder="Dejar vacio para sala publica"
+          type="password"
+        />
+        <ModalActions>
+          <ModalButton label="Cancelar" onClick={() => setShowCreateRoom(false)} />
+          <ModalButton label="Crear" onClick={() => void createRoom()} tone="primary" />
+        </ModalActions>
+      </Modal>
 
-      <Show when={joinPasswordMode()}>
-        {(room) => (
-          <div class={styles.passwordCard}>
-            <strong>Entrar a {room().name}</strong>
-            <input type="password" placeholder="Clave de sala" value={joinPassword()} onInput={(e) => setJoinPassword(e.currentTarget.value)} />
-            <div class={styles.passwordActions}>
-              <button onClick={() => setJoinPasswordMode(null)}>Cerrar</button>
-              <button onClick={() => void confirmJoinProtectedRoom()}>Entrar</button>
-            </div>
-          </div>
-        )}
-      </Show>
+      <Modal 
+        open={!!joinPasswordMode()} 
+        title={`Entrar a ${joinPasswordMode()?.name || ''}`} 
+        onClose={() => setJoinPasswordMode(null)}
+        size="sm"
+      >
+        <p class={styles.modalDescription}>Esta sala requiere una clave de acceso.</p>
+        <FormField 
+          label="Clave" 
+          value={joinPassword()} 
+          onChange={setJoinPassword} 
+          placeholder="Ingresa la clave"
+          type="password"
+        />
+        <ModalActions>
+          <ModalButton label="Cancelar" onClick={() => setJoinPasswordMode(null)} />
+          <ModalButton label="Entrar" onClick={() => void confirmJoinProtectedRoom()} tone="primary" />
+        </ModalActions>
+      </Modal>
 
       <Show when={!selectedPost()} fallback={
         <div class={styles.commentsView}>
