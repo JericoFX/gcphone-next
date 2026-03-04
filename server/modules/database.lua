@@ -829,6 +829,62 @@ local MIGRATIONS = {
                 SET `rechirps` = (SELECT COUNT(*) FROM `phone_chirp_rechirps` WHERE `original_tweet_id` = OLD.`original_tweet_id`)
                 WHERE `id` = OLD.`original_tweet_id`]]
         }
+    },
+    
+    {
+        version = 7,
+        name = "clips_enhanced_features",
+        description = "Comments and likes for Clips (TikTok)",
+        statements = {
+            -- Clips likes table
+            [[CREATE TABLE IF NOT EXISTS `phone_clips_likes` (
+                `id` INT AUTO_INCREMENT PRIMARY KEY,
+                `clip_id` INT NOT NULL,
+                `account_id` INT NOT NULL,
+                `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (`clip_id`) REFERENCES `phone_clips_posts`(`id`) ON DELETE CASCADE,
+                FOREIGN KEY (`account_id`) REFERENCES `phone_snap_accounts`(`id`) ON DELETE CASCADE,
+                UNIQUE KEY `idx_unique_clip_like` (`clip_id`, `account_id`),
+                KEY `idx_account_id` (`account_id`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci]],
+            
+            -- Clips comments table
+            [[CREATE TABLE IF NOT EXISTS `phone_clips_comments` (
+                `id` INT AUTO_INCREMENT PRIMARY KEY,
+                `clip_id` INT NOT NULL,
+                `account_id` INT NOT NULL,
+                `content` VARCHAR(500) NOT NULL,
+                `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (`clip_id`) REFERENCES `phone_clips_posts`(`id`) ON DELETE CASCADE,
+                FOREIGN KEY (`account_id`) REFERENCES `phone_snap_accounts`(`id`) ON DELETE CASCADE,
+                KEY `idx_clip_id` (`clip_id`),
+                KEY `idx_account_id` (`account_id`),
+                KEY `idx_created_at` (`created_at`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci]],
+            
+            -- Indexes
+            [[CREATE INDEX IF NOT EXISTS `idx_clips_likes_clip` ON `phone_clips_likes` (`clip_id`, `account_id`)]],
+            [[CREATE INDEX IF NOT EXISTS `idx_clips_comments_clip` ON `phone_clips_comments` (`clip_id`, `created_at`)]],
+            
+            -- Drop existing triggers
+            [[DROP TRIGGER IF EXISTS `trg_phone_clips_likes_after_insert`]],
+            [[DROP TRIGGER IF EXISTS `trg_phone_clips_likes_after_delete`]],
+            
+            -- Trigger to update likes count
+            [[CREATE TRIGGER IF NOT EXISTS `trg_phone_clips_likes_after_insert`
+                AFTER INSERT ON `phone_clips_likes`
+                FOR EACH ROW
+                UPDATE `phone_clips_posts`
+                SET `likes` = (SELECT COUNT(*) FROM `phone_clips_likes` WHERE `clip_id` = NEW.`clip_id`)
+                WHERE `id` = NEW.`clip_id`]],
+            
+            [[CREATE TRIGGER IF NOT EXISTS `trg_phone_clips_likes_after_delete`
+                AFTER DELETE ON `phone_clips_likes`
+                FOR EACH ROW
+                UPDATE `phone_clips_posts`
+                SET `likes` = (SELECT COUNT(*) FROM `phone_clips_likes` WHERE `clip_id` = OLD.`clip_id`)
+                WHERE `id` = OLD.`clip_id`]]
+        }
     }
 }
 
