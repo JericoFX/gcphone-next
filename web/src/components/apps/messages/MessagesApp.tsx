@@ -30,6 +30,8 @@ export function MessagesApp() {
   const [attachmentUrl, setAttachmentUrl] = createSignal<string | null>(null);
   const [viewerUrl, setViewerUrl] = createSignal<string | null>(null);
   const [selectedIndex, setSelectedIndex] = createSignal(-1);
+  const [search, setSearch] = createSignal('');
+  const [showUnreadOnly, setShowUnreadOnly] = createSignal(false);
 
   const getMediaUrl = (msg: any): string | undefined => sanitizeMediaUrl(msg.mediaUrl || msg.media_url) || undefined;
   
@@ -66,8 +68,17 @@ export function MessagesApp() {
 
   const isSelectedConversationIndex = createSelector(selectedIndex);
 
+  const filteredConversations = createMemo(() => {
+    const q = sanitizeText(search(), 60).toLowerCase();
+    return conversations().filter((convo) => {
+      if (showUnreadOnly() && convo.unread <= 0) return false;
+      if (!q) return true;
+      return convo.display.toLowerCase().includes(q) || convo.number.toLowerCase().includes(q);
+    });
+  });
+
   createEffect(() => {
-    const maxIndex = conversations().length - 1;
+    const maxIndex = filteredConversations().length - 1;
     if (maxIndex < 0) {
       setSelectedIndex(-1);
       return;
@@ -97,7 +108,7 @@ export function MessagesApp() {
         return;
       }
       
-      const convos = conversations();
+       const convos = filteredConversations();
       
       switch (key) {
         case 'ArrowUp':
@@ -237,11 +248,23 @@ export function MessagesApp() {
           <button class="ios-icon-btn">✏️</button>
         </div>
         <div class="ios-content">
+        <div class={styles.searchRow}>
+          <input
+            class={styles.searchInput}
+            type="text"
+            placeholder="Buscar chat"
+            value={search()}
+            onInput={(event) => setSearch(event.currentTarget.value)}
+          />
+          <button class={styles.unreadToggle} classList={{ [styles.unreadToggleActive]: showUnreadOnly() }} onClick={() => setShowUnreadOnly((value) => !value)}>
+            No leidos
+          </button>
+        </div>
         <div class={styles.conversationList}>
           <Show
             when={messagesState.loading}
             fallback={
-              <VirtualList items={conversations} itemHeight={78} overscan={5}>
+              <VirtualList items={filteredConversations} itemHeight={78} overscan={5}>
                 {(convo, index) => (
                   <div
                     class={styles.conversationItem}
