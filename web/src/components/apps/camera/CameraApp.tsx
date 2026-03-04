@@ -268,15 +268,16 @@ export function CameraApp() {
 
   return (
     <div class={styles.app}>
-      <div
-        class={styles.preview}
-        classList={{
-          [styles.previewNoir]: effect() === 'noir',
-          [styles.previewVivid]: effect() === 'vivid',
-          [styles.previewWarm]: effect() === 'warm',
-          [styles.previewSelfie]: selfie(),
-        }}
-      >
+      <div class={styles.preview}>
+        <div
+          class={styles.feedLayer}
+          classList={{
+            [styles.previewNoir]: effect() === 'noir',
+            [styles.previewVivid]: effect() === 'vivid',
+            [styles.previewWarm]: effect() === 'warm',
+            [styles.previewSelfie]: selfie(),
+          }}
+        />
         <div class={styles.topBar}>
           <button class={styles.iconBtn} onClick={() => void closeCamera()}>×</button>
           <div class={styles.topCenter}>

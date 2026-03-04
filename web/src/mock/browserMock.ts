@@ -26,6 +26,57 @@ type GalleryEntry = BrowserMockState['gallery'][number];
 
 const nowIso = () => new Date().toISOString();
 
+interface MockRealtimeConfig {
+  socketHost: string;
+  socketToken: string;
+  livekitUrl: string;
+  livekitToken: string;
+  livekitIdentity: string;
+}
+
+const MOCK_REALTIME_KEYS = {
+  socketHost: 'gcphone:mock:socketHost',
+  socketToken: 'gcphone:mock:socketToken',
+  livekitUrl: 'gcphone:mock:livekitUrl',
+  livekitToken: 'gcphone:mock:livekitToken',
+  livekitIdentity: 'gcphone:mock:livekitIdentity',
+} as const;
+
+const sanitizeConfigValue = (value: unknown, maxLength = 512) => {
+  if (typeof value !== 'string') return '';
+  return value.trim().slice(0, maxLength);
+};
+
+const readRealtimeConfig = (): MockRealtimeConfig => ({
+  socketHost: sanitizeConfigValue(window.localStorage.getItem(MOCK_REALTIME_KEYS.socketHost), 200),
+  socketToken: sanitizeConfigValue(window.localStorage.getItem(MOCK_REALTIME_KEYS.socketToken), 1000),
+  livekitUrl: sanitizeConfigValue(window.localStorage.getItem(MOCK_REALTIME_KEYS.livekitUrl), 200),
+  livekitToken: sanitizeConfigValue(window.localStorage.getItem(MOCK_REALTIME_KEYS.livekitToken), 2000),
+  livekitIdentity: sanitizeConfigValue(window.localStorage.getItem(MOCK_REALTIME_KEYS.livekitIdentity), 120),
+});
+
+const writeRealtimeConfig = (config: Partial<MockRealtimeConfig>) => {
+  const nextSocketHost = sanitizeConfigValue(config.socketHost, 200);
+  const nextSocketToken = sanitizeConfigValue(config.socketToken, 1000);
+  const nextLivekitUrl = sanitizeConfigValue(config.livekitUrl, 200);
+  const nextLivekitToken = sanitizeConfigValue(config.livekitToken, 2000);
+  const nextLivekitIdentity = sanitizeConfigValue(config.livekitIdentity, 120);
+
+  if (nextSocketHost) window.localStorage.setItem(MOCK_REALTIME_KEYS.socketHost, nextSocketHost);
+  if (nextSocketToken) window.localStorage.setItem(MOCK_REALTIME_KEYS.socketToken, nextSocketToken);
+  if (nextLivekitUrl) window.localStorage.setItem(MOCK_REALTIME_KEYS.livekitUrl, nextLivekitUrl);
+  if (nextLivekitToken) window.localStorage.setItem(MOCK_REALTIME_KEYS.livekitToken, nextLivekitToken);
+  if (nextLivekitIdentity) window.localStorage.setItem(MOCK_REALTIME_KEYS.livekitIdentity, nextLivekitIdentity);
+};
+
+const clearRealtimeConfig = () => {
+  window.localStorage.removeItem(MOCK_REALTIME_KEYS.socketHost);
+  window.localStorage.removeItem(MOCK_REALTIME_KEYS.socketToken);
+  window.localStorage.removeItem(MOCK_REALTIME_KEYS.livekitUrl);
+  window.localStorage.removeItem(MOCK_REALTIME_KEYS.livekitToken);
+  window.localStorage.removeItem(MOCK_REALTIME_KEYS.livekitIdentity);
+};
+
 const state: BrowserMockState = {
   phoneNumber: '555-1234',
   wallpaper: './img/background/back001.jpg',
@@ -165,7 +216,28 @@ export function setupBrowserMock() {
         },
       });
     },
+    getRealtime: () => readRealtimeConfig(),
+    setRealtime: (config: Partial<MockRealtimeConfig>) => {
+      writeRealtimeConfig(config);
+      return readRealtimeConfig();
+    },
+    clearRealtime: () => {
+      clearRealtimeConfig();
+      return readRealtimeConfig();
+    },
+    useLocalRealtime: (socketToken = 'mock-socket-token', livekitToken = 'mock-livekit-token') => {
+      writeRealtimeConfig({
+        socketHost: 'ws://127.0.0.1:3001',
+        socketToken,
+        livekitUrl: 'ws://127.0.0.1:7880',
+        livekitToken,
+        livekitIdentity: `mock:${state.phoneNumber}`,
+      });
+      return readRealtimeConfig();
+    },
   };
+
+  console.info('[gcphone mock] Realtime config available at window.gcphoneMock.setRealtime/getRealtime/clearRealtime');
 }
 
 export function handleBrowserNui<T = unknown>(eventName: string, data?: unknown): T | undefined {
@@ -368,21 +440,23 @@ export function handleBrowserNui<T = unknown>(eventName: string, data?: unknown)
   }
 
   if (eventName === 'livekitGetToken') {
+    const realtime = readRealtimeConfig();
     const roomName = String(payload.roomName || `call-${Date.now()}`);
     return {
       success: true,
-      url: 'ws://127.0.0.1:7880',
-      token: 'mock-livekit-token',
+      url: realtime.livekitUrl || 'ws://127.0.0.1:7880',
+      token: realtime.livekitToken || 'mock-livekit-token',
       roomName,
-      identity: `mock:${state.phoneNumber}`,
+      identity: realtime.livekitIdentity || `mock:${state.phoneNumber}`,
     } as T;
   }
 
   if (eventName === 'socketGetToken') {
+    const realtime = readRealtimeConfig();
     return {
       success: true,
-      host: 'ws://127.0.0.1:3001',
-      token: 'mock-socket-token',
+      host: realtime.socketHost || 'ws://127.0.0.1:3001',
+      token: realtime.socketToken || 'mock-socket-token',
     } as T;
   }
 
