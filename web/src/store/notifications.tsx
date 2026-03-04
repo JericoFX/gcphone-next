@@ -21,6 +21,7 @@ interface NotificationsState {
   controlTilePreset: 'compact' | 'default' | 'large';
   controlTileOrder: string[];
   readAtByApp: Record<string, number>;
+  mutedApps: string[];
 }
 
 interface NotificationsActions {
@@ -42,6 +43,8 @@ interface NotificationsActions {
   applyControlTileOrderPreset: (value: 'default' | 'commute' | 'focus') => void;
   markAppAsRead: (appId: string) => void;
   getUnreadCount: (appId: string) => number;
+  toggleMuteApp: (appId: string) => void;
+  isAppMuted: (appId: string) => boolean;
 }
 
 type NotificationsStore = [NotificationsState, NotificationsActions];
@@ -51,6 +54,7 @@ const NotificationsContext = createContext<NotificationsStore>();
 const MAX_QUEUE = 20;
 const MAX_HISTORY = 40;
 const DEFAULT_TILE_ORDER = ['airplane', 'dnd', 'data', 'silent', 'gps', 'preview'];
+const MAX_MUTED_APPS = 40;
 
 function safeJsonParse(value: string) {
   try {
@@ -93,11 +97,27 @@ function normalizeNotification(payload: Partial<PhoneNotification>): PhoneNotifi
   };
 }
 
+function normalizeMutedApps(value: unknown) {
+  if (!Array.isArray(value)) return [];
+  const seen = new Set<string>();
+  const next: string[] = [];
+  for (const item of value) {
+    const appId = sanitizeText(String(item || ''), 24);
+    if (!appId || seen.has(appId)) continue;
+    seen.add(appId);
+    next.push(appId);
+    if (next.length >= MAX_MUTED_APPS) break;
+  }
+  return next;
+}
+
 export const NotificationsProvider: ParentComponent = (props) => {
   const persistedTilePreset = sanitizeText(window.localStorage.getItem('gcphone:controlTilePreset') || '', 12);
   const persistedCompactMode = window.localStorage.getItem('gcphone:notificationCompact') === '1';
   const persistedOrderRaw = window.localStorage.getItem('gcphone:controlTileOrder');
   const persistedOrder = normalizeTileOrder(persistedOrderRaw ? safeJsonParse(persistedOrderRaw) : null);
+  const persistedMutedAppsRaw = window.localStorage.getItem('gcphone:mutedApps');
+  const persistedMutedApps = normalizeMutedApps(persistedMutedAppsRaw ? safeJsonParse(persistedMutedAppsRaw) : null);
 
   const [state, setState] = createStore<NotificationsState>({
     queue: [],
@@ -115,6 +135,7 @@ export const NotificationsProvider: ParentComponent = (props) => {
     controlTilePreset: persistedTilePreset === 'compact' || persistedTilePreset === 'large' ? persistedTilePreset : 'default',
     controlTileOrder: persistedOrder,
     readAtByApp: {},
+    mutedApps: persistedMutedApps,
   });
 
   const [timerVersion, setTimerVersion] = createSignal(0);
@@ -126,6 +147,8 @@ export const NotificationsProvider: ParentComponent = (props) => {
       if (!next) return;
 
       setState('history', (current) => [next, ...current.filter((item) => item.id !== next.id)].slice(0, MAX_HISTORY));
+
+      if (state.mutedApps.includes(next.appId) && next.priority !== 'high') return;
 
       if (state.doNotDisturb && next.priority !== 'high') return;
 
@@ -227,6 +250,20 @@ export const NotificationsProvider: ParentComponent = (props) => {
       const localRead = state.readAtByApp[key] || 0;
       return state.history.filter((n) => n.appId === key && (n.createdAt || 0) > localRead).length;
     },
+    toggleMuteApp: (appId: string) => {
+      const key = sanitizeText(appId, 24);
+      if (!key) return;
+      setState('mutedApps', (current) => {
+        if (current.includes(key)) return current.filter((entry) => entry !== key);
+        const next = [key, ...current.filter((entry) => entry !== key)];
+        return next.slice(0, MAX_MUTED_APPS);
+      });
+    },
+    isAppMuted: (appId: string) => {
+      const key = sanitizeText(appId, 24);
+      if (!key) return false;
+      return state.mutedApps.includes(key);
+    },
   };
 
   useNuiCustomEvent<Partial<PhoneNotification>>('phone:notification', (payload) => {
@@ -249,6 +286,7 @@ export const NotificationsProvider: ParentComponent = (props) => {
     window.localStorage.setItem('gcphone:notificationCompact', state.notificationCompactMode ? '1' : '0');
     window.localStorage.setItem('gcphone:controlTilePreset', state.controlTilePreset);
     window.localStorage.setItem('gcphone:controlTileOrder', JSON.stringify(state.controlTileOrder));
+    window.localStorage.setItem('gcphone:mutedApps', JSON.stringify(state.mutedApps));
   });
 
   onCleanup(() => {

@@ -28,6 +28,17 @@ export function ControlCenter() {
     return Array.from(groups.entries());
   });
 
+  const totalNotificationCount = createMemo(() => notifications.history.length);
+
+  const mutedAppsCount = createMemo(() => notifications.mutedApps.length);
+
+  const dayLabel = createMemo(() => {
+    const now = new Date();
+    const weekday = now.toLocaleDateString('es-ES', { weekday: 'long' });
+    const shortDate = now.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+    return `${weekday} ${shortDate}`;
+  });
+
   function previewNotification() {
     notificationsActions.receive({
       id: `preview-${Date.now()}`,
@@ -172,6 +183,7 @@ export function ControlCenter() {
             <div class={styles.sheetHeader}>
               <div class={styles.grabber} />
               <h3>Notificaciones</h3>
+              <span class={styles.headerDate}>{dayLabel()}</span>
               <button
                 class={styles.compactBtn}
                 onClick={() => notificationsActions.toggleNotificationCompactMode()}
@@ -179,6 +191,21 @@ export function ControlCenter() {
               >
                 {notifications.notificationCompactMode ? 'Expandido' : 'Compacto'}
               </button>
+            </div>
+
+            <div class={styles.summaryRow}>
+              <article class={styles.summaryCard}>
+                <span>Total</span>
+                <strong>{totalNotificationCount()}</strong>
+              </article>
+              <article class={styles.summaryCard}>
+                <span>Silenciadas</span>
+                <strong>{mutedAppsCount()}</strong>
+              </article>
+              <article class={styles.summaryCard}>
+                <span>Modo</span>
+                <strong>{notifications.notificationCompactMode ? 'Compacto' : 'Expandido'}</strong>
+              </article>
             </div>
 
             <div class={styles.notificationList}>
@@ -189,6 +216,12 @@ export function ControlCenter() {
                       <div class={styles.groupTitle}>
                         <img src={APP_BY_ID[appId]?.icon || './img/icons_ios/settings.svg'} alt={appId} />
                         <span>{(APP_BY_ID[appId]?.name || appId).toUpperCase()}</span>
+                        <button
+                          class={styles.muteAppBtn}
+                          onClick={() => notificationsActions.toggleMuteApp(appId)}
+                        >
+                          {notificationsActions.isAppMuted(appId) ? 'Activar' : 'Silenciar'}
+                        </button>
                       </div>
                       <For each={visibleItemsForGroup(items)}>
                         {(item) => (
