@@ -66,7 +66,43 @@ lib.callback.register('gcphone:clips:getFeed', function(source, data)
     return clips
 end)
 
--- Publish clip
+-- Get my clips only
+lib.callback.register('gcphone:clips:getMyClips', function(source, data)
+    local identifier = GetIdentifier(source)
+    if not identifier then return {} end
+    
+    data = type(data) == 'table' and data or {}
+    local limit = tonumber(data.limit) or 30
+    local offset = tonumber(data.offset) or 0
+    if limit < 1 then limit = 1 end
+    if limit > 100 then limit = 100 end
+    if offset < 0 then offset = 0 end
+
+    local account = GetSnapAccount(identifier)
+    if not account then return {} end
+
+    local clips = MySQL.query.await([[
+        SELECT c.*, a.username, a.display_name, a.avatar,
+               (SELECT COUNT(*) FROM phone_clips_comments WHERE clip_id = c.id) as comments_count,
+               1 as is_own
+        FROM phone_clips_posts c
+        JOIN phone_snap_accounts a ON c.account_id = a.id
+        WHERE c.account_id = ?
+        ORDER BY c.created_at DESC
+        LIMIT ? OFFSET ?
+    ]], { account.id, limit, offset }) or {}
+    
+    -- Check if user liked each clip
+    for _, clip in ipairs(clips) do
+        local liked = MySQL.scalar.await(
+            'SELECT 1 FROM phone_clips_likes WHERE clip_id = ? AND account_id = ?',
+            { clip.id, account.id }
+        )
+        clip.liked = liked ~= nil
+    end
+    
+    return clips
+end)
 lib.callback.register('gcphone:clips:publish', function(source, data)
     local identifier = GetIdentifier(source)
     if not identifier then return false end

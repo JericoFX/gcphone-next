@@ -42,11 +42,15 @@ export function ClipsApp() {
   const [showComments, setShowComments] = createSignal(false);
   const [myAccount, setMyAccount] = createSignal<any>(null);
 
+  // Tabs
+  const [currentTab, setCurrentTab] = createSignal<'feed' | 'myVideos'>('feed');
+
   // UI State
   const [loading, setLoading] = createSignal(false);
   const [fabTooltipVisible, setFabTooltipVisible] = createSignal(false);
   const [likeAnimation, setLikeAnimation] = createSignal<number | null>(null);
   const [viewerUrl, setViewerUrl] = createSignal<string | null>(null);
+  const [pausedClips, setPausedClips] = createSignal<Set<number>>(new Set());
 
   // Upload
   const [showUpload, setShowUpload] = createSignal(false);
@@ -55,85 +59,6 @@ export function ClipsApp() {
 
   // Comment
   const [commentText, setCommentText] = createSignal('');
-
-  // Placeholder/Mock data for preview
-  const placeholderClips: Clip[] = [
-    {
-      id: 1,
-      username: 'usuario1',
-      display_name: 'Juan Pérez',
-      avatar: '',
-      media_url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
-      caption: '🎬 Mi primer video en Clips! #fyp #viral',
-      likes: 234,
-      liked: false,
-      comments_count: 45,
-      is_own: false
-    },
-    {
-      id: 2,
-      username: 'gamerpro',
-      display_name: 'Gamer Pro',
-      avatar: '',
-      media_url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
-      caption: '🎮 Jugando en Los Santos #gaming #gta',
-      likes: 1892,
-      liked: true,
-      comments_count: 156,
-      is_own: false
-    },
-    {
-      id: 3,
-      username: 'miamigo',
-      display_name: 'Mi Amigo',
-      avatar: '',
-      media_url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
-      caption: '🔥 Increíble momento capturado! #epic',
-      likes: 567,
-      liked: false,
-      comments_count: 89,
-      is_own: true
-    },
-    {
-      id: 4,
-      username: 'ciudadano',
-      display_name: 'Ciudadano LS',
-      avatar: '',
-      media_url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
-      caption: '🚗 Escapando de la policia... #chase #gta',
-      likes: 3421,
-      liked: false,
-      comments_count: 234,
-      is_own: false
-    }
-  ];
-
-  const placeholderComments: Comment[] = [
-    {
-      id: 1,
-      username: 'user1',
-      display_name: 'Maria G.',
-      avatar: '',
-      content: '¡Increíble video! Me encantó 🔥',
-      created_at: new Date(Date.now() - 1000 * 60 * 5).toISOString() // 5 min ago
-    },
-    {
-      id: 2,
-      username: 'user2',
-      display_name: 'Carlos R.',
-      avatar: '',
-      content: 'JAJAJAJA lo mejor que vi hoy 😂',
-      created_at: new Date(Date.now() - 1000 * 60 * 15).toISOString() // 15 min ago
-    },
-    {
-      id: 3,
-      username: 'user3',
-      display_name: 'Ana M.',
-      avatar: '',
-      content: '¿Dónde fue eso? Se ve épico!',
-      created_at: new Date(Date.now() - 1000 * 60 * 30).toISOString() // 30 min ago
-    }
-  ];
 
   // FAB Tooltip
   let fabTimeout: number;
@@ -149,26 +74,22 @@ export function ClipsApp() {
   const loadClips = async () => {
     setLoading(true);
     
-    // Use placeholder data for preview
-    const usePlaceholders = true; // Cambiar a false para usar datos reales
+    const account = await fetchNui('snapGetAccount', {});
+    setMyAccount(account);
     
-    if (usePlaceholders) {
-      // Simular delay de carga
-      await new Promise(resolve => setTimeout(resolve, 500));
-      setClips(placeholderClips);
-      setMyAccount({ username: 'tuusuario', display_name: 'Tu Nombre' });
+    if (currentTab() === 'myVideos') {
+      const cached = cache.get<Clip[]>('clips:myvideos');
+      const list = cached ?? await fetchNui<Clip[]>('clipsGetMyClips', { limit: 40, offset: 0 }, []);
+      if (!cached) cache.set('clips:myvideos', list || [], 60000);
+      setClips(list || []);
     } else {
       const cached = cache.get<Clip[]>('clips:feed');
       const list = cached ?? await fetchNui<Clip[]>('clipsGetFeed', { limit: 40, offset: 0 }, []);
-      
       if (!cached) cache.set('clips:feed', list || [], 60000);
       setClips(list || []);
-      
-      // Get account
-      const account = await fetchNui('snapGetAccount', {});
-      setMyAccount(account);
     }
     
+    setCurrentClipIndex(0);
     setLoading(false);
   };
 
@@ -217,22 +138,12 @@ export function ClipsApp() {
     await fetchNui('clipsDeletePost', clipId);
     setClips(prev => prev.filter(c => c.id !== clipId));
     cache.invalidate('clips:feed');
+    cache.invalidate('clips:myvideos');
   };
 
   const loadComments = async (clipId: number) => {
-    // Use placeholder data for preview
-    const usePlaceholders = true; // Cambiar a false para usar datos reales
-    
-    if (usePlaceholders) {
-      await new Promise(resolve => setTimeout(resolve, 300));
-      setComments(placeholderComments);
-    } else {
-      const cached = cache.get<Comment[]>(`clips:comments:${clipId}`);
-      const list = cached ?? await fetchNui<Comment[]>('clipsGetComments', { clipId }, []);
-      
-      if (!cached) cache.set(`clips:comments:${clipId}`, list || [], 30000);
-      setComments(list || []);
-    }
+    const list = await fetchNui<Comment[]>('clipsGetComments', { clipId }, []);
+    setComments(list || []);
   };
 
   const openComments = async (clipId: number) => {
@@ -255,7 +166,6 @@ export function ClipsApp() {
       setClips(prev => prev.map(c => 
         c.id === currentClip.id ? { ...c, comments_count: (c.comments_count || 0) + 1 } : c
       ));
-      cache.invalidate(`clips:comments:${currentClip.id}`);
     }
   };
 
@@ -296,19 +206,20 @@ export function ClipsApp() {
     router.navigate('camera', { target: 'clips' });
   };
 
-  const scrollToNext = () => {
-    const next = Math.min(clips().length - 1, currentClipIndex() + 1);
-    setCurrentClipIndex(next);
-  };
-
-  const scrollToPrev = () => {
-    const prev = Math.max(0, currentClipIndex() - 1);
-    setCurrentClipIndex(prev);
+  const togglePause = (clipId: number) => {
+    setPausedClips(prev => {
+      const next = new Set(prev);
+      if (next.has(clipId)) {
+        next.delete(clipId);
+      } else {
+        next.add(clipId);
+      }
+      return next;
+    });
   };
 
   // Handle scroll
   let scrollContainer: HTMLDivElement | undefined;
-  
   const handleScroll = () => {
     if (!scrollContainer) return;
     const scrollTop = scrollContainer.scrollTop;
@@ -317,131 +228,140 @@ export function ClipsApp() {
     setCurrentClipIndex(newIndex);
   };
 
-  onMount(() => {
-    if (scrollContainer) {
-      scrollContainer.addEventListener('scroll', handleScroll);
-    }
-  });
-
   return (
     <AppScaffold title="Clips" subtitle="Videos cortos" onBack={() => router.goBack()} bodyClass={styles.body}>
       <div class={styles.clipsApp}>
+        {/* Tabs */}
+        <div class={styles.tabs}>
+          <button 
+            class={styles.tabBtn}
+            classList={{ [styles.active]: currentTab() === 'feed' }}
+            onClick={() => setCurrentTab('feed')}
+          >
+            Para ti
+          </button>
+          <button 
+            class={styles.tabBtn}
+            classList={{ [styles.active]: currentTab() === 'myVideos' }}
+            onClick={() => setCurrentTab('myVideos')}
+          >
+            Mis Videos
+          </button>
+        </div>
+
         {/* Feed */}
-        <div 
-          class={styles.feed} 
-          ref={scrollContainer}
-          onScroll={handleScroll}
-        >
+        <div class={styles.feed} ref={scrollContainer} onScroll={handleScroll}>
           <Show when={loading() && clips().length === 0}>
             <div class={styles.loading}>Cargando videos...</div>
           </Show>
           
           <For each={clips()}>
-            {(clip, index) => (
-              <div 
-                class={styles.clipCard}
-                onDblClick={() => handleDoubleTap(clip.id)}
-              >
-                {/* Video */}
-                <video
-                  class={styles.clipVideo}
-                  src={clip.media_url}
-                  controls={index() === currentClipIndex()}
-                  playsinline
-                  loop
-                  preload={Math.abs(index() - currentClipIndex()) <= 1 ? "auto" : "metadata"}
-                />
-                
-                {/* Like Animation */}
-                <Show when={likeAnimation() === clip.id}>
-                  <div class={styles.likeAnimation}>♥</div>
-                </Show>
-                
-                {/* Overlay */}
-                <div class={styles.clipOverlay}>
-                  {/* Right Actions */}
-                  <div class={styles.sideActions}>
-                    <div class={styles.actionItem}>
-                      <button 
-                        class={styles.actionBtn}
-                        classList={{ [styles.liked]: clip.liked }}
-                        onClick={() => toggleLike(clip.id)}
-                      >
-                        {clip.liked ? '♥' : '♡'}
-                      </button>
-                      <span class={styles.actionCount}>{clip.likes || 0}</span>
-                    </div>
-                    
-                    <div class={styles.actionItem}>
-                      <button 
-                        class={styles.actionBtn}
-                        onClick={() => openComments(clip.id)}
-                      >
-                        💬
-                      </button>
-                      <span class={styles.actionCount}>{clip.comments_count || 0}</span>
-                    </div>
-                    
-                    <div class={styles.actionItem}>
-                      <button class={styles.actionBtn}>↗</button>
-                      <span class={styles.actionCount}>Compartir</span>
-                    </div>
-                    
-                    <Show when={clip.is_own}>
+            {(clip, index) => {
+              const isPaused = () => pausedClips().has(clip.id);
+              
+              return (
+                <div 
+                  class={styles.clipCard}
+                  onDblClick={(e) => {
+                    e.preventDefault();
+                    handleDoubleTap(clip.id);
+                  }}
+                >
+                  <video
+                    class={styles.clipVideo}
+                    src={clip.media_url}
+                    controls={false}
+                    playsinline
+                    loop
+                    autoplay={index() === currentClipIndex() && !isPaused()}
+                    preload={Math.abs(index() - currentClipIndex()) <= 1 ? "auto" : "metadata"}
+                    onClick={() => togglePause(clip.id)}
+                  />
+                  
+                  <Show when={isPaused()}>
+                    <div class={styles.pauseIndicator}>▶</div>
+                  </Show>
+                  
+                  <Show when={likeAnimation() === clip.id}>
+                    <div class={styles.likeAnimation}>♥</div>
+                  </Show>
+                  
+                  <div class={styles.clipOverlay}>
+                    <div class={styles.sideActions}>
                       <div class={styles.actionItem}>
                         <button 
                           class={styles.actionBtn}
-                          onClick={() => deleteClip(clip.id)}
+                          classList={{ [styles.liked]: clip.liked }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleLike(clip.id);
+                          }}
                         >
-                          🗑
+                          {clip.liked ? '♥' : '♡'}
                         </button>
-                        <span class={styles.actionCount}>Eliminar</span>
+                        <span class={styles.actionCount}>{clip.likes || 0}</span>
                       </div>
-                    </Show>
-                  </div>
-                  
-                  {/* Bottom Info */}
-                  <div class={styles.bottomInfo}>
-                    <div class={styles.authorInfo}>
-                      <div class={styles.authorAvatar}>
-                        {clip.avatar ? (
-                          <img src={clip.avatar} alt="" />
-                        ) : (
-                          <span>{(clip.display_name || clip.username || 'U').charAt(0).toUpperCase()}</span>
-                        )}
+                      
+                      <div class={styles.actionItem}>
+                        <button 
+                          class={styles.actionBtn}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openComments(clip.id);
+                          }}
+                        >
+                          💬
+                        </button>
+                        <span class={styles.actionCount}>{clip.comments_count || 0}</span>
                       </div>
-                      <span class={styles.authorName}>@{clip.username || 'user'}</span>
+                      
+                      <div class={styles.actionItem}>
+                        <button class={styles.actionBtn} onClick={(e) => e.stopPropagation()}>
+                          ↗
+                        </button>
+                        <span class={styles.actionCount}>Compartir</span>
+                      </div>
+                      
+                      <Show when={clip.is_own}>
+                        <div class={styles.actionItem}>
+                          <button 
+                            class={styles.actionBtn}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deleteClip(clip.id);
+                            }}
+                          >
+                            🗑
+                          </button>
+                          <span class={styles.actionCount}>Eliminar</span>
+                        </div>
+                      </Show>
                     </div>
                     
-                    <Show when={clip.caption}>
-                      <p class={styles.caption}>{clip.caption}</p>
-                    </Show>
-                    
-                    <div class={styles.musicInfo}>
-                      <span>🎵 Sonido original - {clip.display_name || clip.username}</span>
+                    <div class={styles.bottomInfo}>
+                      <div class={styles.authorInfo}>
+                        <div class={styles.authorAvatar}>
+                          {clip.avatar ? (
+                            <img src={clip.avatar} alt="" />
+                          ) : (
+                            <span>{(clip.display_name || clip.username || 'U').charAt(0).toUpperCase()}</span>
+                          )}
+                        </div>
+                        <span class={styles.authorName}>@{clip.username || 'user'}</span>
+                      </div>
+                      
+                      <Show when={clip.caption}>
+                        <p class={styles.caption}>{clip.caption}</p>
+                      </Show>
+                      
+                      <div class={styles.musicInfo}>
+                        <span>🎵 Sonido original - {clip.display_name || clip.username}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
-                
-                {/* Navigation Indicators */}
-                <Show when={clips().length > 1}>
-                  <div class={styles.navIndicators}>
-                    <For each={clips()}>
-                      {(_, i) => (
-                        <div 
-                          class={styles.indicator}
-                          classList={{ [styles.active]: i() === currentClipIndex() }}
-                          onClick={() => {
-                            setCurrentClipIndex(i());
-                            scrollContainer?.scrollTo({ top: i() * scrollContainer.clientHeight, behavior: 'smooth' });
-                          }}
-                        />
-                      )}
-                    </For>
-                  </div>
-                </Show>
-              </div>
-            )}
+              );
+            }}
           </For>
           
           <Show when={!loading() && clips().length === 0}>
@@ -512,10 +432,7 @@ export function ClipsApp() {
                 onInput={(e) => setCommentText(e.currentTarget.value)}
                 onKeyDown={(e) => e.key === 'Enter' && addComment()}
               />
-              <button 
-                onClick={addComment}
-                disabled={!commentText().trim()}
-              >
+              <button onClick={addComment} disabled={!commentText().trim()}>
                 Enviar
               </button>
             </div>
