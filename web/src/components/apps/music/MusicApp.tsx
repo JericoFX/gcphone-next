@@ -1,4 +1,4 @@
-import { For, Show, createEffect, createSignal, onCleanup } from 'solid-js';
+import { For, Show, createEffect, createMemo, createSignal, onCleanup } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { usePhone } from '../../../store/phone';
 import { fetchNui } from '../../../utils/fetchNui';
@@ -48,6 +48,12 @@ export function MusicApp() {
   const [distance, setDistance] = createSignal(15);
   const [busyAction, setBusyAction] = createSignal(false);
   const [status, setStatus] = createSignal('Busca una pista y reproduccela para toda la zona.');
+
+  const stateLabel = createMemo(() => {
+    if (isPaused()) return 'Pausado';
+    if (isPlaying()) return 'En vivo';
+    return 'Idle';
+  });
 
   const persistNowPlaying = (title: string) => {
     const value = title?.trim() || 'Sin musica';
@@ -227,14 +233,14 @@ export function MusicApp() {
         <button class="ios-icon-btn" onClick={() => router.goBack()}>
           ‹
         </button>
-        <div class="ios-nav-title">Musica</div>
+        <div class="ios-nav-title">Music Deck</div>
       </div>
 
       <div class={`ios-content ${styles.content}`}>
         <section class={styles.hero}>
           <div class={styles.heroBackdrop} />
           <div class={styles.heroText}>
-            <div class={styles.kicker}>Servidor</div>
+            <div class={styles.kicker}>{stateLabel()}</div>
             <h2>{nowPlaying()}</h2>
             <p>{status()}</p>
           </div>
@@ -243,6 +249,7 @@ export function MusicApp() {
         <section class="ios-list">
           <div class="ios-row">
             <span class="ios-label">Buscar en YouTube</span>
+            <span class="ios-value">{results().length}</span>
           </div>
           <div class={styles.searchRow}>
             <input
