@@ -56,6 +56,85 @@ export function ClipsApp() {
   // Comment
   const [commentText, setCommentText] = createSignal('');
 
+  // Placeholder/Mock data for preview
+  const placeholderClips: Clip[] = [
+    {
+      id: 1,
+      username: 'usuario1',
+      display_name: 'Juan Pérez',
+      avatar: '',
+      media_url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+      caption: '🎬 Mi primer video en Clips! #fyp #viral',
+      likes: 234,
+      liked: false,
+      comments_count: 45,
+      is_own: false
+    },
+    {
+      id: 2,
+      username: 'gamerpro',
+      display_name: 'Gamer Pro',
+      avatar: '',
+      media_url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
+      caption: '🎮 Jugando en Los Santos #gaming #gta',
+      likes: 1892,
+      liked: true,
+      comments_count: 156,
+      is_own: false
+    },
+    {
+      id: 3,
+      username: 'miamigo',
+      display_name: 'Mi Amigo',
+      avatar: '',
+      media_url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+      caption: '🔥 Increíble momento capturado! #epic',
+      likes: 567,
+      liked: false,
+      comments_count: 89,
+      is_own: true
+    },
+    {
+      id: 4,
+      username: 'ciudadano',
+      display_name: 'Ciudadano LS',
+      avatar: '',
+      media_url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
+      caption: '🚗 Escapando de la policia... #chase #gta',
+      likes: 3421,
+      liked: false,
+      comments_count: 234,
+      is_own: false
+    }
+  ];
+
+  const placeholderComments: Comment[] = [
+    {
+      id: 1,
+      username: 'user1',
+      display_name: 'Maria G.',
+      avatar: '',
+      content: '¡Increíble video! Me encantó 🔥',
+      created_at: new Date(Date.now() - 1000 * 60 * 5).toISOString() // 5 min ago
+    },
+    {
+      id: 2,
+      username: 'user2',
+      display_name: 'Carlos R.',
+      avatar: '',
+      content: 'JAJAJAJA lo mejor que vi hoy 😂',
+      created_at: new Date(Date.now() - 1000 * 60 * 15).toISOString() // 15 min ago
+    },
+    {
+      id: 3,
+      username: 'user3',
+      display_name: 'Ana M.',
+      avatar: '',
+      content: '¿Dónde fue eso? Se ve épico!',
+      created_at: new Date(Date.now() - 1000 * 60 * 30).toISOString() // 30 min ago
+    }
+  ];
+
   // FAB Tooltip
   let fabTimeout: number;
   const showFabTooltip = () => {
@@ -69,15 +148,26 @@ export function ClipsApp() {
 
   const loadClips = async () => {
     setLoading(true);
-    const cached = cache.get<Clip[]>('clips:feed');
-    const list = cached ?? await fetchNui<Clip[]>('clipsGetFeed', { limit: 40, offset: 0 }, []);
     
-    if (!cached) cache.set('clips:feed', list || [], 60000);
-    setClips(list || []);
+    // Use placeholder data for preview
+    const usePlaceholders = true; // Cambiar a false para usar datos reales
     
-    // Get account
-    const account = await fetchNui('snapGetAccount', {});
-    setMyAccount(account);
+    if (usePlaceholders) {
+      // Simular delay de carga
+      await new Promise(resolve => setTimeout(resolve, 500));
+      setClips(placeholderClips);
+      setMyAccount({ username: 'tuusuario', display_name: 'Tu Nombre' });
+    } else {
+      const cached = cache.get<Clip[]>('clips:feed');
+      const list = cached ?? await fetchNui<Clip[]>('clipsGetFeed', { limit: 40, offset: 0 }, []);
+      
+      if (!cached) cache.set('clips:feed', list || [], 60000);
+      setClips(list || []);
+      
+      // Get account
+      const account = await fetchNui('snapGetAccount', {});
+      setMyAccount(account);
+    }
     
     setLoading(false);
   };
@@ -130,11 +220,19 @@ export function ClipsApp() {
   };
 
   const loadComments = async (clipId: number) => {
-    const cached = cache.get<Comment[]>(`clips:comments:${clipId}`);
-    const list = cached ?? await fetchNui<Comment[]>('clipsGetComments', { clipId }, []);
+    // Use placeholder data for preview
+    const usePlaceholders = true; // Cambiar a false para usar datos reales
     
-    if (!cached) cache.set(`clips:comments:${clipId}`, list || [], 30000);
-    setComments(list || []);
+    if (usePlaceholders) {
+      await new Promise(resolve => setTimeout(resolve, 300));
+      setComments(placeholderComments);
+    } else {
+      const cached = cache.get<Comment[]>(`clips:comments:${clipId}`);
+      const list = cached ?? await fetchNui<Comment[]>('clipsGetComments', { clipId }, []);
+      
+      if (!cached) cache.set(`clips:comments:${clipId}`, list || [], 30000);
+      setComments(list || []);
+    }
   };
 
   const openComments = async (clipId: number) => {
