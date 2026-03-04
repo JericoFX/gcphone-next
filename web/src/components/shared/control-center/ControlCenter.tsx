@@ -212,33 +212,20 @@ export function ControlCenter() {
         <div class={styles.topPullZone}>
           <div
             class={styles.pullHalf}
-            classList={{ [styles.pullHalfActive]: dragSurface() === 'notifications' }}
             onPointerDown={(event) => handleTopDragStart(event, 'notifications')}
             onPointerMove={handleTopDragMove}
             onPointerUp={handleTopDragEnd}
             onPointerCancel={handleTopDragEnd}
             data-testid="notification-center-toggle"
-          >
-            <div class={styles.pullIndicator} classList={{ [styles.pullIndicatorVisible]: dragSurface() === 'notifications' || dragProgress() > 0 }}>
-              <span class={styles.pullIcon}>v</span>
-              <span class={styles.pullLabel}>Notificaciones</span>
-            </div>
-          </div>
+          />
           <div
             class={styles.pullHalf}
-            classList={{ [styles.pullHalfActive]: dragSurface() === 'control' }}
             onPointerDown={(event) => handleTopDragStart(event, 'control')}
             onPointerMove={handleTopDragMove}
             onPointerUp={handleTopDragEnd}
             onPointerCancel={handleTopDragEnd}
             data-testid="control-center-toggle"
-          >
-            <div class={styles.pullIndicator} classList={{ [styles.pullIndicatorVisible]: dragSurface() === 'control' || dragProgress() > 0 }}>
-              <span class={styles.pullIcon}>v</span>
-              <span class={styles.pullLabel}>Control</span>
-            </div>
-          </div>
-          <div class={styles.pullHintGrabber} classList={{ [styles.pullHintGrabberActive]: dragProgress() > 0 }} style={{ transform: `translateX(-50%) scaleX(${1 + dragProgress() * 0.18})` }} />
+          />
         </div>
       </Show>
 
