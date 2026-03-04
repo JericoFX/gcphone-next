@@ -1,4 +1,4 @@
-import { For, Show, createEffect, createSignal, onCleanup } from 'solid-js';
+import { For, Show, createEffect, createMemo, createSignal, onCleanup } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { fetchNui } from '../../../utils/fetchNui';
 import styles from './DocumentsApp.module.scss';
@@ -18,6 +18,8 @@ export function DocumentsApp() {
   const router = useRouter();
   const [docs, setDocs] = createSignal<DocItem[]>([]);
   const [loading, setLoading] = createSignal(true);
+  const [query, setQuery] = createSignal('');
+  const [typeFilter, setTypeFilter] = createSignal('all');
 
   const load = async () => {
     setLoading(true);
@@ -66,18 +68,63 @@ export function DocumentsApp() {
     void load();
   });
 
+  const docTypes = createMemo(() => {
+    const options = new Set<string>(['all']);
+    for (const doc of docs()) {
+      const entry = String(doc.doc_type || '').trim();
+      if (entry) options.add(entry);
+    }
+    return Array.from(options);
+  });
+
+  const visibleDocs = createMemo(() => {
+    const q = query().trim().toLowerCase();
+    const type = typeFilter();
+    return docs().filter((doc) => {
+      if (type !== 'all' && doc.doc_type !== type) return false;
+      if (!q) return true;
+      return (
+        String(doc.title || '').toLowerCase().includes(q) ||
+        String(doc.holder_name || '').toLowerCase().includes(q) ||
+        String(doc.verification_code || '').toLowerCase().includes(q)
+      );
+    });
+  });
+
   return (
     <div class="ios-page">
       <div class="ios-nav">
         <button class="ios-icon-btn" onClick={() => router.goBack()}>‹</button>
-        <div class="ios-nav-title">Documentos</div>
+        <div class="ios-nav-title">Docs Vault</div>
         <button class="ios-icon-btn" onClick={() => void createDoc()}>＋</button>
       </div>
 
       <div class="ios-content">
+        <div class={styles.toolbar}>
+          <input
+            class={styles.searchInput}
+            type="text"
+            placeholder="Buscar documento"
+            value={query()}
+            onInput={(event) => setQuery(event.currentTarget.value)}
+          />
+          <div class={styles.typeRow}>
+            <For each={docTypes()}>
+              {(entry) => (
+                <button
+                  class={styles.typeChip}
+                  classList={{ [styles.typeChipActive]: typeFilter() === entry }}
+                  onClick={() => setTypeFilter(entry)}
+                >
+                  {entry}
+                </button>
+              )}
+            </For>
+          </div>
+        </div>
         <Show when={!loading()} fallback={<div class="ios-card">Cargando...</div>}>
           <div class={styles.grid}>
-            <For each={docs()}>
+            <For each={visibleDocs()}>
               {(doc) => (
                 <article class={styles.docCard}>
                   <div class={styles.topRow}>
