@@ -42,6 +42,7 @@ server_scripts {
     'server/bridge/qbcore.lua',
     'server/modules/phone.lua',
     'server/modules/contacts.lua',
+    'server/modules/security.lua',
     'server/modules/messages.lua',
     'server/modules/calls.lua',
     'server/modules/gallery.lua',

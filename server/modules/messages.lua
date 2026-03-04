@@ -9,8 +9,30 @@ local function SanitizeText(value, maxLength)
 end
 
 local LastMessageSentBySource = {}
+local SecurityResource = GetCurrentResourceName()
+
+local function HitRateLimit(source, key, windowMs, maxHits)
+    local ok, blocked = pcall(function()
+        return exports[SecurityResource]:HitRateLimit(source, key, windowMs, maxHits)
+    end)
+    if not ok then return false end
+    return blocked == true
+end
+
+local function IsBlockedEither(sourceIdentifier, targetIdentifier, sourcePhone, targetPhone)
+    local ok, blocked = pcall(function()
+        return exports[SecurityResource]:IsBlockedEither(sourceIdentifier, targetIdentifier, sourcePhone, targetPhone)
+    end)
+    if not ok then return false end
+    return blocked == true
+end
 
 local function CanSendMessage(source)
+    local securityMs = (Config.Security and Config.Security.RateLimits and Config.Security.RateLimits.messages) or 900
+    if HitRateLimit(source, 'messages', securityMs, 1) then
+        return false
+    end
+
     local now = GetGameTimer()
     local last = LastMessageSentBySource[source] or 0
     if (now - last) < 500 then
@@ -131,6 +153,9 @@ lib.callback.register('gcphone:sendMessage', function(source, data)
     end
     
     local targetIdentifier = GetIdentifierByPhone(targetPhone)
+    if IsBlockedEither(identifier, targetIdentifier, myNumber, targetPhone) then
+        return false, 'BLOCKED_CONTACT'
+    end
     
     local messageId = MySQL.insert.await(
         'INSERT INTO phone_messages (transmitter, receiver, message, media_url, owner) VALUES (?, ?, ?, ?, ?)',
@@ -324,6 +349,9 @@ lib.callback.register('gcphone:wavechatSendGroupMessage', function(source, data)
     local groupId = ToPositiveInt(data.groupId)
     if not groupId then return false, 'Invalid group' end
     if not IsGroupMember(groupId, identifier) then return false, 'Not a member' end
+
+    local waveMs = (Config.Security and Config.Security.RateLimits and Config.Security.RateLimits.wavechat) or 700
+    if HitRateLimit(source, 'wavechat', waveMs, 1) then return false, 'RATE_LIMITED' end
 
     local message = SanitizeText(data.message, 800)
     local mediaUrl = SanitizeMediaUrl(data.mediaUrl)

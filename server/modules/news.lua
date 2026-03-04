@@ -30,6 +30,15 @@ local function NormalizeMediaType(value)
 end
 
 local ActiveLiveNews = {}
+local SecurityResource = GetCurrentResourceName()
+
+local function HitRateLimit(source, key, windowMs, maxHits)
+    local ok, blocked = pcall(function()
+        return exports[SecurityResource]:HitRateLimit(source, key, windowMs, maxHits)
+    end)
+    if not ok then return false end
+    return blocked == true
+end
 
 lib.callback.register('gcphone:news:getArticles', function(source, data)
     data = type(data) == 'table' and data or {}
@@ -71,7 +80,11 @@ lib.callback.register('gcphone:news:publishArticle', function(source, data)
     if type(data) ~= 'table' then return false end
     
     local name = GetName(source) or 'Unknown'
-    local phoneNumber = GetPhoneNumber(identifier)
+
+    local newsMs = (Config.Security and Config.Security.RateLimits and Config.Security.RateLimits.news) or 2500
+    if HitRateLimit(source, 'news_publish', newsMs, 1) then
+        return false, 'RATE_LIMITED'
+    end
     
     local verified = false
     local job = GetJob(source)
@@ -112,6 +125,11 @@ lib.callback.register('gcphone:news:startLive', function(source, data)
     data = type(data) == 'table' and data or {}
     
     local name = GetName(source) or 'Unknown'
+
+    local newsMs = (Config.Security and Config.Security.RateLimits and Config.Security.RateLimits.news) or 2500
+    if HitRateLimit(source, 'news_live', newsMs, 1) then
+        return false, 'RATE_LIMITED'
+    end
     
     local verified = false
     local job = GetJob(source)
