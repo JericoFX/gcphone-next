@@ -3,128 +3,113 @@
   display: flex;
   flex-direction: column;
   background:
-    radial-gradient(110% 70% at 0% -20%, rgba(255, 171, 93, 0.3), transparent 60%),
-    radial-gradient(110% 80% at 100% 0%, rgba(255, 94, 141, 0.2), transparent 62%),
-    linear-gradient(180deg, #1f2638 0%, #161d30 46%, #121928 100%);
+    radial-gradient(120% 80% at 0% -10%, rgba(255, 188, 48, 0.3), transparent 58%),
+    radial-gradient(120% 90% at 100% 10%, rgba(255, 72, 164, 0.25), transparent 62%),
+    linear-gradient(180deg, #120e22 0%, #15112b 50%, #1a122f 100%);
 }
 
 .header {
-  height: 64px;
-  display: flex;
+  height: 60px;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
   align-items: center;
-  background: linear-gradient(180deg, rgba(11, 17, 30, 0.95), rgba(15, 22, 38, 0.9));
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  padding: 0 12px;
+  gap: 8px;
+  padding: 0 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(13, 10, 28, 0.84);
 
   h1 {
-    margin: 0 auto;
-    font-size: var(--fs-title3);
-    font-weight: 760;
-    color: #f7fbff;
+    margin: 0;
+    text-align: center;
+    color: #ffe580;
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
   }
+}
+
+.back-btn,
+.camera-btn {
+  min-height: 34px;
+  border: none;
+  border-radius: 999px;
+  padding: 0 12px;
+  font-size: 12px;
+  font-weight: 760;
 }
 
 .back-btn {
-  width: 36px;
-  height: 36px;
-  border: none;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.12);
-  color: #f2f7ff;
+  width: 34px;
+  padding: 0;
   font-size: 24px;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.camera-btn {
+  color: #3a1f00;
+  background: linear-gradient(135deg, #ffea66, #ffb43e);
+}
+
+.tab-row {
+  padding: 8px 10px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.tab-btn {
+  min-height: 32px;
+  border: none;
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 236, 150, 0.9);
+  font-size: 12px;
+  font-weight: 760;
+}
+
+.tab-active {
+  color: #2d1e00;
+  background: linear-gradient(180deg, #ffea66, #ffbe45);
 }
 
 .publisher {
-  background: rgba(10, 16, 29, 0.88);
+  margin: 0 10px 10px;
   padding: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  background: rgba(23, 17, 44, 0.92);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
   display: grid;
   gap: 8px;
-  margin: 10px;
-  border-radius: var(--r-lg);
-  box-shadow: var(--shadow-2);
 
   input {
     width: 100%;
-    height: 36px;
-    border: 1px solid rgba(255, 255, 255, 0.16);
-    border-radius: var(--r-md);
+    min-height: 34px;
+    border: none;
+    border-radius: 10px;
     padding: 0 10px;
-    font-size: 13px;
-    font-weight: 500;
-    background: rgba(20, 28, 46, 0.9);
-    color: #e8f2ff;
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff8df;
+    font-size: 12px;
   }
 }
 
-.fab {
-  position: absolute;
-  right: 16px;
-  bottom: 24px;
-  width: 52px;
-  height: 52px;
+.post-btn {
+  min-height: 36px;
   border: none;
-  border-radius: 999px;
-  background: linear-gradient(135deg, #ff2f79, #ff7f34);
-  color: #fff;
-  font-size: 30px;
-  line-height: 1;
-  box-shadow: var(--shadow-3);
-  animation: ios18-pop-in var(--dur-2) var(--ease-standard);
-  z-index: 20;
-}
-
-.quick-actions {
-  display: flex;
-  gap: 8px;
-}
-
-.story-btn,
-.live-btn {
-  flex: 1;
-  height: 32px;
-  border: none;
-  border-radius: 10px;
+  border-radius: 11px;
+  color: #2a1b00;
+  background: linear-gradient(135deg, #ffe05c, #ff9f3b);
   font-size: 12px;
-  font-weight: 700;
-}
-
-.story-btn {
-  background: color-mix(in srgb, var(--tint) 10%, var(--surface));
-  color: var(--tint);
-}
-
-.live-btn {
-  background: #ffeef4;
-  color: #e82d65;
+  font-weight: 800;
 }
 
 .story-row,
 .live-row {
-  display: flex;
-  gap: 6px;
   padding: 8px 10px;
-  overflow-x: auto;
-  background: rgba(11, 16, 28, 0.8);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.story-chip,
-.live-chip {
-  flex: 0 0 auto;
-  height: 26px;
-  border-radius: 999px;
-  padding: 0 10px;
   display: flex;
-  align-items: center;
-  font-size: 11px;
-  font-weight: 700;
-}
-
-.story-chip {
-  background: linear-gradient(135deg, rgba(80, 152, 255, 0.2), rgba(83, 111, 255, 0.2));
-  color: #cfe6ff;
-  border: none;
+  gap: 8px;
+  overflow-x: auto;
 }
 
 .story-chip-wrap {
@@ -133,108 +118,119 @@
   gap: 4px;
 }
 
+.story-chip,
+.live-chip {
+  border: none;
+  border-radius: 999px;
+  min-height: 28px;
+  padding: 0 11px;
+  font-size: 11px;
+  font-weight: 760;
+  white-space: nowrap;
+}
+
+.story-chip {
+  color: #ffe8a6;
+  background: rgba(255, 255, 255, 0.14);
+}
+
 .story-delete-btn {
   width: 20px;
   height: 20px;
   border: none;
   border-radius: 999px;
-  background: #ffeef4;
-  color: #d63265;
+  background: rgba(255, 102, 129, 0.26);
+  color: #ffd6db;
   font-size: 12px;
-  font-weight: 800;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  font-weight: 760;
 }
 
 .live-chip {
-  background: linear-gradient(135deg, rgba(255, 93, 152, 0.25), rgba(255, 121, 83, 0.26));
-  color: #ffd7de;
-}
-
-.post-btn {
-  height: 38px;
-  border: none;
-  border-radius: 12px;
   color: #fff;
-  font-weight: 700;
-  background: linear-gradient(135deg, #ff3a7a, #ff7a3b);
+  background: linear-gradient(135deg, rgba(255, 57, 128, 0.86), rgba(255, 119, 82, 0.86));
 }
 
 .feed {
   flex: 1;
   overflow-y: auto;
-  padding: 10px;
+  padding: 0 10px 10px;
 }
 
 .card {
-  background: rgba(10, 16, 29, 0.86);
-  border-radius: var(--r-lg);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
   overflow: hidden;
   margin-bottom: 10px;
-  box-shadow: var(--shadow-1);
-  animation: ios18-rise-in var(--dur-2) var(--ease-standard);
+  background: rgba(21, 17, 42, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 14px 26px rgba(5, 3, 12, 0.45);
 
   img,
   video {
     width: 100%;
-    height: 180px;
+    height: 190px;
     object-fit: cover;
   }
 
   p {
     margin: 0;
     padding: 8px 10px;
-    font-size: 13px;
-    font-weight: 500;
-    color: rgba(233, 242, 255, 0.9);
+    color: rgba(255, 245, 210, 0.92);
+    font-size: 12px;
   }
 }
 
 .meta {
   padding: 8px 10px;
+  color: #fff5c6;
   font-size: 12px;
-  font-weight: 700;
-  color: #f0f7ff;
-}
-
-.like-btn {
-  margin: 0 10px 10px;
-  height: 30px;
-  border: none;
-  border-radius: 10px;
-  padding: 0 10px;
-  background: color-mix(in srgb, #ff2f79 12%, var(--surface));
-  color: #e92b63;
-  font-weight: 700;
+  font-weight: 760;
 }
 
 .post-actions {
   display: flex;
-  align-items: center;
   gap: 8px;
   padding: 0 10px 10px;
 }
 
+.like-btn,
 .delete-btn {
-  height: 30px;
+  min-height: 30px;
   border: none;
-  border-radius: 10px;
+  border-radius: 9px;
   padding: 0 10px;
-  background: #ffeef0;
-  color: #ce4343;
-  font-weight: 700;
+  font-size: 12px;
+  font-weight: 760;
+}
+
+.like-btn {
+  color: #ffd4df;
+  background: rgba(255, 91, 143, 0.24);
+}
+
+.delete-btn {
+  color: #ffc9d1;
+  background: rgba(255, 86, 86, 0.18);
+}
+
+.fab {
+  position: absolute;
+  right: 14px;
+  bottom: 18px;
+  width: 52px;
+  height: 52px;
+  border: none;
+  border-radius: 999px;
+  color: #fff;
+  font-size: 30px;
+  background: linear-gradient(135deg, #ff5f82, #ffb145);
+  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.42);
 }
 
 .story-viewer {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.9);
   z-index: 120;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  background: rgba(0, 0, 0, 0.92);
 
   img,
   video {
@@ -244,28 +240,29 @@
   }
 }
 
-.story-close {
+.story-close,
+.story-nav {
   position: absolute;
-  top: 12px;
-  right: 12px;
-  width: 36px;
-  height: 36px;
   border: none;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.2);
   color: #fff;
-  font-size: 18px;
-  z-index: 10;
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.story-close {
+  top: 12px;
+  right: 12px;
+  width: 34px;
+  height: 34px;
+  font-size: 16px;
 }
 
 .story-meta {
   position: absolute;
   top: 14px;
   left: 12px;
-  color: #fff;
   display: grid;
-  gap: 3px;
-  z-index: 10;
+  color: #fff;
 
   strong {
     font-size: 13px;
@@ -278,18 +275,12 @@
 }
 
 .story-nav {
-  position: absolute;
   top: 50%;
   transform: translateY(-50%);
   left: 10px;
   width: 38px;
   height: 38px;
-  border: none;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.2);
-  color: #fff;
-  font-size: 26px;
-  z-index: 10;
+  font-size: 24px;
 }
 
 .story-next {

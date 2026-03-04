@@ -1,4 +1,4 @@
-import { createEffect, createSignal, For, onCleanup, Show } from 'solid-js';
+import { createEffect, createMemo, createSignal, For, onCleanup, Show } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { fetchNui } from '../../../utils/fetchNui';
 import { resolveMediaType, sanitizeMediaUrl, sanitizeText } from '../../../utils/sanitize';
@@ -29,6 +29,7 @@ export function SnapApp() {
   const [showComposer, setShowComposer] = createSignal(false);
   const [viewerUrl, setViewerUrl] = createSignal<string | null>(null);
   const [accountUsername, setAccountUsername] = createSignal('');
+  const [activeTab, setActiveTab] = createSignal<'stories' | 'feed'>('stories');
 
   const loadFeed = async () => {
     const result = await fetchNui<SnapPost[]>('snapGetFeed', { limit: 30, offset: 0 }, []);
@@ -185,11 +186,22 @@ export function SnapApp() {
     if (ok?.success) await loadFeed();
   };
 
+  const visibleFeed = createMemo(() => {
+    if (activeTab() === 'stories') return feed().slice(0, 8);
+    return feed();
+  });
+
   return (
     <div class={styles.app}>
       <div class={styles.header}>
         <button class={styles.backBtn} onClick={() => router.goBack()}>‹</button>
-        <h1>Snap</h1>
+        <h1>Snap Neon</h1>
+        <button class={styles.cameraBtn} onClick={() => openCameraFor('snap-post')}>Cam</button>
+      </div>
+
+      <div class={styles.tabRow}>
+        <button class={styles.tabBtn} classList={{ [styles.tabActive]: activeTab() === 'stories' }} onClick={() => setActiveTab('stories')}>Stories</button>
+        <button class={styles.tabBtn} classList={{ [styles.tabActive]: activeTab() === 'feed' }} onClick={() => setActiveTab('feed')}>Feed</button>
       </div>
 
       <Show when={showComposer()}>
@@ -232,7 +244,7 @@ export function SnapApp() {
       </div>
 
       <div class={styles.feed}>
-        <For each={feed()}>
+        <For each={visibleFeed()}>
           {(post) => (
             <article class={styles.card}>
               <div class={styles.meta}>{post.display_name || post.username || 'Usuario'}</div>
