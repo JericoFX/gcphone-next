@@ -63,6 +63,11 @@ export function ChirpApp() {
   // Comments
   const [showComments, setShowComments] = createSignal(false);
   const [commentText, setCommentText] = createSignal('');
+  const [statusMessage, setStatusMessage] = createSignal('');
+  const [deleteTweetId, setDeleteTweetId] = createSignal<number | null>(null);
+  const [deleteCommentId, setDeleteCommentId] = createSignal<number | null>(null);
+  const [showAttachUrlModal, setShowAttachUrlModal] = createSignal(false);
+  const [attachUrlInput, setAttachUrlInput] = createSignal('');
 
   // Viewer
   const [viewerUrl, setViewerUrl] = createSignal<string | null>(null);
@@ -214,19 +219,30 @@ export function ChirpApp() {
 
   const deleteTweet = async (e: Event, tweetId: number) => {
     e.stopPropagation();
-    if (!confirm('¿Eliminar este tweet?')) return;
-    
+    setDeleteTweetId(tweetId);
+  };
+
+  const confirmDeleteTweet = async () => {
+    const tweetId = deleteTweetId();
+    if (!tweetId) return;
+
     await fetchNui('chirpDeleteTweet', tweetId);
     setTweets(prev => prev.filter(t => t.id !== tweetId));
     if (selectedTweet()?.id === tweetId) {
       setViewMode('list');
       setSelectedTweet(null);
     }
+    setDeleteTweetId(null);
   };
 
   const deleteComment = async (commentId: number) => {
-    if (!confirm('¿Eliminar este comentario?')) return;
-    
+    setDeleteCommentId(commentId);
+  };
+
+  const confirmDeleteComment = async () => {
+    const commentId = deleteCommentId();
+    if (!commentId) return;
+
     await fetchNui('chirpDeleteComment', { commentId });
     setComments(prev => prev.filter(c => c.id !== commentId));
     
@@ -241,6 +257,7 @@ export function ChirpApp() {
       } : null);
       cache.invalidate(`comments:${tweet.id}`);
     }
+    setDeleteCommentId(null);
   };
 
   const attachFromGallery = async () => {
@@ -251,10 +268,20 @@ export function ChirpApp() {
   };
 
   const attachByUrl = () => {
-    const input = window.prompt('Pega URL de imagen o video:');
-    const url = sanitizeMediaUrl(input);
-    if (url) setComposerMedia(url);
-    else if (input) alert('URL invalida');
+    setAttachUrlInput(composerMedia());
+    setShowAttachUrlModal(true);
+  };
+
+  const confirmAttachUrl = () => {
+    const url = sanitizeMediaUrl(attachUrlInput());
+    if (!url) {
+      setStatusMessage('URL invalida o formato no permitido.');
+      return;
+    }
+
+    setComposerMedia(url);
+    setStatusMessage('');
+    setShowAttachUrlModal(false);
   };
 
   const openCamera = () => {
@@ -543,6 +570,11 @@ export function ChirpApp() {
   return (
     <AppScaffold title="Chirp" subtitle="Que esta pasando?" onBack={() => router.goBack()} bodyClass={styles.body}>
       <Show when={viewMode() === 'list'} fallback={<DetailView />}>
+        <Show when={statusMessage()}>
+          <div style={{ padding: '8px 12px', margin: '8px', 'background-color': 'rgba(255, 159, 10, 0.14)', color: '#7a4a00', 'font-size': '12px', 'border-radius': '10px' }}>
+            {statusMessage()}
+          </div>
+        </Show>
         <ListView />
       </Show>
 
@@ -597,6 +629,45 @@ export function ChirpApp() {
             tone="primary"
             disabled={!composerText().trim() || charCount() > 280 || loading()}
           />
+        </ModalActions>
+      </Modal>
+
+      <Modal
+        open={showAttachUrlModal()}
+        title="Adjuntar URL"
+        onClose={() => setShowAttachUrlModal(false)}
+        size="sm"
+      >
+        <FormField label="URL de imagen/video" value={attachUrlInput()} onChange={setAttachUrlInput} placeholder="https://..." />
+        <ModalActions>
+          <ModalButton label="Cancelar" onClick={() => setShowAttachUrlModal(false)} />
+          <ModalButton label="Adjuntar" tone="primary" onClick={confirmAttachUrl} />
+        </ModalActions>
+      </Modal>
+
+      <Modal
+        open={deleteTweetId() !== null}
+        title="Eliminar chirp"
+        onClose={() => setDeleteTweetId(null)}
+        size="sm"
+      >
+        <p>Esta accion no se puede deshacer.</p>
+        <ModalActions>
+          <ModalButton label="Cancelar" onClick={() => setDeleteTweetId(null)} />
+          <ModalButton label="Eliminar" tone="danger" onClick={() => void confirmDeleteTweet()} />
+        </ModalActions>
+      </Modal>
+
+      <Modal
+        open={deleteCommentId() !== null}
+        title="Eliminar comentario"
+        onClose={() => setDeleteCommentId(null)}
+        size="sm"
+      >
+        <p>Esta accion no se puede deshacer.</p>
+        <ModalActions>
+          <ModalButton label="Cancelar" onClick={() => setDeleteCommentId(null)} />
+          <ModalButton label="Eliminar" tone="danger" onClick={() => void confirmDeleteComment()} />
         </ModalActions>
       </Modal>
 

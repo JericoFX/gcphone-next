@@ -357,6 +357,12 @@ lib.callback.register('gcphone:music:searchITunes', function(source, data)
     return SearchCatalog(source, data)
 end)
 
+lib.callback.register('gcphone:music:canSearchCatalog', function()
+    return {
+        enabled = GetYoutubeApiKey() ~= ''
+    }
+end)
+
 RegisterNetEvent('gcphone:music:play', function(data)
     local source = source
     if not GetIdentifier(source) then return end

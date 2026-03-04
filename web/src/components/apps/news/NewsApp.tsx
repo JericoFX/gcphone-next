@@ -155,7 +155,7 @@ export function NewsApp() {
     <AppScaffold title="Noticias" subtitle="Noticias de la ciudad" onBack={() => router.goBack()}>
       <div class={styles.newsApp}>
         <div class={styles.tools}>
-          <select value={selectedCategory()} onChange={(e) => { setSelectedCategory(e.currentTarget.value); void load(); }}>
+          <select class={styles.categorySelect} value={selectedCategory()} onChange={(e) => { setSelectedCategory(e.currentTarget.value); void load(); }}>
             <option value="all">Todas</option>
             <For each={categories()}>{(c) => <option value={c}>{c}</option>}</For>
           </select>

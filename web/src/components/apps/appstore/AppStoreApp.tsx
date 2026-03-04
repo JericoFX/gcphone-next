@@ -25,10 +25,8 @@ const APP_CATEGORY: Record<string, StoreTab> = {
   documents: 'core',
   appstore: 'core',
   garage: 'utility',
-  clock: 'utility',
   notes: 'utility',
   maps: 'utility',
-  weather: 'utility',
 };
 
 export function AppStoreApp() {

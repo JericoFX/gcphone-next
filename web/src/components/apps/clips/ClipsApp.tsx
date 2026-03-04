@@ -51,6 +51,8 @@ export function ClipsApp() {
   const [likeAnimation, setLikeAnimation] = createSignal<number | null>(null);
   const [viewerUrl, setViewerUrl] = createSignal<string | null>(null);
   const [pausedClips, setPausedClips] = createSignal<Set<number>>(new Set());
+  const [statusMessage, setStatusMessage] = createSignal('');
+  const [deleteClipId, setDeleteClipId] = createSignal<number | null>(null);
 
   // Upload
   const [showUpload, setShowUpload] = createSignal(false);
@@ -133,12 +135,18 @@ export function ClipsApp() {
   };
 
   const deleteClip = async (clipId: number) => {
-    if (!confirm('¿Eliminar este clip?')) return;
-    
+    setDeleteClipId(clipId);
+  };
+
+  const confirmDeleteClip = async () => {
+    const clipId = deleteClipId();
+    if (!clipId) return;
+
     await fetchNui('clipsDeletePost', clipId);
     setClips(prev => prev.filter(c => c.id !== clipId));
     cache.invalidate('clips:feed');
     cache.invalidate('clips:myvideos');
+    setDeleteClipId(null);
   };
 
   const loadComments = async (clipId: number) => {
@@ -172,9 +180,10 @@ export function ClipsApp() {
   const publishClip = async () => {
     const media = sanitizeMediaUrl(uploadMedia());
     if (!media) {
-      alert('Selecciona un video');
+      setStatusMessage('Selecciona un video para subir.');
       return;
     }
+    setStatusMessage('');
     
     setLoading(true);
     const result = await fetchNui<{ success?: boolean }>('clipsPublish', {
@@ -198,7 +207,7 @@ export function ClipsApp() {
     if (video?.url) {
       setUploadMedia(sanitizeMediaUrl(video.url) || '');
     } else {
-      alert('No se encontraron videos en la galeria');
+      setStatusMessage('No se encontraron videos en la galeria.');
     }
   };
 
@@ -232,6 +241,12 @@ export function ClipsApp() {
     <AppScaffold title="Clips" subtitle="Videos cortos" onBack={() => router.goBack()} bodyClass={styles.body}>
       <div class={styles.clipsApp}>
         {/* Tabs */}
+        <Show when={statusMessage()}>
+          <div style={{ padding: '8px 12px', margin: '8px 12px', 'background-color': 'rgba(255, 159, 10, 0.14)', color: '#7a4a00', 'font-size': '12px', 'border-radius': '10px' }}>
+            {statusMessage()}
+          </div>
+        </Show>
+
         <div class={styles.tabs}>
           <button 
             class={styles.tabBtn}
@@ -484,6 +499,19 @@ export function ClipsApp() {
               tone="primary"
               disabled={!uploadMedia() || loading()}
             />
+          </ModalActions>
+        </Modal>
+
+        <Modal
+          open={deleteClipId() !== null}
+          title="Eliminar clip"
+          onClose={() => setDeleteClipId(null)}
+          size="sm"
+        >
+          <p>Esta accion no se puede deshacer.</p>
+          <ModalActions>
+            <ModalButton label="Cancelar" onClick={() => setDeleteClipId(null)} />
+            <ModalButton label="Eliminar" tone="danger" onClick={() => void confirmDeleteClip()} />
           </ModalActions>
         </Modal>
 

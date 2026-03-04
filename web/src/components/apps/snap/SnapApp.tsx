@@ -59,6 +59,8 @@ export function SnapApp() {
   const [activeStoryIndex, setActiveStoryIndex] = createSignal<number | null>(null);
   const [viewerUrl, setViewerUrl] = createSignal<string | null>(null);
   const [showActionSheet, setShowActionSheet] = createSignal(false);
+  const [statusMessage, setStatusMessage] = createSignal('');
+  const [deletePostId, setDeletePostId] = createSignal<number | null>(null);
 
   // Create Post
   const [showCreatePost, setShowCreatePost] = createSignal(false);
@@ -130,10 +132,16 @@ export function SnapApp() {
 
   const deletePost = async (e: Event, postId: number) => {
     e.stopPropagation();
-    if (!confirm('¿Eliminar este post?')) return;
-    
+    setDeletePostId(postId);
+  };
+
+  const confirmDeletePost = async () => {
+    const postId = deletePostId();
+    if (!postId) return;
+
     await fetchNui('snapDeletePost', postId);
     setPosts(prev => prev.filter(p => p.id !== postId));
+    setDeletePostId(null);
   };
 
   const openStory = (index: number) => {
@@ -159,9 +167,10 @@ export function SnapApp() {
   const publishPost = async () => {
     const media = sanitizeMediaUrl(postMedia());
     if (!media) {
-      alert('Selecciona una imagen o video');
+      setStatusMessage('Selecciona una imagen o video para publicar.');
       return;
     }
+    setStatusMessage('');
     
     setLoading(true);
     
@@ -243,6 +252,12 @@ export function SnapApp() {
         </div>
 
         {/* Live Streams */}
+        <Show when={statusMessage()}>
+          <div style={{ padding: '8px 12px', 'margin-bottom': '8px', 'background-color': 'rgba(255, 159, 10, 0.14)', color: '#7a4a00', 'font-size': '12px', 'border-radius': '10px' }}>
+            {statusMessage()}
+          </div>
+        </Show>
+
         <Show when={liveStreams().length > 0}>
           <div class={styles.liveSection}>
             <h4 class={styles.sectionTitle}>En vivo</h4>
@@ -479,6 +494,19 @@ export function SnapApp() {
           )}
         </div>
       </Show>
+
+      <Modal
+        open={deletePostId() !== null}
+        title="Eliminar publicacion"
+        onClose={() => setDeletePostId(null)}
+        size="sm"
+      >
+        <p>Esta accion no se puede deshacer.</p>
+        <ModalActions>
+          <ModalButton label="Cancelar" onClick={() => setDeletePostId(null)} />
+          <ModalButton label="Eliminar" tone="danger" onClick={() => void confirmDeletePost()} />
+        </ModalActions>
+      </Modal>
 
       <MediaLightbox url={viewerUrl()} onClose={() => setViewerUrl(null)} />
     </AppScaffold>
