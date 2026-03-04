@@ -78,6 +78,10 @@ CreateThread(function()
     }
 
     print('^2[gcphone-next]^7 Server initialized')
+    
+    -- Check database version
+    local dbVersion = exports['gcphone-next'].GetDatabaseVersion and exports['gcphone-next'].GetDatabaseVersion() or 0
+    print(string.format('^2[gcphone-next]^7 Database version: %d', dbVersion))
 end)
 
 exports('GetBridge', function()

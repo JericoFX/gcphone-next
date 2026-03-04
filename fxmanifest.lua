@@ -38,6 +38,7 @@ server_scripts {
     'server/js/livekit.js',
     'server/js/socket_auth.js',
     '@oxmysql/lib/MySQL.lua',
+    'server/modules/database.lua',
     'server/main.lua',
     'server/bridge/qbcore.lua',
     'server/modules/phone.lua',
