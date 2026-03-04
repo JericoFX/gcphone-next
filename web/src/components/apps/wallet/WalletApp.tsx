@@ -59,6 +59,37 @@ export function WalletApp() {
     if (result.success) void load();
   };
 
+  const proximityTransfer = async (method: 'qr' | 'nfc') => {
+    const targetPhone = window.prompt(method === 'qr' ? 'Numero destino (QR)' : 'Numero destino (NFC)') || '';
+    const amount = Number(window.prompt('Monto') || '0');
+    const title = window.prompt('Concepto') || (method === 'qr' ? 'Pago QR' : 'Pago NFC');
+    if (!targetPhone || !Number.isFinite(amount) || amount <= 0) return;
+
+    const result = await fetchNui<{ success?: boolean; balance?: number; error?: string; distance?: number; maxDistance?: number }>(
+      'walletProximityTransfer',
+      { targetPhone, amount, title, method },
+      { success: false }
+    );
+
+    if (result.success) {
+      setBalance(Number(result.balance || 0));
+      void load();
+      return;
+    }
+
+    if (result.error === 'TOO_FAR') {
+      window.alert(`Debes acercarte mas (${(result.maxDistance || 3).toFixed(1)}m max). Distancia: ${(result.distance || 0).toFixed(2)}m`);
+      return;
+    }
+
+    if (result.error === 'TARGET_OFFLINE') {
+      window.alert('La persona debe estar conectada y cerca para pago QR/NFC');
+      return;
+    }
+
+    window.alert(result.error || 'Pago de proximidad fallido');
+  };
+
   const removeCard = async (cardId: number) => {
     const result = await fetchNui<{ success?: boolean }>('walletRemoveCard', { cardId }, { success: false });
     if (result.success) void load();
@@ -89,6 +120,8 @@ export function WalletApp() {
           <strong>${balance().toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
           <div class={styles.actions}>
             <button class="ios-btn ios-btn-primary" onClick={() => void transfer()}>Transferir</button>
+            <button class="ios-btn" onClick={() => void proximityTransfer('qr')}>Pagar QR</button>
+            <button class="ios-btn" onClick={() => void proximityTransfer('nfc')}>Pagar NFC</button>
             <button class="ios-btn" onClick={() => void addCard()}>Agregar tarjeta</button>
           </div>
         </div>

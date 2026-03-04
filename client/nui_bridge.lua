@@ -220,6 +220,12 @@ RegisterNUICallback('walletTransfer', function(data, cb)
     end, data)
 end)
 
+RegisterNUICallback('walletProximityTransfer', function(data, cb)
+    lib.callback('gcphone:wallet:proximityTransfer', false, function(payload)
+        cb(payload or { success = false })
+    end, data)
+end)
+
 RegisterNUICallback('walletAddCard', function(data, cb)
     lib.callback('gcphone:wallet:addCard', false, function(payload)
         cb(payload or { success = false })

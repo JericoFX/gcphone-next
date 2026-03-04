@@ -85,6 +85,7 @@ Config.Features = {
 Config.Wallet = {
     InitialBalance = 2500,
     MaxTransferAmount = 500000,
+    ProximityDistance = 3.0,
 }
 
 Config.Documents = {
