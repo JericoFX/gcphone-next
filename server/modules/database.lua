@@ -941,6 +941,21 @@ local MIGRATIONS = {
                 `location_z` FLOAT NOT NULL,
                 `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 KEY `idx_garage_hist` (`identifier`, `plate`, `created_at`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci]],
+            
+            -- Documents NFC support
+            [[ALTER TABLE `phone_documents` 
+                ADD COLUMN IF NOT EXISTS `nfc_enabled` TINYINT(1) DEFAULT 0 AFTER `verification_code`]],
+            
+            [[CREATE TABLE IF NOT EXISTS `phone_documents_nfc_scans` (
+                `id` INT AUTO_INCREMENT PRIMARY KEY,
+                `document_id` INT NOT NULL,
+                `scanned_by` VARCHAR(50) NOT NULL,
+                `scan_type` ENUM('nfc', 'manual') DEFAULT 'manual',
+                `scanned_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (`document_id`) REFERENCES `phone_documents`(`id`) ON DELETE CASCADE,
+                KEY `idx_scanned_by` (`scanned_by`),
+                KEY `idx_scanned_at` (`scanned_at`)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci]]
         }
     }
