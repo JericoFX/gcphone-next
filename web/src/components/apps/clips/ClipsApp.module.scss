@@ -12,6 +12,39 @@
   position: relative;
 }
 
+// Tabs
+.tabs {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  padding: 12px 20px;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  z-index: 10;
+}
+
+.tabBtn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 20px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 150ms ease;
+  
+  &:hover {
+    color: rgba(255, 255, 255, 0.9);
+  }
+  
+  &.active {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.15);
+  }
+}
+
 // Feed
 .feed {
   flex: 1;
@@ -49,6 +82,26 @@
   width: 100%;
   height: 100%;
   object-fit: contain;
+  cursor: pointer;
+}
+
+// Pause Indicator
+.pauseIndicator {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 80px;
+  height: 80px;
+  background: rgba(0, 0, 0, 0.6);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font-size: 32px;
+  pointer-events: none;
+  z-index: 5;
 }
 
 // Like Animation
