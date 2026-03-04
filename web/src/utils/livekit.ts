@@ -74,7 +74,9 @@ export async function connectLiveKit(url: string, token: string, maxDurationSeco
       if (track.kind !== Track.Kind.Video && track.kind !== Track.Kind.Audio) return;
       const element = track.attach() as HTMLMediaElement;
       element.autoplay = true;
-      element.playsInline = true;
+      if (track.kind === Track.Kind.Video) {
+        (element as HTMLVideoElement).playsInline = true;
+      }
       handlers?.onTrackSubscribed?.({
         participantIdentity: participant.identity,
         trackSid: publication.trackSid,
@@ -97,7 +99,9 @@ export async function connectLiveKit(url: string, token: string, maxDurationSeco
       if (track.kind !== Track.Kind.Video && track.kind !== Track.Kind.Audio) return;
       const element = track.attach() as HTMLMediaElement;
       element.autoplay = true;
-      element.playsInline = true;
+      if (track.kind === Track.Kind.Video) {
+        (element as HTMLVideoElement).playsInline = true;
+      }
       handlers?.onLocalTrackPublished?.({
         participantIdentity: participant.identity,
         trackSid: publication.trackSid,

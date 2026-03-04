@@ -61,7 +61,7 @@ export function AvatarGroup(props: AvatarGroupProps) {
       {children().map((child, index) => {
         if (typeof child === 'number') {
           return (
-            <div classList={{ [styles.avatar]: true, [styles.overflow]: true }} key="overflow">
+            <div classList={{ [styles.avatar]: true, [styles.overflow]: true }}>
               +{child}
             </div>
           );
