@@ -1,5 +1,5 @@
 import { createContext, useContext, ParentComponent, batch, onMount } from 'solid-js';
-import { createStore, produce } from 'solid-js/store';
+import { createStore } from 'solid-js/store';
 import { fetchNui } from '../utils/fetchNui';
 import { useNuiCustomEvent } from '../utils/useNui';
 import { sanitizeMediaUrl, sanitizePhone, sanitizeText } from '../utils/sanitize';
@@ -77,10 +77,7 @@ export const MessagesProvider: ParentComponent = (props) => {
       const result = await fetchNui<{ success: boolean }>('deleteMessage', { id: messageId });
       
       if (result?.success) {
-        setState('messages', produce(m => {
-          const idx = m.findIndex(msg => msg.id === messageId);
-          if (idx >= 0) m.splice(idx, 1);
-        }));
+        setState('messages', messages => messages.filter(msg => msg.id !== messageId));
         setState('unreadCount', countUnread(state.messages));
         return true;
       }
@@ -105,13 +102,11 @@ export const MessagesProvider: ParentComponent = (props) => {
       
       if (result?.success) {
         batch(() => {
-          setState('messages', produce(m => {
-            for (const msg of m) {
-              if (msg.transmitter === phoneNumber && msg.owner === 0) {
-                msg.isRead = true;
-              }
-            }
-          }));
+          setState('messages', messages => messages.map(msg => (
+            msg.transmitter === phoneNumber && msg.owner === 0
+              ? { ...msg, isRead: true }
+              : msg
+          )));
           setState('unreadCount', countUnread(state.messages));
         });
         return true;
@@ -123,16 +118,12 @@ export const MessagesProvider: ParentComponent = (props) => {
   };
   
   useNuiCustomEvent<Message>('messageSent', (message) => {
-    setState('messages', produce(m => {
-      m.push(message);
-    }));
+    setState('messages', messages => [...messages, message]);
   });
   
   useNuiCustomEvent<Message>('messageReceived', (message) => {
     batch(() => {
-      setState('messages', produce(m => {
-        m.push(message);
-      }));
+      setState('messages', messages => [...messages, message]);
       setState('unreadCount', prev => prev + 1);
     });
   });

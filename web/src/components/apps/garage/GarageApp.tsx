@@ -152,7 +152,7 @@ export function GarageApp() {
     });
   };
 
-  const getVehicleIcon = () => './img/icons_ios/car.svg';
+  const getVehicleIcon = () => './img/icons_ios/garage.svg';
 
   return (
     <AppScaffold title="Garage" subtitle="Tus vehiculos" onBack={() => router.goBack()} bodyClass={styles.body}>

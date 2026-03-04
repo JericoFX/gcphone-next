@@ -107,7 +107,16 @@ lib.callback.register('gcphone:chirp:getTweets', function(source, data)
     if offset < 0 then offset = 0 end
     
     local tweets = {}
-    local account = identifier and GetAccount(identifier) or nil
+    local account = nil
+
+    if identifier then
+        account = GetAccount(identifier)
+        if not account then
+            local name = GetName(source) or 'User'
+            local username = GenerateUsername(source)
+            account = CreateAccount(identifier, username, name, nil)
+        end
+    end
     
     if tab == 'following' and account then
         -- Tweets from followed accounts

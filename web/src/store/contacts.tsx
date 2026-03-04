@@ -1,5 +1,5 @@
 import { createContext, useContext, ParentComponent, onMount } from 'solid-js';
-import { createStore, produce } from 'solid-js/store';
+import { createStore } from 'solid-js/store';
 import { fetchNui } from '../utils/fetchNui';
 import { useNuiCustomEvent } from '../utils/useNui';
 import type { Contact } from '../types';
@@ -67,10 +67,7 @@ export const ContactsProvider: ParentComponent = (props) => {
       const result = await fetchNui<{ success: boolean }>('deleteContact', { id });
       
       if (result?.success) {
-        setState('contacts', produce(c => {
-          const idx = c.findIndex(contact => contact.id === id);
-          if (idx >= 0) c.splice(idx, 1);
-        }));
+        setState('contacts', contacts => contacts.filter(contact => contact.id !== id));
         return true;
       }
       return false;
@@ -102,16 +99,11 @@ export const ContactsProvider: ParentComponent = (props) => {
   });
   
   useNuiCustomEvent<Contact>('contactAdded', (contact) => {
-    setState('contacts', produce(c => {
-      c.push(contact);
-    }));
+    setState('contacts', contacts => [...contacts, contact]);
   });
   
   useNuiCustomEvent<number>('contactDeleted', (id) => {
-    setState('contacts', produce(c => {
-      const idx = c.findIndex(contact => contact.id === id);
-      if (idx >= 0) c.splice(idx, 1);
-    }));
+    setState('contacts', contacts => contacts.filter(contact => contact.id !== id));
   });
   
   onMount(() => {
