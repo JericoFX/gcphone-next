@@ -693,7 +693,7 @@ export function DarkRoomsApp() {
             value={roomPassword()} 
             onChange={setRoomPassword} 
             placeholder="Minimo 4 caracteres"
-            type="password"
+            type="text"
           />
         </Show>
         
@@ -716,7 +716,7 @@ export function DarkRoomsApp() {
           value={joinPassword()} 
           onChange={setJoinPassword} 
           placeholder="Ingresa la clave"
-          type="password"
+          type="text"
         />
         <ModalActions>
           <ModalButton label="Cancelar" onClick={() => setJoinPasswordMode(null)} />

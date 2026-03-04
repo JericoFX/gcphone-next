@@ -1,8 +1,4 @@
-<<<<<<< HEAD
 import { For, Show, createEffect, createSignal, onCleanup, onMount } from 'solid-js';
-=======
-import { createEffect, createMemo, createSignal, For, Show, onCleanup } from 'solid-js';
->>>>>>> 6087054b2c17bad903d1ba2a08f953f8451a6489
 import { useRouter } from '../../Phone/PhoneFrame';
 import { fetchNui } from '../../../utils/fetchNui';
 import { timeAgo } from '../../../utils/misc';
@@ -37,16 +33,7 @@ interface Comment {
 
 export function ClipsApp() {
   const router = useRouter();
-<<<<<<< HEAD
   const cache = useAppCache('clips');
-=======
-  const [feed, setFeed] = createSignal<ClipPost[]>([]);
-  const [mediaUrl, setMediaUrl] = createSignal('');
-  const [caption, setCaption] = createSignal('');
-  const [showComposer, setShowComposer] = createSignal(false);
-  const [username, setUsername] = createSignal('');
-  const [sortMode, setSortMode] = createSignal<'hot' | 'new'>('hot');
->>>>>>> 6087054b2c17bad903d1ba2a08f953f8451a6489
 
   // Data
   const [clips, setClips] = createSignal<Clip[]>([]);
@@ -190,7 +177,7 @@ export function ClipsApp() {
     }
     
     setLoading(true);
-    const result = await fetchNui('clipsPublish', {
+    const result = await fetchNui<{ success?: boolean }>('clipsPublish', {
       mediaUrl: media,
       caption: sanitizeText(uploadCaption(), 500)
     });
@@ -241,13 +228,7 @@ export function ClipsApp() {
     setCurrentClipIndex(newIndex);
   };
 
-  const visibleFeed = createMemo(() => {
-    if (sortMode() === 'new') return feed();
-    return [...feed()].sort((a, b) => Number(b.likes || 0) - Number(a.likes || 0));
-  });
-
   return (
-<<<<<<< HEAD
     <AppScaffold title="Clips" subtitle="Videos cortos" onBack={() => router.goBack()} bodyClass={styles.body}>
       <div class={styles.clipsApp}>
         {/* Tabs */}
@@ -266,34 +247,8 @@ export function ClipsApp() {
           >
             Mis Videos
           </button>
-=======
-    <div class={styles.app}>
-      <div class={styles.header}>
-        <button class={styles.backBtn} onClick={() => router.goBack()}>‹</button>
-        <h1>Clips Flow</h1>
-        <button class={styles.uploadBtn} onClick={() => setShowComposer((v) => !v)}>Upload</button>
-      </div>
-
-      <div class={styles.sortRow}>
-        <button class={styles.sortBtn} classList={{ [styles.sortActive]: sortMode() === 'hot' }} onClick={() => setSortMode('hot')}>Trending</button>
-        <button class={styles.sortBtn} classList={{ [styles.sortActive]: sortMode() === 'new' }} onClick={() => setSortMode('new')}>Recientes</button>
-      </div>
-
-      <Show when={showComposer()}>
-        <div class={styles.composer}>
-          <input type="text" placeholder="URL de video" value={mediaUrl()} onInput={(e) => setMediaUrl(e.currentTarget.value)} />
-          <input type="text" placeholder="Descripcion" value={caption()} onInput={(e) => setCaption(e.currentTarget.value)} />
-          <div class={styles.composerActions}>
-            <button class={styles.softBtn} onClick={() => void attachFromGallery()}>Galeria</button>
-            <button class={styles.softBtn} onClick={() => router.navigate('camera', { target: 'clips' })}>Camara</button>
-            <button class={styles.softBtn} onClick={attachByUrl}>Pegar URL</button>
-            <button class={styles.postBtn} onClick={() => void publish()}>Publicar video</button>
-          </div>
-          <div class={styles.hint}>Para videos grabados, configura upload de video en tu backend (ej. FiveManage).</div>
->>>>>>> 6087054b2c17bad903d1ba2a08f953f8451a6489
         </div>
 
-<<<<<<< HEAD
         {/* Feed */}
         <div class={styles.feed} ref={scrollContainer} onScroll={handleScroll}>
           <Show when={loading() && clips().length === 0}>
@@ -502,20 +457,6 @@ export function ClipsApp() {
                   <span class={styles.uploadIcon}>🎬</span>
                   <span>Elegir de galeria</span>
                 </button>
-=======
-      <div class={styles.feed}>
-        <For each={visibleFeed()}>
-          {(post) => (
-            <article class={styles.card}>
-              <div class={styles.meta}>{post.display_name || post.username || 'Usuario'}</div>
-              <video src={post.media_url} controls playsinline preload="metadata" />
-              <p>{post.caption || 'Sin descripcion'}</p>
-              <div class={styles.actions}>
-                <button class={styles.likeBtn} onClick={() => void likePost(post.id)}>♥ {post.likes || 0}</button>
-                <Show when={sanitizeText(post.username || '', 40) === username()}>
-                  <button class={styles.deleteBtn} onClick={() => void deletePost(post.id)}>Eliminar</button>
-                </Show>
->>>>>>> 6087054b2c17bad903d1ba2a08f953f8451a6489
               </div>
             </Show>
             

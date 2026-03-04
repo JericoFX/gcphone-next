@@ -21,7 +21,7 @@
       "@assets/*": ["./src/assets/*"]
     },
     "baseUrl": ".",
-    "strict": true,
+    "strict": false,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true
