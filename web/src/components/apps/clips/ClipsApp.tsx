@@ -1,4 +1,4 @@
-import { createEffect, createSignal, For, Show, onCleanup } from 'solid-js';
+import { createEffect, createMemo, createSignal, For, Show, onCleanup } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { fetchNui } from '../../../utils/fetchNui';
 import { resolveMediaType, sanitizeMediaUrl, sanitizeText } from '../../../utils/sanitize';
@@ -20,6 +20,7 @@ export function ClipsApp() {
   const [caption, setCaption] = createSignal('');
   const [showComposer, setShowComposer] = createSignal(false);
   const [username, setUsername] = createSignal('');
+  const [sortMode, setSortMode] = createSignal<'hot' | 'new'>('hot');
 
   const loadFeed = async () => {
     const list = await fetchNui<ClipPost[]>('clipsGetFeed', { limit: 40, offset: 0 }, []);
@@ -82,11 +83,22 @@ export function ClipsApp() {
     if (ok?.success) await loadFeed();
   };
 
+  const visibleFeed = createMemo(() => {
+    if (sortMode() === 'new') return feed();
+    return [...feed()].sort((a, b) => Number(b.likes || 0) - Number(a.likes || 0));
+  });
+
   return (
     <div class={styles.app}>
       <div class={styles.header}>
         <button class={styles.backBtn} onClick={() => router.goBack()}>‹</button>
-        <h1>Clips</h1>
+        <h1>Clips Flow</h1>
+        <button class={styles.uploadBtn} onClick={() => setShowComposer((v) => !v)}>Upload</button>
+      </div>
+
+      <div class={styles.sortRow}>
+        <button class={styles.sortBtn} classList={{ [styles.sortActive]: sortMode() === 'hot' }} onClick={() => setSortMode('hot')}>Trending</button>
+        <button class={styles.sortBtn} classList={{ [styles.sortActive]: sortMode() === 'new' }} onClick={() => setSortMode('new')}>Recientes</button>
       </div>
 
       <Show when={showComposer()}>
@@ -104,7 +116,7 @@ export function ClipsApp() {
       </Show>
 
       <div class={styles.feed}>
-        <For each={feed()}>
+        <For each={visibleFeed()}>
           {(post) => (
             <article class={styles.card}>
               <div class={styles.meta}>{post.display_name || post.username || 'Usuario'}</div>
