@@ -1,4 +1,4 @@
-import { createEffect, createSignal, For, onCleanup, Show } from 'solid-js';
+import { createEffect, createMemo, createSignal, For, onCleanup, Show } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { fetchNui } from '../../../utils/fetchNui';
 import { timeAgo } from '../../../utils/misc';
@@ -29,6 +29,7 @@ export function NewsApp() {
   const [liveArticleId, setLiveArticleId] = createSignal<number | null>(null);
   const [showAttachSheet, setShowAttachSheet] = createSignal(false);
   const [viewerUrl, setViewerUrl] = createSignal<string | null>(null);
+  const [query, setQuery] = createSignal('');
 
   const load = async () => {
     const data = await fetchNui<NewsArticle[]>('newsGetArticles', { category: selectedCategory(), limit: 50, offset: 0 }, []);
@@ -135,24 +136,60 @@ export function NewsApp() {
     }
   };
 
+  const categoryOptions = createMemo(() => ['all', ...categories().filter((entry) => entry !== 'all')]);
+
+  const visibleArticles = createMemo(() => {
+    const q = sanitizeText(query(), 80).toLowerCase();
+    return articles().filter((article) => {
+      if (!q) return true;
+      return (
+        sanitizeText(article.title || '', 200).toLowerCase().includes(q) ||
+        sanitizeText(article.content || '', 3000).toLowerCase().includes(q) ||
+        sanitizeText(article.author_name || '', 80).toLowerCase().includes(q)
+      );
+    });
+  });
+
   return (
     <div class={styles.app}>
       <div class={styles.header}>
         <button class={styles.backBtn} onClick={() => router.goBack()}>‹</button>
-        <h1>Noticias</h1>
+        <h1>Newsroom</h1>
         <button class={styles.addBtn} onClick={() => setShowCompose(true)}>✎</button>
       </div>
 
+      <div class={styles.searchRow}>
+        <input
+          class={styles.searchInput}
+          type="text"
+          placeholder="Buscar titulares"
+          value={query()}
+          onInput={(event) => setQuery(event.currentTarget.value)}
+        />
+      </div>
+
       <div class={styles.tools}>
-        <select value={selectedCategory()} onChange={(e) => { setSelectedCategory(e.currentTarget.value); void load(); }}>
-          <option value="all">Todas</option>
-          <For each={categories()}>{(c) => <option value={c}>{c}</option>}</For>
-        </select>
+        <div class={styles.categoryRow}>
+          <For each={categoryOptions()}>
+            {(entry) => (
+              <button
+                class={styles.categoryChip}
+                classList={{ [styles.categoryChipActive]: selectedCategory() === entry }}
+                onClick={() => {
+                  setSelectedCategory(entry);
+                  void load();
+                }}
+              >
+                {entry}
+              </button>
+            )}
+          </For>
+        </div>
         <button class={styles.liveBtn} onClick={toggleLive}>{liveArticleId() ? 'Terminar live' : 'Iniciar live'}</button>
       </div>
 
       <div class={styles.feed}>
-        <For each={articles()}>
+        <For each={visibleArticles()}>
           {(article) => (
             <article class={styles.card} onClick={() => viewArticle(article.id)}>
               <div class={styles.meta}>
