@@ -9,6 +9,7 @@ import { ActionSheet } from '../../shared/ui/ActionSheet';
 import { MediaLightbox } from '../../shared/ui/MediaLightbox';
 import { SkeletonList } from '../../shared/ui/SkeletonList';
 import { VirtualList } from '../../shared/ui/VirtualList';
+import { AppScaffold } from '../../shared/layout';
 import styles from './MessagesApp.module.scss';
 
 function extractCoords(text?: string): { x: number; y: number } | null {
@@ -199,78 +200,71 @@ export function MessagesApp() {
   };
   
   return (
-    <div class="ios-page">
-      <Show when={!selectedConversation()} fallback={
-        <ConversationView
-          phoneNumber={selectedConversation()!}
-          contactName={getContactName(selectedConversation()!)}
-          messages={getConversationMessages()}
-          messageInput={messageInput()}
-          attachmentUrl={attachmentUrl()}
-          onInput={setMessageInput}
-          onSend={sendMessage}
-          onAttachGallery={attachFromGallery}
-          onAttachCamera={attachFromCamera}
-          onAttachUrl={attachByUrl}
-          onSendLocation={sendLocationText}
-          onOpenCoords={(x, y) => router.navigate('maps', { x, y })}
-          onClearAttachment={() => setAttachmentUrl(null)}
-          onOpenViewer={setViewerUrl}
-          getMediaUrl={getMediaUrl}
-          onBack={() => setSelectedConversation(null)}
-          onDeleteConversation={() => void deleteConversation(selectedConversation()!)}
-        />
-      }>
-        <div class="ios-nav">
-          <button class="ios-icon-btn" onClick={() => router.goBack()}>
-            ‹
-          </button>
-          <div class="ios-nav-title">Mensajes</div>
-          <button class="ios-icon-btn">✏️</button>
-        </div>
-        <div class="ios-content">
-        <div class={styles.conversationList}>
-          <Show
-            when={messagesState.loading}
-            fallback={
-              <VirtualList items={conversations} itemHeight={78} overscan={5}>
-                {(convo, index) => (
-                  <div
-                    class={styles.conversationItem}
-                    classList={{ [styles.selected]: isSelectedConversationIndex(index()) }}
-                    onClick={() => openConversation(convo.number)}
-                  >
-                    <div class={styles.avatar} style={{ 'background-color': generateColorForString(convo.number) }}>
-                      {convo.display.charAt(0).toUpperCase()}
-                    </div>
-                    <div class={styles.info}>
-                      <div class={styles.topRow}>
-                        <span class={styles.name}>{convo.display}</span>
-                        <span class={styles.time}>{timeAgo(convo.lastMessage.time)}</span>
+    <Show when={!selectedConversation()} fallback={
+      <ConversationView
+        phoneNumber={selectedConversation()!}
+        contactName={getContactName(selectedConversation()!)}
+        messages={getConversationMessages()}
+        messageInput={messageInput()}
+        attachmentUrl={attachmentUrl()}
+        onInput={setMessageInput}
+        onSend={sendMessage}
+        onAttachGallery={attachFromGallery}
+        onAttachCamera={attachFromCamera}
+        onAttachUrl={attachByUrl}
+        onSendLocation={sendLocationText}
+        onOpenCoords={(x, y) => router.navigate('maps', { x, y })}
+        onClearAttachment={() => setAttachmentUrl(null)}
+        onOpenViewer={setViewerUrl}
+        getMediaUrl={getMediaUrl}
+        onBack={() => setSelectedConversation(null)}
+        onDeleteConversation={() => void deleteConversation(selectedConversation()!)}
+      />
+    }>
+      <AppScaffold title="Mensajes" subtitle="Tus conversaciones" onBack={() => router.goBack()}>
+        <div class={styles.messagesApp}>
+          <div class={styles.conversationList}>
+            <Show
+              when={messagesState.loading}
+              fallback={
+                <VirtualList items={conversations} itemHeight={78} overscan={5}>
+                  {(convo, index) => (
+                    <div
+                      class={styles.conversationItem}
+                      classList={{ [styles.selected]: isSelectedConversationIndex(index()) }}
+                      onClick={() => openConversation(convo.number)}
+                    >
+                      <div class={styles.avatar} style={{ 'background-color': generateColorForString(convo.number) }}>
+                        {convo.display.charAt(0).toUpperCase()}
                       </div>
-                      <div class={styles.preview}>
-                        <Show when={convo.unread > 0}>
-                          <span class={styles.unreadBadge}>{convo.unread}</span>
-                        </Show>
-                        <span class={styles.message}>{getMediaUrl(convo.lastMessage) ? 'Adjunto multimedia' : convo.lastMessage.message}</span>
+                      <div class={styles.info}>
+                        <div class={styles.topRow}>
+                          <span class={styles.name}>{convo.display}</span>
+                          <span class={styles.time}>{timeAgo(convo.lastMessage.time)}</span>
+                        </div>
+                        <div class={styles.preview}>
+                          <Show when={convo.unread > 0}>
+                            <span class={styles.unreadBadge}>{convo.unread}</span>
+                          </Show>
+                          <span class={styles.message}>{getMediaUrl(convo.lastMessage) ? 'Adjunto multimedia' : convo.lastMessage.message}</span>
+                        </div>
                       </div>
+                      <button class={styles.deleteConversationBtn} onClick={(e) => { e.stopPropagation(); void deleteConversation(convo.number); }}>
+                        Borrar
+                      </button>
                     </div>
-                    <button class={styles.deleteConversationBtn} onClick={(e) => { e.stopPropagation(); void deleteConversation(convo.number); }}>
-                      Borrar
-                    </button>
-                  </div>
-                )}
-              </VirtualList>
-            }
-          >
-            <SkeletonList rows={6} avatar />
-          </Show>
+                  )}
+                </VirtualList>
+              }
+            >
+              <SkeletonList rows={6} avatar />
+            </Show>
+          </div>
+          <button class={styles.fab} onClick={openNewChat}>+</button>
         </div>
-        <button class={styles.fab} onClick={openNewChat}>+</button>
-        </div>
-      </Show>
+      </AppScaffold>
       <MediaLightbox url={viewerUrl()} onClose={() => setViewerUrl(null)} />
-    </div>
+    </Show>
   );
 }
 

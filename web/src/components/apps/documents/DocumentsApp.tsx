@@ -53,17 +53,17 @@ export function DocumentsApp() {
   const [docTypes, setDocTypes] = createSignal<DocType[]>([]);
   const [scanHistory, setScanHistory] = createSignal<ScanHistory[]>([]);
   const [selectedDoc, setSelectedDoc] = createSignal<Document | null>(null);
-  const [scannedDoc, setScannedDoc] = createSignal<ScannedDoc | null>(null);
 
   // Tabs
-  const [activeTab, setActiveTab] = createSignal<'my' | 'scan' | 'history'>('my');
+  const [activeTab, setActiveTab] = createSignal<'my' | 'nfc' | 'history'>('my');
 
   // UI State
   const [loading, setLoading] = createSignal(false);
   const [showComposer, setShowComposer] = createSignal(false);
-  const [showScanner, setShowScanner] = createSignal(false);
-  const [scanCode, setScanCode] = createSignal('');
-  const [nfcScanning, setNfcScanning] = createSignal(false);
+  const [showDocPicker, setShowDocPicker] = createSignal(false);
+  const [docPickerTarget, setDocPickerTarget] = createSignal<number | null>(null);
+  const [receivedDoc, setReceivedDoc] = createSignal<ScannedDoc & { from?: string; shared_at?: string } | null>(null);
+  const [lastNfcRouteKey, setLastNfcRouteKey] = createSignal('');
 
   // Composer
   const [composerType, setComposerType] = createSignal('id');
@@ -93,21 +93,61 @@ export function DocumentsApp() {
 
   createEffect(() => {
     void loadData();
+    
+    // Listen for document picker events from ox_target
+    const handleMessage = (event: MessageEvent) => {
+      if (event?.data?.action === 'openDocumentPicker') {
+        setDocPickerTarget(event.data.data?.targetServerId || null);
+        setShowDocPicker(true);
+      }
+      if (event?.data?.action === 'receiveSharedDocument') {
+        const doc = event.data.data?.document;
+        if (doc) {
+          setReceivedDoc({
+            ...doc,
+            from: event.data.data.from,
+            shared_at: event.data.data.shared_at
+          });
+        }
+      }
+    };
+    
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  });
+
+  createEffect(() => {
+    const params = router.params() as {
+      nfcAction?: string;
+      targetServerId?: number;
+      requestId?: number;
+      receivedDocument?: { document?: ScannedDoc; from?: string; shared_at?: string };
+    };
+
+    const key = `${params?.requestId || 0}:${params?.nfcAction || 'none'}:${params?.targetServerId || ''}`;
+    if (key === lastNfcRouteKey()) return;
+    setLastNfcRouteKey(key);
+
+    if (params?.nfcAction === 'share_document' && typeof params?.targetServerId === 'number') {
+      setDocPickerTarget(params.targetServerId);
+      setShowDocPicker(true);
+      setActiveTab('nfc');
+    }
+
+    if (params?.nfcAction === 'received_document' && params.receivedDocument?.document) {
+      setReceivedDoc({
+        ...params.receivedDocument.document,
+        from: params.receivedDocument.from,
+        shared_at: params.receivedDocument.shared_at,
+      });
+    }
   });
 
   createEffect(() => {
     const onKey = (e: CustomEvent<string>) => {
       if (e.detail === 'Backspace') {
-        if (showScanner()) {
-          setShowScanner(false);
-          return;
-        }
         if (showComposer()) {
           setShowComposer(false);
-          return;
-        }
-        if (scannedDoc()) {
-          setScannedDoc(null);
           return;
         }
         if (selectedDoc()) {
@@ -176,46 +216,19 @@ export function DocumentsApp() {
     ));
   };
 
-  const scanDocument = async () => {
-    if (!scanCode().trim()) return;
+  const shareDocument = async (docId: number) => {
+    if (!docPickerTarget()) return;
     
-    setLoading(true);
-    const result = await fetchNui<{ success?: boolean; document?: ScannedDoc; error?: string }>('documentsVerify', {
-      code: scanCode().trim()
-    });
-    setLoading(false);
-
-    if (result?.success && result.document) {
-      setScannedDoc(result.document);
-      setShowScanner(false);
-      setScanCode('');
-      await loadData(); // Refresh history
-    } else {
-      alert(result?.error || 'Documento no encontrado');
-    }
-  };
-
-  const simulateNFCScan = async () => {
-    // In real implementation, this would use NFC hardware
-    // For now, we simulate with a prompt
-    const code = prompt('Simular escaneo NFC - Ingresa codigo de verificacion:');
-    if (!code) return;
-    
-    setNfcScanning(true);
-    setLoading(true);
-    
-    const result = await fetchNui<{ success?: boolean; document?: ScannedDoc; error?: string }>('documentsScanNFC', {
-      code: code.trim()
+    const result = await fetchNui<{ success?: boolean; error?: string }>('shareDocument', {
+      documentId: docId,
+      targetServerId: docPickerTarget()
     });
     
-    setLoading(false);
-    setNfcScanning(false);
-    
-    if (result?.success && result.document) {
-      setScannedDoc(result.document);
-      await loadData();
+    if (result?.success) {
+      setShowDocPicker(false);
+      setDocPickerTarget(null);
     } else {
-      alert(result?.error || 'Documento no encontrado o NFC desactivado');
+      alert(result?.error || 'Error al compartir documento');
     }
   };
 
@@ -233,10 +246,10 @@ export function DocumentsApp() {
           </button>
           <button
             class={styles.tabBtn}
-            classList={{ [styles.active]: activeTab() === 'scan' }}
-            onClick={() => setActiveTab('scan')}
+            classList={{ [styles.active]: activeTab() === 'nfc' }}
+            onClick={() => setActiveTab('nfc')}
           >
-            Escanear
+            NFC
           </button>
           <button
             class={styles.tabBtn}
@@ -280,7 +293,7 @@ export function DocumentsApp() {
                       </Show>
                     </div>
                     
-                    <div class={styles.docArrow}>›</div>
+                    <div class={styles.docArrow}><img src="./img/icons_ios/ui-chevron-right.svg" alt="" /></div>
                   </div>
                 );
               }}
@@ -300,28 +313,29 @@ export function DocumentsApp() {
           </button>
         </Show>
 
-        {/* Scan Tab */}
-        <Show when={activeTab() === 'scan'}>
+        {/* NFC Tab */}
+        <Show when={activeTab() === 'nfc'}>
           <div class={styles.scanSection}>
             <div class={styles.scanOptions}>
-              <button class={styles.scanBtn} onClick={simulateNFCScan}>
+              <button class={styles.scanBtn} onClick={() => setActiveTab('my')}>
                 <span class={styles.scanIcon}>NFC</span>
-                <strong>Escanear NFC</strong>
-                <span>Acerca el telefono al documento</span>
+                <strong>Activar en mis documentos</strong>
+                <span>Abre un documento y activa NFC Habilitado</span>
               </button>
               
-              <button class={styles.scanBtn} onClick={() => setShowScanner(true)}>
-                <span class={styles.scanIcon}>123</span>
-                <strong>Ingresar Codigo</strong>
-                <span>Verificar manualmente</span>
+              <button class={styles.scanBtn}>
+                <span class={styles.scanIcon}>OX</span>
+                <strong>Usar ox_target</strong>
+                <span>Mira a una persona y usa "Mostrar documento NFC"</span>
               </button>
             </div>
             
             <div class={styles.scanInfo}>
-              <h4>¿Como funciona?</h4>
-              <p>1. El documento debe tener NFC activado</p>
-              <p>2. Acerca tu telefono al documento fisico</p>
-              <p>3. Se verificara automaticamente la autenticidad</p>
+              <h4>Como funciona NFC</h4>
+              <p>1. Activa NFC en el documento desde Mis Docs.</p>
+              <p>2. Acercate a la persona y usa ox_target.</p>
+              <p>3. Elige "Mostrar documento NFC" y selecciona documento.</p>
+              <p>4. La otra persona lo recibe en su telefono automaticamente.</p>
             </div>
           </div>
         </Show>
@@ -359,7 +373,7 @@ export function DocumentsApp() {
         <Show when={selectedDoc()}>
           <div class={styles.detailModal}>
             <button class={styles.closeBtn} onClick={() => setSelectedDoc(null)}>
-              ✕
+              <img src="./img/icons_ios/ui-close.svg" alt="" />
             </button>
             
             {(() => {
@@ -413,7 +427,7 @@ export function DocumentsApp() {
                         />
                         <span>NFC Habilitado</span>
                       </label>
-                      <p>Otros pueden escanear este documento via NFC</p>
+                      <p>Permite mostrar este documento a personas cercanas via ox_target</p>
                     </div>
                   </div>
                   
@@ -421,69 +435,6 @@ export function DocumentsApp() {
                     <button class={styles.deleteBtn} onClick={() => deleteDocument(doc.id)}>
                       Eliminar Documento
                     </button>
-                  </div>
-                </div>
-              );
-            })()}
-          </div>
-        </Show>
-
-        {/* Scanned Document Result */}
-        <Show when={scannedDoc()}>
-          <div class={styles.scanResultModal}>
-            <button class={styles.closeBtn} onClick={() => setScannedDoc(null)}>
-              ✕
-            </button>
-            
-            {(() => {
-              const doc = scannedDoc();
-              const typeInfo = getDocTypeInfo(doc.doc_type);
-              const expired = isExpired(doc.expires_at);
-              
-              return (
-                <div class={styles.scanResultContent}>
-                  <div class={styles.scanResultHeader} classList={{ [styles.valid]: !expired, [styles.invalid]: expired }}>
-                    <span class={styles.scanStatus}>{expired ? 'EXPIRADO' : 'DOCUMENTO VALIDO'}</span>
-                  </div>
-                  
-                  <div class={styles.scanResultBody}>
-                    <div class={styles.scanDocIcon} style={{ background: typeInfo.color }}>
-                      <span>{typeInfo.icon}</span>
-                    </div>
-                    
-                    <h2>{doc.title}</h2>
-                    <span class={styles.scanDocType}>{typeInfo.name}</span>
-                    
-                    <div class={styles.scanFields}>
-                      <div class={styles.scanField}>
-                        <label>Titular</label>
-                        <strong>{doc.holder_name}</strong>
-                      </div>
-                      
-                      <Show when={doc.holder_number}>
-                        <div class={styles.scanField}>
-                          <label>Numero</label>
-                          <strong>{doc.holder_number}</strong>
-                        </div>
-                      </Show>
-                      
-                      <Show when={doc.expires_at}>
-                        <div class={styles.scanField}>
-                          <label>Vencimiento</label>
-                          <strong classList={{ [styles.expiredText]: expired }}>{doc.expires_at}</strong>
-                        </div>
-                      </Show>
-                      
-                      <div class={styles.scanField}>
-                        <label>Codigo</label>
-                        <strong>{doc.verification_code}</strong>
-                      </div>
-                      
-                      <div class={styles.scanField}>
-                        <label>Escaneado</label>
-                        <strong>{doc.scanned_at}</strong>
-                      </div>
-                    </div>
                   </div>
                 </div>
               );
@@ -580,34 +531,117 @@ export function DocumentsApp() {
           </ModalActions>
         </Modal>
 
-        {/* Scanner Modal */}
+        {/* Document Picker Modal - for ox_target sharing */}
         <Modal
-          open={showScanner()}
-          title="Verificar Documento"
-          onClose={() => setShowScanner(false)}
-          size="sm"
+          open={showDocPicker()}
+          title="Seleccionar Documento"
+          onClose={() => { setShowDocPicker(false); setDocPickerTarget(null); }}
+          size="md"
         >
-          <div class={styles.scannerContent}>
-            <p>Ingresa el codigo de verificacion del documento:</p>
-            <input
-              type="text"
-              placeholder="Ej: ABC12345"
-              value={scanCode()}
-              onInput={(e) => setScanCode(e.currentTarget.value.toUpperCase())}
-              style={{ 'text-transform': 'uppercase' }}
-            />
+          <div class={styles.docPickerContent}>
+            <p>Selecciona un documento para mostrar:</p>
+            <div class={styles.docPickerList}>
+              <For each={documents().filter(d => d.nfc_enabled)}>
+                {(doc) => {
+                  const typeInfo = getDocTypeInfo(doc.doc_type);
+                  return (
+                    <button 
+                      class={styles.docPickerItem}
+                      onClick={() => shareDocument(doc.id)}
+                    >
+                      <div class={styles.docPickerIcon} style={{ background: typeInfo.color }}>
+                        <span>{typeInfo.icon}</span>
+                      </div>
+                      <div class={styles.docPickerInfo}>
+                        <strong>{doc.title}</strong>
+                        <span>{typeInfo.name}</span>
+                      </div>
+                    </button>
+                  );
+                }}
+              </For>
+            </div>
+            <Show when={documents().filter(d => d.nfc_enabled).length === 0}>
+              <p class={styles.docPickerEmpty}>No tienes documentos con NFC activado</p>
+            </Show>
           </div>
           
           <ModalActions>
-            <ModalButton label="Cancelar" onClick={() => setShowScanner(false)} />
-            <ModalButton
-              label="Verificar"
-              onClick={() => void scanDocument()}
-              tone="primary"
-              disabled={!scanCode().trim() || loading()}
-            />
+            <ModalButton label="Cancelar" onClick={() => { setShowDocPicker(false); setDocPickerTarget(null); }} />
           </ModalActions>
         </Modal>
+
+        {/* Received Document Modal */}
+        <Show when={receivedDoc()}>
+          <div class={styles.scanResultModal}>
+            <button class={styles.closeBtn} onClick={() => setReceivedDoc(null)}>
+              <img src="./img/icons_ios/ui-close.svg" alt="" />
+            </button>
+            
+            {(() => {
+              const doc = receivedDoc();
+              const typeInfo = getDocTypeInfo(doc.doc_type);
+              const expired = isExpired(doc.expires_at);
+              
+              return (
+                <div class={styles.scanResultContent}>
+                  <div class={styles.scanResultHeader} classList={{ [styles.valid]: !expired, [styles.invalid]: expired }}>
+                    <span class={styles.scanStatus}>{expired ? 'EXPIRADO' : 'DOCUMENTO VALIDO'}</span>
+                  </div>
+                  
+                  <div class={styles.scanResultBody}>
+                    <div class={styles.scanDocIcon} style={{ background: typeInfo.color }}>
+                      <span>{typeInfo.icon}</span>
+                    </div>
+                    
+                    <h2>{doc.title}</h2>
+                    <span class={styles.scanDocType}>{typeInfo.name}</span>
+                    
+                    <div class={styles.scanFields}>
+                      <div class={styles.scanField}>
+                        <label>Titular</label>
+                        <strong>{doc.holder_name}</strong>
+                      </div>
+                      
+                      <Show when={doc.holder_number}>
+                        <div class={styles.scanField}>
+                          <label>Numero</label>
+                          <strong>{doc.holder_number}</strong>
+                        </div>
+                      </Show>
+                      
+                      <Show when={doc.expires_at}>
+                        <div class={styles.scanField}>
+                          <label>Vencimiento</label>
+                          <strong classList={{ [styles.expiredText]: expired }}>{doc.expires_at}</strong>
+                        </div>
+                      </Show>
+                      
+                      <div class={styles.scanField}>
+                        <label>Codigo</label>
+                        <strong>{doc.verification_code}</strong>
+                      </div>
+                      
+                      <Show when={doc.from}>
+                        <div class={styles.scanField}>
+                          <label>Compartido por</label>
+                          <strong>{doc.from}</strong>
+                        </div>
+                      </Show>
+                      
+                      <Show when={doc.shared_at}>
+                        <div class={styles.scanField}>
+                          <label>Fecha</label>
+                          <strong>{doc.shared_at}</strong>
+                        </div>
+                      </Show>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        </Show>
       </div>
     </AppScaffold>
   );

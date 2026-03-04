@@ -144,8 +144,14 @@
 }
 
 .docArrow {
-  font-size: 24px;
-  color: #c7c7cc;
+  display: flex;
+  align-items: center;
+
+  img {
+    width: 16px;
+    height: 16px;
+    opacity: 0.45;
+  }
 }
 
 // Empty State
@@ -347,10 +353,15 @@
   border-radius: 50%;
   background: rgba(0, 0, 0, 0.6);
   color: #ffffff;
-  font-size: 18px;
   cursor: pointer;
   z-index: 10;
   backdrop-filter: blur(10px);
+
+  img {
+    width: 16px;
+    height: 16px;
+    filter: brightness(0) invert(1);
+  }
 }
 
 .detailContent,
