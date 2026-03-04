@@ -433,7 +433,7 @@
   }
 }
 
-.ios-slider {
+:global(.ios-slider) {
   width: 100%;
   -webkit-appearance: none;
   appearance: none;

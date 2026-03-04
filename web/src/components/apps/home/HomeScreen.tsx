@@ -43,7 +43,7 @@ export function HomeScreen() {
 
   const folderGroups = createMemo(() => {
     const socialSet = new Set(['messages', 'wavechat', 'chirp', 'snap', 'clips', 'darkrooms']);
-    const utilitySet = new Set(['camera', 'gallery', 'maps', 'weather', 'clock', 'notes', 'settings']);
+    const utilitySet = new Set(['camera', 'gallery', 'maps', 'notes', 'settings']);
 
     const socialApps = homeApps().filter((app) => socialSet.has(app.id));
     const utilityApps = homeApps().filter((app) => utilitySet.has(app.id));
@@ -278,10 +278,10 @@ export function HomeScreen() {
       </div>
 
       <div class={styles.widgetsRow}>
-        <button class={styles.widgetCard} onClick={() => router.navigate('weather')}>
-          <span class={styles.widgetLabel}>Clima</span>
+        <button class={styles.widgetCard} onClick={() => router.navigate('maps')}>
+          <span class={styles.widgetLabel}>Mapas</span>
           <strong>{currentTime().toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}</strong>
-          <small>Ver pronostico rapido</small>
+          <small>Abrir navegacion rapida</small>
         </button>
         <button class={styles.widgetCard} onClick={() => router.navigate('music')}>
           <span class={styles.widgetLabel}>Now Playing</span>

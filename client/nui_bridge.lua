@@ -484,6 +484,12 @@ RegisterNUICallback('musicSearchITunes', function(data, cb)
     end, data or {})
 end)
 
+RegisterNUICallback('musicCanSearchCatalog', function(_, cb)
+    lib.callback('gcphone:music:canSearchCatalog', false, function(payload)
+        cb(payload or { enabled = false })
+    end)
+end)
+
 RegisterNUICallback('musicPlay', function(data, cb)
     TriggerEvent('gcphone:music:playFromNUI', data)
     cb(true)

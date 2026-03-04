@@ -48,6 +48,7 @@ export function MusicApp() {
   const [distance, setDistance] = createSignal(15);
   const [busyAction, setBusyAction] = createSignal(false);
   const [status, setStatus] = createSignal('Busca una pista y reproduccela para toda la zona.');
+  const [catalogEnabled, setCatalogEnabled] = createSignal(true);
 
   const stateLabel = createMemo(() => {
     if (isPaused()) return 'Pausado';
@@ -114,8 +115,27 @@ export function MusicApp() {
     });
   });
 
+  createEffect(() => {
+    void (async () => {
+      const response = await fetchNui<{ enabled?: boolean }>('musicCanSearchCatalog', {}, { enabled: false });
+      const enabled = response?.enabled === true;
+      setCatalogEnabled(enabled);
+      if (!enabled) {
+        setQuery('');
+        setResults([]);
+        setSearchError('Busqueda desactivada: falta API key de YouTube en el servidor.');
+      }
+    })();
+  });
+
   const searchCatalog = async () => {
     const term = query().trim();
+    if (!catalogEnabled()) {
+      setSearchError('Busqueda desactivada: falta API key de YouTube en el servidor.');
+      setResults([]);
+      return;
+    }
+
     if (!term) {
       setSearchError('Escribe algo para buscar.');
       setResults([]);
@@ -257,9 +277,10 @@ export function MusicApp() {
               type="text"
               placeholder="Ej: Daft Punk - One More Time"
               value={query()}
+              disabled={!catalogEnabled()}
               onInput={(e) => setQuery(e.currentTarget.value)}
             />
-            <button class="ios-primary-btn" disabled={searching()} onClick={searchCatalog}>
+            <button class="ios-primary-btn" disabled={searching() || !catalogEnabled()} onClick={searchCatalog}>
               {searching() ? 'Buscando...' : 'Buscar'}
             </button>
           </div>

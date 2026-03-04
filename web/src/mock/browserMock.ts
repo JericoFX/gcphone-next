@@ -125,7 +125,7 @@ const state: BrowserMockState = {
     { id: 2, description: 'Transferencia enviada', amount: -1200, time: nowIso() },
   ],
   appLayout: {
-    home: ['contacts', 'messages', 'calls', 'settings', 'gallery', 'camera', 'bank', 'wallet', 'documents', 'wavechat', 'music', 'chirp', 'snap', 'clips', 'darkrooms', 'yellowpages', 'market', 'news', 'garage', 'clock', 'notes', 'maps', 'weather'],
+    home: ['contacts', 'messages', 'calls', 'settings', 'gallery', 'camera', 'bank', 'wallet', 'documents', 'wavechat', 'music', 'chirp', 'snap', 'clips', 'darkrooms', 'yellowpages', 'market', 'news', 'garage', 'notes', 'maps'],
     menu: ['appstore']
   },
   airplaneMode: false,
