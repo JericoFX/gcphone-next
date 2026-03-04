@@ -167,9 +167,24 @@ let nextContactId = 4;
 let nextMessageId = 2;
 let nextPhotoId = 3;
 let nextCallId = 2;
+let nextWalletRequestId = 1;
 let started = false;
 let mockLiveLocationActive = false;
 let mockLiveLocationInterval = 10;
+const mockWalletRequests: Array<{
+  id: number;
+  requesterIdentifier: string;
+  requesterPhone: string;
+  targetIdentifier: string;
+  targetPhone: string;
+  amount: number;
+  title: string;
+  method: 'qr' | 'nfc';
+  status: 'pending' | 'accepted' | 'declined' | 'expired' | 'cancelled';
+  expiresAt: string;
+  createdAt: string;
+}> = [];
+const mockBlockedNumbers: Array<{ id: number; target_phone: string; reason?: string; created_at: string }> = [];
 
 export function setupBrowserMock() {
   if (started) return;
@@ -708,6 +723,97 @@ export function handleBrowserNui<T = unknown>(eventName: string, data?: unknown)
 
   if (eventName === 'walletTransfer') {
     return { success: true, balance: Math.max(0, state.balance - Number(payload.amount || 0)) } as T;
+  }
+
+  if (eventName === 'walletProximityTransfer') {
+    return { success: true, balance: Math.max(0, state.balance - Number(payload.amount || 0)) } as T;
+  }
+
+  if (eventName === 'walletCreateRequest') {
+    const targetPhone = String(payload.targetPhone || '').trim();
+    const amount = Number(payload.amount || 0);
+    if (!targetPhone || !Number.isFinite(amount) || amount <= 0) {
+      return { success: false, error: 'INVALID_REQUEST' } as T;
+    }
+
+    const row = {
+      id: nextWalletRequestId++,
+      requesterIdentifier: 'mock:self',
+      requesterPhone: state.phoneNumber,
+      targetIdentifier: `mock:${targetPhone}`,
+      targetPhone,
+      amount,
+      title: String(payload.title || 'Solicitud QR/NFC').slice(0, 64),
+      method: String(payload.method || 'qr') === 'nfc' ? 'nfc' as const : 'qr' as const,
+      status: 'pending' as const,
+      expiresAt: nowIso(),
+      createdAt: nowIso(),
+    };
+    mockWalletRequests.unshift(row);
+    return { success: true, request: row } as T;
+  }
+
+  if (eventName === 'walletGetPendingRequests') {
+    if (!mockWalletRequests.some((item) => item.targetPhone === state.phoneNumber && item.status === 'pending')) {
+      mockWalletRequests.unshift({
+        id: nextWalletRequestId++,
+        requesterIdentifier: 'mock:remote',
+        requesterPhone: '555-1111',
+        targetIdentifier: 'mock:self',
+        targetPhone: state.phoneNumber,
+        amount: 125,
+        title: 'Solicitud pendiente',
+        method: 'qr',
+        status: 'pending',
+        expiresAt: nowIso(),
+        createdAt: nowIso(),
+      });
+    }
+    return {
+      incoming: mockWalletRequests.filter((item) => item.targetPhone === state.phoneNumber && item.status === 'pending'),
+      outgoing: mockWalletRequests.filter((item) => item.requesterPhone === state.phoneNumber && item.status === 'pending'),
+    } as T;
+  }
+
+  if (eventName === 'walletRespondRequest') {
+    const requestId = Number(payload.requestId || 0);
+    const accept = payload.accept === true;
+    const row = mockWalletRequests.find((item) => item.id === requestId);
+    if (!row || row.status !== 'pending') {
+      return { success: false, error: 'REQUEST_NOT_FOUND' } as T;
+    }
+    row.status = accept ? 'accepted' : 'declined';
+    return { success: true, status: row.status, balance: state.balance } as T;
+  }
+
+  if (eventName === 'securityGetBlockedNumbers') {
+    return [...mockBlockedNumbers] as T;
+  }
+
+  if (eventName === 'securityBlockNumber') {
+    const targetPhone = String(payload.targetPhone || '').trim();
+    if (!targetPhone) return { success: false, error: 'INVALID_PHONE' } as T;
+    const existing = mockBlockedNumbers.find((entry) => entry.target_phone === targetPhone);
+    if (!existing) {
+      mockBlockedNumbers.unshift({
+        id: mockBlockedNumbers.length + 1,
+        target_phone: targetPhone,
+        reason: typeof payload.reason === 'string' ? payload.reason : undefined,
+        created_at: nowIso(),
+      });
+    }
+    return { success: true } as T;
+  }
+
+  if (eventName === 'securityUnblockNumber') {
+    const targetPhone = String(payload.targetPhone || '').trim();
+    const index = mockBlockedNumbers.findIndex((entry) => entry.target_phone === targetPhone);
+    if (index >= 0) mockBlockedNumbers.splice(index, 1);
+    return { success: true } as T;
+  }
+
+  if (eventName === 'securityReportUser') {
+    return { success: true } as T;
   }
 
   if (eventName === 'walletAddCard' || eventName === 'walletRemoveCard') {

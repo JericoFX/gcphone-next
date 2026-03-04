@@ -95,6 +95,53 @@ export function WalletApp() {
     if (result.success) void load();
   };
 
+  const createRequest = async (method: 'qr' | 'nfc') => {
+    const targetPhone = window.prompt(method === 'qr' ? 'Numero para solicitar pago QR' : 'Numero para solicitar pago NFC') || '';
+    const amount = Number(window.prompt('Monto') || '0');
+    const title = window.prompt('Concepto') || (method === 'qr' ? 'Solicitud QR' : 'Solicitud NFC');
+    if (!targetPhone || !Number.isFinite(amount) || amount <= 0) return;
+
+    const result = await fetchNui<{ success?: boolean; error?: string }>('walletCreateRequest', { targetPhone, amount, title, method }, { success: false });
+    if (!result.success) {
+      window.alert(result.error || 'No se pudo crear la solicitud');
+      return;
+    }
+
+    window.alert('Solicitud enviada');
+  };
+
+  const reviewRequests = async () => {
+    const result = await fetchNui<{ incoming?: Array<{ id: number; requesterPhone: string; amount: number; title?: string; method?: string }> }>(
+      'walletGetPendingRequests',
+      {},
+      { incoming: [] }
+    );
+
+    const incoming = result.incoming || [];
+    if (incoming.length === 0) {
+      window.alert('No tienes solicitudes pendientes');
+      return;
+    }
+
+    const first = incoming[0];
+    const shouldAccept = window.confirm(`Solicitud de ${first.requesterPhone} - $${Number(first.amount || 0).toFixed(2)}\n${first.title || 'Pago'}\nAceptar?`);
+    const response = await fetchNui<{ success?: boolean; error?: string; balance?: number }>(
+      'walletRespondRequest',
+      { requestId: first.id, accept: shouldAccept },
+      { success: false }
+    );
+
+    if (!response.success) {
+      window.alert(response.error || 'No se pudo responder la solicitud');
+      return;
+    }
+
+    if (shouldAccept) {
+      setBalance(Number(response.balance || 0));
+      void load();
+    }
+  };
+
   createEffect(() => {
     const onKey = (e: CustomEvent<string>) => {
       if (e.detail === 'Backspace') router.goBack();
@@ -126,6 +173,9 @@ export function WalletApp() {
             <button class="ios-btn ios-btn-primary" onClick={() => void transfer()}>Transferir</button>
             <button class="ios-btn" onClick={() => void proximityTransfer('qr')}>Pagar QR</button>
             <button class="ios-btn" onClick={() => void proximityTransfer('nfc')}>Pagar NFC</button>
+            <button class="ios-btn" onClick={() => void createRequest('qr')}>Solicitar QR</button>
+            <button class="ios-btn" onClick={() => void createRequest('nfc')}>Solicitar NFC</button>
+            <button class="ios-btn" onClick={() => void reviewRequests()}>Solicitudes</button>
             <button class="ios-btn" onClick={() => void addCard()}>Agregar tarjeta</button>
           </div>
         </div>
