@@ -1,4 +1,4 @@
-import { createSignal, Show, createEffect, onCleanup, For } from 'solid-js';
+import { createMemo, createSignal, Show, createEffect, onCleanup, For } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { fetchNui } from '../../../utils/fetchNui';
 import { ScreenState } from '../../shared/ui/ScreenState';
@@ -15,6 +15,8 @@ export function BankApp() {
   const [contacts, setContacts] = createSignal<any[]>([]);
   const [loading, setLoading] = createSignal(true);
   const [error, setError] = createSignal<string | null>(null);
+
+  const transactionCount = createMemo(() => transactions().length);
   
   const loadData = async () => {
     const bal = await fetchNui('getBankBalance', undefined, 15000);
@@ -73,13 +75,17 @@ export function BankApp() {
         <button class="ios-icon-btn" onClick={() => router.goBack()}>
           ‹
         </button>
-        <div class="ios-nav-title">Banco</div>
+        <div class="ios-nav-title">Bank Prime</div>
       </div>
       
       <div class="ios-content">
       <div class={styles.balanceCard}>
         <span class={styles.label}>Saldo disponible</span>
         <span class={styles.amount}>{formatMoney(balance())}</span>
+        <div class={styles.balanceMeta}>
+          <span>Movimientos</span>
+          <strong>{transactionCount()}</strong>
+        </div>
       </div>
       
       <div class={styles.actions}>
