@@ -79,6 +79,14 @@ export function MessagesApp() {
   });
   
   createEffect(() => {
+    const params = router.params();
+    const number = typeof params.phoneNumber === 'string' ? params.phoneNumber : '';
+    if (!number) return;
+    setSelectedConversation(number);
+    messagesActions.markAsRead(number);
+  });
+
+  createEffect(() => {
     const handleKeyUp = (e: CustomEvent<string>) => {
       const key = e.detail;
       

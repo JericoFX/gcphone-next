@@ -3,6 +3,8 @@ import { usePhone } from '../../../store/phone';
 import { useNotifications } from '../../../store/notifications';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { APP_BY_ID } from '../../../config/apps';
+import { fetchNui } from '../../../utils/fetchNui';
+import { timeAgo } from '../../../utils/misc';
 import styles from './HomeScreen.module.scss';
 
 export function HomeScreen() {
@@ -19,6 +21,12 @@ export function HomeScreen() {
   const [pageTransition, setPageTransition] = createSignal<'next' | 'prev' | null>(null);
   const [openFolderId, setOpenFolderId] = createSignal<string | null>(null);
   const [musicNowPlaying, setMusicNowPlaying] = createSignal('Sin musica');
+  const [searchOpen, setSearchOpen] = createSignal(false);
+  const [searchQuery, setSearchQuery] = createSignal('');
+  const [searchLoading, setSearchLoading] = createSignal(false);
+  const [searchContacts, setSearchContacts] = createSignal<Array<{ number: string; display: string }>>([]);
+  const [searchConversations, setSearchConversations] = createSignal<Array<{ number: string; preview: string; time: string }>>([]);
+  const [searchCalls, setSearchCalls] = createSignal<Array<{ num: string; time: string }>>([]);
 
   const APPS_PER_PAGE = 12;
 
@@ -50,6 +58,81 @@ export function HomeScreen() {
     const start = desktopPage() * APPS_PER_PAGE;
     return homeApps().slice(start, start + APPS_PER_PAGE);
   });
+
+  const searchResults = createMemo(() => {
+    const q = searchQuery().trim().toLowerCase();
+    if (!q) {
+      return {
+        apps: [] as Array<{ id: string; name: string; icon: string; route: string }>,
+        contacts: [] as Array<{ number: string; display: string }>,
+        conversations: [] as Array<{ number: string; preview: string; time: string }>,
+        calls: [] as Array<{ num: string; time: string }>,
+      };
+    }
+
+    const apps = state.enabledApps
+      .map((id) => APP_BY_ID[id])
+      .filter((app): app is NonNullable<typeof app> => Boolean(app))
+      .filter((app) => app.name.toLowerCase().includes(q) || app.id.toLowerCase().includes(q))
+      .slice(0, 6);
+
+    const contacts = searchContacts()
+      .filter((entry) => entry.display.toLowerCase().includes(q) || entry.number.toLowerCase().includes(q))
+      .slice(0, 6);
+
+    const conversations = searchConversations()
+      .filter((entry) => entry.number.toLowerCase().includes(q) || entry.preview.toLowerCase().includes(q))
+      .slice(0, 6);
+
+    const calls = searchCalls()
+      .filter((entry) => entry.num.toLowerCase().includes(q))
+      .slice(0, 6);
+
+    return { apps, contacts, conversations, calls };
+  });
+
+  const loadSearchIndex = async () => {
+    setSearchLoading(true);
+    const [contacts, messages, calls] = await Promise.all([
+      fetchNui<Array<{ number: string; display: string }>>('getContacts', undefined, []),
+      fetchNui<Array<{ owner: number; receiver: string; transmitter: string; message: string; time: string }>>('getMessages', undefined, []),
+      fetchNui<Array<{ num: string; time: string }>>('getCallHistory', undefined, []),
+    ]);
+
+    setSearchContacts((contacts || []).slice(0, 300));
+
+    const byNumber = new Map<string, { number: string; preview: string; time: string }>();
+    for (const msg of messages || []) {
+      const number = msg.owner === 1 ? msg.receiver : msg.transmitter;
+      if (!number || byNumber.has(number)) continue;
+      byNumber.set(number, {
+        number,
+        preview: msg.message || 'Mensaje',
+        time: msg.time,
+      });
+      if (byNumber.size >= 300) break;
+    }
+    setSearchConversations(Array.from(byNumber.values()));
+    setSearchCalls((calls || []).slice(0, 300));
+    setSearchLoading(false);
+  };
+
+  const openSearch = () => {
+    setSearchOpen(true);
+    if (searchContacts().length === 0 && !searchLoading()) {
+      void loadSearchIndex();
+    }
+  };
+
+  const closeSearch = () => {
+    setSearchOpen(false);
+    setSearchQuery('');
+  };
+
+  const openMessagesThread = (number: string) => {
+    closeSearch();
+    router.navigate('messages', { phoneNumber: number });
+  };
 
   createEffect(() => {
     if (desktopPage() > pageCount() - 1) setDesktopPage(Math.max(0, pageCount() - 1));
@@ -131,6 +214,10 @@ export function HomeScreen() {
         case 'Backspace':
           if (openFolderId()) {
             setOpenFolderId(null);
+            break;
+          }
+          if (searchOpen()) {
+            closeSearch();
           }
           break;
       }
@@ -180,6 +267,7 @@ export function HomeScreen() {
           <button class={styles.editBtn} onClick={() => setEditing((v) => !v)}>
             {editing() ? 'OK' : 'Editar'}
           </button>
+          <button class={styles.searchBtn} onClick={openSearch}>Buscar</button>
 
         </div>
       </div>
@@ -317,6 +405,102 @@ export function HomeScreen() {
             </div>
           );
         }}
+      </Show>
+
+      <Show when={searchOpen()}>
+        <div class={styles.searchOverlay} onClick={closeSearch}>
+          <div class={styles.searchPanel} onClick={(e) => e.stopPropagation()}>
+            <div class={styles.searchHeader}>
+              <input
+                class={styles.searchInput}
+                type="text"
+                value={searchQuery()}
+                placeholder="Buscar en telefono"
+                onInput={(e) => setSearchQuery(e.currentTarget.value)}
+                autofocus
+              />
+              <button class={styles.searchClose} onClick={closeSearch}>Cancelar</button>
+            </div>
+
+            <Show when={searchLoading()}>
+              <div class={styles.searchEmpty}>Indexando contenido...</div>
+            </Show>
+
+            <Show when={!searchLoading() && searchQuery().trim() && searchResults().apps.length + searchResults().contacts.length + searchResults().conversations.length + searchResults().calls.length === 0}>
+              <div class={styles.searchEmpty}>Sin resultados</div>
+            </Show>
+
+            <div class={styles.searchResults}>
+              <Show when={searchResults().apps.length > 0}>
+                <section>
+                  <h4>Apps</h4>
+                  <For each={searchResults().apps}>
+                    {(app) => (
+                      <button class={styles.searchItem} onClick={() => { closeSearch(); router.navigate(app.route); }}>
+                        <img src={app.icon} alt={app.name} />
+                        <div>
+                          <strong>{app.name}</strong>
+                          <span>{app.route}</span>
+                        </div>
+                      </button>
+                    )}
+                  </For>
+                </section>
+              </Show>
+
+              <Show when={searchResults().contacts.length > 0}>
+                <section>
+                  <h4>Contactos</h4>
+                  <For each={searchResults().contacts}>
+                    {(entry) => (
+                      <button class={styles.searchItem} onClick={() => { closeSearch(); router.navigate('contacts'); }}>
+                        <div class={styles.searchDot}>👤</div>
+                        <div>
+                          <strong>{entry.display}</strong>
+                          <span>{entry.number}</span>
+                        </div>
+                      </button>
+                    )}
+                  </For>
+                </section>
+              </Show>
+
+              <Show when={searchResults().conversations.length > 0}>
+                <section>
+                  <h4>Chats</h4>
+                  <For each={searchResults().conversations}>
+                    {(entry) => (
+                      <button class={styles.searchItem} onClick={() => openMessagesThread(entry.number)}>
+                        <div class={styles.searchDot}>💬</div>
+                        <div>
+                          <strong>{entry.number}</strong>
+                          <span>{entry.preview}</span>
+                        </div>
+                      </button>
+                    )}
+                  </For>
+                </section>
+              </Show>
+
+              <Show when={searchResults().calls.length > 0}>
+                <section>
+                  <h4>Llamadas</h4>
+                  <For each={searchResults().calls}>
+                    {(entry) => (
+                      <button class={styles.searchItem} onClick={() => { closeSearch(); router.navigate('calls'); }}>
+                        <div class={styles.searchDot}>📞</div>
+                        <div>
+                          <strong>{entry.num}</strong>
+                          <span>{timeAgo(new Date(entry.time))}</span>
+                        </div>
+                      </button>
+                    )}
+                  </For>
+                </section>
+              </Show>
+            </div>
+          </div>
+        </div>
       </Show>
     </div>
   );
