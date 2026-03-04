@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 import { For, Show, createEffect, createSignal, onCleanup, onMount } from 'solid-js';
+=======
+import { Show, createEffect, createMemo, createSignal, For, onCleanup } from 'solid-js';
+>>>>>>> 6087054b2c17bad903d1ba2a08f953f8451a6489
 import { useRouter } from '../../Phone/PhoneFrame';
 import { fetchNui } from '../../../utils/fetchNui';
 import { timeAgo } from '../../../utils/misc';
@@ -66,6 +70,7 @@ export function ChirpApp() {
 
   // Viewer
   const [viewerUrl, setViewerUrl] = createSignal<string | null>(null);
+  const [query, setQuery] = createSignal('');
 
   // FAB Tooltip
   let fabTimeout: number;
@@ -260,6 +265,7 @@ export function ChirpApp() {
     router.navigate('camera', { target: 'chirp' });
   };
 
+<<<<<<< HEAD
   // Render Tweet Card
   const TweetCard = (props: { tweet: ChirpTweet }) => {
     const tweet = props.tweet;
@@ -278,6 +284,135 @@ export function ChirpApp() {
               <strong>{tweet.display_name || 'Usuario'}</strong>
               {tweet.verified && <span class={styles.verified}>✓</span>}
               <span class={styles.username}>@{tweet.username || 'user'}</span>
+=======
+  const deleteTweet = async (tweetId: number) => {
+    const result = await fetchNui<{ success?: boolean }>('chirpDeleteTweet', { tweetId });
+    if (result?.success) await loadTweets();
+  };
+
+  const trending = createMemo(() => {
+    const tags = new Map<string, number>();
+    for (const tweet of tweets()) {
+      const matches = (tweet.content || '').match(/#[a-zA-Z0-9_]+/g) || [];
+      for (const tag of matches) {
+        const normalized = tag.toLowerCase();
+        tags.set(normalized, (tags.get(normalized) || 0) + 1);
+      }
+    }
+
+    return Array.from(tags.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 6)
+      .map(([tag, count]) => ({ tag, count }));
+  });
+
+  const visibleTweets = createMemo(() => {
+    const normalized = sanitizeText(query(), 60).toLowerCase();
+    if (!normalized) return tweets();
+    return tweets().filter((tweet) => {
+      const author = `${tweet.display_name || ''} ${tweet.username || ''}`.toLowerCase();
+      return tweet.content.toLowerCase().includes(normalized) || author.includes(normalized);
+    });
+  });
+
+  return (
+    <div class={styles.app}>
+      <div class={styles.header}>
+        <button class={styles.backBtn} onClick={() => router.goBack()}>‹</button>
+        <h1>Chirp Pulse</h1>
+        <button class={styles.composeBtn} onClick={() => setShowComposer(true)}>Post</button>
+      </div>
+
+      <div class={styles.searchRow}>
+        <input
+          class={styles.searchInput}
+          placeholder="Buscar en Chirp"
+          value={query()}
+          onInput={(event) => setQuery(event.currentTarget.value)}
+        />
+      </div>
+
+      <Show when={trending().length > 0}>
+        <div class={styles.trendingRow}>
+          <For each={trending()}>
+            {(item) => (
+              <button class={styles.trendChip} onClick={() => setQuery(item.tag)}>
+                <strong>{item.tag}</strong>
+                <span>{item.count}</span>
+              </button>
+            )}
+          </For>
+        </div>
+      </Show>
+
+      <div class={styles.tabs}>
+        <button class={styles.tabBtn} classList={{ [styles.active]: tab() === 'forYou' }} onClick={() => { setTab('forYou'); void loadTweets(); }}>
+          Para ti
+        </button>
+        <button class={styles.tabBtn} classList={{ [styles.active]: tab() === 'following' }} onClick={() => { setTab('following'); void loadTweets(); }}>
+          Siguiendo
+        </button>
+      </div>
+
+      <div class={styles.feed}>
+        <For each={visibleTweets()}>
+          {(tweet) => (
+            <article class={styles.tweetCard}>
+              <div class={styles.meta}>
+                <strong>{tweet.display_name || 'Usuario'}</strong>
+                <span>@{tweet.username || 'user'}</span>
+                <span>{tweet.created_at ? timeAgo(tweet.created_at) : 'ahora'}</span>
+              </div>
+              <p>{tweet.content}</p>
+              <Show when={(tweet as any).media_url || (tweet as any).mediaUrl}>
+                <Show when={resolveMediaType((tweet as any).media_url || (tweet as any).mediaUrl) === 'image'}>
+                  <img class={styles.tweetMedia} src={(tweet as any).media_url || (tweet as any).mediaUrl} alt="media" onClick={() => setViewerUrl((tweet as any).media_url || (tweet as any).mediaUrl)} />
+                </Show>
+                <Show when={resolveMediaType((tweet as any).media_url || (tweet as any).mediaUrl) === 'video'}>
+                  <video class={styles.tweetMedia} src={(tweet as any).media_url || (tweet as any).mediaUrl} controls playsinline preload="metadata" onClick={() => setViewerUrl((tweet as any).media_url || (tweet as any).mediaUrl)} />
+                </Show>
+              </Show>
+              <button class={styles.likeBtn} onClick={() => toggleLike(tweet.id)}>
+                {tweet.liked ? '♥' : '♡'} {tweet.likes || 0}
+              </button>
+              <button class={styles.deleteBtn} onClick={() => deleteTweet(tweet.id)}>Eliminar</button>
+            </article>
+          )}
+        </For>
+      </div>
+
+      <ActionSheet
+        open={showAttachSheet()}
+        title="Adjuntar a Chirp"
+        onClose={() => setShowAttachSheet(false)}
+        actions={[
+          { label: 'Abrir camara dedicada', tone: 'primary', onClick: openCameraComposer },
+          { label: 'Elegir desde galeria', tone: 'primary', onClick: attachFromGallery },
+          { label: 'Tomar foto con camara', onClick: attachFromCamera },
+          { label: 'Publicar foto rapida', onClick: quickPostFromCamera },
+          { label: 'Pegar URL multimedia', onClick: attachByUrl },
+          { label: 'Quitar adjunto', tone: 'danger', onClick: () => { setMediaUrl(''); } },
+        ]}
+      />
+
+      <Show when={showComposer()}>
+        <div class={styles.composeModal}>
+          <div class={styles.composer}>
+            <textarea
+              maxlength={280}
+              placeholder="Que esta pasando?"
+              value={composer()}
+              onInput={(e) => setComposer(e.currentTarget.value)}
+            />
+            <div class={styles.attachRow}>
+              <button class={styles.attachBtn} onClick={() => setShowAttachSheet(true)}>Adjuntar</button>
+              <input
+                type="text"
+                placeholder="URL media (opcional)"
+                value={mediaUrl()}
+                onInput={(e) => setMediaUrl(sanitizeMediaUrl(e.currentTarget.value))}
+              />
+>>>>>>> 6087054b2c17bad903d1ba2a08f953f8451a6489
             </div>
             <span class={styles.time}>{tweet.created_at ? timeAgo(tweet.created_at) : 'ahora'}</span>
           </div>

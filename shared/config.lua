@@ -82,9 +82,25 @@ Config.Features = {
     YellowPages = true,
 }
 
+Config.Security = {
+    ReportCooldownMs = 3000,
+    RateLimits = {
+        messages = 900,
+        wavechat = 700,
+        chirp = 1400,
+        snap = 1500,
+        clips = 1500,
+        market = 2500,
+        news = 2500,
+        wallet = 900,
+        walletRequest = 1300,
+    }
+}
+
 Config.Wallet = {
     InitialBalance = 2500,
     MaxTransferAmount = 500000,
+    ProximityDistance = 3.0,
 }
 
 Config.Documents = {

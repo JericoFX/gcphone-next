@@ -26,6 +26,57 @@ type GalleryEntry = BrowserMockState['gallery'][number];
 
 const nowIso = () => new Date().toISOString();
 
+interface MockRealtimeConfig {
+  socketHost: string;
+  socketToken: string;
+  livekitUrl: string;
+  livekitToken: string;
+  livekitIdentity: string;
+}
+
+const MOCK_REALTIME_KEYS = {
+  socketHost: 'gcphone:mock:socketHost',
+  socketToken: 'gcphone:mock:socketToken',
+  livekitUrl: 'gcphone:mock:livekitUrl',
+  livekitToken: 'gcphone:mock:livekitToken',
+  livekitIdentity: 'gcphone:mock:livekitIdentity',
+} as const;
+
+const sanitizeConfigValue = (value: unknown, maxLength = 512) => {
+  if (typeof value !== 'string') return '';
+  return value.trim().slice(0, maxLength);
+};
+
+const readRealtimeConfig = (): MockRealtimeConfig => ({
+  socketHost: sanitizeConfigValue(window.localStorage.getItem(MOCK_REALTIME_KEYS.socketHost), 200),
+  socketToken: sanitizeConfigValue(window.localStorage.getItem(MOCK_REALTIME_KEYS.socketToken), 1000),
+  livekitUrl: sanitizeConfigValue(window.localStorage.getItem(MOCK_REALTIME_KEYS.livekitUrl), 200),
+  livekitToken: sanitizeConfigValue(window.localStorage.getItem(MOCK_REALTIME_KEYS.livekitToken), 2000),
+  livekitIdentity: sanitizeConfigValue(window.localStorage.getItem(MOCK_REALTIME_KEYS.livekitIdentity), 120),
+});
+
+const writeRealtimeConfig = (config: Partial<MockRealtimeConfig>) => {
+  const nextSocketHost = sanitizeConfigValue(config.socketHost, 200);
+  const nextSocketToken = sanitizeConfigValue(config.socketToken, 1000);
+  const nextLivekitUrl = sanitizeConfigValue(config.livekitUrl, 200);
+  const nextLivekitToken = sanitizeConfigValue(config.livekitToken, 2000);
+  const nextLivekitIdentity = sanitizeConfigValue(config.livekitIdentity, 120);
+
+  if (nextSocketHost) window.localStorage.setItem(MOCK_REALTIME_KEYS.socketHost, nextSocketHost);
+  if (nextSocketToken) window.localStorage.setItem(MOCK_REALTIME_KEYS.socketToken, nextSocketToken);
+  if (nextLivekitUrl) window.localStorage.setItem(MOCK_REALTIME_KEYS.livekitUrl, nextLivekitUrl);
+  if (nextLivekitToken) window.localStorage.setItem(MOCK_REALTIME_KEYS.livekitToken, nextLivekitToken);
+  if (nextLivekitIdentity) window.localStorage.setItem(MOCK_REALTIME_KEYS.livekitIdentity, nextLivekitIdentity);
+};
+
+const clearRealtimeConfig = () => {
+  window.localStorage.removeItem(MOCK_REALTIME_KEYS.socketHost);
+  window.localStorage.removeItem(MOCK_REALTIME_KEYS.socketToken);
+  window.localStorage.removeItem(MOCK_REALTIME_KEYS.livekitUrl);
+  window.localStorage.removeItem(MOCK_REALTIME_KEYS.livekitToken);
+  window.localStorage.removeItem(MOCK_REALTIME_KEYS.livekitIdentity);
+};
+
 const state: BrowserMockState = {
   phoneNumber: '555-1234',
   wallpaper: './img/background/back001.jpg',
@@ -116,9 +167,24 @@ let nextContactId = 4;
 let nextMessageId = 2;
 let nextPhotoId = 3;
 let nextCallId = 2;
+let nextWalletRequestId = 1;
 let started = false;
 let mockLiveLocationActive = false;
 let mockLiveLocationInterval = 10;
+const mockWalletRequests: Array<{
+  id: number;
+  requesterIdentifier: string;
+  requesterPhone: string;
+  targetIdentifier: string;
+  targetPhone: string;
+  amount: number;
+  title: string;
+  method: 'qr' | 'nfc';
+  status: 'pending' | 'accepted' | 'declined' | 'expired' | 'cancelled';
+  expiresAt: string;
+  createdAt: string;
+}> = [];
+const mockBlockedNumbers: Array<{ id: number; target_phone: string; reason?: string; created_at: string }> = [];
 
 export function setupBrowserMock() {
   if (started) return;
@@ -165,7 +231,28 @@ export function setupBrowserMock() {
         },
       });
     },
+    getRealtime: () => readRealtimeConfig(),
+    setRealtime: (config: Partial<MockRealtimeConfig>) => {
+      writeRealtimeConfig(config);
+      return readRealtimeConfig();
+    },
+    clearRealtime: () => {
+      clearRealtimeConfig();
+      return readRealtimeConfig();
+    },
+    useLocalRealtime: (socketToken = 'mock-socket-token', livekitToken = 'mock-livekit-token') => {
+      writeRealtimeConfig({
+        socketHost: 'ws://127.0.0.1:3001',
+        socketToken,
+        livekitUrl: 'ws://127.0.0.1:7880',
+        livekitToken,
+        livekitIdentity: `mock:${state.phoneNumber}`,
+      });
+      return readRealtimeConfig();
+    },
   };
+
+  console.info('[gcphone mock] Realtime config available at window.gcphoneMock.setRealtime/getRealtime/clearRealtime');
 }
 
 export function handleBrowserNui<T = unknown>(eventName: string, data?: unknown): T | undefined {
@@ -368,21 +455,23 @@ export function handleBrowserNui<T = unknown>(eventName: string, data?: unknown)
   }
 
   if (eventName === 'livekitGetToken') {
+    const realtime = readRealtimeConfig();
     const roomName = String(payload.roomName || `call-${Date.now()}`);
     return {
       success: true,
-      url: 'ws://127.0.0.1:7880',
-      token: 'mock-livekit-token',
+      url: realtime.livekitUrl || 'ws://127.0.0.1:7880',
+      token: realtime.livekitToken || 'mock-livekit-token',
       roomName,
-      identity: `mock:${state.phoneNumber}`,
+      identity: realtime.livekitIdentity || `mock:${state.phoneNumber}`,
     } as T;
   }
 
   if (eventName === 'socketGetToken') {
+    const realtime = readRealtimeConfig();
     return {
       success: true,
-      host: 'ws://127.0.0.1:3001',
-      token: 'mock-socket-token',
+      host: realtime.socketHost || 'ws://127.0.0.1:3001',
+      token: realtime.socketToken || 'mock-socket-token',
     } as T;
   }
 
@@ -634,6 +723,97 @@ export function handleBrowserNui<T = unknown>(eventName: string, data?: unknown)
 
   if (eventName === 'walletTransfer') {
     return { success: true, balance: Math.max(0, state.balance - Number(payload.amount || 0)) } as T;
+  }
+
+  if (eventName === 'walletProximityTransfer') {
+    return { success: true, balance: Math.max(0, state.balance - Number(payload.amount || 0)) } as T;
+  }
+
+  if (eventName === 'walletCreateRequest') {
+    const targetPhone = String(payload.targetPhone || '').trim();
+    const amount = Number(payload.amount || 0);
+    if (!targetPhone || !Number.isFinite(amount) || amount <= 0) {
+      return { success: false, error: 'INVALID_REQUEST' } as T;
+    }
+
+    const row = {
+      id: nextWalletRequestId++,
+      requesterIdentifier: 'mock:self',
+      requesterPhone: state.phoneNumber,
+      targetIdentifier: `mock:${targetPhone}`,
+      targetPhone,
+      amount,
+      title: String(payload.title || 'Solicitud QR/NFC').slice(0, 64),
+      method: String(payload.method || 'qr') === 'nfc' ? 'nfc' as const : 'qr' as const,
+      status: 'pending' as const,
+      expiresAt: nowIso(),
+      createdAt: nowIso(),
+    };
+    mockWalletRequests.unshift(row);
+    return { success: true, request: row } as T;
+  }
+
+  if (eventName === 'walletGetPendingRequests') {
+    if (!mockWalletRequests.some((item) => item.targetPhone === state.phoneNumber && item.status === 'pending')) {
+      mockWalletRequests.unshift({
+        id: nextWalletRequestId++,
+        requesterIdentifier: 'mock:remote',
+        requesterPhone: '555-1111',
+        targetIdentifier: 'mock:self',
+        targetPhone: state.phoneNumber,
+        amount: 125,
+        title: 'Solicitud pendiente',
+        method: 'qr',
+        status: 'pending',
+        expiresAt: nowIso(),
+        createdAt: nowIso(),
+      });
+    }
+    return {
+      incoming: mockWalletRequests.filter((item) => item.targetPhone === state.phoneNumber && item.status === 'pending'),
+      outgoing: mockWalletRequests.filter((item) => item.requesterPhone === state.phoneNumber && item.status === 'pending'),
+    } as T;
+  }
+
+  if (eventName === 'walletRespondRequest') {
+    const requestId = Number(payload.requestId || 0);
+    const accept = payload.accept === true;
+    const row = mockWalletRequests.find((item) => item.id === requestId);
+    if (!row || row.status !== 'pending') {
+      return { success: false, error: 'REQUEST_NOT_FOUND' } as T;
+    }
+    row.status = accept ? 'accepted' : 'declined';
+    return { success: true, status: row.status, balance: state.balance } as T;
+  }
+
+  if (eventName === 'securityGetBlockedNumbers') {
+    return [...mockBlockedNumbers] as T;
+  }
+
+  if (eventName === 'securityBlockNumber') {
+    const targetPhone = String(payload.targetPhone || '').trim();
+    if (!targetPhone) return { success: false, error: 'INVALID_PHONE' } as T;
+    const existing = mockBlockedNumbers.find((entry) => entry.target_phone === targetPhone);
+    if (!existing) {
+      mockBlockedNumbers.unshift({
+        id: mockBlockedNumbers.length + 1,
+        target_phone: targetPhone,
+        reason: typeof payload.reason === 'string' ? payload.reason : undefined,
+        created_at: nowIso(),
+      });
+    }
+    return { success: true } as T;
+  }
+
+  if (eventName === 'securityUnblockNumber') {
+    const targetPhone = String(payload.targetPhone || '').trim();
+    const index = mockBlockedNumbers.findIndex((entry) => entry.target_phone === targetPhone);
+    if (index >= 0) mockBlockedNumbers.splice(index, 1);
+    return { success: true } as T;
+  }
+
+  if (eventName === 'securityReportUser') {
+    return { success: true } as T;
   }
 
   if (eventName === 'walletAddCard' || eventName === 'walletRemoveCard') {

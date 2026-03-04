@@ -1,4 +1,4 @@
-import type { JSX, ParentComponent, ParentProps } from 'solid-js';
+import type { ParentComponent, ParentProps } from 'solid-js';
 import { Show } from 'solid-js';
 import styles from './layout.module.scss';
 
@@ -38,14 +38,11 @@ export interface AppHeaderProps extends ParentProps {
 }
 
 export const AppHeader: ParentComponent<AppHeaderProps> = (props) => {
-  const router = (() => {
-    try {
-      const { useRouter } = require('@/components/Phone/PhoneFrame');
-      return useRouter();
-    } catch {
-      return { goBack: () => {} };
-    }
-  })();
+  const router = {
+    goBack: () => {
+      window.dispatchEvent(new CustomEvent('phone:keyUp', { detail: 'Backspace' }));
+    },
+  };
 
   const handleBack = () => {
     if (props.onBack) {

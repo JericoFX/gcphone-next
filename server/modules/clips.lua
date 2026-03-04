@@ -30,7 +30,20 @@ local function GetSnapAccount(identifier)
     return MySQL.single.await('SELECT id, username, display_name, avatar FROM phone_snap_accounts WHERE identifier = ?', { identifier })
 end
 
+<<<<<<< HEAD
 -- Get clips feed
+=======
+local SecurityResource = GetCurrentResourceName()
+
+local function HitRateLimit(source, key, windowMs, maxHits)
+    local ok, blocked = pcall(function()
+        return exports[SecurityResource]:HitRateLimit(source, key, windowMs, maxHits)
+    end)
+    if not ok then return false end
+    return blocked == true
+end
+
+>>>>>>> 6087054b2c17bad903d1ba2a08f953f8451a6489
 lib.callback.register('gcphone:clips:getFeed', function(source, data)
     local identifier = GetIdentifier(source)
     data = type(data) == 'table' and data or {}
@@ -110,6 +123,11 @@ lib.callback.register('gcphone:clips:publish', function(source, data)
 
     local account = GetSnapAccount(identifier)
     if not account then return false, 'Account not found' end
+
+    local clipsMs = (Config.Security and Config.Security.RateLimits and Config.Security.RateLimits.clips) or 1500
+    if HitRateLimit(source, 'clips_publish', clipsMs, 1) then
+        return false, 'RATE_LIMITED'
+    end
 
     local mediaUrl = SanitizeVideoUrl(data.mediaUrl)
     local caption = SanitizeText(data.caption, 500)

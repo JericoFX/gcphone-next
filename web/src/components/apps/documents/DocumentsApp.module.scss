@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 .body {
   display: flex;
   flex-direction: column;
@@ -33,6 +34,70 @@
   
   &:hover {
     color: #3a3a3c;
+=======
+.toolbar {
+  margin-bottom: 8px;
+}
+
+.searchInput {
+  width: 100%;
+  min-height: 36px;
+  border: none;
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: inset 0 0 0 1px rgba(76, 94, 143, 0.2);
+  color: #2a3f67;
+  font-size: 13px;
+  padding: 0 12px;
+}
+
+.typeRow {
+  margin-top: 7px;
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+}
+
+.typeChip {
+  border: none;
+  border-radius: 999px;
+  min-height: 28px;
+  padding: 0 11px;
+  text-transform: uppercase;
+  font-size: 10px;
+  font-weight: 760;
+  letter-spacing: 0.04em;
+  background: rgba(255, 255, 255, 0.8);
+  color: #5a739a;
+}
+
+.typeChipActive {
+  background: linear-gradient(180deg, #5979c7, #3d5ea9);
+  color: #fff;
+}
+
+.grid {
+  display: grid;
+  gap: 10px;
+}
+
+.docCard {
+  border-radius: 15px;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  background:
+    radial-gradient(120% 90% at 0% -10%, rgba(127, 157, 219, 0.2), transparent 58%),
+    rgba(245, 249, 255, 0.9);
+  color: #1f3558;
+  padding: 11px;
+  display: grid;
+  gap: 4px;
+  box-shadow: 0 12px 24px rgba(30, 49, 86, 0.12);
+
+  p {
+    margin: 0;
+    font-size: 12px;
+    color: #547097;
+>>>>>>> 6087054b2c17bad903d1ba2a08f953f8451a6489
   }
   
   &.active {
@@ -51,6 +116,7 @@
   }
 }
 
+<<<<<<< HEAD
 // Documents List
 .documentsList {
   flex: 1;
@@ -97,6 +163,17 @@
     color: #ffffff;
     font-size: 20px;
     font-weight: 700;
+=======
+  button {
+    justify-self: end;
+    border: none;
+    border-radius: 8px;
+    padding: 4px 8px;
+    background: rgba(220, 82, 82, 0.16);
+    color: #bd4a4a;
+    font-size: 11px;
+    font-weight: 760;
+>>>>>>> 6087054b2c17bad903d1ba2a08f953f8451a6489
   }
 }
 
@@ -311,16 +388,31 @@
   flex: 1;
   
   strong {
+<<<<<<< HEAD
     display: block;
     font-size: 15px;
     font-weight: 600;
     color: #1a1a1a;
     margin-bottom: 2px;
+=======
+    font-size: 14px;
+    font-weight: 760;
+    color: #20375c;
+>>>>>>> 6087054b2c17bad903d1ba2a08f953f8451a6489
   }
   
   span {
+<<<<<<< HEAD
     font-size: 13px;
     color: #8e8e93;
+=======
+    font-size: 10px;
+    border-radius: 999px;
+    padding: 3px 8px;
+    background: rgba(89, 125, 201, 0.2);
+    color: #4164ad;
+    font-weight: 760;
+>>>>>>> 6087054b2c17bad903d1ba2a08f953f8451a6489
   }
 }
 
@@ -329,6 +421,7 @@
   background: #f5f5f7;
   border-radius: 10px;
   font-size: 11px;
+<<<<<<< HEAD
   font-weight: 600;
   color: #8e8e93;
 }
@@ -695,4 +788,7 @@
       background: #ffffff;
     }
   }
+=======
+  color: #45689f;
+>>>>>>> 6087054b2c17bad903d1ba2a08f953f8451a6489
 }

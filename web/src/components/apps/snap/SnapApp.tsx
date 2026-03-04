@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 import { For, Show, createEffect, createSignal, onCleanup } from 'solid-js';
+=======
+import { createEffect, createMemo, createSignal, For, onCleanup, Show } from 'solid-js';
+>>>>>>> 6087054b2c17bad903d1ba2a08f953f8451a6489
 import { useRouter } from '../../Phone/PhoneFrame';
 import { fetchNui } from '../../../utils/fetchNui';
 import { timeAgo } from '../../../utils/misc';
@@ -45,7 +49,23 @@ interface SnapLive {
 
 export function SnapApp() {
   const router = useRouter();
+<<<<<<< HEAD
   const cache = useAppCache('snap');
+=======
+  const [feed, setFeed] = createSignal<SnapPost[]>([]);
+  const [stories, setStories] = createSignal<any[]>([]);
+  const [liveStreams, setLiveStreams] = createSignal<any[]>([]);
+  const [activeStoryIndex, setActiveStoryIndex] = createSignal<number | null>(null);
+  const [storyNow, setStoryNow] = createSignal(Date.now());
+  const [mediaUrl, setMediaUrl] = createSignal('');
+  const [caption, setCaption] = createSignal('');
+  const [livePostId, setLivePostId] = createSignal<number | null>(null);
+  const [showAttachSheet, setShowAttachSheet] = createSignal(false);
+  const [showComposer, setShowComposer] = createSignal(false);
+  const [viewerUrl, setViewerUrl] = createSignal<string | null>(null);
+  const [accountUsername, setAccountUsername] = createSignal('');
+  const [activeTab, setActiveTab] = createSignal<'stories' | 'feed'>('stories');
+>>>>>>> 6087054b2c17bad903d1ba2a08f953f8451a6489
 
   // Data
   const [posts, setPosts] = createSignal<SnapPost[]>([]);
@@ -210,7 +230,13 @@ export function SnapApp() {
     return idx !== null ? stories()[idx] : null;
   };
 
+  const visibleFeed = createMemo(() => {
+    if (activeTab() === 'stories') return feed().slice(0, 8);
+    return feed();
+  });
+
   return (
+<<<<<<< HEAD
     <AppScaffold title="Snap" subtitle="Comparte momentos" onBack={() => router.goBack()} bodyClass={styles.body}>
       <div class={styles.snapApp}>
         {/* Stories Bar */}
@@ -220,6 +246,73 @@ export function SnapApp() {
             <button class={styles.storyItem} onClick={() => setShowActionSheet(true)}>
               <div class={styles.storyAvatar} classList={{ [styles.hasStory]: false }}>
                 <span>+</span>
+=======
+    <div class={styles.app}>
+      <div class={styles.header}>
+        <button class={styles.backBtn} onClick={() => router.goBack()}>‹</button>
+        <h1>Snap Neon</h1>
+        <button class={styles.cameraBtn} onClick={() => openCameraFor('snap-post')}>Cam</button>
+      </div>
+
+      <div class={styles.tabRow}>
+        <button class={styles.tabBtn} classList={{ [styles.tabActive]: activeTab() === 'stories' }} onClick={() => setActiveTab('stories')}>Stories</button>
+        <button class={styles.tabBtn} classList={{ [styles.tabActive]: activeTab() === 'feed' }} onClick={() => setActiveTab('feed')}>Feed</button>
+      </div>
+
+      <Show when={showComposer()}>
+        <div class={styles.publisher}>
+          <input
+            type="text"
+            placeholder="URL de foto o video"
+            value={mediaUrl()}
+            onInput={(e) => setMediaUrl(sanitizeMediaUrl(e.currentTarget.value))}
+          />
+          <input
+            type="text"
+            placeholder="Descripcion"
+            value={caption()}
+            onInput={(e) => setCaption(e.currentTarget.value)}
+          />
+          <button class={styles.postBtn} onClick={() => { void publish(); setShowComposer(false); }}>Subir</button>
+        </div>
+      </Show>
+
+      <div class={styles.storyRow}>
+        <For each={stories()}>
+          {(story, index) => (
+            <div class={styles.storyChipWrap}>
+              <button class={styles.storyChip} onClick={() => openStory(index())}>
+                {(story.username || 'story')} · {formatStoryRemaining(story.expires_at)}
+              </button>
+              <Show when={sanitizeText(story.username || '', 40) === accountUsername()}>
+                <button class={styles.storyDeleteBtn} onClick={() => void deleteStory(story.id)}>×</button>
+              </Show>
+            </div>
+          )}
+        </For>
+      </div>
+
+      <div class={styles.liveRow}>
+        <For each={liveStreams()}>
+          {(stream) => <div class={styles.liveChip}>LIVE {stream.username || 'user'} ({stream.live_viewers || 0})</div>}
+        </For>
+      </div>
+
+      <div class={styles.feed}>
+        <For each={visibleFeed()}>
+          {(post) => (
+            <article class={styles.card}>
+              <div class={styles.meta}>{post.display_name || post.username || 'Usuario'}</div>
+              <Show when={resolveMediaType(post.media_url) === 'video'} fallback={<img src={post.media_url || './img/background/back001.jpg'} alt="post" onClick={() => setViewerUrl(post.media_url || null)} />}>
+                <video src={post.media_url} controls playsinline preload="metadata" onClick={() => setViewerUrl(post.media_url || null)} />
+              </Show>
+              <p>{post.caption || 'Sin descripcion'}</p>
+              <div class={styles.postActions}>
+                <button class={styles.likeBtn} onClick={() => likePost(post.id)}>♥ {post.likes || 0}</button>
+                <Show when={sanitizeText(post.username || '', 40) === accountUsername()}>
+                  <button class={styles.deleteBtn} onClick={() => void deletePost(post.id)}>Eliminar</button>
+                </Show>
+>>>>>>> 6087054b2c17bad903d1ba2a08f953f8451a6489
               </div>
               <span class={styles.storyName}>Tu historia</span>
             </button>

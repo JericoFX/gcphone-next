@@ -3,72 +3,41 @@
   top: 0;
   left: 0;
   right: 0;
-  height: 48px;
+  height: 8px;
   display: grid;
   grid-template-columns: 1fr 1fr;
   z-index: 56;
   touch-action: none;
+  pointer-events: none;
 }
 
 .pull-hint-grabber {
-  position: absolute;
-  top: 6px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 104px;
-  height: 4px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.44);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
-  transition: all 180ms ease;
-  pointer-events: none;
-  
-  &.pull-hint-grabber-active {
-    background: rgba(255, 255, 255, 0.72);
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
-  }
+  display: none;
 }
 
 .pull-half {
   height: 100%;
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  cursor: grab;
+  display: block;
+  cursor: ns-resize;
   touch-action: none;
-  transition: background 120ms ease;
-  
-  &:active {
-    cursor: grabbing;
-  }
+  pointer-events: auto;
+  background: transparent;
 }
 
 .pull-half-active {
-  background: rgba(255, 255, 255, 0.18);
+  background: transparent;
 }
 
 .pull-indicator {
-  margin-top: 14px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  opacity: 0;
-  transform: translateY(-8px);
-  transition: opacity 160ms ease, transform 160ms ease;
-  pointer-events: none;
+  display: none;
 }
 
 .pull-indicator-visible {
-  opacity: 1;
-  transform: translateY(0);
+  display: none;
 }
 
 .pull-icon {
-  font-size: 18px;
-  color: rgba(255, 255, 255, 0.9);
-  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
-  animation: pull-bounce 500ms ease-in-out infinite;
+  display: none;
 }
 
 @keyframes pull-bounce {
@@ -81,11 +50,7 @@
 }
 
 .pull-label {
-  font-size: 10px;
-  font-weight: 700;
-  color: rgba(255, 255, 255, 0.85);
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
-  letter-spacing: 0.02em;
+  display: none;
 }
 
 .overlay {
@@ -93,10 +58,10 @@
   inset: 0;
   z-index: 90;
   background:
-    radial-gradient(130% 65% at 50% -8%, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0) 56%),
-    linear-gradient(180deg, rgba(242, 245, 252, 0.78), rgba(232, 239, 250, 0.8));
-  backdrop-filter: blur(42px) saturate(168%);
-  -webkit-backdrop-filter: blur(42px) saturate(168%);
+    radial-gradient(130% 65% at 50% -8%, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0) 58%),
+    linear-gradient(180deg, rgba(236, 241, 251, 0.8), rgba(222, 232, 249, 0.82));
+  backdrop-filter: blur(48px) saturate(175%);
+  -webkit-backdrop-filter: blur(48px) saturate(175%);
 }
 
 .sheet {
@@ -105,7 +70,7 @@
   padding: 12px;
   display: flex;
   flex-direction: column;
-  color: #12213a;
+  color: #0f1b30;
   animation: sheet-drop 260ms cubic-bezier(0.2, 0.8, 0.2, 1);
   touch-action: pan-y;
 }
@@ -133,6 +98,47 @@
     font-size: 19px;
     font-weight: 760;
     letter-spacing: -0.01em;
+  }
+}
+
+.headerDate {
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #5a6d8b;
+  font-weight: 700;
+}
+
+.summaryRow {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.summaryCard {
+  min-height: 52px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.62);
+  box-shadow: 0 8px 20px rgba(17, 30, 52, 0.12);
+  display: grid;
+  align-content: center;
+  justify-items: start;
+  padding: 8px 10px;
+
+  span {
+    font-size: 10px;
+    font-weight: 700;
+    color: #687d9e;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  strong {
+    font-size: 14px;
+    font-weight: 760;
+    color: #1c2e4a;
   }
 }
 
@@ -187,16 +193,28 @@
   }
 }
 
+.muteAppBtn {
+  margin-left: auto;
+  border: none;
+  border-radius: 999px;
+  min-height: 22px;
+  padding: 0 10px;
+  background: rgba(37, 73, 133, 0.12);
+  color: #325f9f;
+  font-size: 10px;
+  font-weight: 760;
+}
+
 .notification-item {
   border: none;
-  border-radius: 12px;
+  border-radius: 14px;
   background: rgba(255, 255, 255, 0.72);
   color: #132139;
   text-align: left;
   padding: 8px 10px;
   display: grid;
   gap: 2px;
-  box-shadow: 0 2px 10px rgba(18, 34, 58, 0.09), inset 0 0 0 1px rgba(255, 255, 255, 0.44);
+  box-shadow: 0 8px 18px rgba(18, 34, 58, 0.12), inset 0 0 0 1px rgba(255, 255, 255, 0.5);
   transition: transform 120ms ease, background 120ms ease;
 
   &:active {

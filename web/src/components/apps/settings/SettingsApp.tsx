@@ -156,14 +156,14 @@ export function SettingsApp() {
   );
 
   return (
-    <div class="ios-page">
+    <div class={`ios-page ${styles.app}`}>
       <div class="ios-nav">
         <button class="ios-icon-btn k-touch-ripple" onClick={() => router.goBack()}>‹</button>
-        <div class="ios-nav-title">Ajustes</div>
+        <div class="ios-nav-title">Ajustes Pro</div>
       </div>
 
-      <div class="ios-content">
-        <div class="ios-segment">
+      <div class={`ios-content ${styles.settingsCanvas}`}>
+        <div class={`ios-segment ${styles.settingsTabs}`}>
           <button class="ios-segment-btn" classList={{ 'ios-segment-btn-active': tab() === 'appearance' }} onClick={() => setTab('appearance')}>Apariencia</button>
           <button class="ios-segment-btn" classList={{ 'ios-segment-btn-active': tab() === 'sound' }} onClick={() => setTab('sound')}>Sonido</button>
           <button class="ios-segment-btn" classList={{ 'ios-segment-btn-active': tab() === 'security' }} onClick={() => setTab('security')}>Seguridad</button>
@@ -413,8 +413,8 @@ export function SettingsApp() {
               <div class={`ios-row ${styles.liveLocationStatus}`}>{liveLocationStatus()}</div>
             </Show>
             <div class="ios-row">
-              <span class="ios-label">Gestos superior noti/control</span>
-              <span class="ios-value">Desactivado</span>
+              <span class="ios-label">Zona drag superior</span>
+              <span class="ios-value">Minima</span>
             </div>
             <SettingToggle label="Modo avion" active={notifications.airplaneMode} onClick={() => notificationsActions.setAirplaneMode(!notifications.airplaneMode)} />
             <SettingToggle label="No molestar" active={notifications.doNotDisturb} onClick={() => notificationsActions.setDoNotDisturb(!notifications.doNotDisturb)} />
