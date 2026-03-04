@@ -1,4 +1,4 @@
-import { Show, createEffect, createSignal, For, onCleanup } from 'solid-js';
+import { Show, createEffect, createMemo, createSignal, For, onCleanup } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { fetchNui } from '../../../utils/fetchNui';
 import { timeAgo } from '../../../utils/misc';
@@ -26,6 +26,7 @@ export function ChirpApp() {
   const [showAttachSheet, setShowAttachSheet] = createSignal(false);
   const [showComposer, setShowComposer] = createSignal(false);
   const [viewerUrl, setViewerUrl] = createSignal<string | null>(null);
+  const [query, setQuery] = createSignal('');
 
   const loadTweets = async () => {
     const list = await fetchNui<ChirpTweet[]>('chirpGetTweets', { tab: tab(), limit: 50, offset: 0 }, []);
@@ -119,12 +120,60 @@ export function ChirpApp() {
     if (result?.success) await loadTweets();
   };
 
+  const trending = createMemo(() => {
+    const tags = new Map<string, number>();
+    for (const tweet of tweets()) {
+      const matches = (tweet.content || '').match(/#[a-zA-Z0-9_]+/g) || [];
+      for (const tag of matches) {
+        const normalized = tag.toLowerCase();
+        tags.set(normalized, (tags.get(normalized) || 0) + 1);
+      }
+    }
+
+    return Array.from(tags.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 6)
+      .map(([tag, count]) => ({ tag, count }));
+  });
+
+  const visibleTweets = createMemo(() => {
+    const normalized = sanitizeText(query(), 60).toLowerCase();
+    if (!normalized) return tweets();
+    return tweets().filter((tweet) => {
+      const author = `${tweet.display_name || ''} ${tweet.username || ''}`.toLowerCase();
+      return tweet.content.toLowerCase().includes(normalized) || author.includes(normalized);
+    });
+  });
+
   return (
     <div class={styles.app}>
       <div class={styles.header}>
         <button class={styles.backBtn} onClick={() => router.goBack()}>‹</button>
-        <h1>Chirp</h1>
+        <h1>Chirp Pulse</h1>
+        <button class={styles.composeBtn} onClick={() => setShowComposer(true)}>Post</button>
       </div>
+
+      <div class={styles.searchRow}>
+        <input
+          class={styles.searchInput}
+          placeholder="Buscar en Chirp"
+          value={query()}
+          onInput={(event) => setQuery(event.currentTarget.value)}
+        />
+      </div>
+
+      <Show when={trending().length > 0}>
+        <div class={styles.trendingRow}>
+          <For each={trending()}>
+            {(item) => (
+              <button class={styles.trendChip} onClick={() => setQuery(item.tag)}>
+                <strong>{item.tag}</strong>
+                <span>{item.count}</span>
+              </button>
+            )}
+          </For>
+        </div>
+      </Show>
 
       <div class={styles.tabs}>
         <button class={styles.tabBtn} classList={{ [styles.active]: tab() === 'forYou' }} onClick={() => { setTab('forYou'); void loadTweets(); }}>
@@ -136,7 +185,7 @@ export function ChirpApp() {
       </div>
 
       <div class={styles.feed}>
-        <For each={tweets()}>
+        <For each={visibleTweets()}>
           {(tweet) => (
             <article class={styles.tweetCard}>
               <div class={styles.meta}>
