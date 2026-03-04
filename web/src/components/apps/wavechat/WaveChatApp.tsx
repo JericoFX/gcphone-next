@@ -11,6 +11,7 @@ import { connectWaveSocket, disconnectWaveSocket, getWaveRecent, isWaveSocketCon
 import { ActionSheet } from '../../shared/ui/ActionSheet';
 import { MediaLightbox } from '../../shared/ui/MediaLightbox';
 import { VirtualList } from '../../shared/ui/VirtualList';
+import { AppScaffold } from '../../shared/layout';
 import styles from './WaveChatApp.module.scss';
 
 interface GifResult {

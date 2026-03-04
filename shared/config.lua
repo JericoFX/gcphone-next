@@ -198,6 +198,8 @@ Config.Proximity = {
     ShareContactDistance = 3.0,
     ShareLocationDistance = 5.0,
     FriendRequestDistance = 5.0,
+    ShareDocumentDistance = 2.0,
+    ShareWalletDistance = 2.0,
 }
 
 Config.FixePhone = {

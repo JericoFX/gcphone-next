@@ -5,6 +5,7 @@ import { timeAgo } from '../../../utils/misc';
 import { resolveMediaType, sanitizeMediaUrl, sanitizeText } from '../../../utils/sanitize';
 import { ActionSheet } from '../../shared/ui/ActionSheet';
 import { MediaLightbox } from '../../shared/ui/MediaLightbox';
+import { AppScaffold } from '../../shared/layout';
 import styles from './NewsApp.module.scss';
 
 interface NewsArticle {
@@ -136,87 +137,83 @@ export function NewsApp() {
   };
 
   return (
-    <div class={styles.app}>
-      <div class={styles.header}>
-        <button class={styles.backBtn} onClick={() => router.goBack()}>‹</button>
-        <h1>Noticias</h1>
-        <button class={styles.addBtn} onClick={() => setShowCompose(true)}>✎</button>
-      </div>
+    <AppScaffold title="Noticias" subtitle="Noticias de la ciudad" onBack={() => router.goBack()}>
+      <div class={styles.newsApp}>
+        <div class={styles.tools}>
+          <select value={selectedCategory()} onChange={(e) => { setSelectedCategory(e.currentTarget.value); void load(); }}>
+            <option value="all">Todas</option>
+            <For each={categories()}>{(c) => <option value={c}>{c}</option>}</For>
+          </select>
+          <button class={styles.liveBtn} onClick={toggleLive}>{liveArticleId() ? 'Terminar live' : 'Iniciar live'}</button>
+        </div>
 
-      <div class={styles.tools}>
-        <select value={selectedCategory()} onChange={(e) => { setSelectedCategory(e.currentTarget.value); void load(); }}>
-          <option value="all">Todas</option>
-          <For each={categories()}>{(c) => <option value={c}>{c}</option>}</For>
-        </select>
-        <button class={styles.liveBtn} onClick={toggleLive}>{liveArticleId() ? 'Terminar live' : 'Iniciar live'}</button>
-      </div>
+        <div class={styles.feed}>
+          <For each={articles()}>
+            {(article) => (
+              <article class={styles.card} onClick={() => viewArticle(article.id)}>
+                <div class={styles.meta}>
+                  <span>{article.author_name || 'Redaccion'}</span>
+                  <span>{article.created_at ? timeAgo(article.created_at) : 'ahora'}</span>
+                </div>
+                <strong>{article.title}</strong>
+                <Show when={(article as any).media_url || (article as any).mediaUrl}>
+                  <Show when={resolveMediaType((article as any).media_url || (article as any).mediaUrl) === 'image'}>
+                    <img class={styles.articleMedia} src={(article as any).media_url || (article as any).mediaUrl} alt="media" onClick={(e) => { e.stopPropagation(); setViewerUrl((article as any).media_url || (article as any).mediaUrl); }} />
+                  </Show>
+                  <Show when={resolveMediaType((article as any).media_url || (article as any).mediaUrl) === 'video'}>
+                    <video class={styles.articleMedia} src={(article as any).media_url || (article as any).mediaUrl} controls playsinline preload="metadata" />
+                  </Show>
+                </Show>
+                <p>{article.content}</p>
+                <small>{article.category || 'general'}</small>
+                <button class={styles.deleteBtn} onClick={(e) => { e.stopPropagation(); void deleteArticle(article.id); }}>Eliminar</button>
+              </article>
+            )}
+          </For>
+        </div>
 
-      <div class={styles.feed}>
-        <For each={articles()}>
-          {(article) => (
-            <article class={styles.card} onClick={() => viewArticle(article.id)}>
-              <div class={styles.meta}>
-                <span>{article.author_name || 'Redaccion'}</span>
-                <span>{article.created_at ? timeAgo(article.created_at) : 'ahora'}</span>
+        <Show when={showCompose()}>
+          <div class={styles.modal}>
+            <div class={styles.modalContent}>
+              <h2>Publicar noticia</h2>
+              <input type="text" placeholder="Titulo" value={title()} onInput={(e) => setTitle(e.currentTarget.value)} />
+              <textarea placeholder="Contenido" value={content()} onInput={(e) => setContent(e.currentTarget.value)} />
+              <div class={styles.composeAttachments}>
+                <button onClick={() => setShowAttachSheet(true)}>Adjuntar</button>
+                <input type="text" placeholder="URL media (opcional)" value={mediaUrl()} onInput={(e) => setMediaUrl(sanitizeMediaUrl(e.currentTarget.value))} />
               </div>
-              <strong>{article.title}</strong>
-              <Show when={(article as any).media_url || (article as any).mediaUrl}>
-                <Show when={resolveMediaType((article as any).media_url || (article as any).mediaUrl) === 'image'}>
-                  <img class={styles.articleMedia} src={(article as any).media_url || (article as any).mediaUrl} alt="media" onClick={(e) => { e.stopPropagation(); setViewerUrl((article as any).media_url || (article as any).mediaUrl); }} />
+              <Show when={mediaUrl()}>
+                <Show when={resolveMediaType(mediaUrl()) === 'image'}>
+                  <img class={styles.articleMedia} src={mediaUrl()} alt="preview" onClick={() => setViewerUrl(mediaUrl())} />
                 </Show>
-                <Show when={resolveMediaType((article as any).media_url || (article as any).mediaUrl) === 'video'}>
-                  <video class={styles.articleMedia} src={(article as any).media_url || (article as any).mediaUrl} controls playsinline preload="metadata" />
+                <Show when={resolveMediaType(mediaUrl()) === 'video'}>
+                  <video class={styles.articleMedia} src={mediaUrl()} controls playsinline preload="metadata" />
                 </Show>
               </Show>
-              <p>{article.content}</p>
-              <small>{article.category || 'general'}</small>
-              <button class={styles.deleteBtn} onClick={(e) => { e.stopPropagation(); void deleteArticle(article.id); }}>Eliminar</button>
-            </article>
-          )}
-        </For>
-      </div>
-
-      <Show when={showCompose()}>
-        <div class={styles.modal}>
-          <div class={styles.modalContent}>
-            <h2>Publicar noticia</h2>
-            <input type="text" placeholder="Titulo" value={title()} onInput={(e) => setTitle(e.currentTarget.value)} />
-            <textarea placeholder="Contenido" value={content()} onInput={(e) => setContent(e.currentTarget.value)} />
-            <div class={styles.composeAttachments}>
-              <button onClick={() => setShowAttachSheet(true)}>Adjuntar</button>
-              <input type="text" placeholder="URL media (opcional)" value={mediaUrl()} onInput={(e) => setMediaUrl(sanitizeMediaUrl(e.currentTarget.value))} />
-            </div>
-            <Show when={mediaUrl()}>
-              <Show when={resolveMediaType(mediaUrl()) === 'image'}>
-                <img class={styles.articleMedia} src={mediaUrl()} alt="preview" onClick={() => setViewerUrl(mediaUrl())} />
-              </Show>
-              <Show when={resolveMediaType(mediaUrl()) === 'video'}>
-                <video class={styles.articleMedia} src={mediaUrl()} controls playsinline preload="metadata" />
-              </Show>
-            </Show>
-            <input type="text" placeholder="Categoria" value={category()} onInput={(e) => setCategory(sanitizeText(e.currentTarget.value, 30))} />
-            <div class={styles.actions}>
-              <button onClick={() => setShowCompose(false)}>Cancelar</button>
-              <button class={styles.primary} onClick={publish}>Publicar</button>
+              <input type="text" placeholder="Categoria" value={category()} onInput={(e) => setCategory(sanitizeText(e.currentTarget.value, 30))} />
+              <div class={styles.actions}>
+                <button onClick={() => setShowCompose(false)}>Cancelar</button>
+                <button class={styles.primary} onClick={publish}>Publicar</button>
+              </div>
             </div>
           </div>
-        </div>
-      </Show>
+        </Show>
 
-      <ActionSheet
-        open={showAttachSheet()}
-        title="Adjuntar en noticias"
-        onClose={() => setShowAttachSheet(false)}
-        actions={[
-          { label: 'Elegir desde galeria', tone: 'primary', onClick: attachFromGallery },
-          { label: 'Tomar foto con camara', onClick: attachFromCamera },
-          { label: 'Pegar URL multimedia', onClick: attachByUrl },
-          { label: 'Quitar adjunto', tone: 'danger', onClick: () => { setMediaUrl(''); } },
-        ]}
-      />
+        <ActionSheet
+          open={showAttachSheet()}
+          title="Adjuntar en noticias"
+          onClose={() => setShowAttachSheet(false)}
+          actions={[
+            { label: 'Elegir desde galeria', tone: 'primary', onClick: attachFromGallery },
+            { label: 'Tomar foto con camara', onClick: attachFromCamera },
+            { label: 'Pegar URL multimedia', onClick: attachByUrl },
+            { label: 'Quitar adjunto', tone: 'danger', onClick: () => { setMediaUrl(''); } },
+          ]}
+        />
 
-      <button class={styles.fab} onClick={() => setShowCompose(true)}>+</button>
-      <MediaLightbox url={viewerUrl()} onClose={() => setViewerUrl(null)} />
-    </div>
+        <button class={styles.fab} onClick={() => setShowCompose(true)}>+</button>
+        <MediaLightbox url={viewerUrl()} onClose={() => setViewerUrl(null)} />
+      </div>
+    </AppScaffold>
   );
 }

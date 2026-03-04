@@ -107,6 +107,17 @@ end)
 
 -- Scan NFC (read document via NFC)
 lib.callback.register('gcphone:documents:scanNFC', function(source, data)
+    return { success = false, error = 'NFC_USE_OX_TARGET' }
+end)
+
+-- Verify document by code (manual verification)
+lib.callback.register('gcphone:documents:verify', function(source, data)
+    return { success = false, error = 'VERIFY_DISABLED_USE_OX_TARGET' }
+end)
+
+-- Legacy implementation disabled to keep NFC flow only through ox_target
+--[[
+lib.callback.register('gcphone:documents:scanNFC', function(source, data)
     if type(data) ~= 'table' then return { success = false, error = 'INVALID_DATA' } end
     
     local verificationCode = SafeString(data.code)
@@ -200,6 +211,7 @@ lib.callback.register('gcphone:documents:verify', function(source, data)
         }
     }
 end)
+]]
 
 -- Get scan history for my documents
 lib.callback.register('gcphone:documents:getScanHistory', function(source)
@@ -216,15 +228,85 @@ lib.callback.register('gcphone:documents:getScanHistory', function(source)
     ]], { identifier }) or {}
 end)
 
+-- Share document with nearby player (via ox_target)
+lib.callback.register('gcphone:documents:share', function(source, data)
+    if type(data) ~= 'table' then return { success = false, error = 'INVALID_DATA' } end
+    
+    local identifier = GetIdentifier(source)
+    if not identifier then return { success = false, error = 'INVALID_SOURCE' } end
+    
+    local documentId = tonumber(data.documentId)
+    local targetServerId = tonumber(data.targetServerId)
+    
+    if not documentId or not targetServerId then
+        return { success = false, error = 'INVALID_PARAMS' }
+    end
+    
+    -- Get the document
+    local doc = MySQL.single.await(
+        'SELECT d.*, n.phone_number FROM phone_documents d ' ..
+        'LEFT JOIN phone_numbers n ON d.identifier = n.identifier ' ..
+        'WHERE d.id = ? AND d.identifier = ? AND d.nfc_enabled = 1',
+        { documentId, identifier }
+    )
+    
+    if not doc then
+        return { success = false, error = 'DOCUMENT_NOT_FOUND_OR_NFC_DISABLED' }
+    end
+    
+    -- Check if document is expired
+    if doc.expires_at then
+        local expires = os.time({year=tonumber(doc.expires_at:sub(1,4)), month=tonumber(doc.expires_at:sub(6,7)), day=tonumber(doc.expires_at:sub(9,10))})
+        if os.time() > expires then
+            return { success = false, error = 'DOCUMENT_EXPIRED' }
+        end
+    end
+    
+    -- Get sender info
+    local senderName = GetName(source) or 'Ciudadano'
+    
+    -- Record the share
+    MySQL.insert.await(
+        'INSERT INTO phone_documents_nfc_scans (document_id, scanned_by, scan_type) VALUES (?, ?, ?)',
+        { doc.id, GetIdentifierFromPlayer(targetServerId), 'shared' }
+    )
+    
+    -- Send document to target player
+    TriggerClientEvent('gcphone:receiveSharedDocument', targetServerId, {
+        document = {
+            doc_type = doc.doc_type,
+            title = doc.title,
+            holder_name = doc.holder_name,
+            holder_number = doc.holder_number,
+            expires_at = doc.expires_at,
+            verification_code = doc.verification_code
+        },
+        from = senderName,
+        shared_at = os.date('%Y-%m-%d %H:%M:%S')
+    })
+    
+    return { success = true }
+end)
+
+-- Helper function to get identifier from player server ID
+function GetIdentifierFromPlayer(serverId)
+    for _, playerId in ipairs(GetPlayers()) do
+        if tonumber(playerId) == serverId then
+            return GetIdentifier(playerId)
+        end
+    end
+    return nil
+end
+
 -- Get document types
 lib.callback.register('gcphone:documents:getTypes', function(source)
     return {
-        { id = 'id', name = 'DNI / ID', icon: '🆔', color: '#007aff' },
-        { id = 'license', name: 'Licencia de Conducir', icon: '🚗', color: '#34c759' },
-        { id = 'passport', name: 'Pasaporte', icon: '🛂', color: '#ff9500' },
-        { id = 'permit', name: 'Permiso Especial', icon: '📄', color: '#af52de' },
-        { id = 'work_permit', name: 'Permiso de Trabajo', icon: '💼', color: '#5856d6' },
-        { id = 'insurance', name: 'Seguro', icon: '🛡️', color: '#ff3b30' },
-        { id = 'registration', name: 'Registro Civil', icon: '📋', color: '#5ac8fa' }
+        { id = 'id', name = 'DNI / ID', icon = 'ID', color = '#007aff' },
+        { id = 'license', name = 'Licencia de Conducir', icon = 'CAR', color = '#34c759' },
+        { id = 'passport', name = 'Pasaporte', icon = 'PASS', color = '#ff9500' },
+        { id = 'permit', name = 'Permiso Especial', icon = 'PERM', color = '#af52de' },
+        { id = 'work_permit', name = 'Permiso de Trabajo', icon = 'WORK', color = '#5856d6' },
+        { id = 'insurance', name = 'Seguro', icon = 'INS', color = '#ff3b30' },
+        { id = 'registration', name = 'Registro Civil', icon = 'REG', color = '#5ac8fa' }
     }
 end)

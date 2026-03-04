@@ -94,6 +94,40 @@ ox_target:addGlobalPlayer({
                 data = { targetServerId = targetServerId }
             })
         end
+    },
+    {
+        name = 'gcphone_shareDocument',
+        icon = 'fa-solid fa-id-card',
+        label = 'Mostrar documento NFC',
+        distance = Config.Proximity.ShareDocumentDistance,
+        canInteract = function(entity, distance)
+            return IsPhoneOpenSafe() and distance <= Config.Proximity.ShareDocumentDistance
+        end,
+        onSelect = function(data)
+            local targetServerId = GetPlayerServerId(NetworkGetPlayerIndexFromPed(data.entity))
+            
+            SendNUIMessage({
+                action = 'phone:openRoute',
+                data = { route = 'documents', data = { nfcAction = 'share_document', targetServerId = targetServerId, requestId = GetGameTimer() } }
+            })
+        end
+    },
+    {
+        name = 'gcphone_walletNfcInvoice',
+        icon = 'fa-solid fa-wallet',
+        label = 'Cobrar con NFC',
+        distance = Config.Proximity.ShareWalletDistance,
+        canInteract = function(entity, distance)
+            return IsPhoneOpenSafe() and distance <= Config.Proximity.ShareWalletDistance
+        end,
+        onSelect = function(data)
+            local targetServerId = GetPlayerServerId(NetworkGetPlayerIndexFromPed(data.entity))
+
+            SendNUIMessage({
+                action = 'phone:openRoute',
+                data = { route = 'wallet', data = { nfcAction = 'create_invoice', targetServerId = targetServerId, requestId = GetGameTimer() } }
+            })
+        end
     }
 })
 
@@ -142,6 +176,21 @@ RegisterNUICallback('acceptContactRequest', function(data, cb)
         end
         cb({ success = success })
     end, data)
+end)
+
+RegisterNUICallback('getNearbyPlayers', function(_, cb)
+    local list = GetNearbyPlayers(Config.Proximity.ShareWalletDistance)
+    local payload = {}
+
+    for _, item in ipairs(list) do
+        payload[#payload + 1] = {
+            serverId = item.serverId,
+            name = GetPlayerName(NetworkGetPlayerIndexFromPed(item.ped)) or ('ID ' .. tostring(item.serverId)),
+            distance = math.floor((item.distance or 0) * 10) / 10,
+        }
+    end
+
+    cb(payload)
 end)
 
 RegisterNetEvent('gcphone:receiveContactRequest', function(data)
@@ -195,6 +244,101 @@ RegisterNetEvent('gcphone:receiveSharedPost', function(data)
         description = data.from .. ' te ha compartido una publicacion',
         type = 'info'
     })
+end)
+
+RegisterNetEvent('gcphone:receiveSharedDocument', function(data)
+    SendNUIMessage({
+        action = 'receiveSharedDocument',
+        data = data
+    })
+
+    SendNUIMessage({
+        action = 'phone:openRoute',
+        data = { route = 'documents', data = { nfcAction = 'received_document', receivedDocument = data, requestId = GetGameTimer() } }
+    })
+    
+    lib.notify({ 
+        title = 'Documento recibido',
+        description = data.from .. ' te ha mostrado un documento',
+        type = 'info'
+    })
+end)
+
+RegisterNetEvent('gcphone:walletNfcInvoiceReceived', function(data)
+    SendNUIMessage({
+        action = 'walletNfcInvoiceReceived',
+        data = data
+    })
+
+    SendNUIMessage({
+        action = 'phone:openRoute',
+        data = { route = 'wallet', data = { nfcAction = 'incoming_invoice', invoice = data, requestId = GetGameTimer() } }
+    })
+
+    lib.notify({
+        title = 'Cobro NFC',
+        description = (data.fromName or 'Alguien') .. ' te envio un cobro',
+        type = 'info'
+    })
+end)
+
+RegisterNetEvent('gcphone:walletNfcInvoiceResult', function(data)
+    SendNUIMessage({
+        action = 'walletNfcInvoiceResult',
+        data = data
+    })
+
+    if data and data.status == 'paid' then
+        lib.notify({ title = 'Cobro NFC', description = 'Pago completado', type = 'success' })
+    elseif data and data.status == 'rejected' then
+        lib.notify({ title = 'Cobro NFC', description = 'Pago rechazado', type = 'error' })
+    elseif data and data.status == 'expired' then
+        lib.notify({ title = 'Cobro NFC', description = 'Cobro vencido', type = 'error' })
+    end
+end)
+
+RegisterNetEvent('gcphone:bankInvoiceReceived', function(data)
+    SendNUIMessage({
+        action = 'bankInvoiceReceived',
+        data = data
+    })
+
+    SendNUIMessage({
+        action = 'phone:openRoute',
+        data = { route = 'bank', data = { nfcAction = 'incoming_invoice', invoice = data, requestId = GetGameTimer() } }
+    })
+
+    lib.notify({
+        title = 'Factura recibida',
+        description = (data.fromName or 'Alguien') .. ' te envio una factura',
+        type = 'info'
+    })
+end)
+
+RegisterNetEvent('gcphone:bankInvoiceResult', function(data)
+    SendNUIMessage({
+        action = 'bankInvoiceResult',
+        data = data
+    })
+
+    if data and data.status == 'paid' then
+        lib.notify({ title = 'Factura', description = 'Factura pagada', type = 'success' })
+    elseif data and data.status == 'rejected' then
+        lib.notify({ title = 'Factura', description = 'Factura rechazada', type = 'error' })
+    elseif data and data.status == 'expired' then
+        lib.notify({ title = 'Factura', description = 'Factura vencida', type = 'error' })
+    end
+end)
+
+RegisterNUICallback('shareDocument', function(data, cb)
+    lib.callback('gcphone:documents:share', false, function(success, msg)
+        if success then
+            lib.notify({ title = 'Documento mostrado', type = 'success' })
+        else
+            lib.notify({ title = msg or 'Error al mostrar documento', type = 'error' })
+        end
+        cb({ success = success, message = msg })
+    end, data)
 end)
 
 exports('GetNearbyPlayers', GetNearbyPlayers)

@@ -35,6 +35,17 @@ interface Category {
   icon: string;
 }
 
+const CATEGORY_ICON_MAP: Record<string, string> = {
+  all: './img/icons_ios/ui-list.svg',
+  autos: './img/icons_ios/garage.svg',
+  properties: './img/icons_ios/map.svg',
+  electronics: './img/icons_ios/phone-solid.svg',
+  services: './img/icons_ios/settings.svg',
+  jobs: './img/icons_ios/documents.svg',
+  items: './img/icons_ios/market.svg',
+  other: './img/icons_ios/ui-list.svg',
+};
+
 interface SellerInfo {
   identifier: string;
   phone_number: string;
@@ -132,10 +143,7 @@ export function YellowPagesApp() {
     onCleanup(() => window.removeEventListener('phone:keyUp', onKey as EventListener));
   });
 
-  const getCategoryIcon = (catId: string) => {
-    const cat = categories().find(c => c.id === catId);
-    return cat?.icon || '📋';
-  };
+  const getCategoryIcon = (catId: string) => CATEGORY_ICON_MAP[catId] || './img/icons_ios/ui-list.svg';
 
   const getCategoryName = (catId: string) => {
     const cat = categories().find(c => c.id === catId);
@@ -252,7 +260,9 @@ export function YellowPagesApp() {
               onInput={(e) => setSearchQuery(e.currentTarget.value)}
               onKeyDown={(e) => e.key === 'Enter' && loadListings()}
             />
-            <button class={styles.searchBtn} onClick={() => loadListings()}>🔍</button>
+            <button class={styles.searchBtn} onClick={() => loadListings()}>
+              <img src="./img/icons_ios/ui-search.svg" alt="" />
+            </button>
           </div>
           
           {/* Category Filter */}
@@ -264,7 +274,7 @@ export function YellowPagesApp() {
                   classList={{ [styles.active]: selectedCategory() === cat.id }}
                   onClick={() => setSelectedCategory(cat.id)}
                 >
-                  <span class={styles.catIcon}>{cat.icon}</span>
+                  <span class={styles.catIcon}><img src={getCategoryIcon(cat.id)} alt="" /></span>
                   <span class={styles.catName}>{cat.name}</span>
                 </button>
               )}
@@ -304,14 +314,14 @@ export function YellowPagesApp() {
                     <img src={listing.photos[0]} alt="" />
                   </Show>
                   <div class={styles.categoryBadge}>
-                    <span>{getCategoryIcon(listing.category)}</span>
+                    <img src={getCategoryIcon(listing.category)} alt="" />
                   </div>
                   <Show when={listing.is_own}>
                     <button 
                       class={styles.deleteBtn}
                       onClick={(e) => { e.stopPropagation(); deleteListing(listing.id); }}
                     >
-                      ✕
+                      <img src="./img/icons_ios/ui-close.svg" alt="" />
                     </button>
                   </Show>
                 </div>
@@ -322,7 +332,7 @@ export function YellowPagesApp() {
                   
                   <div class={styles.cardMeta}>
                     <span class={styles.price}>${listing.price.toLocaleString()}</span>
-                    <span class={styles.views}>👁 {listing.views || 0}</span>
+                    <span class={styles.views}><img src="./img/icons_ios/ui-eye.svg" alt="" /> {listing.views || 0}</span>
                   </div>
                   
                   <div class={styles.cardFooter}>
@@ -351,7 +361,7 @@ export function YellowPagesApp() {
         <Show when={selectedListing()}>
           <div class={styles.detailModal}>
             <button class={styles.closeBtn} onClick={() => { setSelectedListing(null); setSellerInfo(null); }}>
-              ✕
+              <img src="./img/icons_ios/ui-close.svg" alt="" />
             </button>
             
             <div class={styles.detailContent}>
@@ -370,7 +380,7 @@ export function YellowPagesApp() {
               
               <div class={styles.detailInfo}>
                 <span class={styles.detailCategory}>
-                  {getCategoryIcon(selectedListing().category)} {getCategoryName(selectedListing().category)}
+                  <img src={getCategoryIcon(selectedListing().category)} alt="" /> {getCategoryName(selectedListing().category)}
                 </span>
                 <h2 class={styles.detailTitle}>{selectedListing().title}</h2>
                 <p class={styles.detailDesc}>{selectedListing().description || 'Sin descripcion'}</p>
@@ -381,7 +391,7 @@ export function YellowPagesApp() {
                 </div>
                 
                 <div class={styles.detailMeta}>
-                  <span>👁 {selectedListing().views || 0} visitas</span>
+                  <span class={styles.metaWithIcon}><img src="./img/icons_ios/ui-eye.svg" alt="" /> {selectedListing().views || 0} visitas</span>
                   <span>•</span>
                   <span>Publicado {selectedListing().created_at ? timeAgo(selectedListing().created_at) : ''}</span>
                 </div>
@@ -401,7 +411,7 @@ export function YellowPagesApp() {
                     </div>
                     <div class={styles.sellerInfo}>
                       <strong>{sellerInfo().seller_name || 'Vendedor'}</strong>
-                      <span>📞 {sellerInfo().phone_number || 'Sin teléfono'}</span>
+                      <span class={styles.metaWithIcon}><img src="./img/icons_ios/ui-phone.svg" alt="" /> {sellerInfo().phone_number || 'Sin telefono'}</span>
                     </div>
                   </div>
                 </div>
@@ -413,14 +423,16 @@ export function YellowPagesApp() {
                       class={styles.contactBtn}
                       onClick={() => setShowContactModal(true)}
                     >
-                      📞 Contactar
+                      <img src="./img/icons_ios/ui-phone.svg" alt="" />
+                      Contactar
                     </button>
                     <Show when={selectedListing()?.location_shared}>
                       <button 
                         class={styles.locationBtn}
                         onClick={viewLocation}
                       >
-                        📍 Ver ubicacion
+                        <img src="./img/icons_ios/ui-location.svg" alt="" />
+                        Ver ubicacion
                       </button>
                     </Show>
                   </div>
@@ -439,7 +451,7 @@ export function YellowPagesApp() {
         >
           <div class={styles.contactOptions}>
             <button class={styles.contactOption} onClick={() => contactSeller('call')}>
-              <span class={styles.contactIcon}>📞</span>
+              <span class={styles.contactIcon}><img src="./img/icons_ios/ui-phone.svg" alt="" /></span>
               <div class={styles.contactInfo}>
                 <strong>Llamar</strong>
                 <span>{sellerInfo()?.phone_number}</span>
@@ -447,7 +459,7 @@ export function YellowPagesApp() {
             </button>
             
             <button class={styles.contactOption} onClick={() => contactSeller('message')}>
-              <span class={styles.contactIcon}>💬</span>
+              <span class={styles.contactIcon}><img src="./img/icons_ios/ui-chat.svg" alt="" /></span>
               <div class={styles.contactInfo}>
                 <strong>Enviar mensaje</strong>
                 <span>Chat privado</span>
@@ -510,7 +522,7 @@ export function YellowPagesApp() {
                 >
                   <For each={categories().filter(c => c.id !== 'all')}>
                     {(cat) => (
-                      <option value={cat.id}>{cat.icon} {cat.name}</option>
+                      <option value={cat.id}>{cat.name}</option>
                     )}
                   </For>
                 </select>
@@ -524,7 +536,7 @@ export function YellowPagesApp() {
                   {(photo, index) => (
                     <div class={styles.photoThumb}>
                       <img src={photo} alt="" />
-                      <button onClick={() => removePhoto(index())}>✕</button>
+                      <button onClick={() => removePhoto(index())}><img src="./img/icons_ios/ui-close.svg" alt="" /></button>
                     </div>
                   )}
                 </For>

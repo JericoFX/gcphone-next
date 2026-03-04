@@ -152,18 +152,7 @@ export function GarageApp() {
     });
   };
 
-  const getVehicleIcon = (modelName?: string) => {
-    if (!modelName) return '🚗';
-    const name = modelName.toLowerCase();
-    if (name.includes('motor') || name.includes('bike')) return '🏍';
-    if (name.includes('truck') || name.includes('camion')) return '🚚';
-    if (name.includes('boat') || name.includes('barco')) return '🚤';
-    if (name.includes('heli') || name.includes('helicoptero')) return '🚁';
-    if (name.includes('plane') || name.includes('avion')) return '✈';
-    if (name.includes('sport') || name.includes('deportivo')) return '🏎';
-    if (name.includes('suv') || name.includes('jeep')) return '🚙';
-    return '🚗';
-  };
+  const getVehicleIcon = () => './img/icons_ios/car.svg';
 
   return (
     <AppScaffold title="Garage" subtitle="Tus vehiculos" onBack={() => router.goBack()} bodyClass={styles.body}>
@@ -215,7 +204,7 @@ export function GarageApp() {
             {(vehicle) => (
               <div class={styles.vehicleCard} onClick={() => openVehicle(vehicle)}>
                 <div class={styles.vehicleIcon}>
-                  <span>{getVehicleIcon(vehicle.model_name)}</span>
+                  <img src={getVehicleIcon()} alt="" />
                 </div>
                 
                 <div class={styles.vehicleInfo}>
@@ -224,19 +213,21 @@ export function GarageApp() {
                   
                   <div class={styles.vehicleStatus}>
                     <Show when={vehicle.impounded}>
-                      <span class={styles.impoundedBadge}>🚨 En Deposito</span>
+                      <span class={styles.impoundedBadge}>En Deposito</span>
                     </Show>
                     <Show when={!vehicle.impounded}>
-                      <span class={styles.garageBadge}>✓ {vehicle.garage_name || 'Garage'}</span>
+                      <span class={styles.garageBadge}>{vehicle.garage_name || 'Garage'}</span>
                     </Show>
                   </div>
                   
                   <Show when={vehicle.has_location}>
-                    <span class={styles.locationBadge}>📍 Ubicacion guardada</span>
+                    <span class={styles.locationBadge}>Ubicacion guardada</span>
                   </Show>
                 </div>
                 
-                <div class={styles.vehicleArrow}>›</div>
+                <div class={styles.vehicleArrow}>
+                  <img src="./img/icons_ios/ui-chevron-right.svg" alt="" />
+                </div>
               </div>
             )}
           </For>
@@ -253,14 +244,14 @@ export function GarageApp() {
         <Show when={selectedVehicle()}>
           <div class={styles.detailModal}>
             <button class={styles.closeBtn} onClick={() => { setSelectedVehicle(null); setLocationHistory([]); }}>
-              ✕
+              <img src="./img/icons_ios/ui-close.svg" alt="" />
             </button>
             
             <div class={styles.detailContent}>
               {/* Vehicle Header */}
               <div class={styles.detailHeader}>
                 <div class={styles.detailIcon}>
-                  <span>{getVehicleIcon(selectedVehicle().model_name)}</span>
+                  <img src={getVehicleIcon()} alt="" />
                 </div>
                 <div class={styles.detailTitle}>
                   <h2>{selectedVehicle().model_name || 'Vehiculo'}</h2>
@@ -272,7 +263,9 @@ export function GarageApp() {
               <div class={styles.statusCard}>
                 <Show when={selectedVehicle().impounded}>
                   <div class={styles.statusImpounded}>
-                    <span>🚨</span>
+                    <span class={styles.statusIcon}>
+                      <img src="./img/icons_ios/ui-warning.svg" alt="" />
+                    </span>
                     <div>
                       <strong>Vehiculo en deposito</strong>
                       <p>Debes pagar la multa para recuperarlo</p>
@@ -281,7 +274,9 @@ export function GarageApp() {
                 </Show>
                 <Show when={!selectedVehicle().impounded}>
                   <div class={styles.statusGarage}>
-                    <span>✓</span>
+                    <span class={styles.statusIcon}>
+                      <img src="./img/icons_ios/ui-check.svg" alt="" />
+                    </span>
                     <div>
                       <strong>En {selectedVehicle().garage_name || 'Garage'}</strong>
                       <p>Vehiculo disponible</p>
@@ -293,7 +288,7 @@ export function GarageApp() {
               {/* Location Info */}
               <Show when={selectedVehicle().has_location}>
                 <div class={styles.locationCard}>
-                  <h4>📍 Ultima Ubicacion</h4>
+                  <h4>Ultima Ubicacion</h4>
                   <Show when={selectedVehicle().location_updated}>
                     <p class={styles.locationTime}>
                       Guardada {timeAgo(selectedVehicle().location_updated)}
@@ -318,7 +313,9 @@ export function GarageApp() {
                       <For each={locationHistory().slice(0, 5)}>
                         {(loc) => (
                           <div class={styles.historyItem}>
-                            <span class={styles.historyDot}>📍</span>
+                            <span class={styles.historyDot}>
+                              <img src="./img/icons_ios/ui-location.svg" alt="" />
+                            </span>
                             <span class={styles.historyTime}>{timeAgo(loc.created_at)}</span>
                           </div>
                         )}
@@ -332,7 +329,7 @@ export function GarageApp() {
               <Show when={!selectedVehicle().impounded}>
                 <div class={styles.detailActions}>
                   <button class={styles.requestBtn} onClick={() => requestVehicle(selectedVehicle().plate)}>
-                    🚗 Solicitar Vehiculo
+                    Solicitar Vehiculo
                   </button>
                 </div>
               </Show>
