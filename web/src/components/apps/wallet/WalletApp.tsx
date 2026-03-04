@@ -111,13 +111,17 @@ export function WalletApp() {
     <div class="ios-page">
       <div class="ios-nav">
         <button class="ios-icon-btn" onClick={() => router.goBack()}>‹</button>
-        <div class="ios-nav-title">Wallet</div>
+        <div class="ios-nav-title">Wallet Elite</div>
       </div>
 
       <div class="ios-content">
         <div class={styles.balanceCard}>
           <span>Saldo disponible</span>
           <strong>${balance().toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+          <div class={styles.metaRow}>
+            <span>Tarjetas</span>
+            <b>{cards().length}</b>
+          </div>
           <div class={styles.actions}>
             <button class="ios-btn ios-btn-primary" onClick={() => void transfer()}>Transferir</button>
             <button class="ios-btn" onClick={() => void proximityTransfer('qr')}>Pagar QR</button>
