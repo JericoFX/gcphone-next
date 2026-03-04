@@ -917,6 +917,30 @@ local MIGRATIONS = {
                 KEY `idx_buyer` (`buyer_identifier`),
                 KEY `idx_seller` (`seller_identifier`),
                 KEY `idx_created` (`created_at`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci]],
+            
+            -- Garage location tables
+            [[CREATE TABLE IF NOT EXISTS `phone_garage_locations` (
+                `id` INT AUTO_INCREMENT PRIMARY KEY,
+                `identifier` VARCHAR(50) NOT NULL,
+                `plate` VARCHAR(10) NOT NULL,
+                `location_x` FLOAT NOT NULL,
+                `location_y` FLOAT NOT NULL,
+                `location_z` FLOAT NOT NULL,
+                `location_updated` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                UNIQUE KEY `idx_garage_loc` (`identifier`, `plate`),
+                KEY `idx_updated` (`location_updated`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci]],
+            
+            [[CREATE TABLE IF NOT EXISTS `phone_garage_location_history` (
+                `id` INT AUTO_INCREMENT PRIMARY KEY,
+                `identifier` VARCHAR(50) NOT NULL,
+                `plate` VARCHAR(10) NOT NULL,
+                `location_x` FLOAT NOT NULL,
+                `location_y` FLOAT NOT NULL,
+                `location_z` FLOAT NOT NULL,
+                `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                KEY `idx_garage_hist` (`identifier`, `plate`, `created_at`)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci]]
         }
     }

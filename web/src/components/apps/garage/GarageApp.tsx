@@ -1,83 +1,373 @@
-import { createEffect, createSignal, For, onCleanup } from 'solid-js';
+import { For, Show, createEffect, createSignal, onCleanup } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { fetchNui } from '../../../utils/fetchNui';
+import { timeAgo } from '../../../utils/misc';
+import { AppScaffold } from '../../shared/layout';
+import { useAppCache } from '../../../hooks';
+import { Modal, ModalActions, ModalButton } from '../../shared/ui/Modal';
 import styles from './GarageApp.module.scss';
 
-interface GarageVehicle {
+interface Vehicle {
+  id?: number;
   plate: string;
+  model: string;
   model_name?: string;
   garage_name?: string;
-  impounded?: boolean;
+  impounded: number;
+  properties?: any;
+  location_x?: number;
+  location_y?: number;
+  location_z?: number;
+  location_updated?: string;
+  has_location: number;
+}
+
+interface LocationHistory {
+  id: number;
+  location_x: number;
+  location_y: number;
+  location_z: number;
+  created_at: string;
 }
 
 export function GarageApp() {
   const router = useRouter();
-  const [vehicles, setVehicles] = createSignal<GarageVehicle[]>([]);
+  const cache = useAppCache('garage');
+
+  // Data
+  const [vehicles, setVehicles] = createSignal<Vehicle[]>([]);
+  const [selectedVehicle, setSelectedVehicle] = createSignal<Vehicle | null>(null);
+  const [locationHistory, setLocationHistory] = createSignal<LocationHistory[]>([]);
+
+  // Filters
+  const [filter, setFilter] = createSignal<'all' | 'garage' | 'impounded'>('all');
+  const [searchQuery, setSearchQuery] = createSignal('');
+
+  // UI State
+  const [loading, setLoading] = createSignal(false);
+  const [showShareModal, setShowShareModal] = createSignal(false);
+  const [showLocationModal, setShowLocationModal] = createSignal(false);
   const [sharePhone, setSharePhone] = createSignal('');
 
-  const load = async () => {
-    const result = await fetchNui<GarageVehicle[]>('garageGetVehicles', {}, []);
-    setVehicles(result || []);
+  const loadVehicles = async () => {
+    setLoading(true);
+    const cached = cache.get<Vehicle[]>('garage:vehicles');
+    const list = cached ?? await fetchNui<Vehicle[]>('garageGetVehicles', {}, []);
+    if (!cached) cache.set('garage:vehicles', list || [], 60000);
+    setVehicles(list || []);
+    setLoading(false);
   };
 
   createEffect(() => {
-    void load();
+    void loadVehicles();
   });
 
   createEffect(() => {
     const onKey = (e: CustomEvent<string>) => {
-      if (e.detail === 'Backspace') router.goBack();
+      if (e.detail === 'Backspace') {
+        if (showShareModal()) {
+          setShowShareModal(false);
+          return;
+        }
+        if (showLocationModal()) {
+          setShowLocationModal(false);
+          return;
+        }
+        if (selectedVehicle()) {
+          setSelectedVehicle(null);
+          setLocationHistory([]);
+          return;
+        }
+        router.goBack();
+      }
     };
     window.addEventListener('phone:keyUp', onKey as EventListener);
     onCleanup(() => window.removeEventListener('phone:keyUp', onKey as EventListener));
   });
 
-  const requestVehicle = async (plate: string) => {
-    await fetchNui('garageRequestVehicle', { plate });
+  const filteredVehicles = () => {
+    let list = vehicles();
+    
+    // Apply filter
+    if (filter() === 'garage') {
+      list = list.filter(v => !v.impounded);
+    } else if (filter() === 'impounded') {
+      list = list.filter(v => v.impounded);
+    }
+    
+    // Apply search
+    if (searchQuery()) {
+      const q = searchQuery().toLowerCase();
+      list = list.filter(v => 
+        v.plate.toLowerCase().includes(q) ||
+        (v.model_name || '').toLowerCase().includes(q)
+      );
+    }
+    
+    return list;
   };
 
-  const shareLocation = async (plate: string) => {
-    if (!sharePhone().trim()) return;
+  const openVehicle = async (vehicle: Vehicle) => {
+    setSelectedVehicle(vehicle);
+    
+    if (vehicle.has_location) {
+      const history = await fetchNui<LocationHistory[]>('garageGetLocationHistory', vehicle.plate, []);
+      setLocationHistory(history || []);
+    }
+  };
+
+  const requestVehicle = async (plate: string) => {
+    const result = await fetchNui<{ success?: boolean; error?: string }>('garageRequestVehicle', plate);
+    if (!result?.success) {
+      alert(result?.error || 'No se pudo solicitar el vehiculo');
+    }
+  };
+
+  const shareLocation = async () => {
+    const vehicle = selectedVehicle();
+    if (!vehicle || !sharePhone().trim()) return;
+    
     await fetchNui('garageShareLocation', {
+      plate: vehicle.plate,
       phoneNumber: sharePhone().trim(),
-      x: 0,
-      y: 0,
-      z: 0,
-      message: `Ubicacion del vehiculo ${plate}`
+      x: vehicle.location_x,
+      y: vehicle.location_y,
+      z: vehicle.location_z
     });
+    
     setSharePhone('');
+    setShowShareModal(false);
+    alert('Ubicacion compartida');
+  };
+
+  const viewOnMap = () => {
+    const vehicle = selectedVehicle();
+    if (!vehicle || !vehicle.location_x) return;
+    
+    router.navigate('maps', {
+      x: vehicle.location_x,
+      y: vehicle.location_y,
+      z: vehicle.location_z,
+      label: vehicle.model_name || vehicle.plate
+    });
+  };
+
+  const getVehicleIcon = (modelName?: string) => {
+    if (!modelName) return '🚗';
+    const name = modelName.toLowerCase();
+    if (name.includes('motor') || name.includes('bike')) return '🏍';
+    if (name.includes('truck') || name.includes('camion')) return '🚚';
+    if (name.includes('boat') || name.includes('barco')) return '🚤';
+    if (name.includes('heli') || name.includes('helicoptero')) return '🚁';
+    if (name.includes('plane') || name.includes('avion')) return '✈';
+    if (name.includes('sport') || name.includes('deportivo')) return '🏎';
+    if (name.includes('suv') || name.includes('jeep')) return '🚙';
+    return '🚗';
   };
 
   return (
-    <div class={styles.app}>
-      <div class={styles.header}>
-        <button class={styles.backBtn} onClick={() => router.goBack()}>‹</button>
-        <h1>Garage</h1>
-      </div>
+    <AppScaffold title="Garage" subtitle="Tus vehiculos" onBack={() => router.goBack()} bodyClass={styles.body}>
+      <div class={styles.garageApp}>
+        {/* Search */}
+        <div class={styles.searchSection}>
+          <div class={styles.searchBar}>
+            <input
+              type="text"
+              placeholder="Buscar por placa o modelo..."
+              value={searchQuery()}
+              onInput={(e) => setSearchQuery(e.currentTarget.value)}
+            />
+          </div>
+        </div>
 
-      <div class={styles.shareBar}>
-        <input
-          type="text"
-          placeholder="Numero para compartir"
-          value={sharePhone()}
-          onInput={(e) => setSharePhone(e.currentTarget.value)}
-        />
-      </div>
+        {/* Filters */}
+        <div class={styles.filters}>
+          <button
+            class={styles.filterBtn}
+            classList={{ [styles.active]: filter() === 'all' }}
+            onClick={() => setFilter('all')}
+          >
+            Todos
+          </button>
+          <button
+            class={styles.filterBtn}
+            classList={{ [styles.active]: filter() === 'garage' }}
+            onClick={() => setFilter('garage')}
+          >
+            En Garage
+          </button>
+          <button
+            class={styles.filterBtn}
+            classList={{ [styles.active]: filter() === 'impounded' }}
+            onClick={() => setFilter('impounded')}
+          >
+            Depositados
+          </button>
+        </div>
 
-      <div class={styles.list}>
-        <For each={vehicles()}>
-          {(vehicle) => (
-            <article class={styles.card}>
-              <strong>{vehicle.model_name || 'Vehiculo'} · {vehicle.plate}</strong>
-              <p>{vehicle.garage_name || 'Sin ubicacion'} {vehicle.impounded ? '(Depositado)' : ''}</p>
-              <div class={styles.actions}>
-                <button onClick={() => requestVehicle(vehicle.plate)}>Solicitar</button>
-                <button class={styles.primary} onClick={() => shareLocation(vehicle.plate)}>Compartir</button>
+        {/* Vehicle List */}
+        <div class={styles.vehicleList}>
+          <Show when={loading() && vehicles().length === 0}>
+            <div class={styles.loading}>Cargando vehiculos...</div>
+          </Show>
+          
+          <For each={filteredVehicles()}>
+            {(vehicle) => (
+              <div class={styles.vehicleCard} onClick={() => openVehicle(vehicle)}>
+                <div class={styles.vehicleIcon}>
+                  <span>{getVehicleIcon(vehicle.model_name)}</span>
+                </div>
+                
+                <div class={styles.vehicleInfo}>
+                  <h3 class={styles.vehicleName}>{vehicle.model_name || 'Vehiculo'}</h3>
+                  <span class={styles.vehiclePlate}>{vehicle.plate}</span>
+                  
+                  <div class={styles.vehicleStatus}>
+                    <Show when={vehicle.impounded}>
+                      <span class={styles.impoundedBadge}>🚨 En Deposito</span>
+                    </Show>
+                    <Show when={!vehicle.impounded}>
+                      <span class={styles.garageBadge}>✓ {vehicle.garage_name || 'Garage'}</span>
+                    </Show>
+                  </div>
+                  
+                  <Show when={vehicle.has_location}>
+                    <span class={styles.locationBadge}>📍 Ubicacion guardada</span>
+                  </Show>
+                </div>
+                
+                <div class={styles.vehicleArrow}>›</div>
               </div>
-            </article>
-          )}
-        </For>
+            )}
+          </For>
+          
+          <Show when={!loading() && filteredVehicles().length === 0}>
+            <div class={styles.emptyState}>
+              <p>No hay vehiculos</p>
+              <p class={styles.emptyHint}>Los vehiculos apareceran aqui cuando los guardes</p>
+            </div>
+          </Show>
+        </div>
+
+        {/* Vehicle Detail Modal */}
+        <Show when={selectedVehicle()}>
+          <div class={styles.detailModal}>
+            <button class={styles.closeBtn} onClick={() => { setSelectedVehicle(null); setLocationHistory([]); }}>
+              ✕
+            </button>
+            
+            <div class={styles.detailContent}>
+              {/* Vehicle Header */}
+              <div class={styles.detailHeader}>
+                <div class={styles.detailIcon}>
+                  <span>{getVehicleIcon(selectedVehicle().model_name)}</span>
+                </div>
+                <div class={styles.detailTitle}>
+                  <h2>{selectedVehicle().model_name || 'Vehiculo'}</h2>
+                  <span class={styles.detailPlate}>{selectedVehicle().plate}</span>
+                </div>
+              </div>
+              
+              {/* Status */}
+              <div class={styles.statusCard}>
+                <Show when={selectedVehicle().impounded}>
+                  <div class={styles.statusImpounded}>
+                    <span>🚨</span>
+                    <div>
+                      <strong>Vehiculo en deposito</strong>
+                      <p>Debes pagar la multa para recuperarlo</p>
+                    </div>
+                  </div>
+                </Show>
+                <Show when={!selectedVehicle().impounded}>
+                  <div class={styles.statusGarage}>
+                    <span>✓</span>
+                    <div>
+                      <strong>En {selectedVehicle().garage_name || 'Garage'}</strong>
+                      <p>Vehiculo disponible</p>
+                    </div>
+                  </div>
+                </Show>
+              </div>
+              
+              {/* Location Info */}
+              <Show when={selectedVehicle().has_location}>
+                <div class={styles.locationCard}>
+                  <h4>📍 Ultima Ubicacion</h4>
+                  <Show when={selectedVehicle().location_updated}>
+                    <p class={styles.locationTime}>
+                      Guardada {timeAgo(selectedVehicle().location_updated)}
+                    </p>
+                  </Show>
+                  
+                  <div class={styles.locationActions}>
+                    <button class={styles.mapBtn} onClick={viewOnMap}>
+                      Ver en Mapa
+                    </button>
+                    <button class={styles.shareBtn} onClick={() => setShowShareModal(true)}>
+                      Compartir
+                    </button>
+                  </div>
+                </div>
+                
+                {/* Location History */}
+                <Show when={locationHistory().length > 0}>
+                  <div class={styles.historySection}>
+                    <h4>Historial de Ubicaciones</h4>
+                    <div class={styles.historyList}>
+                      <For each={locationHistory().slice(0, 5)}>
+                        {(loc) => (
+                          <div class={styles.historyItem}>
+                            <span class={styles.historyDot}>📍</span>
+                            <span class={styles.historyTime}>{timeAgo(loc.created_at)}</span>
+                          </div>
+                        )}
+                      </For>
+                    </div>
+                  </div>
+                </Show>
+              </Show>
+              
+              {/* Actions */}
+              <Show when={!selectedVehicle().impounded}>
+                <div class={styles.detailActions}>
+                  <button class={styles.requestBtn} onClick={() => requestVehicle(selectedVehicle().plate)}>
+                    🚗 Solicitar Vehiculo
+                  </button>
+                </div>
+              </Show>
+            </div>
+          </div>
+        </Show>
+
+        {/* Share Modal */}
+        <Modal
+          open={showShareModal()}
+          title="Compartir Ubicacion"
+          onClose={() => setShowShareModal(false)}
+          size="sm"
+        >
+          <div class={styles.shareContent}>
+            <p>Enviar ubicacion del vehiculo a:</p>
+            <input
+              type="text"
+              placeholder="Numero de telefono"
+              value={sharePhone()}
+              onInput={(e) => setSharePhone(e.currentTarget.value)}
+            />
+          </div>
+          
+          <ModalActions>
+            <ModalButton label="Cancelar" onClick={() => setShowShareModal(false)} />
+            <ModalButton 
+              label="Compartir"
+              onClick={() => void shareLocation()}
+              tone="primary"
+              disabled={!sharePhone().trim()}
+            />
+          </ModalActions>
+        </Modal>
       </div>
-    </div>
+    </AppScaffold>
   );
 }
