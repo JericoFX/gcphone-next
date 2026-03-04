@@ -53,6 +53,7 @@ server_scripts {
     'server/modules/snap.lua',
     'server/modules/garage.lua',
     'server/modules/market.lua',
+    'server/modules/yellowpages.lua',
     'server/modules/news.lua',
     'server/modules/clips.lua',
     'server/modules/proximity.lua',

@@ -885,6 +885,40 @@ local MIGRATIONS = {
                 SET `likes` = (SELECT COUNT(*) FROM `phone_clips_likes` WHERE `clip_id` = OLD.`clip_id`)
                 WHERE `id` = OLD.`clip_id`]]
         }
+    },
+    
+    {
+        version = 8,
+        name = "yellowpages_enhanced",
+        description = "Add seller info and contact features to YellowPages",
+        statements = {
+            -- Add seller info columns to phone_market
+            [[ALTER TABLE `phone_market` 
+                ADD COLUMN IF NOT EXISTS `seller_name` VARCHAR(100) DEFAULT NULL AFTER `phone_number`,
+                ADD COLUMN IF NOT EXISTS `seller_avatar` VARCHAR(255) DEFAULT NULL AFTER `seller_name`,
+                ADD COLUMN IF NOT EXISTS `location_shared` TINYINT(1) DEFAULT 0 AFTER `seller_avatar`,
+                ADD COLUMN IF NOT EXISTS `location_x` FLOAT DEFAULT NULL AFTER `location_shared`,
+                ADD COLUMN IF NOT EXISTS `location_y` FLOAT DEFAULT NULL AFTER `location_x`,
+                ADD COLUMN IF NOT EXISTS `location_z` FLOAT DEFAULT NULL AFTER `location_y`]],
+            
+            -- Index for seller lookups
+            [[CREATE INDEX IF NOT EXISTS `idx_market_seller` ON `phone_market` (`identifier`, `created_at`)]],
+            [[CREATE INDEX IF NOT EXISTS `idx_market_location` ON `phone_market` (`location_shared`, `location_x`, `location_y`)]],
+            
+            -- YellowPages contact history table
+            [[CREATE TABLE IF NOT EXISTS `phone_yellowpages_contacts` (
+                `id` INT AUTO_INCREMENT PRIMARY KEY,
+                `listing_id` INT NOT NULL,
+                `buyer_identifier` VARCHAR(50) NOT NULL,
+                `seller_identifier` VARCHAR(50) NOT NULL,
+                `contact_type` ENUM('call', 'message') NOT NULL,
+                `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (`listing_id`) REFERENCES `phone_market`(`id`) ON DELETE CASCADE,
+                KEY `idx_buyer` (`buyer_identifier`),
+                KEY `idx_seller` (`seller_identifier`),
+                KEY `idx_created` (`created_at`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci]]
+        }
     }
 }
 

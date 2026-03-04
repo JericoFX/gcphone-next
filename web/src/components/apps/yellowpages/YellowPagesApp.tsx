@@ -1,135 +1,555 @@
 import { For, Show, createEffect, createSignal, onCleanup } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { fetchNui } from '../../../utils/fetchNui';
+import { timeAgo } from '../../../utils/misc';
 import { sanitizeMediaUrl, sanitizeText } from '../../../utils/sanitize';
+import { AppScaffold } from '../../shared/layout';
+import { useAppCache } from '../../../hooks';
 import { MediaLightbox } from '../../shared/ui/MediaLightbox';
+import { Modal, ModalActions, ModalButton } from '../../shared/ui/Modal';
 import styles from './YellowPagesApp.module.scss';
 
 interface Listing {
   id: number;
+  identifier?: string;
+  phone_number?: string;
+  seller_name?: string;
+  seller_avatar?: string;
   title: string;
   description?: string;
   price: number;
   category: string;
   photos?: string[] | string;
+  views?: number;
+  location_shared?: number;
+  location_x?: number;
+  location_y?: number;
+  location_z?: number;
+  created_at?: string;
+  is_own?: boolean;
+}
+
+interface Category {
+  id: string;
+  name: string;
+  icon: string;
+}
+
+interface SellerInfo {
+  identifier: string;
+  phone_number: string;
+  seller_name: string;
+  seller_avatar?: string;
+  location_shared: number;
+  location_x?: number;
+  location_y?: number;
+  location_z?: number;
 }
 
 export function YellowPagesApp() {
   const router = useRouter();
+  const cache = useAppCache('yellowpages');
+
+  // Data
   const [listings, setListings] = createSignal<Listing[]>([]);
+  const [categories, setCategories] = createSignal<Category[]>([]);
+  const [selectedListing, setSelectedListing] = createSignal<Listing | null>(null);
+  const [sellerInfo, setSellerInfo] = createSignal<SellerInfo | null>(null);
+
+  // Tabs and filters
+  const [currentTab, setCurrentTab] = createSignal<'all' | 'my'>('all');
+  const [selectedCategory, setSelectedCategory] = createSignal('all');
+  const [searchQuery, setSearchQuery] = createSignal('');
+
+  // UI State
+  const [loading, setLoading] = createSignal(false);
   const [showComposer, setShowComposer] = createSignal(false);
-  const [title, setTitle] = createSignal('');
-  const [description, setDescription] = createSignal('');
-  const [price, setPrice] = createSignal('0');
-  const [category, setCategory] = createSignal('items');
-  const [photoUrl, setPhotoUrl] = createSignal('');
+  const [showContactModal, setShowContactModal] = createSignal(false);
   const [viewerUrl, setViewerUrl] = createSignal<string | null>(null);
 
-  const load = async () => {
-    const next = await fetchNui<Listing[]>('marketGetListings', { category: 'all', limit: 50, offset: 0 }, []);
-    setListings(next || []);
+  // Composer
+  const [title, setTitle] = createSignal('');
+  const [description, setDescription] = createSignal('');
+  const [price, setPrice] = createSignal('');
+  const [composerCategory, setComposerCategory] = createSignal('items');
+  const [photos, setPhotos] = createSignal<string[]>([]);
+
+  const loadCategories = async () => {
+    const cats = await fetchNui<Category[]>('yellowpagesGetCategories', {}, []);
+    setCategories(cats || []);
+  };
+
+  const loadListings = async () => {
+    setLoading(true);
+    
+    const cacheKey = `yellowpages:${currentTab()}:${selectedCategory()}:${searchQuery()}`;
+    const cached = cache.get<Listing[]>(cacheKey);
+    
+    let list: Listing[];
+    if (cached) {
+      list = cached;
+    } else if (currentTab() === 'my') {
+      list = await fetchNui<Listing[]>('yellowpagesGetMyListings', { limit: 50, offset: 0 }, []);
+    } else {
+      list = await fetchNui<Listing[]>('yellowpagesGetListings', {
+        category: selectedCategory(),
+        search: searchQuery(),
+        limit: 50,
+        offset: 0
+      }, []);
+    }
+    
+    if (!cached) cache.set(cacheKey, list || [], 30000);
+    setListings(list || []);
+    setLoading(false);
   };
 
   createEffect(() => {
-    void load();
+    void loadCategories();
+    void loadListings();
   });
 
   createEffect(() => {
-    const onKey = (event: CustomEvent<string>) => {
-      if (event.detail === 'Backspace') {
-        if (showComposer()) setShowComposer(false);
-        else router.goBack();
+    const onKey = (e: CustomEvent<string>) => {
+      if (e.detail === 'Backspace') {
+        if (showContactModal()) {
+          setShowContactModal(false);
+          return;
+        }
+        if (selectedListing()) {
+          setSelectedListing(null);
+          setSellerInfo(null);
+          return;
+        }
+        if (showComposer()) {
+          setShowComposer(false);
+          return;
+        }
+        router.goBack();
       }
     };
     window.addEventListener('phone:keyUp', onKey as EventListener);
     onCleanup(() => window.removeEventListener('phone:keyUp', onKey as EventListener));
   });
 
+  const getCategoryIcon = (catId: string) => {
+    const cat = categories().find(c => c.id === catId);
+    return cat?.icon || '📋';
+  };
+
+  const getCategoryName = (catId: string) => {
+    const cat = categories().find(c => c.id === catId);
+    return cat?.name || 'Otros';
+  };
+
+  const openListing = async (listing: Listing) => {
+    setSelectedListing(listing);
+    const info = await fetchNui<SellerInfo>('yellowpagesGetSellerInfo', listing.id);
+    setSellerInfo(info);
+  };
+
+  const contactSeller = async (type: 'call' | 'message') => {
+    const listing = selectedListing();
+    const seller = sellerInfo();
+    if (!listing || !seller) return;
+
+    // Record contact
+    await fetchNui('yellowpagesRecordContact', {
+      listingId: listing.id,
+      sellerId: seller.identifier,
+      contactType: type
+    });
+
+    if (type === 'call') {
+      // Navigate to calls app with number
+      router.navigate('calls', { number: seller.phone_number });
+    } else {
+      // Navigate to messages app
+      router.navigate('messages', { number: seller.phone_number });
+    }
+    
+    setShowContactModal(false);
+  };
+
+  const viewLocation = () => {
+    const listing = selectedListing();
+    if (!listing || !listing.location_shared || !listing.location_x) return;
+    
+    router.navigate('maps', {
+      x: listing.location_x,
+      y: listing.location_y,
+      z: listing.location_z
+    });
+  };
+
   const publish = async () => {
     const payload = {
       title: sanitizeText(title(), 100),
       description: sanitizeText(description(), 1000),
       price: Number(price() || 0),
-      category: sanitizeText(category(), 30) || 'items',
-      photos: sanitizeMediaUrl(photoUrl()) ? [sanitizeMediaUrl(photoUrl())] : [],
+      category: composerCategory(),
+      photos: photos()
     };
-    if (!payload.title) return;
+    
+    if (!payload.title) {
+      alert('El titulo es obligatorio');
+      return;
+    }
 
-    const result = await fetchNui<{ success?: boolean }>('marketCreateListing', payload);
-    if (!result?.success) return;
+    setLoading(true);
+    const result = await fetchNui<{ success?: boolean; listing?: Listing }>('yellowpagesCreateListing', payload);
+    setLoading(false);
+    
+    if (!result?.success) {
+      alert('Error al publicar');
+      return;
+    }
 
+    // Reset form
     setShowComposer(false);
     setTitle('');
     setDescription('');
-    setPrice('0');
-    setPhotoUrl('');
-    await load();
+    setPrice('');
+    setPhotos([]);
+    
+    // Refresh listings
+    cache.invalidate();
+    await loadListings();
   };
 
-  const attachFromCamera = async () => {
-    const shot = await fetchNui<{ url?: string }>('takePhoto', {} as any, { url: '' } as any);
-    if (shot?.url) {
-      const next = sanitizeMediaUrl(shot.url);
-      if (next) setPhotoUrl(next);
-    }
+  const deleteListing = async (id: number) => {
+    if (!confirm('¿Eliminar este anuncio?')) return;
+    
+    await fetchNui('yellowpagesDeleteListing', id);
+    cache.invalidate();
+    await loadListings();
   };
 
-  const attachFromGallery = async () => {
+  const addPhoto = async () => {
     const gallery = await fetchNui<any[]>('getGallery', undefined, []);
-    if (gallery && gallery.length > 0) {
-      const next = sanitizeMediaUrl(gallery[0].url);
-      if (next) setPhotoUrl(next);
+    if (gallery?.[0]?.url) {
+      const url = sanitizeMediaUrl(gallery[0].url);
+      if (url && photos().length < 5) {
+        setPhotos([...photos(), url]);
+      }
     }
+  };
+
+  const removePhoto = (index: number) => {
+    setPhotos(photos().filter((_, i) => i !== index));
   };
 
   return (
-    <div class={styles.app}>
-      <div class={styles.header}>
-        <button class={styles.backBtn} onClick={() => router.goBack()}>‹</button>
-        <h1>Paginas Amarillas</h1>
-        <button class={styles.addBtn} onClick={() => setShowComposer(true)}>+</button>
-      </div>
-
-      <div class={styles.list}>
-        <For each={listings()}>
-          {(listing) => (
-            <article class={styles.card}>
-              <strong>{listing.title}</strong>
-              <Show when={Array.isArray(listing.photos) ? listing.photos[0] : undefined}>
-                <img class={styles.photo} src={(Array.isArray(listing.photos) ? listing.photos[0] : '') as string} alt="foto" onClick={() => setViewerUrl((Array.isArray(listing.photos) ? listing.photos[0] : '') as string)} />
-              </Show>
-              <p>{listing.description || 'Sin descripcion'}</p>
-              <div class={styles.meta}>
-                <span>{listing.category}</span>
-                <span>${listing.price}</span>
-              </div>
-            </article>
-          )}
-        </For>
-      </div>
-
-      <MediaLightbox url={viewerUrl()} onClose={() => setViewerUrl(null)} />
-
-      <Show when={showComposer()}>
-        <div class={styles.modal}>
-          <div class={styles.modalContent}>
-            <h2>Nueva publicacion</h2>
-            <input type="text" placeholder="Titulo" value={title()} onInput={(e) => setTitle(e.currentTarget.value)} />
-            <textarea placeholder="Descripcion" value={description()} onInput={(e) => setDescription(e.currentTarget.value)} />
-            <input type="number" placeholder="Precio" value={price()} onInput={(e) => setPrice(e.currentTarget.value)} />
-            <input type="text" placeholder="Categoria" value={category()} onInput={(e) => setCategory(e.currentTarget.value)} />
-            <div class={styles.photoRow}>
-              <input type="text" placeholder="URL foto" value={photoUrl()} onInput={(e) => setPhotoUrl(e.currentTarget.value)} />
-              <button onClick={() => void attachFromCamera()}>Camara</button>
-              <button onClick={() => void attachFromGallery()}>Galeria</button>
-            </div>
-            <div class={styles.actions}>
-              <button onClick={() => setShowComposer(false)}>Cancelar</button>
-              <button class={styles.primary} onClick={publish}>Publicar</button>
-            </div>
+    <AppScaffold title="Paginas Amarillas" subtitle="Compra, vende, conecta" onBack={() => router.goBack()} bodyClass={styles.body}>
+      <div class={styles.yellowpagesApp}>
+        {/* Header with Search */}
+        <div class={styles.header}>
+          <div class={styles.searchBar}>
+            <input
+              type="text"
+              placeholder="Buscar anuncios..."
+              value={searchQuery()}
+              onInput={(e) => setSearchQuery(e.currentTarget.value)}
+              onKeyDown={(e) => e.key === 'Enter' && loadListings()}
+            />
+            <button class={styles.searchBtn} onClick={() => loadListings()}>🔍</button>
+          </div>
+          
+          {/* Category Filter */}
+          <div class={styles.categoryFilter}>
+            <For each={categories()}>
+              {(cat) => (
+                <button
+                  class={styles.categoryChip}
+                  classList={{ [styles.active]: selectedCategory() === cat.id }}
+                  onClick={() => setSelectedCategory(cat.id)}
+                >
+                  <span class={styles.catIcon}>{cat.icon}</span>
+                  <span class={styles.catName}>{cat.name}</span>
+                </button>
+              )}
+            </For>
           </div>
         </div>
-      </Show>
-    </div>
+
+        {/* Tabs */}
+        <div class={styles.tabs}>
+          <button
+            class={styles.tabBtn}
+            classList={{ [styles.active]: currentTab() === 'all' }}
+            onClick={() => setCurrentTab('all')}
+          >
+            Todos
+          </button>
+          <button
+            class={styles.tabBtn}
+            classList={{ [styles.active]: currentTab() === 'my' }}
+            onClick={() => setCurrentTab('my')}
+          >
+            Mis Anuncios
+          </button>
+        </div>
+
+        {/* Listings */}
+        <div class={styles.listingsGrid}>
+          <Show when={loading() && listings().length === 0}>
+            <div class={styles.loading}>Cargando...</div>
+          </Show>
+          
+          <For each={listings()}>
+            {(listing) => (
+              <div class={styles.listingCard} onClick={() => openListing(listing)}>
+                <div class={styles.cardImage}>
+                  <Show when={Array.isArray(listing.photos) && listing.photos.length > 0}>
+                    <img src={listing.photos[0]} alt="" />
+                  </Show>
+                  <div class={styles.categoryBadge}>
+                    <span>{getCategoryIcon(listing.category)}</span>
+                  </div>
+                  <Show when={listing.is_own}>
+                    <button 
+                      class={styles.deleteBtn}
+                      onClick={(e) => { e.stopPropagation(); deleteListing(listing.id); }}
+                    >
+                      ✕
+                    </button>
+                  </Show>
+                </div>
+                
+                <div class={styles.cardContent}>
+                  <h3 class={styles.cardTitle}>{listing.title}</h3>
+                  <p class={styles.cardDesc}>{listing.description || 'Sin descripcion'}</p>
+                  
+                  <div class={styles.cardMeta}>
+                    <span class={styles.price}>${listing.price.toLocaleString()}</span>
+                    <span class={styles.views}>👁 {listing.views || 0}</span>
+                  </div>
+                  
+                  <div class={styles.cardFooter}>
+                    <span class={styles.category}>{getCategoryName(listing.category)}</span>
+                    <span class={styles.time}>{listing.created_at ? timeAgo(listing.created_at) : ''}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </For>
+          
+          <Show when={!loading() && listings().length === 0}>
+            <div class={styles.emptyState}>
+              <p>No hay anuncios</p>
+              <p class={styles.emptyHint}>¡Sé el primero en publicar!</p>
+            </div>
+          </Show>
+        </div>
+
+        {/* FAB */}
+        <button class={styles.fab} onClick={() => setShowComposer(true)}>
+          <span>+</span>
+        </button>
+
+        {/* Listing Detail Modal */}
+        <Show when={selectedListing()}>
+          <div class={styles.detailModal}>
+            <button class={styles.closeBtn} onClick={() => { setSelectedListing(null); setSellerInfo(null); }}>
+              ✕
+            </button>
+            
+            <div class={styles.detailContent}>
+              <Show when={Array.isArray(selectedListing()?.photos) && selectedListing().photos.length > 0}>
+                <div class={styles.detailImage}>
+                  <img 
+                    src={selectedListing().photos[0]} 
+                    alt="" 
+                    onClick={() => setViewerUrl(selectedListing().photos[0])}
+                  />
+                  <Show when={selectedListing().photos.length > 1}>
+                    <div class={styles.photoCount}>+{selectedListing().photos.length - 1} fotos</div>
+                  </Show>
+                </div>
+              </Show>
+              
+              <div class={styles.detailInfo}>
+                <span class={styles.detailCategory}>
+                  {getCategoryIcon(selectedListing().category)} {getCategoryName(selectedListing().category)}
+                </span>
+                <h2 class={styles.detailTitle}>{selectedListing().title}</h2>
+                <p class={styles.detailDesc}>{selectedListing().description || 'Sin descripcion'}</p>
+                
+                <div class={styles.detailPrice}>
+                  <span class={styles.priceLabel}>Precio</span>
+                  <span class={styles.priceValue}>${selectedListing().price.toLocaleString()}</span>
+                </div>
+                
+                <div class={styles.detailMeta}>
+                  <span>👁 {selectedListing().views || 0} visitas</span>
+                  <span>•</span>
+                  <span>Publicado {selectedListing().created_at ? timeAgo(selectedListing().created_at) : ''}</span>
+                </div>
+              </div>
+              
+              {/* Seller Info */}
+              <Show when={sellerInfo()}>
+                <div class={styles.sellerSection}>
+                  <h4>Vendedor</h4>
+                  <div class={styles.sellerCard}>
+                    <div class={styles.sellerAvatar}>
+                      {sellerInfo().seller_avatar ? (
+                        <img src={sellerInfo().seller_avatar} alt="" />
+                      ) : (
+                        <span>{(sellerInfo().seller_name || 'U').charAt(0).toUpperCase()}</span>
+                      )}
+                    </div>
+                    <div class={styles.sellerInfo}>
+                      <strong>{sellerInfo().seller_name || 'Vendedor'}</strong>
+                      <span>📞 {sellerInfo().phone_number || 'Sin teléfono'}</span>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Contact Buttons */}
+                <Show when={!selectedListing()?.is_own}>
+                  <div class={styles.contactButtons}>
+                    <button 
+                      class={styles.contactBtn}
+                      onClick={() => setShowContactModal(true)}
+                    >
+                      📞 Contactar
+                    </button>
+                    <Show when={selectedListing()?.location_shared}>
+                      <button 
+                        class={styles.locationBtn}
+                        onClick={viewLocation}
+                      >
+                        📍 Ver ubicacion
+                      </button>
+                    </Show>
+                  </div>
+                </Show>
+              </Show>
+            </div>
+          </div>
+        </Show>
+
+        {/* Contact Modal */}
+        <Modal
+          open={showContactModal()}
+          title="Contactar Vendedor"
+          onClose={() => setShowContactModal(false)}
+          size="sm"
+        >
+          <div class={styles.contactOptions}>
+            <button class={styles.contactOption} onClick={() => contactSeller('call')}>
+              <span class={styles.contactIcon}>📞</span>
+              <div class={styles.contactInfo}>
+                <strong>Llamar</strong>
+                <span>{sellerInfo()?.phone_number}</span>
+              </div>
+            </button>
+            
+            <button class={styles.contactOption} onClick={() => contactSeller('message')}>
+              <span class={styles.contactIcon}>💬</span>
+              <div class={styles.contactInfo}>
+                <strong>Enviar mensaje</strong>
+                <span>Chat privado</span>
+              </div>
+            </button>
+          </div>
+          
+          <ModalActions>
+            <ModalButton label="Cancelar" onClick={() => setShowContactModal(false)} />
+          </ModalActions>
+        </Modal>
+
+        {/* Composer Modal */}
+        <Modal
+          open={showComposer()}
+          title="Nuevo Anuncio"
+          onClose={() => setShowComposer(false)}
+          size="md"
+        >
+          <div class={styles.composerContent}>
+            <div class={styles.formField}>
+              <label>Titulo *</label>
+              <input
+                type="text"
+                placeholder="Ej: Auto deportivo en venta"
+                value={title()}
+                onInput={(e) => setTitle(e.currentTarget.value)}
+                maxlength={100}
+              />
+            </div>
+            
+            <div class={styles.formField}>
+              <label>Descripcion</label>
+              <textarea
+                placeholder="Describe tu producto o servicio..."
+                value={description()}
+                onInput={(e) => setDescription(e.currentTarget.value)}
+                rows={4}
+                maxlength={1000}
+              />
+            </div>
+            
+            <div class={styles.formRow}>
+              <div class={styles.formField}>
+                <label>Precio ($)</label>
+                <input
+                  type="number"
+                  placeholder="0"
+                  value={price()}
+                  onInput={(e) => setPrice(e.currentTarget.value)}
+                  min="0"
+                />
+              </div>
+              
+              <div class={styles.formField}>
+                <label>Categoria</label>
+                <select
+                  value={composerCategory()}
+                  onChange={(e) => setComposerCategory(e.currentTarget.value)}
+                >
+                  <For each={categories().filter(c => c.id !== 'all')}>
+                    {(cat) => (
+                      <option value={cat.id}>{cat.icon} {cat.name}</option>
+                    )}
+                  </For>
+                </select>
+              </div>
+            </div>
+            
+            <div class={styles.formField}>
+              <label>Fotos ({photos().length}/5)</label>
+              <div class={styles.photosGrid}>
+                <For each={photos()}>
+                  {(photo, index) => (
+                    <div class={styles.photoThumb}>
+                      <img src={photo} alt="" />
+                      <button onClick={() => removePhoto(index())}>✕</button>
+                    </div>
+                  )}
+                </For>
+                <Show when={photos().length < 5}>
+                  <button class={styles.addPhotoBtn} onClick={addPhoto}>
+                    <span>+</span>
+                  </button>
+                </Show>
+              </div>
+            </div>
+          </div>
+          
+          <ModalActions>
+            <ModalButton label="Cancelar" onClick={() => setShowComposer(false)} />
+            <ModalButton 
+              label={loading() ? 'Publicando...' : 'Publicar'}
+              onClick={() => void publish()}
+              tone="primary"
+              disabled={!title().trim() || loading()}
+            />
+          </ModalActions>
+        </Modal>
+
+        <MediaLightbox url={viewerUrl()} onClose={() => setViewerUrl(null)} />
+      </div>
+    </AppScaffold>
   );
 }
