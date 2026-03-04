@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 .bankApp {
   height: 100%;
   display: flex;
@@ -189,10 +190,190 @@
       border-color: #34c759;
       background: white;
     }
+=======
+.balanceCard {
+  margin: 12px;
+  padding: 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background:
+    radial-gradient(120% 90% at 0% 0%, rgba(112, 170, 255, 0.28), transparent 62%),
+    linear-gradient(145deg, rgba(17, 37, 70, 0.96), rgba(11, 24, 47, 0.96));
+  color: #f6f9ff;
+  display: grid;
+  gap: 8px;
+  box-shadow: 0 14px 28px rgba(12, 29, 57, 0.35);
+}
+
+.label {
+  font-size: 12px;
+  font-weight: 760;
+  color: rgba(222, 235, 255, 0.85);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.amount {
+  font-size: 34px;
+  font-weight: 320;
+  color: #fff;
+  letter-spacing: -0.02em;
+}
+
+.balanceMeta {
+  min-height: 28px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 10px;
+
+  span {
+    font-size: 10px;
+    font-weight: 760;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: rgba(220, 236, 255, 0.86);
+  }
+
+  strong {
+    font-size: 13px;
+    font-weight: 800;
+    color: #fff;
+  }
+}
+
+.actions {
+  display: flex;
+  padding: 0 12px;
+  gap: 10px;
+}
+
+.actionBtn {
+  flex: 1;
+  min-height: 42px;
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #4f92ff, #2f76ea);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 760;
+  box-shadow: 0 8px 18px rgba(44, 106, 198, 0.28);
+}
+
+.transactions {
+  flex: 1;
+  margin: 12px 12px 0;
+  border-radius: 16px 16px 0 0;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  background:
+    radial-gradient(120% 80% at 0% -10%, rgba(116, 176, 255, 0.12), transparent 58%),
+    rgba(248, 252, 255, 0.92);
+  padding: 12px;
+  overflow-y: auto;
+
+  h3 {
+    margin: 0 0 8px;
+    font-size: 14px;
+    font-weight: 800;
+    color: #223a5f;
+  }
+}
+
+.transactionItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(70, 105, 155, 0.12);
+}
+
+.info {
+  flex: 1;
+}
+
+.desc {
+  display: block;
+  font-size: 13px;
+  font-weight: 760;
+  color: #1f3556;
+}
+
+.date {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  color: #6883a8;
+}
+
+.positive,
+.negative {
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.positive {
+  color: #259d5b;
+}
+
+.negative {
+  color: #d44f4f;
+}
+
+.modal {
+  position: absolute;
+  inset: 0;
+  background: rgba(5, 12, 24, 0.45);
+  display: flex;
+  align-items: flex-end;
+  z-index: 100;
+}
+
+.modalContent {
+  width: 100%;
+  border-radius: 18px 18px 0 0;
+  background: rgba(247, 252, 255, 0.98);
+  border-top: 1px solid rgba(58, 97, 153, 0.2);
+  padding: 14px;
+
+  h2 {
+    margin: 0 0 10px;
+    font-size: 16px;
+    font-weight: 800;
+    color: #203759;
+  }
+}
+
+.formGroup {
+  margin-bottom: 10px;
+
+  label {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 11px;
+    font-weight: 760;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #6883a8;
+  }
+
+  input,
+  select {
+    width: 100%;
+    min-height: 38px;
+    border: none;
+    border-radius: 10px;
+    background: rgba(232, 242, 255, 0.75);
+    color: #28466f;
+    font-size: 13px;
+    padding: 0 10px;
+>>>>>>> 6087054b2c17bad903d1ba2a08f953f8451a6489
   }
 }
 
 .modalActions {
+<<<<<<< HEAD
   display: flex;
   gap: 12px;
   margin-top: 24px;
@@ -235,4 +416,28 @@
     opacity: 0.5;
     cursor: not-allowed;
   }
+=======
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.cancelBtn,
+.sendBtn {
+  min-height: 36px;
+  border: none;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 760;
+}
+
+.cancelBtn {
+  color: #2f5f9f;
+  background: rgba(47, 104, 178, 0.14);
+}
+
+.sendBtn {
+  color: #fff;
+  background: linear-gradient(180deg, #4f92ff, #2f76ea);
+>>>>>>> 6087054b2c17bad903d1ba2a08f953f8451a6489
 }

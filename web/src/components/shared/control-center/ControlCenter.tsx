@@ -1,4 +1,4 @@
-import { For, Show, createEffect, createMemo, onCleanup } from 'solid-js';
+import { For, Show, createEffect, createMemo, createSignal, onCleanup } from 'solid-js';
 import { fetchNui } from '../../../utils/fetchNui';
 import { useNotifications } from '../../../store/notifications';
 import { usePhone } from '../../../store/phone';
@@ -11,9 +11,13 @@ type TileId = 'airplane' | 'dnd' | 'data' | 'silent' | 'gps' | 'preview';
 export function ControlCenter() {
   const [notifications, notificationsActions] = useNotifications();
   const [phoneState, phoneActions] = usePhone();
+  const [dragSurface, setDragSurface] = createSignal<'notifications' | 'control' | null>(null);
+  const [dragProgress, setDragProgress] = createSignal(0);
   
   let sheetGestureStartX = 0;
   let sheetGestureStartY = 0;
+  let topDragStartY = 0;
+  let topDragPointerId = -1;
 
   const volumePercent = () => Math.round(phoneState.settings.volume * 100);
 
@@ -26,6 +30,17 @@ export function ControlCenter() {
       groups.set(key, list);
     }
     return Array.from(groups.entries());
+  });
+
+  const totalNotificationCount = createMemo(() => notifications.history.length);
+
+  const mutedAppsCount = createMemo(() => notifications.mutedApps.length);
+
+  const dayLabel = createMemo(() => {
+    const now = new Date();
+    const weekday = now.toLocaleDateString('es-ES', { weekday: 'long' });
+    const shortDate = now.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+    return `${weekday} ${shortDate}`;
   });
 
   function previewNotification() {
@@ -137,6 +152,38 @@ export function ControlCenter() {
     window.dispatchEvent(new CustomEvent('phone:openRoute', { detail: { route, data: data || {} } }));
   };
 
+  const topDragEnabled = createMemo(() => !notifications.controlCenterOpen && !notifications.notificationCenterOpen);
+
+  const handleTopDragStart = (event: PointerEvent, target: 'notifications' | 'control') => {
+    if (!topDragEnabled()) return;
+    topDragStartY = event.clientY;
+    topDragPointerId = event.pointerId;
+    setDragSurface(target);
+    setDragProgress(0);
+    const current = event.currentTarget as HTMLElement;
+    current.setPointerCapture(event.pointerId);
+  };
+
+  const handleTopDragMove = (event: PointerEvent) => {
+    if (!topDragEnabled()) return;
+    if (!dragSurface() || topDragPointerId !== event.pointerId) return;
+    const deltaY = Math.max(0, event.clientY - topDragStartY);
+    const progress = Math.min(1, deltaY / 96);
+    setDragProgress(progress);
+  };
+
+  const handleTopDragEnd = (event: PointerEvent) => {
+    if (!dragSurface() || topDragPointerId !== event.pointerId) return;
+    if (dragProgress() >= 0.34) {
+      if (dragSurface() === 'notifications') notificationsActions.setNotificationCenterOpen(true);
+      if (dragSurface() === 'control') notificationsActions.setControlCenterOpen(true);
+    }
+
+    topDragPointerId = -1;
+    setDragSurface(null);
+    setDragProgress(0);
+  };
+
   const ControlToggle = (props: { label: string; active: boolean; onChange: (next: boolean) => void }) => (
     <button class={styles.switchRow} onClick={() => props.onChange(!props.active)}>
       <span>{props.label}</span>
@@ -161,6 +208,27 @@ export function ControlCenter() {
 
   return (
     <>
+      <Show when={topDragEnabled()}>
+        <div class={styles.topPullZone}>
+          <div
+            class={styles.pullHalf}
+            onPointerDown={(event) => handleTopDragStart(event, 'notifications')}
+            onPointerMove={handleTopDragMove}
+            onPointerUp={handleTopDragEnd}
+            onPointerCancel={handleTopDragEnd}
+            data-testid="notification-center-toggle"
+          />
+          <div
+            class={styles.pullHalf}
+            onPointerDown={(event) => handleTopDragStart(event, 'control')}
+            onPointerMove={handleTopDragMove}
+            onPointerUp={handleTopDragEnd}
+            onPointerCancel={handleTopDragEnd}
+            data-testid="control-center-toggle"
+          />
+        </div>
+      </Show>
+
       <Show when={notifications.notificationCenterOpen}>
         <div class={styles.overlay} data-testid="notification-center-sheet" onClick={() => notificationsActions.setNotificationCenterOpen(false)}>
           <div
@@ -172,6 +240,7 @@ export function ControlCenter() {
             <div class={styles.sheetHeader}>
               <div class={styles.grabber} />
               <h3>Notificaciones</h3>
+              <span class={styles.headerDate}>{dayLabel()}</span>
               <button
                 class={styles.compactBtn}
                 onClick={() => notificationsActions.toggleNotificationCompactMode()}
@@ -179,6 +248,21 @@ export function ControlCenter() {
               >
                 {notifications.notificationCompactMode ? 'Expandido' : 'Compacto'}
               </button>
+            </div>
+
+            <div class={styles.summaryRow}>
+              <article class={styles.summaryCard}>
+                <span>Total</span>
+                <strong>{totalNotificationCount()}</strong>
+              </article>
+              <article class={styles.summaryCard}>
+                <span>Silenciadas</span>
+                <strong>{mutedAppsCount()}</strong>
+              </article>
+              <article class={styles.summaryCard}>
+                <span>Modo</span>
+                <strong>{notifications.notificationCompactMode ? 'Compacto' : 'Expandido'}</strong>
+              </article>
             </div>
 
             <div class={styles.notificationList}>
@@ -189,6 +273,12 @@ export function ControlCenter() {
                       <div class={styles.groupTitle}>
                         <img src={APP_BY_ID[appId]?.icon || './img/icons_ios/settings.svg'} alt={appId} />
                         <span>{(APP_BY_ID[appId]?.name || appId).toUpperCase()}</span>
+                        <button
+                          class={styles.muteAppBtn}
+                          onClick={() => notificationsActions.toggleMuteApp(appId)}
+                        >
+                          {notificationsActions.isAppMuted(appId) ? 'Activar' : 'Silenciar'}
+                        </button>
                       </div>
                       <For each={visibleItemsForGroup(items)}>
                         {(item) => (

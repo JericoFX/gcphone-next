@@ -25,6 +25,16 @@ local function SanitizeMediaUrl(value)
     return nil
 end
 
+local SecurityResource = GetCurrentResourceName()
+
+local function HitRateLimit(source, key, windowMs, maxHits)
+    local ok, blocked = pcall(function()
+        return exports[SecurityResource]:HitRateLimit(source, key, windowMs, maxHits)
+    end)
+    if not ok then return false end
+    return blocked == true
+end
+
 local function GetAccount(identifier)
     if not identifier then return nil end
     
@@ -192,6 +202,11 @@ lib.callback.register('gcphone:chirp:publishTweet', function(source, data)
     
     local account = GetAccount(identifier)
     if not account then return false end
+
+    local chirpMs = (Config.Security and Config.Security.RateLimits and Config.Security.RateLimits.chirp) or 1400
+    if HitRateLimit(source, 'chirp', chirpMs, 1) then
+        return false, 'RATE_LIMITED'
+    end
 
     local content = SanitizeText(data.content, Config.Chirp.MaxTweetLength)
     local mediaUrl = SanitizeMediaUrl(data.mediaUrl)

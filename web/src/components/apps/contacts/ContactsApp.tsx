@@ -1,4 +1,4 @@
-import { createSignal, For, Show, createEffect, onCleanup, batch } from 'solid-js';
+import { createSignal, For, Show, createEffect, onCleanup, batch, createMemo } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { useContacts } from '../../../store/contacts';
 import { fetchNui } from '../../../utils/fetchNui';
@@ -28,6 +28,8 @@ export function ContactsApp() {
     const base = contactsState.contacts.filter((c) => c.display.toLowerCase().includes(q) || c.number.toLowerCase().includes(q));
     return tab() === 'favoritos' ? base.filter((c) => c.favorite) : base;
   };
+
+  const contactsCounter = createMemo(() => filteredContacts().length);
 
   createEffect(() => {
     const handle = setTimeout(() => setLoading(false), 120);
@@ -136,6 +138,11 @@ export function ContactsApp() {
             value={search()}
             onInput={(e) => setSearch(e.currentTarget.value)}
           />
+        </div>
+
+        <div class={styles.sectionMeta}>
+          <span>{tab() === 'favoritos' ? 'Favoritos' : 'Contactos'}</span>
+          <strong>{contactsCounter()}</strong>
         </div>
 
         <div class={styles.segmented}>

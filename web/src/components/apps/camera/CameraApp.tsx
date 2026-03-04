@@ -268,18 +268,22 @@ export function CameraApp() {
 
   return (
     <div class={styles.app}>
-      <div
-        class={styles.preview}
-        classList={{
-          [styles.previewNoir]: effect() === 'noir',
-          [styles.previewVivid]: effect() === 'vivid',
-          [styles.previewWarm]: effect() === 'warm',
-          [styles.previewSelfie]: selfie(),
-        }}
-      >
+      <div class={styles.preview}>
+        <div
+          class={styles.feedLayer}
+          classList={{
+            [styles.previewNoir]: effect() === 'noir',
+            [styles.previewVivid]: effect() === 'vivid',
+            [styles.previewWarm]: effect() === 'warm',
+            [styles.previewSelfie]: selfie(),
+          }}
+        />
         <div class={styles.topBar}>
           <button class={styles.iconBtn} onClick={() => void closeCamera()}>×</button>
-          <div class={styles.targetPill}>{targetLabel(target())}</div>
+          <div class={styles.topCenter}>
+            <div class={styles.brandPill}>CineCam</div>
+            <div class={styles.targetPill}>{targetLabel(target())}</div>
+          </div>
           <div class={styles.topActions}>
             <button class={styles.iconBtn} classList={{ [styles.iconBtnActive]: flash() }} onClick={() => setFlash((v) => !v)} title="Flash">
               ⚡
@@ -308,6 +312,7 @@ export function CameraApp() {
         </div>
 
         <div class={styles.controlsCard}>
+          <div class={styles.effectBadge}>FX: {effect().toUpperCase()}</div>
           <div class={styles.sliderRow}>
             <span>FOV</span>
             <input class="ios-slider" type="range" min="25" max="90" step="1" value={fov()} onInput={(e) => setFov(Number(e.currentTarget.value))} />

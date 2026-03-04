@@ -1,4 +1,4 @@
-import { createSignal, Show, createEffect, onCleanup, For } from 'solid-js';
+import { createMemo, createSignal, Show, createEffect, onCleanup, For } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { fetchNui } from '../../../utils/fetchNui';
 import { AppScaffold } from '../../shared/layout';
@@ -24,8 +24,13 @@ export function BankApp() {
   const [contacts, setContacts] = createSignal<any[]>([]);
   const [loading, setLoading] = createSignal(true);
   const [error, setError] = createSignal<string | null>(null);
+<<<<<<< HEAD
   const [incomingInvoice, setIncomingInvoice] = createSignal<BankInvoice | null>(null);
   const [lastRouteKey, setLastRouteKey] = createSignal('');
+=======
+
+  const transactionCount = createMemo(() => transactions().length);
+>>>>>>> 6087054b2c17bad903d1ba2a08f953f8451a6489
   
   const loadData = async () => {
     setLoading(true);
@@ -136,6 +141,7 @@ export function BankApp() {
   };
   
   return (
+<<<<<<< HEAD
     <AppScaffold title="Banco" subtitle="Tu cuenta bancaria" onBack={() => router.goBack()} bodyClass={styles.bankApp}>
       <div class={styles.bankApp}>
         {/* Balance Section */}
@@ -146,6 +152,92 @@ export function BankApp() {
             <button class={styles.actionBtn} onClick={() => setShowTransfer(true)}>
               Transferir
             </button>
+=======
+    <div class="ios-page">
+      <div class="ios-nav">
+        <button class="ios-icon-btn" onClick={() => router.goBack()}>
+          ‹
+        </button>
+        <div class="ios-nav-title">Bank Prime</div>
+      </div>
+      
+      <div class="ios-content">
+      <div class={styles.balanceCard}>
+        <span class={styles.label}>Saldo disponible</span>
+        <span class={styles.amount}>{formatMoney(balance())}</span>
+        <div class={styles.balanceMeta}>
+          <span>Movimientos</span>
+          <strong>{transactionCount()}</strong>
+        </div>
+      </div>
+      
+      <div class={styles.actions}>
+        <button class={styles.actionBtn} onClick={() => setShowTransfer(true)}>
+          Transferir
+        </button>
+      </div>
+      
+      <div class={styles.transactions}>
+        <h3>Movimientos</h3>
+        <Show when={loading()} fallback={<ScreenState loading={false} error={error()} empty={transactions().length === 0} emptyTitle="Sin movimientos" emptyDescription="Tus transferencias apareceran aqui.">
+          <For each={transactions()}>
+            {(tx) => (
+              <div class={styles.transactionItem}>
+                <div class={styles.info}>
+                  <span class={styles.desc}>{tx.description || 'Transferencia'}</span>
+                  <span class={styles.date}>{tx.time}</span>
+                </div>
+                <span class={styles.amount} classList={{ [styles.positive]: tx.amount >= 0, [styles.negative]: tx.amount < 0 }}>
+                  {tx.amount >= 0 ? '+' : ''}{formatMoney(tx.amount)}
+                </span>
+              </div>
+            )}
+          </For>
+        </ScreenState>}>
+          <SkeletonList rows={6} />
+        </Show>
+      </div>
+      </div>
+      
+      <Show when={showTransfer()}>
+        <div class={styles.modal}>
+          <div class={styles.modalContent}>
+            <h2>Nueva transferencia</h2>
+            
+            <div class={styles.formGroup}>
+              <label>Destinatario</label>
+              <select 
+                value={transferTarget()}
+                onChange={(e) => setTransferTarget(e.currentTarget.value)}
+              >
+                <option value="">Seleccionar contacto</option>
+                <For each={contacts()}>
+                  {(contact) => (
+                    <option value={contact.number}>{contact.display}</option>
+                  )}
+                </For>
+              </select>
+            </div>
+            
+            <div class={styles.formGroup}>
+              <label>Monto</label>
+              <input
+                type="number"
+                placeholder="0.00"
+                value={transferAmount()}
+                onInput={(e) => setTransferAmount(e.currentTarget.value)}
+              />
+            </div>
+            
+            <div class={styles.modalActions}>
+              <button class={styles.cancelBtn} onClick={() => setShowTransfer(false)}>
+                Cancelar
+              </button>
+              <button class={styles.sendBtn} onClick={handleTransfer}>
+                Enviar
+              </button>
+            </div>
+>>>>>>> 6087054b2c17bad903d1ba2a08f953f8451a6489
           </div>
         </div>
 

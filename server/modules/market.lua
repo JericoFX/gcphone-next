@@ -37,6 +37,16 @@ local function SanitizePhotos(value)
     return photos
 end
 
+local SecurityResource = GetCurrentResourceName()
+
+local function HitRateLimit(source, key, windowMs, maxHits)
+    local ok, blocked = pcall(function()
+        return exports[SecurityResource]:HitRateLimit(source, key, windowMs, maxHits)
+    end)
+    if not ok then return false end
+    return blocked == true
+end
+
 lib.callback.register('gcphone:market:getListings', function(source, data)
     data = type(data) == 'table' and data or {}
     local category = SanitizeText(data.category, 30)
@@ -86,6 +96,11 @@ lib.callback.register('gcphone:market:createListing', function(source, data)
     
     local phoneNumber = GetPhoneNumber(identifier)
     if not phoneNumber then return false end
+
+    local marketMs = (Config.Security and Config.Security.RateLimits and Config.Security.RateLimits.market) or 2500
+    if HitRateLimit(source, 'market_create', marketMs, 1) then
+        return false, 'RATE_LIMITED'
+    end
     
     local title = SanitizeText(data.title, 100)
     local description = SanitizeText(data.description, 1000)

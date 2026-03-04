@@ -238,6 +238,21 @@ export function CallsApp() {
     resetCallUi();
   };
 
+  const rejectWithMessage = async () => {
+    const currentCall = callInfo();
+    if (!currentCall?.id) return;
+    const target = currentCall.receiverNum;
+    if (target) {
+      await fetchNui('sendMessage', {
+        phoneNumber: target,
+        message: 'Ahora no puedo hablar, te llamo en un momento.',
+      });
+    }
+    await fetchNui('rejectCall', { callId: currentCall.id });
+    resetCallUi();
+    void loadHistory();
+  };
+
   const handleMuteToggle = async (nextMuted: boolean) => {
     if (!videoMode()) return;
     await setLiveKitMicrophoneEnabled(!nextMuted);
@@ -413,6 +428,12 @@ export function CallsApp() {
                       >
                         <img src="./img/icons_ios/phone-solid.svg" alt="Llamar" />
                       </button>
+                      <button
+                        class={styles.callbackBtn}
+                        onClick={() => startCall(call.num)}
+                      >
+                        Devolver
+                      </button>
                     </div>
                   )}
                 </For>
@@ -511,6 +532,7 @@ export function CallsApp() {
           onMediaHost={setMediaHost}
           onStartVideo={startVideoCall}
           onToggleMute={handleMuteToggle}
+          onRejectWithMessage={rejectWithMessage}
           onEnd={endCall}
         />
       </Show>
@@ -518,7 +540,7 @@ export function CallsApp() {
   );
 }
 
-function ActiveCallView(props: { callInfo: any; videoMode: boolean; videoStatus: string; videoParticipants: string[]; onMediaHost: (identity: string, element?: HTMLDivElement) => void; onStartVideo: () => void; onToggleMute: (nextMuted: boolean) => Promise<void>; onEnd: () => void }) {
+function ActiveCallView(props: { callInfo: any; videoMode: boolean; videoStatus: string; videoParticipants: string[]; onMediaHost: (identity: string, element?: HTMLDivElement) => void; onStartVideo: () => void; onToggleMute: (nextMuted: boolean) => Promise<void>; onRejectWithMessage: () => void; onEnd: () => void }) {
   const [duration, setDuration] = createSignal(0);
   const [muted, setMuted] = createSignal(false);
   const [speaker, setSpeaker] = createSignal(false);
@@ -620,6 +642,10 @@ function ActiveCallView(props: { callInfo: any; videoMode: boolean; videoStatus:
 
       <Show when={!props.videoMode}>
         <button class={styles.startVideoBtn} onClick={props.onStartVideo}>Iniciar video</button>
+      </Show>
+
+      <Show when={props.callInfo?.incoming === true}>
+        <button class={styles.rejectMessageBtn} onClick={props.onRejectWithMessage}>Rechazar con mensaje</button>
       </Show>
 
       <button class={styles.endCallBtn} onClick={props.onEnd}>

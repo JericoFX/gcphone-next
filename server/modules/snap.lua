@@ -54,6 +54,16 @@ local function GenerateUsername(source)
     return cleanName .. random
 end
 
+local SecurityResource = GetCurrentResourceName()
+
+local function HitRateLimit(source, key, windowMs, maxHits)
+    local ok, blocked = pcall(function()
+        return exports[SecurityResource]:HitRateLimit(source, key, windowMs, maxHits)
+    end)
+    if not ok then return false end
+    return blocked == true
+end
+
 local ActiveStreams = {}
 
 lib.callback.register('gcphone:snap:getAccount', function(source)
@@ -133,6 +143,11 @@ lib.callback.register('gcphone:snap:publishPost', function(source, data)
     local account = GetAccount(identifier)
     if not account then return false end
 
+    local snapMs = (Config.Security and Config.Security.RateLimits and Config.Security.RateLimits.snap) or 1500
+    if HitRateLimit(source, 'snap_post', snapMs, 1) then
+        return false, 'RATE_LIMITED'
+    end
+
     local mediaUrl = SanitizeMediaUrl(data.mediaUrl)
     local mediaType = NormalizeMediaType(data.mediaType)
     local caption = SanitizeText(data.caption, 2200)
@@ -163,6 +178,11 @@ lib.callback.register('gcphone:snap:publishStory', function(source, data)
     
     local account = GetAccount(identifier)
     if not account then return false end
+
+    local snapMs = (Config.Security and Config.Security.RateLimits and Config.Security.RateLimits.snap) or 1500
+    if HitRateLimit(source, 'snap_story', snapMs, 1) then
+        return false, 'RATE_LIMITED'
+    end
 
     local mediaUrl = SanitizeMediaUrl(data.mediaUrl)
     local mediaType = NormalizeMediaType(data.mediaType)
@@ -242,6 +262,11 @@ lib.callback.register('gcphone:snap:startLive', function(source)
     
     local account = GetAccount(identifier)
     if not account then return false end
+
+    local snapMs = (Config.Security and Config.Security.RateLimits and Config.Security.RateLimits.snap) or 1500
+    if HitRateLimit(source, 'snap_live', snapMs, 1) then
+        return false, 'RATE_LIMITED'
+    end
     
     local postId = MySQL.insert.await(
         'INSERT INTO phone_snap_posts (account_id, media_url, media_type, caption, is_live, live_viewers) VALUES (?, ?, ?, ?, 1, 0)',

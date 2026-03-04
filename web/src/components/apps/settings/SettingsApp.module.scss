@@ -1,5 +1,22 @@
+.app {
+  background:
+    radial-gradient(120% 90% at 0% -10%, rgba(255, 169, 116, 0.2), transparent 58%),
+    linear-gradient(180deg, #fbfaf8 0%, #f6f2ed 58%, #efe7df 100%);
+}
+
+.settings-canvas {
+  background: transparent;
+}
+
+.settings-tabs {
+  margin-bottom: 6px;
+  background: rgba(185, 154, 123, 0.18);
+}
+
 .wallpaper-card {
   padding: 10px;
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(155, 114, 80, 0.16);
 }
 
 .wallpaper-item {
@@ -18,7 +35,7 @@
 }
 
 .selected {
-  border-color: var(--tint);
+  border-color: #c87943;
 }
 
 .inline-form {
@@ -26,12 +43,16 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(155, 114, 80, 0.16);
 }
 
 .pin-card {
   padding: 10px;
   display: grid;
   gap: 8px;
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(155, 114, 80, 0.16);
 }
 
 .ok,
@@ -39,23 +60,25 @@
   border-radius: 10px;
   padding: 8px 10px;
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 760;
 }
 
 .ok {
-  background: color-mix(in srgb, var(--success) 16%, var(--surface));
-  color: var(--success);
+  background: rgba(52, 165, 98, 0.16);
+  color: #228353;
 }
 
 .error {
-  background: color-mix(in srgb, var(--danger) 16%, var(--surface));
-  color: var(--danger);
+  background: rgba(220, 76, 76, 0.16);
+  color: #b84848;
 }
 
 .notification-card {
   padding: 8px;
   display: grid;
   gap: 6px;
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(155, 114, 80, 0.16);
 }
 
 .notification-row {
@@ -66,7 +89,7 @@
   min-height: 32px;
   padding: 4px 6px;
   border-radius: 10px;
-  background: color-mix(in srgb, var(--surface) 88%, var(--surface-2));
+  background: rgba(247, 239, 229, 0.84);
 }
 
 .notification-icon {
@@ -77,8 +100,8 @@
 
 .notification-name {
   font-size: 12px;
-  font-weight: 700;
-  color: var(--text);
+  font-weight: 760;
+  color: #5d3d28;
 }
 
 .notification-badge {
@@ -86,7 +109,7 @@
   height: 18px;
   padding: 0 6px;
   border-radius: 999px;
-  background: #ff3b30;
+  background: #dd5149;
   color: #fff;
   font-size: 11px;
   font-weight: 800;
@@ -99,7 +122,7 @@
   width: 18px;
   height: 18px;
   border-radius: 999px;
-  background: #34c759;
+  background: #34a562;
   color: #fff;
   font-size: 11px;
   font-weight: 800;
@@ -119,8 +142,8 @@
 
 .live-location-status {
   font-size: 12px;
-  color: var(--text-2);
-  background: color-mix(in srgb, var(--surface) 88%, var(--surface-2));
+  color: #6a4a33;
+  background: rgba(248, 236, 221, 0.82);
   border-radius: 10px;
   margin: 6px;
 }

@@ -1,4 +1,4 @@
-import { createEffect, createSignal, For, onCleanup, Show } from 'solid-js';
+import { createEffect, createMemo, createSignal, For, onCleanup, Show } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { fetchNui } from '../../../utils/fetchNui';
 import { sanitizeMediaUrl, sanitizeText } from '../../../utils/sanitize';
@@ -28,6 +28,8 @@ export function MarketApp() {
   const [photoUrl, setPhotoUrl] = createSignal('');
   const [showAttachSheet, setShowAttachSheet] = createSignal(false);
   const [viewerUrl, setViewerUrl] = createSignal<string | null>(null);
+  const [query, setQuery] = createSignal('');
+  const [selectedCategory, setSelectedCategory] = createSignal('all');
 
   const load = async () => {
     const data = await fetchNui<MarketListing[]>('marketGetListings', { category: 'all', limit: 50, offset: 0 }, []);
@@ -124,12 +126,47 @@ export function MarketApp() {
     }
   };
 
+  const allCategories = createMemo(() => {
+    const categories = new Set<string>(['all']);
+    for (const listing of listings()) {
+      const next = sanitizeText(listing.category || '', 30);
+      if (next) categories.add(next);
+    }
+    return Array.from(categories);
+  });
+
+  const visibleListings = createMemo(() => {
+    const source = tab() === 'all' ? listings() : myListings();
+    const q = sanitizeText(query(), 60).toLowerCase();
+    const categoryFilter = selectedCategory();
+
+    return source.filter((item) => {
+      const category = sanitizeText(item.category || '', 30) || 'general';
+      if (categoryFilter !== 'all' && category !== categoryFilter) return false;
+      if (!q) return true;
+      return (
+        sanitizeText(item.title || '', 100).toLowerCase().includes(q) ||
+        sanitizeText(item.description || '', 1000).toLowerCase().includes(q)
+      );
+    });
+  });
+
   return (
     <div class={styles.app}>
       <div class={styles.header}>
         <button class={styles.backBtn} onClick={() => router.goBack()}>‹</button>
-        <h1>Market</h1>
+        <h1>Market Pro</h1>
         <button class={styles.addBtn} onClick={() => setShowCreate(true)}>+</button>
+      </div>
+
+      <div class={styles.searchRow}>
+        <input
+          class={styles.searchInput}
+          type="text"
+          placeholder="Buscar productos, servicios"
+          value={query()}
+          onInput={(event) => setQuery(event.currentTarget.value)}
+        />
       </div>
 
       <div class={styles.tabs}>
@@ -137,13 +174,28 @@ export function MarketApp() {
         <button class={styles.tabBtn} classList={{ [styles.active]: tab() === 'mine' }} onClick={() => setTab('mine')}>Mis avisos</button>
       </div>
 
+      <div class={styles.categoryRow}>
+        <For each={allCategories()}>
+          {(entry) => (
+            <button
+              class={styles.categoryChip}
+              classList={{ [styles.categoryChipActive]: selectedCategory() === entry }}
+              onClick={() => setSelectedCategory(entry)}
+            >
+              {entry}
+            </button>
+          )}
+        </For>
+      </div>
+
       <div class={styles.list}>
-        <For each={tab() === 'all' ? listings() : myListings()}>
+        <For each={visibleListings()}>
           {(item) => (
             <article class={styles.card}>
               <strong>{item.title}</strong>
               <span class={styles.price}>${Number(item.price || 0).toLocaleString('en-US')}</span>
               <p>{item.description || 'Sin descripcion'}</p>
+              <small class={styles.cardCategory}>{item.category || 'general'}</small>
               <div class={styles.cardActions}>
                 <button onClick={() => contactSeller(item.id)}>Contactar</button>
                 <Show when={tab() === 'mine'}>

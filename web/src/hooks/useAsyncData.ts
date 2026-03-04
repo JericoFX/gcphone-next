@@ -29,7 +29,7 @@ export function useAsyncData<T>(
     try {
       const result = await fetchFn();
       if (!abortController.signal.aborted) {
-        setData(result);
+        setData(() => result);
         setLoading(false);
         onSuccess?.(result);
         return result;
@@ -48,7 +48,7 @@ export function useAsyncData<T>(
 
   const reset = () => {
     abortController?.abort();
-    setData(initialData);
+    setData(() => initialData);
     setLoading(false);
     setError(null);
   };
