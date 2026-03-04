@@ -753,6 +753,82 @@ local MIGRATIONS = {
                     END IF;
                 END]]
         }
+    },
+    
+    {
+        version = 6,
+        name = "chirp_enhanced_features",
+        description = "Comments and ReChirps for Chirp",
+        statements = {
+            -- Chirp Comments table
+            [[CREATE TABLE IF NOT EXISTS `phone_chirp_comments` (
+                `id` INT AUTO_INCREMENT PRIMARY KEY,
+                `tweet_id` INT NOT NULL,
+                `account_id` INT NOT NULL,
+                `content` VARCHAR(500) NOT NULL,
+                `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (`tweet_id`) REFERENCES `phone_chirp_tweets`(`id`) ON DELETE CASCADE,
+                FOREIGN KEY (`account_id`) REFERENCES `phone_chirp_accounts`(`id`) ON DELETE CASCADE,
+                KEY `idx_tweet_id` (`tweet_id`),
+                KEY `idx_account_id` (`account_id`),
+                KEY `idx_created_at` (`created_at`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci]],
+            
+            -- Chirp ReChirps table
+            [[CREATE TABLE IF NOT EXISTS `phone_chirp_rechirps` (
+                `id` INT AUTO_INCREMENT PRIMARY KEY,
+                `original_tweet_id` INT NOT NULL,
+                `account_id` INT NOT NULL,
+                `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (`original_tweet_id`) REFERENCES `phone_chirp_tweets`(`id`) ON DELETE CASCADE,
+                FOREIGN KEY (`account_id`) REFERENCES `phone_chirp_accounts`(`id`) ON DELETE CASCADE,
+                UNIQUE KEY `idx_unique_rechirp` (`original_tweet_id`, `account_id`),
+                KEY `idx_account_id` (`account_id`),
+                KEY `idx_created_at` (`created_at`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci]],
+            
+            -- Add replies count column to tweets
+            [[ALTER TABLE `phone_chirp_tweets` ADD COLUMN IF NOT EXISTS `replies` INT DEFAULT 0 AFTER `rechirps`]],
+            
+            -- Indexes for performance
+            [[CREATE INDEX IF NOT EXISTS `idx_chirp_comments_tweet` ON `phone_chirp_comments` (`tweet_id`, `created_at`)]],
+            [[CREATE INDEX IF NOT EXISTS `idx_chirp_rechirps_original` ON `phone_chirp_rechirps` (`original_tweet_id`, `created_at`)]],
+            [[CREATE INDEX IF NOT EXISTS `idx_chirp_rechirps_account` ON `phone_chirp_rechirps` (`account_id`, `created_at`)]],
+            
+            -- Trigger to update replies count
+            [[DROP TRIGGER IF EXISTS `trg_phone_chirp_comments_after_insert`]],
+            [[CREATE TRIGGER IF NOT EXISTS `trg_phone_chirp_comments_after_insert`
+                AFTER INSERT ON `phone_chirp_comments`
+                FOR EACH ROW
+                UPDATE `phone_chirp_tweets`
+                SET `replies` = (SELECT COUNT(*) FROM `phone_chirp_comments` WHERE `tweet_id` = NEW.`tweet_id`)
+                WHERE `id` = NEW.`tweet_id`]],
+            
+            [[DROP TRIGGER IF EXISTS `trg_phone_chirp_comments_after_delete`]],
+            [[CREATE TRIGGER IF NOT EXISTS `trg_phone_chirp_comments_after_delete`
+                AFTER DELETE ON `phone_chirp_comments`
+                FOR EACH ROW
+                UPDATE `phone_chirp_tweets`
+                SET `replies` = (SELECT COUNT(*) FROM `phone_chirp_comments` WHERE `tweet_id` = OLD.`tweet_id`)
+                WHERE `id` = OLD.`tweet_id`]],
+            
+            -- Trigger to update rechirps count
+            [[DROP TRIGGER IF EXISTS `trg_phone_chirp_rechirps_after_insert`]],
+            [[CREATE TRIGGER IF NOT EXISTS `trg_phone_chirp_rechirps_after_insert`
+                AFTER INSERT ON `phone_chirp_rechirps`
+                FOR EACH ROW
+                UPDATE `phone_chirp_tweets`
+                SET `rechirps` = (SELECT COUNT(*) FROM `phone_chirp_rechirps` WHERE `original_tweet_id` = NEW.`original_tweet_id`)
+                WHERE `id` = NEW.`original_tweet_id`]],
+            
+            [[DROP TRIGGER IF EXISTS `trg_phone_chirp_rechirps_after_delete`]],
+            [[CREATE TRIGGER IF NOT EXISTS `trg_phone_chirp_rechirps_after_delete`
+                AFTER DELETE ON `phone_chirp_rechirps`
+                FOR EACH ROW
+                UPDATE `phone_chirp_tweets`
+                SET `rechirps` = (SELECT COUNT(*) FROM `phone_chirp_rechirps` WHERE `original_tweet_id` = OLD.`original_tweet_id`)
+                WHERE `id` = OLD.`original_tweet_id`]]
+        }
     }
 }
 
