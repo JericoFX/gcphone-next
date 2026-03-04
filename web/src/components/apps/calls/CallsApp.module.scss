@@ -202,6 +202,18 @@
       height: 20px;
     }
   }
+
+  .callback-btn {
+    margin-left: 8px;
+    border: none;
+    border-radius: 999px;
+    min-height: 32px;
+    padding: 0 10px;
+    background: rgba(0, 122, 255, 0.12);
+    color: var(--tint);
+    font-size: 11px;
+    font-weight: 700;
+  }
 }
 
 .empty-state {
@@ -661,6 +673,20 @@
   &:active {
     transform: scale(0.95);
   }
+}
+
+.reject-message-btn {
+  position: relative;
+  z-index: 1;
+  margin-top: 10px;
+  border: none;
+  border-radius: 999px;
+  min-height: 36px;
+  padding: 0 16px;
+  background: rgba(255, 149, 0, 0.14);
+  color: #b66a00;
+  font-size: 12px;
+  font-weight: 760;
 }
 
 @keyframes ios18-rise-in {
