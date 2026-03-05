@@ -4,6 +4,7 @@ import { usePhone } from '../../../store/phone';
 import { useNotifications } from '../../../store/notifications';
 import { fetchNui } from '../../../utils/fetchNui';
 import { APP_DEFINITIONS } from '../../../config/apps';
+import { appName, t } from '../../../i18n';
 import styles from './SettingsApp.module.scss';
 
 type SettingsTab = 'appearance' | 'sound' | 'security' | 'advanced';
@@ -47,6 +48,7 @@ export function SettingsApp() {
   const [liveLocationEnabled, setLiveLocationEnabled] = createSignal(false);
   const [liveLocationInterval, setLiveLocationInterval] = createSignal<5 | 10>(10);
   const [liveLocationStatus, setLiveLocationStatus] = createSignal('');
+  const language = () => phoneState.settings.language || 'es';
 
   createEffect(() => {
     const onKey = (e: CustomEvent<string>) => {
@@ -159,19 +161,19 @@ export function SettingsApp() {
     <div class={`ios-page ${styles.app}`}>
       <div class="ios-nav">
         <button class="ios-icon-btn k-touch-ripple" onClick={() => router.goBack()}>‹</button>
-        <div class="ios-nav-title">Ajustes Pro</div>
+        <div class="ios-nav-title">{t('settings.title', language())}</div>
       </div>
 
       <div class={`ios-content ${styles.settingsCanvas}`}>
         <div class={`ios-segment ${styles.settingsTabs}`}>
-          <button class="ios-segment-btn" classList={{ 'ios-segment-btn-active': tab() === 'appearance' }} onClick={() => setTab('appearance')}>Apariencia</button>
-          <button class="ios-segment-btn" classList={{ 'ios-segment-btn-active': tab() === 'sound' }} onClick={() => setTab('sound')}>Sonido</button>
-          <button class="ios-segment-btn" classList={{ 'ios-segment-btn-active': tab() === 'security' }} onClick={() => setTab('security')}>Seguridad</button>
-          <button class="ios-segment-btn" classList={{ 'ios-segment-btn-active': tab() === 'advanced' }} onClick={() => setTab('advanced')}>Avanzado</button>
+          <button class="ios-segment-btn" classList={{ 'ios-segment-btn-active': tab() === 'appearance' }} onClick={() => setTab('appearance')}>{t('settings.tab.appearance', language())}</button>
+          <button class="ios-segment-btn" classList={{ 'ios-segment-btn-active': tab() === 'sound' }} onClick={() => setTab('sound')}>{t('settings.tab.sound', language())}</button>
+          <button class="ios-segment-btn" classList={{ 'ios-segment-btn-active': tab() === 'security' }} onClick={() => setTab('security')}>{t('settings.tab.security', language())}</button>
+          <button class="ios-segment-btn" classList={{ 'ios-segment-btn-active': tab() === 'advanced' }} onClick={() => setTab('advanced')}>{t('settings.tab.advanced', language())}</button>
         </div>
 
         <Show when={tab() === 'appearance'}>
-          <div class="ios-section-title">Fondos</div>
+          <div class="ios-section-title">{t('settings.wallpapers', language())}</div>
           <div class={`ios-card ${styles.wallpaperCard}`}>
             <div class="ios-grid-3">
               <For each={wallpapers}>
@@ -188,35 +190,35 @@ export function SettingsApp() {
             </div>
           </div>
 
-          <div class="ios-section-title">Fuente de fondo</div>
+          <div class="ios-section-title">{t('settings.wallpaper_source', language())}</div>
           <div class="ios-list">
             <div class="ios-row">
-              <span class="ios-label">Desde galeria</span>
-              <button class="ios-btn ios-btn-primary" onClick={() => fetchNui('openGallery', { selectWallpaper: true })}>Elegir</button>
+              <span class="ios-label">{t('settings.from_gallery', language())}</span>
+              <button class="ios-btn ios-btn-primary" onClick={() => fetchNui('openGallery', { selectWallpaper: true })}>{t('settings.choose', language())}</button>
             </div>
             <div class="ios-row">
-              <span class="ios-label">Aleatorio API</span>
-              <button class="ios-btn" onClick={randomWallpaper}>Aplicar</button>
+              <span class="ios-label">{t('settings.random_api', language())}</span>
+              <button class="ios-btn" onClick={randomWallpaper}>{t('settings.apply', language())}</button>
             </div>
           </div>
 
-          <div class="ios-section-title">URL manual</div>
+          <div class="ios-section-title">{t('settings.manual_url', language())}</div>
           <div class={`ios-card ${styles.inlineForm}`}>
             <input class="ios-input" type="url" placeholder="https://example.com/wallpaper.jpg" value={urlInput()} onInput={(e) => setUrlInput(e.currentTarget.value)} />
-            <button class="ios-btn ios-btn-primary" onClick={applyUrlWallpaper}>Aplicar</button>
+            <button class="ios-btn ios-btn-primary" onClick={applyUrlWallpaper}>{t('settings.apply', language())}</button>
           </div>
 
-          <div class="ios-section-title">Marco del telefono</div>
+          <div class="ios-section-title">{t('settings.frame', language())}</div>
           <div class={`ios-card ${styles.inlineForm}`}>
             <select class="ios-select" value={phoneState.settings.coque} onChange={(e) => phoneActions.setCoque(e.currentTarget.value)}>
               <For each={coques}>{(coque) => <option value={coque}>{coque}</option>}</For>
             </select>
           </div>
 
-          <div class="ios-section-title">Tema</div>
+          <div class="ios-section-title">{t('settings.theme', language())}</div>
           <div class="ios-list">
             <div class="ios-row">
-              <span class="ios-label">Apariencia</span>
+              <span class="ios-label">{t('settings.appearance', language())}</span>
               <div class="ios-segment">
                 <button
                   class="ios-segment-btn"
@@ -242,7 +244,7 @@ export function SettingsApp() {
               </div>
             </div>
             <div class="ios-row">
-              <span class="ios-label">Idioma</span>
+              <span class="ios-label">{t('settings.language', language())}</span>
               <div class="ios-segment">
                 <button
                   class="ios-segment-btn"
@@ -278,7 +280,7 @@ export function SettingsApp() {
         </Show>
 
         <Show when={tab() === 'sound'}>
-          <div class="ios-section-title">Volumen</div>
+          <div class="ios-section-title">{t('settings.volume', language())}</div>
           <div class={`ios-card ${styles.inlineForm}`}>
             <input
               type="range"
@@ -290,10 +292,10 @@ export function SettingsApp() {
             <span class="ios-chip">{Math.round(phoneState.settings.volume * 100)}%</span>
           </div>
 
-          <div class="ios-section-title">Perfil de audio</div>
+          <div class="ios-section-title">{t('settings.audio_profile', language())}</div>
           <div class="ios-list">
             <div class="ios-row">
-              <span class="ios-label">Contexto</span>
+              <span class="ios-label">{t('settings.context', language())}</span>
               <div class="ios-segment">
                 <button
                   class="ios-segment-btn"
@@ -327,7 +329,7 @@ export function SettingsApp() {
             </div>
           </div>
 
-          <div class="ios-section-title">Tono</div>
+          <div class="ios-section-title">{t('settings.ringtone', language())}</div>
           <div class="ios-list">
             <For each={ringtones}>
               {(ringtone) => (
@@ -347,11 +349,11 @@ export function SettingsApp() {
         </Show>
 
         <Show when={tab() === 'security'}>
-          <div class="ios-section-title">Bloqueo por PIN</div>
+          <div class="ios-section-title">{t('settings.pin_lock', language())}</div>
           <div class={`ios-card ${styles.pinCard}`}>
-            <input class="ios-input" type="password" maxlength="4" placeholder="Nuevo PIN (4 digitos)" value={codeA()} onInput={(e) => setCodeA(e.currentTarget.value)} />
-            <input class="ios-input" type="password" maxlength="4" placeholder="Confirmar PIN" value={codeB()} onInput={(e) => setCodeB(e.currentTarget.value)} />
-            <button class="ios-btn ios-btn-primary" onClick={savePin}>Guardar PIN</button>
+            <input class="ios-input" type="password" maxlength="4" placeholder={t('settings.new_pin', language())} value={codeA()} onInput={(e) => setCodeA(e.currentTarget.value)} />
+            <input class="ios-input" type="password" maxlength="4" placeholder={t('settings.confirm_pin', language())} value={codeB()} onInput={(e) => setCodeB(e.currentTarget.value)} />
+            <button class="ios-btn ios-btn-primary" onClick={savePin}>{t('settings.save_pin', language())}</button>
             <Show when={status()}>
               {(msg) => <div class={msg().type === 'ok' ? styles.ok : styles.error}>{msg().text}</div>}
             </Show>
@@ -359,15 +361,15 @@ export function SettingsApp() {
         </Show>
 
         <Show when={tab() === 'advanced'}>
-          <div class="ios-section-title">Notificaciones por App</div>
+          <div class="ios-section-title">{t('settings.app_notifications', language())}</div>
           <div class={`ios-card ${styles.notificationCard}`}>
             <For each={APP_DEFINITIONS.filter((app) => phoneState.enabledApps.includes(app.id))}>
               {(app) => {
                 const unreadCount = notificationsActions.getUnreadCount(app.id);
                 return (
                   <div class={styles.notificationRow}>
-                    <img src={app.icon} alt={app.name} class={styles.notificationIcon} />
-                    <span class={styles.notificationName}>{app.name}</span>
+                    <img src={app.icon} alt={appName(app.id, app.name, language())} class={styles.notificationIcon} />
+                    <span class={styles.notificationName}>{appName(app.id, app.name, language())}</span>
                     <Show when={unreadCount > 0}>
                       <span class={styles.notificationBadge}>{unreadCount}</span>
                     </Show>
@@ -390,7 +392,7 @@ export function SettingsApp() {
             </button>
           </div>
 
-          <div class="ios-section-title">Sistema</div>
+          <div class="ios-section-title">{t('settings.system', language())}</div>
           <div class="ios-list">
             <div class="ios-row">
               <span class="ios-label">Compartir ubicacion activa</span>
@@ -429,7 +431,12 @@ export function SettingsApp() {
                 min="40"
                 max="120"
                 value={Math.round(notifications.brightness * 100)}
-                onInput={(e) => notificationsActions.setBrightness(Number(e.currentTarget.value) / 100)}
+                style={{ '--value-percent': `${((Math.round(notifications.brightness * 100) - 40) / (120 - 40)) * 100}%` }}
+                onInput={(e) => {
+                  const val = Number(e.currentTarget.value);
+                  e.currentTarget.style.setProperty('--value-percent', `${((val - 40) / (120 - 40)) * 100}%`);
+                  notificationsActions.setBrightness(val / 100);
+                }}
               />
               <span class="ios-value">{Math.round(notifications.brightness * 100)}%</span>
             </div>
@@ -441,7 +448,12 @@ export function SettingsApp() {
                 min="0"
                 max="100"
                 value={Math.round(phoneState.settings.volume * 100)}
-                onInput={(e) => phoneActions.setVolume(Number(e.currentTarget.value) / 100)}
+                style={{ '--value-percent': `${Math.round(phoneState.settings.volume * 100)}%` }}
+                onInput={(e) => {
+                  const val = Number(e.currentTarget.value);
+                  e.currentTarget.style.setProperty('--value-percent', `${val}%`);
+                  phoneActions.setVolume(val / 100);
+                }}
               />
               <span class="ios-value">{Math.round(phoneState.settings.volume * 100)}%</span>
             </div>

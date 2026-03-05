@@ -297,7 +297,6 @@
   align-items: center;
   justify-content: center;
   z-index: 2000;
-  backdrop-filter: blur(20px);
 }
 
 .incoming-call-content {
@@ -421,7 +420,6 @@
   background: rgba(255, 255, 255, 0.8);
   padding: 6px 14px;
   border-radius: 999px;
-  backdrop-filter: blur(10px);
 }
 
 .video-grid {
@@ -497,7 +495,6 @@
   background: rgba(255, 255, 255, 0.7);
   padding: 3px 8px;
   border-radius: 6px;
-  backdrop-filter: blur(4px);
 }
 
 .start-video-btn {
@@ -611,7 +608,6 @@
     box-shadow: 0 8px 20px rgba(22, 40, 72, 0.1), inset 0 0 0 1px rgba(255, 255, 255, 0.5);
     cursor: pointer;
     transition: transform 120ms ease, background 120ms ease, box-shadow 120ms ease;
-    backdrop-filter: blur(10px);
 
     &:active {
       transform: scale(0.96);

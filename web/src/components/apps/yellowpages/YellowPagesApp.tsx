@@ -3,6 +3,8 @@ import { useRouter } from '../../Phone/PhoneFrame';
 import { fetchNui } from '../../../utils/fetchNui';
 import { timeAgo } from '../../../utils/misc';
 import { sanitizeMediaUrl, sanitizeText } from '../../../utils/sanitize';
+import { uiConfirm } from '../../../utils/uiDialog';
+import { uiAlert } from '../../../utils/uiAlert';
 import { AppScaffold } from '../../shared/layout';
 import { useAppCache } from '../../../hooks';
 import { MediaLightbox } from '../../shared/ui/MediaLightbox';
@@ -200,7 +202,7 @@ export function YellowPagesApp() {
     };
     
     if (!payload.title) {
-      alert('El titulo es obligatorio');
+      uiAlert('El titulo es obligatorio');
       return;
     }
 
@@ -209,7 +211,7 @@ export function YellowPagesApp() {
     setLoading(false);
     
     if (!result?.success) {
-      alert('Error al publicar');
+      uiAlert('Error al publicar');
       return;
     }
 
@@ -226,7 +228,7 @@ export function YellowPagesApp() {
   };
 
   const deleteListing = async (id: number) => {
-    if (!confirm('¿Eliminar este anuncio?')) return;
+    if (!(await uiConfirm('¿Eliminar este anuncio?', { title: 'Eliminar anuncio' }))) return;
     
     await fetchNui('yellowpagesDeleteListing', id);
     cache.invalidate();

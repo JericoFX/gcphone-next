@@ -1,5 +1,3 @@
--- Creado/Modificado por JericoFX
-
 local function SafeString(value, maxLen)
     if type(value) ~= 'string' then return nil end
     local trimmed = value:gsub('%s+', ' '):gsub('^%s+', ''):gsub('%s+$', '')
@@ -18,6 +16,24 @@ local function SafeNumber(value, min, max)
     return num
 end
 
+local function RequirePlayerIdentifier(source)
+    local src = tonumber(source)
+    if not src or src <= 0 then return nil end
+
+    if type(GetPlayer) == 'function' and not GetPlayer(src) then
+        return nil
+    end
+
+    if type(IsPlayerActionAllowed) == 'function' then
+        local allowed = IsPlayerActionAllowed(src)
+        if not allowed then
+            return nil
+        end
+    end
+
+    return GetIdentifier(src)
+end
+
 local function EnsureWallet(identifier)
     local wallet = MySQL.single.await('SELECT id, balance FROM phone_wallets WHERE identifier = ? LIMIT 1', { identifier })
     if wallet then return wallet end
@@ -30,24 +46,6 @@ local function EnsureWallet(identifier)
     }
 end
 
-<<<<<<< HEAD
-local function GetPhoneByIdentifier(identifier)
-    if not identifier then return nil end
-    return MySQL.scalar.await('SELECT phone_number FROM phone_numbers WHERE identifier = ? LIMIT 1', { identifier })
-end
-
-local function TransferBetweenWallets(senderIdentifier, receiverIdentifier, amount, title)
-    local senderWallet = EnsureWallet(senderIdentifier)
-    local receiverWallet = EnsureWallet(receiverIdentifier)
-    local senderPhone = GetPhoneByIdentifier(senderIdentifier)
-    local receiverPhone = GetPhoneByIdentifier(receiverIdentifier)
-
-    local senderBalance = tonumber(senderWallet.balance) or 0
-    if senderBalance < amount then
-        return false, 'INSUFFICIENT_FUNDS'
-    end
-
-=======
 local SecurityResource = GetCurrentResourceName()
 
 local function HitRateLimit(source, key, windowMs, maxHits)
@@ -127,7 +125,6 @@ local function ExecuteWalletTransfer(senderIdentifier, receiverIdentifier, targe
 
     local receiverWallet = EnsureWallet(receiverIdentifier)
 
->>>>>>> 6087054b2c17bad903d1ba2a08f953f8451a6489
     MySQL.transaction.await({
         {
             query = 'UPDATE phone_wallets SET balance = balance - ? WHERE id = ?',
@@ -139,16 +136,35 @@ local function ExecuteWalletTransfer(senderIdentifier, receiverIdentifier, targe
         },
         {
             query = 'INSERT INTO phone_wallet_transactions (identifier, amount, type, title, target_phone) VALUES (?, ?, ?, ?, ?)',
-<<<<<<< HEAD
-            values = { senderIdentifier, amount, 'out', title, receiverPhone }
+            values = { senderIdentifier, amount, 'out', title, targetPhone }
         },
         {
             query = 'INSERT INTO phone_wallet_transactions (identifier, amount, type, title, target_phone) VALUES (?, ?, ?, ?, ?)',
-            values = { receiverIdentifier, amount, 'in', title, senderPhone }
+            values = { receiverIdentifier, amount, 'in', title, targetPhone }
         },
     })
 
-    return true
+    local updated = MySQL.scalar.await('SELECT balance FROM phone_wallets WHERE id = ? LIMIT 1', { senderWallet.id })
+    return true, {
+        balance = tonumber(updated) or 0,
+    }
+end
+
+local function BuildWalletRequestPayload(row)
+    if type(row) ~= 'table' then return nil end
+    return {
+        id = tonumber(row.id) or 0,
+        requesterIdentifier = row.requester_identifier,
+        requesterPhone = row.requester_phone,
+        targetIdentifier = row.target_identifier,
+        targetPhone = row.target_phone,
+        amount = tonumber(row.amount) or 0,
+        title = row.title,
+        method = row.method,
+        status = row.status,
+        expiresAt = row.expires_at,
+        createdAt = row.created_at,
+    }
 end
 
 local function TransferFrameworkMoney(payerSource, receiverSource, amount, method)
@@ -180,7 +196,7 @@ local function BuildInvoiceId(source)
 end
 
 local function ResolveInvoiceTarget(source, data)
-    local fromIdentifier = GetIdentifier(source)
+    local fromIdentifier = RequirePlayerIdentifier(source)
     if not fromIdentifier then return nil, nil, nil, 'INVALID_SOURCE' end
     if type(data) ~= 'table' then return nil, nil, nil, 'INVALID_DATA' end
 
@@ -191,6 +207,10 @@ local function ResolveInvoiceTarget(source, data)
     if targetServerId then
         local targetId = GetIdentifier(targetServerId)
         if not targetId then return nil, nil, nil, 'TARGET_NOT_FOUND' end
+        if type(IsPlayerActionAllowed) == 'function' then
+            local allowed = IsPlayerActionAllowed(targetServerId)
+            if not allowed then return nil, nil, nil, 'TARGET_UNAVAILABLE' end
+        end
         if targetId == fromIdentifier then return nil, nil, nil, 'INVALID_TARGET' end
         return targetServerId, targetId, 'nfc'
     end
@@ -201,6 +221,10 @@ local function ResolveInvoiceTarget(source, data)
         if targetId == fromIdentifier then return nil, nil, nil, 'INVALID_TARGET' end
         local targetSource = GetSourceFromIdentifier(targetId)
         if not targetSource then return nil, nil, nil, 'TARGET_OFFLINE' end
+        if type(IsPlayerActionAllowed) == 'function' then
+            local allowed = IsPlayerActionAllowed(targetSource)
+            if not allowed then return nil, nil, nil, 'TARGET_UNAVAILABLE' end
+        end
         return targetSource, targetId, 'remote'
     end
 
@@ -208,6 +232,10 @@ local function ResolveInvoiceTarget(source, data)
         if targetIdentifier == fromIdentifier then return nil, nil, nil, 'INVALID_TARGET' end
         local targetSource = GetSourceFromIdentifier(targetIdentifier)
         if not targetSource then return nil, nil, nil, 'TARGET_OFFLINE' end
+        if type(IsPlayerActionAllowed) == 'function' then
+            local allowed = IsPlayerActionAllowed(targetSource)
+            if not allowed then return nil, nil, nil, 'TARGET_UNAVAILABLE' end
+        end
         return targetSource, targetIdentifier, 'remote'
     end
 
@@ -238,41 +266,10 @@ local function NotifyInvoiceResult(invoice, status)
             })
         end
     end
-=======
-            values = { senderIdentifier, amount, 'out', title, targetPhone }
-        },
-        {
-            query = 'INSERT INTO phone_wallet_transactions (identifier, amount, type, title, target_phone) VALUES (?, ?, ?, ?, ?)',
-            values = { receiverIdentifier, amount, 'in', title, targetPhone }
-        },
-    })
-
-    local updated = MySQL.scalar.await('SELECT balance FROM phone_wallets WHERE id = ? LIMIT 1', { senderWallet.id })
-    return true, {
-        balance = tonumber(updated) or 0,
-    }
-end
-
-local function BuildWalletRequestPayload(row)
-    if type(row) ~= 'table' then return nil end
-    return {
-        id = tonumber(row.id) or 0,
-        requesterIdentifier = row.requester_identifier,
-        requesterPhone = row.requester_phone,
-        targetIdentifier = row.target_identifier,
-        targetPhone = row.target_phone,
-        amount = tonumber(row.amount) or 0,
-        title = row.title,
-        method = row.method,
-        status = row.status,
-        expiresAt = row.expires_at,
-        createdAt = row.created_at,
-    }
->>>>>>> 6087054b2c17bad903d1ba2a08f953f8451a6489
 end
 
 lib.callback.register('gcphone:wallet:getState', function(source)
-    local identifier = GetIdentifier(source)
+    local identifier = RequirePlayerIdentifier(source)
     if not identifier then
         return {
             balance = 0,
@@ -300,7 +297,7 @@ lib.callback.register('gcphone:wallet:getState', function(source)
 end)
 
 lib.callback.register('gcphone:wallet:addCard', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = RequirePlayerIdentifier(source)
     if not identifier then return { success = false, error = 'INVALID_SOURCE' } end
 
     local label = SafeString(type(data) == 'table' and data.label or nil, 32)
@@ -320,7 +317,7 @@ lib.callback.register('gcphone:wallet:addCard', function(source, data)
 end)
 
 lib.callback.register('gcphone:wallet:removeCard', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = RequirePlayerIdentifier(source)
     if not identifier then return { success = false, error = 'INVALID_SOURCE' } end
     local cardId = tonumber(type(data) == 'table' and data.cardId or nil)
     if not cardId then return { success = false, error = 'INVALID_CARD' } end
@@ -330,7 +327,7 @@ lib.callback.register('gcphone:wallet:removeCard', function(source, data)
 end)
 
 lib.callback.register('gcphone:wallet:transfer', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = RequirePlayerIdentifier(source)
     if not identifier then return { success = false, error = 'INVALID_SOURCE' } end
     if type(data) ~= 'table' then return { success = false, error = 'INVALID_DATA' } end
 
@@ -342,37 +339,16 @@ lib.callback.register('gcphone:wallet:transfer', function(source, data)
         return { success = false, error = 'INVALID_TRANSFER' }
     end
 
-<<<<<<< HEAD
-=======
     local walletMs = (Config.Security and Config.Security.RateLimits and Config.Security.RateLimits.wallet) or 900
     if HitRateLimit(source, 'wallet_transfer', walletMs, 1) then
         return { success = false, error = 'RATE_LIMITED' }
     end
 
->>>>>>> 6087054b2c17bad903d1ba2a08f953f8451a6489
     local receiverIdentifier = GetIdentifierByPhone(targetPhone)
     if not receiverIdentifier then
         return { success = false, error = 'TARGET_NOT_FOUND' }
     end
 
-<<<<<<< HEAD
-    local ok, err = TransferBetweenWallets(identifier, receiverIdentifier, amount, title)
-    if not ok then
-        return { success = false, error = err or 'TRANSFER_FAILED' }
-    end
-
-    local targetSource = GetSourceFromIdentifier(receiverIdentifier)
-    if targetSource then
-        TriggerClientEvent('gcphone:notify', targetSource, {
-            appId = 'wallet',
-            title = 'Wallet',
-            message = ('Recibiste $%s'):format(math.floor(amount)),
-            priority = 'normal'
-        })
-    end
-
-    local updated = MySQL.scalar.await('SELECT balance FROM phone_wallets WHERE identifier = ? LIMIT 1', { identifier })
-=======
     local success, transferPayload = ExecuteWalletTransfer(identifier, receiverIdentifier, targetPhone, amount, title)
     if not success then
         return { success = false, error = transferPayload.error or 'TRANSFER_FAILED' }
@@ -383,7 +359,6 @@ lib.callback.register('gcphone:wallet:transfer', function(source, data)
         PushWalletNotification(receiverSource, 'Wallet', ('Recibiste $%s'):format(math.floor(amount)))
     end
 
->>>>>>> 6087054b2c17bad903d1ba2a08f953f8451a6489
     return {
         success = true,
         balance = transferPayload.balance,
@@ -391,7 +366,7 @@ lib.callback.register('gcphone:wallet:transfer', function(source, data)
 end)
 
 lib.callback.register('gcphone:wallet:proximityTransfer', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = RequirePlayerIdentifier(source)
     if not identifier then return { success = false, error = 'INVALID_SOURCE' } end
     if type(data) ~= 'table' then return { success = false, error = 'INVALID_DATA' } end
 
@@ -413,6 +388,12 @@ lib.callback.register('gcphone:wallet:proximityTransfer', function(source, data)
     local receiverIdentifier, receiverSource = ResolveTargetByPhone(targetPhone)
     if not receiverIdentifier or not receiverSource then
         return { success = false, error = 'TARGET_OFFLINE' }
+    end
+    if type(IsPlayerActionAllowed) == 'function' then
+        local allowed = IsPlayerActionAllowed(receiverSource)
+        if not allowed then
+            return { success = false, error = 'TARGET_UNAVAILABLE' }
+        end
     end
 
     if receiverIdentifier == identifier then
@@ -447,7 +428,7 @@ lib.callback.register('gcphone:wallet:proximityTransfer', function(source, data)
 end)
 
 lib.callback.register('gcphone:wallet:createRequest', function(source, data)
-    local requesterIdentifier = GetIdentifier(source)
+    local requesterIdentifier = RequirePlayerIdentifier(source)
     if not requesterIdentifier then return { success = false, error = 'INVALID_SOURCE' } end
     if type(data) ~= 'table' then return { success = false, error = 'INVALID_DATA' } end
 
@@ -468,6 +449,12 @@ lib.callback.register('gcphone:wallet:createRequest', function(source, data)
     local targetIdentifier, targetSource = ResolveTargetByPhone(targetPhone)
     if not targetIdentifier or not targetSource then
         return { success = false, error = 'TARGET_OFFLINE' }
+    end
+    if type(IsPlayerActionAllowed) == 'function' then
+        local allowed = IsPlayerActionAllowed(targetSource)
+        if not allowed then
+            return { success = false, error = 'TARGET_UNAVAILABLE' }
+        end
     end
     if targetIdentifier == requesterIdentifier then
         return { success = false, error = 'INVALID_TARGET' }
@@ -502,7 +489,7 @@ lib.callback.register('gcphone:wallet:createRequest', function(source, data)
 end)
 
 lib.callback.register('gcphone:wallet:getPendingRequests', function(source)
-    local identifier = GetIdentifier(source)
+    local identifier = RequirePlayerIdentifier(source)
     if not identifier then return { incoming = {}, outgoing = {} } end
 
     MySQL.update.await('UPDATE phone_wallet_requests SET status = "expired", responded_at = NOW() WHERE status = "pending" AND expires_at < NOW()')
@@ -534,7 +521,7 @@ lib.callback.register('gcphone:wallet:getPendingRequests', function(source)
 end)
 
 lib.callback.register('gcphone:wallet:respondRequest', function(source, data)
-    local responderIdentifier = GetIdentifier(source)
+    local responderIdentifier = RequirePlayerIdentifier(source)
     if not responderIdentifier then return { success = false, error = 'INVALID_SOURCE' } end
     if type(data) ~= 'table' then return { success = false, error = 'INVALID_DATA' } end
 
@@ -562,6 +549,12 @@ lib.callback.register('gcphone:wallet:respondRequest', function(source, data)
     if not requesterSource then
         MySQL.update.await('UPDATE phone_wallet_requests SET status = "expired", responded_at = NOW() WHERE id = ? AND status = "pending"', { requestId })
         return { success = false, error = 'REQUESTER_OFFLINE' }
+    end
+    if type(IsPlayerActionAllowed) == 'function' then
+        local allowed = IsPlayerActionAllowed(requesterSource)
+        if not allowed then
+            return { success = false, error = 'TARGET_UNAVAILABLE' }
+        end
     end
 
     local distanceLimit = SafeNumber(Config.Wallet and Config.Wallet.ProximityDistance or nil, 1.0, 10.0) or 3.0
@@ -641,6 +634,12 @@ exports('ProximityTransfer', function(source, targetSource, amount, title, metho
     if not sourceIdentifier or not targetIdentifier then
         return { success = false, error = 'TARGET_OFFLINE' }
     end
+    if type(IsPlayerActionAllowed) == 'function' then
+        local sourceAllowed = IsPlayerActionAllowed(source)
+        local targetAllowed = IsPlayerActionAllowed(targetSource)
+        if not sourceAllowed then return { success = false, error = 'INVALID_SOURCE' } end
+        if not targetAllowed then return { success = false, error = 'TARGET_UNAVAILABLE' } end
+    end
 
     if sourceIdentifier == targetIdentifier then
         return { success = false, error = 'INVALID_TARGET' }
@@ -673,7 +672,7 @@ exports('ProximityTransfer', function(source, targetSource, amount, title, metho
 end)
 
 local function CreateInvoice(source, data)
-    local fromIdentifier = GetIdentifier(source)
+    local fromIdentifier = RequirePlayerIdentifier(source)
     if not fromIdentifier then return { success = false, error = 'INVALID_SOURCE' } end
     if type(data) ~= 'table' then return { success = false, error = 'INVALID_DATA' } end
 
@@ -718,7 +717,7 @@ local function CreateInvoice(source, data)
 end
 
 local function RespondInvoice(source, data)
-    local toIdentifier = GetIdentifier(source)
+    local toIdentifier = RequirePlayerIdentifier(source)
     if not toIdentifier then return { success = false, error = 'INVALID_SOURCE' } end
     if type(data) ~= 'table' then return { success = false, error = 'INVALID_DATA' } end
 
@@ -747,6 +746,12 @@ local function RespondInvoice(source, data)
     local receiverSource = GetSourceFromIdentifier(invoice.fromIdentifier)
     if not receiverSource then
         return { success = false, error = 'TARGET_OFFLINE' }
+    end
+    if type(IsPlayerActionAllowed) == 'function' then
+        local allowed = IsPlayerActionAllowed(receiverSource)
+        if not allowed then
+            return { success = false, error = 'TARGET_UNAVAILABLE' }
+        end
     end
 
     local method = invoice.channel == 'nfc' and ((requestedMethod == 'cash' and 'cash') or 'bank') or 'bank'

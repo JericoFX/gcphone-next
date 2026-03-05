@@ -18,8 +18,9 @@
   justify-content: center;
   gap: 20px;
   padding: 12px 20px;
-  background: rgba(0, 0, 0, 0.8);
-  backdrop-filter: blur(10px);
+  background:
+    radial-gradient(120% 100% at 50% -20%, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0) 52%),
+    rgba(0, 0, 0, 0.82);
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   z-index: 10;
 }
@@ -169,8 +170,7 @@
   height: 48px;
   border: none;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
+  background: rgba(255, 255, 255, 0.14);
   color: #ffffff;
   font-size: 24px;
   cursor: pointer;

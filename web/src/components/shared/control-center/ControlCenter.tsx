@@ -3,6 +3,7 @@ import { fetchNui } from '../../../utils/fetchNui';
 import { useNotifications } from '../../../store/notifications';
 import { usePhone } from '../../../store/phone';
 import { APP_BY_ID } from '../../../config/apps';
+import { appName, formatDate, t } from '../../../i18n';
 import styles from './ControlCenter.module.scss';
 
 type TileId = 'airplane' | 'dnd' | 'data' | 'silent' | 'gps' | 'preview';
@@ -11,6 +12,7 @@ type TileId = 'airplane' | 'dnd' | 'data' | 'silent' | 'gps' | 'preview';
 export function ControlCenter() {
   const [notifications, notificationsActions] = useNotifications();
   const [phoneState, phoneActions] = usePhone();
+  const language = () => phoneState.settings.language || 'es';
   const [dragSurface, setDragSurface] = createSignal<'notifications' | 'control' | null>(null);
   const [dragProgress, setDragProgress] = createSignal(0);
   
@@ -38,8 +40,8 @@ export function ControlCenter() {
 
   const dayLabel = createMemo(() => {
     const now = new Date();
-    const weekday = now.toLocaleDateString('es-ES', { weekday: 'long' });
-    const shortDate = now.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+    const weekday = formatDate(now, language(), { weekday: 'long' });
+    const shortDate = formatDate(now, language(), { day: 'numeric', month: 'short' });
     return `${weekday} ${shortDate}`;
   });
 
@@ -47,8 +49,8 @@ export function ControlCenter() {
     notificationsActions.receive({
       id: `preview-${Date.now()}`,
       appId: 'wavechat',
-      title: 'WaveChat',
-      message: 'Mensaje nuevo de Alex: Estoy en Legion Square',
+        title: 'WaveChat',
+       message: 'Mensaje nuevo de Alex: Estoy en Legion Square',
       icon: '💬',
       route: 'wavechat',
       durationMs: 4200,
@@ -239,14 +241,14 @@ export function ControlCenter() {
           >
             <div class={styles.sheetHeader}>
               <div class={styles.grabber} />
-              <h3>Notificaciones</h3>
+              <h3>{t('control.notifications', language())}</h3>
               <span class={styles.headerDate}>{dayLabel()}</span>
               <button
                 class={styles.compactBtn}
                 onClick={() => notificationsActions.toggleNotificationCompactMode()}
                 data-testid="notification-compact-toggle"
               >
-                {notifications.notificationCompactMode ? 'Expandido' : 'Compacto'}
+                 {notifications.notificationCompactMode ? 'Expandido' : t('control.preset.compact', language())}
               </button>
             </div>
 
@@ -256,12 +258,12 @@ export function ControlCenter() {
                 <strong>{totalNotificationCount()}</strong>
               </article>
               <article class={styles.summaryCard}>
-                <span>Silenciadas</span>
+                 <span>Silenciadas</span>
                 <strong>{mutedAppsCount()}</strong>
               </article>
               <article class={styles.summaryCard}>
                 <span>Modo</span>
-                <strong>{notifications.notificationCompactMode ? 'Compacto' : 'Expandido'}</strong>
+                 <strong>{notifications.notificationCompactMode ? t('control.preset.compact', language()) : 'Expandido'}</strong>
               </article>
             </div>
 
@@ -272,12 +274,12 @@ export function ControlCenter() {
                     <div class={styles.notificationGroup}>
                       <div class={styles.groupTitle}>
                         <img src={APP_BY_ID[appId]?.icon || './img/icons_ios/settings.svg'} alt={appId} />
-                        <span>{(APP_BY_ID[appId]?.name || appId).toUpperCase()}</span>
+                        <span>{appName(appId, APP_BY_ID[appId]?.name || appId, language()).toUpperCase()}</span>
                         <button
                           class={styles.muteAppBtn}
                           onClick={() => notificationsActions.toggleMuteApp(appId)}
                         >
-                          {notificationsActions.isAppMuted(appId) ? 'Activar' : 'Silenciar'}
+                           {notificationsActions.isAppMuted(appId) ? 'Activar' : 'Silenciar'}
                         </button>
                       </div>
                       <For each={visibleItemsForGroup(items)}>
@@ -308,8 +310,8 @@ export function ControlCenter() {
             </div>
 
             <div class={styles.sheetFooter}>
-              <button class={styles.clearBtn} onClick={() => notificationsActions.clear()}>Limpiar</button>
-              <button class={styles.closeBtn} onClick={() => notificationsActions.setNotificationCenterOpen(false)}>Cerrar</button>
+               <button class={styles.clearBtn} onClick={() => notificationsActions.clear()}>{t('control.clear', language())}</button>
+               <button class={styles.closeBtn} onClick={() => notificationsActions.setNotificationCenterOpen(false)}>{t('control.close', language())}</button>
             </div>
           </div>
         </div>
@@ -325,19 +327,19 @@ export function ControlCenter() {
           >
             <div class={styles.sheetHeader}>
               <div class={styles.grabber} />
-              <h3>Centro de control</h3>
+               <h3>{t('control.center', language())}</h3>
             </div>
 
             <div class={styles.presetRow}>
-              <button class={styles.presetBtn} classList={{ [styles.activePreset]: notifications.controlTilePreset === 'compact' }} onClick={() => notificationsActions.setControlTilePreset('compact')}>Compacto</button>
-              <button class={styles.presetBtn} classList={{ [styles.activePreset]: notifications.controlTilePreset === 'default' }} onClick={() => notificationsActions.setControlTilePreset('default')}>Normal</button>
-              <button class={styles.presetBtn} classList={{ [styles.activePreset]: notifications.controlTilePreset === 'large' }} onClick={() => notificationsActions.setControlTilePreset('large')}>Grande</button>
+               <button class={styles.presetBtn} classList={{ [styles.activePreset]: notifications.controlTilePreset === 'compact' }} onClick={() => notificationsActions.setControlTilePreset('compact')}>{t('control.preset.compact', language())}</button>
+               <button class={styles.presetBtn} classList={{ [styles.activePreset]: notifications.controlTilePreset === 'default' }} onClick={() => notificationsActions.setControlTilePreset('default')}>{t('control.preset.normal', language())}</button>
+               <button class={styles.presetBtn} classList={{ [styles.activePreset]: notifications.controlTilePreset === 'large' }} onClick={() => notificationsActions.setControlTilePreset('large')}>{t('control.preset.large', language())}</button>
             </div>
 
             <div class={styles.presetRow}>
-              <button class={styles.presetBtn} onClick={() => notificationsActions.applyControlTileOrderPreset('default')}>Orden base</button>
-              <button class={styles.presetBtn} onClick={() => notificationsActions.applyControlTileOrderPreset('commute')}>Traslado</button>
-              <button class={styles.presetBtn} onClick={() => notificationsActions.applyControlTileOrderPreset('focus')}>Foco</button>
+               <button class={styles.presetBtn} onClick={() => notificationsActions.applyControlTileOrderPreset('default')}>{t('control.order.base', language())}</button>
+               <button class={styles.presetBtn} onClick={() => notificationsActions.applyControlTileOrderPreset('commute')}>{t('control.order.commute', language())}</button>
+               <button class={styles.presetBtn} onClick={() => notificationsActions.applyControlTileOrderPreset('focus')}>{t('control.order.focus', language())}</button>
             </div>
 
             <div
@@ -358,39 +360,49 @@ export function ControlCenter() {
             </div>
 
             <div class={styles.switchCard}>
-              <ControlToggle label="Bloqueo de rotacion" active={notifications.rotationLock} onChange={notificationsActions.setRotationLock} />
-              <ControlToggle label="No molestar" active={notifications.doNotDisturb} onChange={notificationsActions.setDoNotDisturb} />
-              <ControlToggle label="Modo avion" active={notifications.airplaneMode} onChange={notificationsActions.setAirplaneMode} />
+              <ControlToggle label={t('control.rotation_lock', language())} active={notifications.rotationLock} onChange={notificationsActions.setRotationLock} />
+              <ControlToggle label={t('control.dnd', language())} active={notifications.doNotDisturb} onChange={notificationsActions.setDoNotDisturb} />
+              <ControlToggle label={t('control.airplane', language())} active={notifications.airplaneMode} onChange={notificationsActions.setAirplaneMode} />
             </div>
 
             <div class={styles.sliderCard}>
-              <span>Brillo</span>
+              <span>{t('settings.brightness', language())}</span>
               <input 
                 class={`${styles.slider} ios-slider`}
                 type="range" 
                 min="40" 
                 max="120" 
                 value={Math.round(notifications.brightness * 100)} 
-                onInput={(e) => notificationsActions.setBrightness(Number(e.currentTarget.value) / 100)} 
+                style={{ '--value-percent': `${((Math.round(notifications.brightness * 100) - 40) / (120 - 40)) * 100}%` }}
+                onInput={(e) => {
+                  const val = Number(e.currentTarget.value);
+                  e.currentTarget.style.setProperty('--value-percent', `${((val - 40) / (120 - 40)) * 100}%`);
+                  notificationsActions.setBrightness(val / 100);
+                }} 
               />
               <strong>{Math.round(notifications.brightness * 100)}%</strong>
             </div>
 
             <div class={styles.sliderCard}>
-              <span>Volumen</span>
+              <span>{t('settings.volume', language())}</span>
               <input 
                 class={`${styles.slider} ios-slider`}
                 type="range" 
                 min="0" 
                 max="100" 
                 value={volumePercent()} 
-                onInput={(e) => phoneActions.setVolume(Number(e.currentTarget.value) / 100)} 
+                style={{ '--value-percent': `${volumePercent()}%` }}
+                onInput={(e) => {
+                  const val = Number(e.currentTarget.value);
+                  e.currentTarget.style.setProperty('--value-percent', `${val}%`);
+                  phoneActions.setVolume(val / 100);
+                }} 
               />
               <strong>{volumePercent()}%</strong>
             </div>
 
             <div class={styles.sheetFooter}>
-              <button class={styles.closeBtn} onClick={() => notificationsActions.setControlCenterOpen(false)}>Cerrar</button>
+              <button class={styles.closeBtn} onClick={() => notificationsActions.setControlCenterOpen(false)}>{t('control.close', language())}</button>
             </div>
           </div>
         </div>

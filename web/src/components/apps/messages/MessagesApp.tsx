@@ -5,6 +5,8 @@ import { useContacts } from '../../../store/contacts';
 import { fetchNui } from '../../../utils/fetchNui';
 import { generateColorForString, timeAgo } from '../../../utils/misc';
 import { resolveMediaType, sanitizeMediaUrl, sanitizeText } from '../../../utils/sanitize';
+import { uiPrompt } from '../../../utils/uiDialog';
+import { uiAlert } from '../../../utils/uiAlert';
 import { ActionSheet } from '../../shared/ui/ActionSheet';
 import { MediaLightbox } from '../../shared/ui/MediaLightbox';
 import { SkeletonList } from '../../shared/ui/SkeletonList';
@@ -187,14 +189,14 @@ export function MessagesApp() {
     }
   };
 
-  const attachByUrl = () => {
-    const input = window.prompt('Pega URL de imagen, video o audio');
+  const attachByUrl = async () => {
+    const input = await uiPrompt('Pega URL de imagen, video o audio', { title: 'Adjuntar' });
     const nextUrl = sanitizeMediaUrl(input);
     if (nextUrl) {
       setAttachmentUrl(nextUrl);
       return;
     }
-    if (input && input.trim()) window.alert('URL invalida o formato no permitido');
+    if (input && input.trim()) uiAlert('URL invalida o formato no permitido');
   };
   
   const getContactName = (number: string) => {
@@ -202,8 +204,8 @@ export function MessagesApp() {
     return contact?.display || number;
   };
 
-  const openNewChat = () => {
-    const input = window.prompt('Numero para iniciar chat');
+  const openNewChat = async () => {
+    const input = await uiPrompt('Numero para iniciar chat', { title: 'Nuevo chat' });
     const number = sanitizeText(input, 20);
     if (!number) return;
     setSelectedConversation(number);
@@ -212,8 +214,8 @@ export function MessagesApp() {
   const sendLocationText = async () => {
     const number = selectedConversation();
     if (!number) return;
-    const x = Number(window.prompt('Coordenada X'));
-    const y = Number(window.prompt('Coordenada Y'));
+    const x = Number(await uiPrompt('Coordenada X', { title: 'Compartir ubicacion' }));
+    const y = Number(await uiPrompt('Coordenada Y', { title: 'Compartir ubicacion' }));
     if (!Number.isFinite(x) || !Number.isFinite(y)) return;
     await messagesActions.send(number, `📍 Ubicacion compartida LOC:${x.toFixed(2)},${y.toFixed(2)}`);
   };

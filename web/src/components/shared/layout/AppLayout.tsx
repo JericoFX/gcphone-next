@@ -1,5 +1,6 @@
 import type { ParentComponent, ParentProps } from 'solid-js';
 import { Show } from 'solid-js';
+import { getStoredLanguage, tl } from '../../../i18n';
 import styles from './layout.module.scss';
 
 export interface AppLayoutProps extends ParentProps {
@@ -66,10 +67,10 @@ export const AppHeader: ParentComponent<AppHeaderProps> = (props) => {
       </button>
       <div class="ios-nav-title">
         <Show when={props.title}>
-          <span class={styles.titleText}>{props.title}</span>
+          <span class={styles.titleText}>{tl(props.title, getStoredLanguage())}</span>
         </Show>
         <Show when={props.subtitle}>
-          <span class={styles.subtitleText}>{props.subtitle}</span>
+          <span class={styles.subtitleText}>{tl(props.subtitle || '', getStoredLanguage())}</span>
         </Show>
       </div>
       <Show when={props.action}>
@@ -182,11 +183,11 @@ export function AppTabs(props: AppTabsProps) {
           <Show when={tab.icon}>
             <span class={styles.tabIcon}>
               <Show when={tab.icon!.endsWith('.svg')} fallback={tab.icon}>
-                <img src={tab.icon} alt={tab.label} />
+                <img src={tab.icon} alt={tl(tab.label, getStoredLanguage())} />
               </Show>
             </span>
           </Show>
-          <span class={styles.tabLabel}>{tab.label}</span>
+          <span class={styles.tabLabel}>{tl(tab.label, getStoredLanguage())}</span>
           <Show when={tab.badge && tab.badge > 0}>
             <span class={styles.tabBadge}>{tab.badge! > 99 ? '99+' : tab.badge}</span>
           </Show>

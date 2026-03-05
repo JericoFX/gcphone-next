@@ -1,6 +1,3 @@
--- Creado/Modificado por JericoFX
--- Clips (TikTok Clone) - Backend
-
 local function SanitizeText(value, maxLength)
     if type(value) ~= 'string' then return '' end
     local text = value:gsub('[%z\1-\31\127]', '')
@@ -30,9 +27,24 @@ local function GetSnapAccount(identifier)
     return MySQL.single.await('SELECT id, username, display_name, avatar FROM phone_snap_accounts WHERE identifier = ?', { identifier })
 end
 
-<<<<<<< HEAD
--- Get clips feed
-=======
+local function RequirePlayerIdentifier(source)
+    local src = tonumber(source)
+    if not src or src <= 0 then return nil end
+
+    if type(GetPlayer) == 'function' and not GetPlayer(src) then
+        return nil
+    end
+
+    if type(IsPlayerActionAllowed) == 'function' then
+        local allowed = IsPlayerActionAllowed(src)
+        if not allowed then
+            return nil
+        end
+    end
+
+    return GetIdentifier(src)
+end
+
 local SecurityResource = GetCurrentResourceName()
 
 local function HitRateLimit(source, key, windowMs, maxHits)
@@ -43,9 +55,8 @@ local function HitRateLimit(source, key, windowMs, maxHits)
     return blocked == true
 end
 
->>>>>>> 6087054b2c17bad903d1ba2a08f953f8451a6489
 lib.callback.register('gcphone:clips:getFeed', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = RequirePlayerIdentifier(source)
     data = type(data) == 'table' and data or {}
     local limit = tonumber(data.limit) or 30
     local offset = tonumber(data.offset) or 0
@@ -65,7 +76,6 @@ lib.callback.register('gcphone:clips:getFeed', function(source, data)
         LIMIT ? OFFSET ?
     ]], { account and account.id or 0, limit, offset }) or {}
     
-    -- Check if user liked each clip
     if account then
         for _, clip in ipairs(clips) do
             local liked = MySQL.scalar.await(
@@ -79,9 +89,8 @@ lib.callback.register('gcphone:clips:getFeed', function(source, data)
     return clips
 end)
 
--- Get my clips only
 lib.callback.register('gcphone:clips:getMyClips', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = RequirePlayerIdentifier(source)
     if not identifier then return {} end
     
     data = type(data) == 'table' and data or {}
@@ -105,7 +114,6 @@ lib.callback.register('gcphone:clips:getMyClips', function(source, data)
         LIMIT ? OFFSET ?
     ]], { account.id, limit, offset }) or {}
     
-    -- Check if user liked each clip
     for _, clip in ipairs(clips) do
         local liked = MySQL.scalar.await(
             'SELECT 1 FROM phone_clips_likes WHERE clip_id = ? AND account_id = ?',
@@ -117,7 +125,7 @@ lib.callback.register('gcphone:clips:getMyClips', function(source, data)
     return clips
 end)
 lib.callback.register('gcphone:clips:publish', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = RequirePlayerIdentifier(source)
     if not identifier then return false end
     if type(data) ~= 'table' then return false end
 
@@ -148,9 +156,8 @@ lib.callback.register('gcphone:clips:publish', function(source, data)
     return true, post
 end)
 
--- Delete clip (only own)
 lib.callback.register('gcphone:clips:deletePost', function(source, postId)
-    local identifier = GetIdentifier(source)
+    local identifier = RequirePlayerIdentifier(source)
     if not identifier then return false end
 
     local account = GetSnapAccount(identifier)
@@ -163,9 +170,8 @@ lib.callback.register('gcphone:clips:deletePost', function(source, postId)
     return true
 end)
 
--- Toggle like (add/remove)
 lib.callback.register('gcphone:clips:toggleLike', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = RequirePlayerIdentifier(source)
     if not identifier then return false end
     if type(data) ~= 'table' then return false end
     local postId = tonumber(data.postId)
@@ -174,14 +180,12 @@ lib.callback.register('gcphone:clips:toggleLike', function(source, data)
     local account = GetSnapAccount(identifier)
     if not account then return false end
 
-    -- Check if already liked
     local existing = MySQL.scalar.await(
         'SELECT id FROM phone_clips_likes WHERE clip_id = ? AND account_id = ?',
         { postId, account.id }
     )
     
     if existing then
-        -- Unlike
         MySQL.execute.await(
             'DELETE FROM phone_clips_likes WHERE clip_id = ? AND account_id = ?',
             { postId, account.id }
@@ -192,7 +196,6 @@ lib.callback.register('gcphone:clips:toggleLike', function(source, data)
         )
         return { liked = false }
     else
-        -- Like
         MySQL.insert.await(
             'INSERT INTO phone_clips_likes (clip_id, account_id) VALUES (?, ?)',
             { postId, account.id }
@@ -205,7 +208,6 @@ lib.callback.register('gcphone:clips:toggleLike', function(source, data)
     end
 end)
 
--- Get comments
 lib.callback.register('gcphone:clips:getComments', function(source, data)
     if type(data) ~= 'table' then return {} end
     local clipId = tonumber(data.clipId)
@@ -220,9 +222,8 @@ lib.callback.register('gcphone:clips:getComments', function(source, data)
     ]], { clipId }) or {}
 end)
 
--- Add comment
 lib.callback.register('gcphone:clips:addComment', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = RequirePlayerIdentifier(source)
     if not identifier then return false end
     if type(data) ~= 'table' then return false end
     
@@ -248,9 +249,8 @@ lib.callback.register('gcphone:clips:addComment', function(source, data)
     return true, comment
 end)
 
--- Delete comment
 lib.callback.register('gcphone:clips:deleteComment', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = RequirePlayerIdentifier(source)
     if not identifier then return false end
     if type(data) ~= 'table' then return false end
     

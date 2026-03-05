@@ -7,6 +7,7 @@ import { PhoneNotificationBanner } from '../shared/notifications/PhoneNotificati
 import { ControlCenter } from '../shared/control-center/ControlCenter';
 import { useNotifications } from '../../store/notifications';
 import { APP_BY_ID } from '../../config/apps';
+import { appName } from '../../i18n';
 import { isEnvBrowser } from '../../utils/misc';
 import styles from './PhoneFrame.module.scss';
 
@@ -64,31 +65,6 @@ const lazyApps = {
   camera: lazy(() => import('../apps/camera/CameraApp').then(m => ({ default: m.CameraApp }))),
 };
 
-const APP_NAMES: Record<string, string> = {
-  calls: 'Llamadas',
-  contacts: 'Contactos',
-  messages: 'Mensajes',
-  settings: 'Ajustes',
-  bank: 'Banco',
-  wallet: 'Wallet',
-  documents: 'Documentos',
-  appstore: 'App Store',
-  gallery: 'Galeria',
-  chirp: 'Chirp',
-  snap: 'Snap',
-  clips: 'Clips',
-  darkrooms: 'DarkRooms',
-  // market: 'Market',
-  news: 'Noticias',
-  garage: 'Garage',
-  notes: 'Notas',
-  maps: 'Mapas',
-  wavechat: 'WaveChat',
-  music: 'Musica',
-  yellowpages: 'Amarillas',
-  camera: 'Camara',
-};
-
 export const PhoneFrame: ParentComponent & { Router: () => JSX.Element } = (props) => {
   const [phoneState] = usePhone();
   const [notifications] = useNotifications();
@@ -98,6 +74,14 @@ export const PhoneFrame: ParentComponent & { Router: () => JSX.Element } = (prop
   const [params, setParams] = createSignal<Record<string, unknown>>({});
   const [direction, setDirection] = createSignal<'forward' | 'back'>('forward');
   const [multitaskOpen, setMultitaskOpen] = createSignal(false);
+  const [dialogOpen, setDialogOpen] = createSignal(false);
+  const [dialogType, setDialogType] = createSignal<'prompt' | 'confirm'>('confirm');
+  const [dialogTitle, setDialogTitle] = createSignal('');
+  const [dialogMessage, setDialogMessage] = createSignal('');
+  const [dialogInput, setDialogInput] = createSignal('');
+  const [dialogPlaceholder, setDialogPlaceholder] = createSignal('');
+  let dialogResolve: ((value: unknown) => void) | null = null;
+  const currentLanguage = () => phoneState.settings.language || 'es';
 
   const currentRoute = () => {
     const stack = history();
@@ -153,6 +137,39 @@ export const PhoneFrame: ParentComponent & { Router: () => JSX.Element } = (prop
     onCleanup(() => window.removeEventListener('phone:openRoute', handler as EventListener));
   });
 
+  createEffect(() => {
+    const onDialogRequest = (event: Event) => {
+      const detail = (event as CustomEvent<{
+        type?: 'prompt' | 'confirm';
+        title?: string;
+        message?: string;
+        placeholder?: string;
+        defaultValue?: string;
+        resolve?: (value: unknown) => void;
+      }>).detail;
+
+      if (!detail || typeof detail.resolve !== 'function' || !detail.message) return;
+
+      dialogResolve = detail.resolve;
+      setDialogType(detail.type === 'prompt' ? 'prompt' : 'confirm');
+      setDialogTitle(detail.title || (detail.type === 'prompt' ? 'Entrada' : 'Confirmar'));
+      setDialogMessage(detail.message);
+      setDialogPlaceholder(detail.placeholder || '');
+      setDialogInput(detail.defaultValue || '');
+      setDialogOpen(true);
+    };
+
+    window.addEventListener('phone:uiDialogRequest', onDialogRequest as EventListener);
+    onCleanup(() => window.removeEventListener('phone:uiDialogRequest', onDialogRequest as EventListener));
+  });
+
+  const closeDialog = (value: unknown) => {
+    const resolve = dialogResolve;
+    dialogResolve = null;
+    setDialogOpen(false);
+    if (resolve) resolve(value);
+  };
+
   return (
     <div class={styles.phoneWrapper} style={browserMode ? { transform: 'none', right: '20px', bottom: '20px' } : undefined}>
       <Show when={phoneState.settings.coque && phoneState.settings.coque !== 'sin_funda.png'}>
@@ -187,8 +204,8 @@ export const PhoneFrame: ParentComponent & { Router: () => JSX.Element } = (prop
                             setMultitaskOpen(false);
                           }}
                         >
-                          <img src={app?.icon || './img/icons_ios/settings.svg'} alt={app?.name || route} />
-                          <span>{app?.name || route}</span>
+                          <img src={app?.icon || './img/icons_ios/settings.svg'} alt={appName(route, app?.name || route, currentLanguage())} />
+                          <span>{appName(route, app?.name || route, currentLanguage())}</span>
                         </button>
                         <button
                           class={styles.multitaskClose}
@@ -205,6 +222,28 @@ export const PhoneFrame: ParentComponent & { Router: () => JSX.Element } = (prop
               </div>
             </div>
           </Show>
+
+          <Show when={dialogOpen()}>
+            <div class={styles.dialogOverlay} onClick={() => closeDialog(dialogType() === 'confirm' ? false : null)}>
+              <div class={styles.dialogCard} onClick={(event) => event.stopPropagation()}>
+                <h3>{dialogTitle()}</h3>
+                <p>{dialogMessage()}</p>
+                <Show when={dialogType() === 'prompt'}>
+                  <input
+                    class="ios-input"
+                    type="text"
+                    value={dialogInput()}
+                    placeholder={dialogPlaceholder()}
+                    onInput={(event) => setDialogInput(event.currentTarget.value)}
+                  />
+                </Show>
+                <div class={styles.dialogActions}>
+                  <button class="ios-btn" onClick={() => closeDialog(dialogType() === 'confirm' ? false : null)}>Cancelar</button>
+                  <button class="ios-btn ios-btn-primary" onClick={() => closeDialog(dialogType() === 'confirm' ? true : dialogInput())}>Aceptar</button>
+                </div>
+              </div>
+            </div>
+          </Show>
         </RouterContext.Provider>
       </div>
       <img class={styles.phoneFrame} src="./img/phone/frame-clean.svg" alt="frame" />
@@ -215,6 +254,7 @@ export const PhoneFrame: ParentComponent & { Router: () => JSX.Element } = (prop
 function Router() {
   const phoneState = usePhoneState();
   const { currentRoute, direction, openApps } = useRouter();
+  const routeLanguage = () => phoneState.settings.language || 'es';
 
   const renderRoute = (route: AppRoute) => {
     if (route === 'home') return <HomeScreen />;
@@ -224,9 +264,9 @@ function Router() {
     const LazyApp = lazyApps[route as keyof typeof lazyApps];
     
     if (LazyApp) {
-      const appName = APP_NAMES[route] || route;
+      const appLabel = appName(route, APP_BY_ID[route]?.name || route, routeLanguage());
       return (
-        <Suspense fallback={<AppPlaceholder title={appName} rows={5} />}>
+        <Suspense fallback={<AppPlaceholder title={appLabel} rows={5} />}>
           <LazyApp />
         </Suspense>
       );

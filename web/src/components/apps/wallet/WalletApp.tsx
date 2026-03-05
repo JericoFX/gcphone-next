@@ -1,6 +1,8 @@
 import { For, Show, createEffect, createSignal, onCleanup } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { fetchNui } from '../../../utils/fetchNui';
+import { uiPrompt } from '../../../utils/uiDialog';
+import { uiAlert } from '../../../utils/uiAlert';
 import { AppScaffold } from '../../shared/layout';
 import styles from './WalletApp.module.scss';
 
@@ -75,8 +77,8 @@ export function WalletApp() {
   };
 
   const addCard = async () => {
-    const label = window.prompt('Nombre de tarjeta') || '';
-    const last4 = window.prompt('Ultimos 4 digitos') || '';
+    const label = (await uiPrompt('Nombre de tarjeta', { title: 'Agregar tarjeta' })) || '';
+    const last4 = (await uiPrompt('Ultimos 4 digitos', { title: 'Agregar tarjeta' })) || '';
     if (!label || !/^\d{4}$/.test(last4)) return;
 
     const result = await fetchNui<{ success?: boolean }>('walletAddCard', { label, last4, color: '#007aff' }, { success: false });
@@ -84,9 +86,9 @@ export function WalletApp() {
   };
 
   const proximityTransfer = async (method: 'qr' | 'nfc') => {
-    const targetPhone = window.prompt(method === 'qr' ? 'Numero destino (QR)' : 'Numero destino (NFC)') || '';
-    const amount = Number(window.prompt('Monto') || '0');
-    const title = window.prompt('Concepto') || (method === 'qr' ? 'Pago QR' : 'Pago NFC');
+    const targetPhone = (await uiPrompt(method === 'qr' ? 'Numero destino (QR)' : 'Numero destino (NFC)', { title: 'Transferencia' })) || '';
+    const amount = Number((await uiPrompt('Monto', { title: 'Transferencia' })) || '0');
+    const title = (await uiPrompt('Concepto', { title: 'Transferencia' })) || (method === 'qr' ? 'Pago QR' : 'Pago NFC');
     if (!targetPhone || !Number.isFinite(amount) || amount <= 0) return;
 
     const result = await fetchNui<{ success?: boolean; balance?: number; error?: string; distance?: number; maxDistance?: number }>(
@@ -102,16 +104,16 @@ export function WalletApp() {
     }
 
     if (result.error === 'TOO_FAR') {
-      window.alert(`Debes acercarte mas (${(result.maxDistance || 3).toFixed(1)}m max). Distancia: ${(result.distance || 0).toFixed(2)}m`);
+      uiAlert(`Debes acercarte mas (${(result.maxDistance || 3).toFixed(1)}m max). Distancia: ${(result.distance || 0).toFixed(2)}m`);
       return;
     }
 
     if (result.error === 'TARGET_OFFLINE') {
-      window.alert('La persona debe estar conectada y cerca para pago QR/NFC');
+      uiAlert('La persona debe estar conectada y cerca para pago QR/NFC');
       return;
     }
 
-    window.alert(result.error || 'Pago de proximidad fallido');
+    uiAlert(result.error || 'Pago de proximidad fallido');
   };
 
   const removeCard = async (cardId: number) => {
@@ -145,7 +147,7 @@ export function WalletApp() {
 
     const result = await fetchNui<{ success?: boolean; error?: string; channel?: 'nfc' | 'remote' }>('walletCreateInvoice', payload, { success: false });
     if (!result?.success) {
-      window.alert(result?.error || 'No se pudo crear la factura');
+      uiAlert(result?.error || 'No se pudo crear la factura');
       return;
     }
 
@@ -153,7 +155,7 @@ export function WalletApp() {
     setNfcAmount('');
     setNfcTitle('Factura');
     if (result.channel === 'remote') {
-      window.alert('Factura remota enviada. Le aparecera en Banco al destinatario.');
+      uiAlert('Factura remota enviada. Le aparecera en Banco al destinatario.');
     }
   };
 
@@ -168,7 +170,7 @@ export function WalletApp() {
     }, { success: false });
 
     if (!result?.success && accept) {
-      window.alert(result?.error || 'No se pudo completar el pago');
+      uiAlert(result?.error || 'No se pudo completar el pago');
       return;
     }
 

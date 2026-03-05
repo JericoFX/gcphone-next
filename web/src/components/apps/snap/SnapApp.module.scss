@@ -265,7 +265,6 @@
   border: none;
   border-radius: 20px;
   background: rgba(255, 255, 255, 0.2);
-  backdrop-filter: blur(10px);
   color: #ffffff;
   font-size: 13px;
   cursor: pointer;
@@ -530,7 +529,6 @@
   font-size: 20px;
   cursor: pointer;
   z-index: 10;
-  backdrop-filter: blur(10px);
   
   &:hover {
     background: rgba(255, 255, 255, 0.3);
@@ -551,7 +549,6 @@
   font-size: 24px;
   cursor: pointer;
   z-index: 10;
-  backdrop-filter: blur(10px);
   display: flex;
   align-items: center;
   justify-content: center;

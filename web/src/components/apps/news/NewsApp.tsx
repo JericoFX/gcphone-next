@@ -3,6 +3,8 @@ import { useRouter } from '../../Phone/PhoneFrame';
 import { fetchNui } from '../../../utils/fetchNui';
 import { timeAgo } from '../../../utils/misc';
 import { resolveMediaType, sanitizeMediaUrl, sanitizeText } from '../../../utils/sanitize';
+import { uiPrompt } from '../../../utils/uiDialog';
+import { uiAlert } from '../../../utils/uiAlert';
 import { ActionSheet } from '../../shared/ui/ActionSheet';
 import { MediaLightbox } from '../../shared/ui/MediaLightbox';
 import { AppScaffold } from '../../shared/layout';
@@ -99,14 +101,14 @@ export function NewsApp() {
     }
   };
 
-  const attachByUrl = () => {
-    const input = window.prompt('Pega URL de imagen o video');
+  const attachByUrl = async () => {
+    const input = await uiPrompt('Pega URL de imagen o video', { title: 'Adjuntar en noticias' });
     const nextUrl = sanitizeMediaUrl(input);
     if (nextUrl) {
       setMediaUrl(nextUrl);
       return;
     }
-    if (input && input.trim()) window.alert('URL invalida o formato no permitido');
+    if (input && input.trim()) uiAlert('URL invalida o formato no permitido');
   };
 
   const viewArticle = async (articleId: number) => {

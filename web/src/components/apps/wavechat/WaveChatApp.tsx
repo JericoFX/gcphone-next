@@ -7,6 +7,8 @@ import { useNuiCustomEvent } from '../../../utils/useNui';
 import { generateColorForString, timeAgo } from '../../../utils/misc';
 import { resolveMediaType, sanitizeMediaUrl, sanitizeText } from '../../../utils/sanitize';
 import { fetchSocketToken } from '../../../utils/realtimeAuth';
+import { uiPrompt } from '../../../utils/uiDialog';
+import { uiAlert } from '../../../utils/uiAlert';
 import { connectWaveSocket, disconnectWaveSocket, getWaveRecent, isWaveSocketConnected, joinWaveRoom, leaveWaveRoom, sendWaveMessage, sendWaveTyping, type WaveSocketMessage } from '../../../utils/socket';
 import { ActionSheet } from '../../shared/ui/ActionSheet';
 import { MediaLightbox } from '../../shared/ui/MediaLightbox';
@@ -98,9 +100,9 @@ export function WaveChatApp() {
   };
 
   const createGroup = async () => {
-    const name = sanitizeText(window.prompt('Nombre del grupo') || '', 80);
+    const name = sanitizeText((await uiPrompt('Nombre del grupo', { title: 'Crear grupo' })) || '', 80);
     if (!name) return;
-    const membersRaw = sanitizeText(window.prompt('Numeros (separados por coma)') || '', 200);
+    const membersRaw = sanitizeText((await uiPrompt('Numeros (separados por coma)', { title: 'Crear grupo' })) || '', 200);
     const members = membersRaw
       .split(',')
       .map((x) => sanitizeText(x, 20))
@@ -373,24 +375,24 @@ export function WaveChatApp() {
     setShowAttachSheet(false);
   };
 
-  const attachByUrl = () => {
-    const input = window.prompt('Pega URL de imagen, video, audio o GIF');
+  const attachByUrl = async () => {
+    const input = await uiPrompt('Pega URL de imagen, video, audio o GIF', { title: 'Adjuntar' });
     const nextUrl = sanitizeMediaUrl(input);
     if (nextUrl) {
       setAttachmentUrl(nextUrl);
     } else if (input && input.trim()) {
-      window.alert('URL invalida o formato no permitido');
+      uiAlert('URL invalida o formato no permitido');
     }
     setShowAttachSheet(false);
   };
 
-  const attachAudioUrl = () => {
-    const input = window.prompt('Pega URL de audio (mp3, ogg, wav, m4a)');
+  const attachAudioUrl = async () => {
+    const input = await uiPrompt('Pega URL de audio (mp3, ogg, wav, m4a)', { title: 'Adjuntar' });
     const nextUrl = sanitizeMediaUrl(input);
     if (nextUrl && resolveMediaType(nextUrl) === 'audio') {
       setAttachmentUrl(nextUrl);
     } else if (input && input.trim()) {
-      window.alert('URL de audio invalida');
+      uiAlert('URL de audio invalida');
     }
     setShowAttachSheet(false);
   };
@@ -403,8 +405,8 @@ export function WaveChatApp() {
   const sendLocationText = async () => {
     const number = selectedConversation();
     if (!number) return;
-    const x = Number(window.prompt('Coordenada X'));
-    const y = Number(window.prompt('Coordenada Y'));
+    const x = Number(await uiPrompt('Coordenada X', { title: 'Compartir ubicacion' }));
+    const y = Number(await uiPrompt('Coordenada Y', { title: 'Compartir ubicacion' }));
     if (!Number.isFinite(x) || !Number.isFinite(y)) return;
     await messagesActions.send(number, `📍 Ubicacion compartida LOC:${x.toFixed(2)},${y.toFixed(2)}`);
   };
@@ -429,13 +431,13 @@ export function WaveChatApp() {
   const startVoiceRecording = async () => {
     if (isRecordingVoice()) return;
     if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
-      window.alert('Grabacion de audio no disponible en este entorno');
+      uiAlert('Grabacion de audio no disponible en este entorno');
       return;
     }
 
     const uploadConfig = await fetchNui<UploadConfig>('getUploadConfig', {}, { uploadUrl: '', uploadField: 'files[]' });
     if (!uploadConfig?.uploadUrl) {
-      window.alert('Configura Config.Gallery.UploadUrl para enviar audios');
+      uiAlert('Configura Config.Gallery.UploadUrl para enviar audios');
       return;
     }
 
@@ -461,10 +463,10 @@ export function WaveChatApp() {
           if (uploadedUrl && resolveMediaType(uploadedUrl) === 'audio') {
             setAttachmentUrl(uploadedUrl);
           } else {
-            window.alert('Respuesta de upload invalida para audio');
+             uiAlert('Respuesta de upload invalida para audio');
           }
         } catch (_err) {
-          window.alert('No se pudo subir la nota de voz');
+           uiAlert('No se pudo subir la nota de voz');
         } finally {
           setUploadingVoice(false);
           cleanupRecorder();
@@ -477,7 +479,7 @@ export function WaveChatApp() {
       recordingInterval = window.setInterval(() => setRecordingSeconds((prev) => prev + 1), 1000);
     } catch (_err) {
       cleanupRecorder();
-      window.alert('No se pudo iniciar la grabacion');
+      uiAlert('No se pudo iniciar la grabacion');
     }
   };
 

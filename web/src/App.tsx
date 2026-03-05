@@ -5,13 +5,15 @@ import { LockScreen } from './components/LockScreen/LockScreen';
 import { ContactRequestNotification } from './components/shared/ContactRequest/ContactRequest';
 import { PhoneNotificationBanner } from './components/shared/notifications/PhoneNotificationBanner';
 import { fetchNui } from './utils/fetchNui';
+import { setNuiAuthToken } from './utils/fetchNui';
 import { isEnvBrowser } from './utils/misc';
 import { setupBrowserMock } from './mock/browserMock';
+import { localeTagFromLanguage } from './i18n';
 import './App.scss';
 
 function PhoneContent() {
   const [phoneState] = usePhone();
-  const [notifications] = useNotifications();
+  const [notifications, notificationsActions] = useNotifications();
   const [prefersDark, setPrefersDark] = createSignal(false);
 
   onMount(() => {
@@ -26,6 +28,30 @@ function PhoneContent() {
     });
   });
 
+
+  onMount(() => {
+    const onUiAlert = (event: Event) => {
+      const detail = (event as CustomEvent<{ title?: string; message?: string }>).detail;
+      const message = typeof detail?.message === 'string' ? detail.message.trim() : '';
+      if (!message) return;
+
+      notificationsActions.receive({
+        id: `ui-alert-${Date.now()}`,
+        appId: 'system',
+        title: detail?.title || 'Aviso',
+        message,
+        durationMs: 3200,
+        priority: 'normal',
+      });
+    };
+
+    window.addEventListener('phone:uiAlert', onUiAlert as EventListener);
+
+    onCleanup(() => {
+      window.removeEventListener('phone:uiAlert', onUiAlert as EventListener);
+    });
+  });
+
   const themeClass = createMemo(() => {
     const theme = phoneState.settings.theme;
     if (theme === 'dark') return 'theme-dark';
@@ -35,7 +61,7 @@ function PhoneContent() {
 
   createEffect(() => {
     const lang = phoneState.settings.language || 'es';
-    document.documentElement.lang = lang;
+    document.documentElement.lang = localeTagFromLanguage(lang);
     window.localStorage.setItem('gcphone:language', lang);
   });
 
@@ -77,6 +103,10 @@ export function App() {
       }
 
       if (payload.action) {
+        if ((payload.action === 'initPhone' || payload.action === 'showPhone') && payload.data && typeof payload.data === 'object') {
+          const token = (payload.data as { nuiAuthToken?: string }).nuiAuthToken;
+          setNuiAuthToken(token);
+        }
         window.dispatchEvent(new CustomEvent(payload.action, { detail: payload.data }));
       }
 

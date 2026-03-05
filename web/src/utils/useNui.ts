@@ -10,7 +10,7 @@ export function useNuiEvent<T = unknown>(
   action: string,
   handler: (data: T) => void
 ): void {
-  const eventListener = (event: MessageEvent<NuiMessageData<T>>) => {
+  const messageListener = (event: MessageEvent<NuiMessageData<T>>) => {
     const { action: eventAction, data } = event.data;
     
     if (eventAction === action) {
@@ -18,10 +18,10 @@ export function useNuiEvent<T = unknown>(
     }
   };
   
-  window.addEventListener('message', eventListener);
+  window.addEventListener('message', messageListener);
   
   onCleanup(() => {
-    window.removeEventListener('message', eventListener);
+    window.removeEventListener('message', messageListener);
   });
 }
 
@@ -29,13 +29,13 @@ export function useNuiCustomEvent<T = unknown>(
   eventName: string,
   handler: (data: T) => void
 ): void {
-  const eventListener = (event: CustomEvent<T>) => {
+  const customEventListener = (event: CustomEvent<T>) => {
     handler(event.detail);
   };
   
-  window.addEventListener(eventName, eventListener as EventListener);
+  window.addEventListener(eventName, customEventListener as EventListener);
   
   onCleanup(() => {
-    window.removeEventListener(eventName, eventListener as EventListener);
+    window.removeEventListener(eventName, customEventListener as EventListener);
   });
 }

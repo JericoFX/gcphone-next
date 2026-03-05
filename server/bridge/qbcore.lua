@@ -1,5 +1,3 @@
--- Creado/Modificado por JericoFX
-
 local QBCore = nil
 local Framework = nil
 
@@ -29,7 +27,36 @@ function GetPlayer(source)
     return QBCore.Functions.GetPlayer(source)
 end
 
+local function IsTruthy(value)
+    if value == true then return true end
+    if type(value) == 'number' then return value ~= 0 end
+    if type(value) == 'string' then
+        local lower = value:lower()
+        return lower == 'true' or lower == '1' or lower == 'yes'
+    end
+    return false
+end
+
+function IsPlayerActionAllowed(source)
+    local player = GetPlayer(source)
+    if not player then return false, 'PLAYER_NOT_FOUND' end
+
+    local metadata = (player.PlayerData and player.PlayerData.metadata) or {}
+    local isDead = IsTruthy(metadata.isdead) or IsTruthy(metadata.dead)
+    local inLastStand = IsTruthy(metadata.inlaststand)
+    local isCuffed = IsTruthy(metadata.ishandcuffed) or IsTruthy(metadata.handcuffed) or IsTruthy(metadata.isHandcuffed)
+
+    if isDead then return false, 'PLAYER_DEAD' end
+    if inLastStand then return false, 'PLAYER_DOWN' end
+    if isCuffed then return false, 'PLAYER_RESTRAINED' end
+
+    return true, nil
+end
+
 function GetIdentifier(source)
+    local allowed = IsPlayerActionAllowed(source)
+    if not allowed then return nil end
+
     local player = GetPlayer(source)
     if not player then return nil end
     return player.PlayerData.citizenid

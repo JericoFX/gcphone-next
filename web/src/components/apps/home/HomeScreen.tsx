@@ -3,6 +3,7 @@ import { usePhone } from '../../../store/phone';
 import { useNotifications } from '../../../store/notifications';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { APP_BY_ID } from '../../../config/apps';
+import { appName, formatDate as formatDateI18n, formatTime as formatTimeI18n, t } from '../../../i18n';
 import { fetchNui } from '../../../utils/fetchNui';
 import { timeAgo } from '../../../utils/misc';
 import styles from './HomeScreen.module.scss';
@@ -20,7 +21,7 @@ export function HomeScreen() {
   const [touchStartX, setTouchStartX] = createSignal<number | null>(null);
   const [pageTransition, setPageTransition] = createSignal<'next' | 'prev' | null>(null);
   const [openFolderId, setOpenFolderId] = createSignal<string | null>(null);
-  const [musicNowPlaying, setMusicNowPlaying] = createSignal('Sin musica');
+  const [musicNowPlaying, setMusicNowPlaying] = createSignal('');
   const [searchOpen, setSearchOpen] = createSignal(false);
   const [searchQuery, setSearchQuery] = createSignal('');
   const [searchLoading, setSearchLoading] = createSignal(false);
@@ -40,6 +41,7 @@ export function HomeScreen() {
   const isSelected = createSelector(selectedApp);
   const isDragOverIndex = createSelector(dragOverIndex);
   const isDraggingApp = createSelector(draggingId);
+  const language = createMemo(() => state.settings.language || 'es');
 
   const folderGroups = createMemo(() => {
     const socialSet = new Set(['messages', 'wavechat', 'chirp', 'snap', 'clips', 'darkrooms']);
@@ -49,8 +51,8 @@ export function HomeScreen() {
     const utilityApps = homeApps().filter((app) => utilitySet.has(app.id));
 
     return [
-      { id: 'social', name: 'Social', icon: '💬', apps: socialApps },
-      { id: 'utility', name: 'Utilidades', icon: '🧰', apps: utilityApps },
+      { id: 'social', name: t('home.folder.social', language()), icon: '💬', apps: socialApps },
+      { id: 'utility', name: t('home.folder.utility', language()), icon: '🧰', apps: utilityApps },
     ].filter((group) => group.apps.length > 0);
   });
 
@@ -73,7 +75,10 @@ export function HomeScreen() {
     const apps = state.enabledApps
       .map((id) => APP_BY_ID[id])
       .filter((app): app is NonNullable<typeof app> => Boolean(app))
-      .filter((app) => app.name.toLowerCase().includes(q) || app.id.toLowerCase().includes(q))
+      .filter((app) => {
+        const label = appName(app.id, app.name, language()).toLowerCase();
+        return label.includes(q) || app.id.toLowerCase().includes(q);
+      })
       .slice(0, 6);
 
     const contacts = searchContacts()
@@ -107,7 +112,7 @@ export function HomeScreen() {
       if (!number || byNumber.has(number)) continue;
       byNumber.set(number, {
         number,
-        preview: msg.message || 'Mensaje',
+        preview: msg.message || t('home.section_chats', language()),
         time: msg.time,
       });
       if (byNumber.size >= 300) break;
@@ -164,10 +169,10 @@ export function HomeScreen() {
       setCurrentTime(new Date());
     }, 1000);
 
-    setMusicNowPlaying(window.localStorage.getItem('gcphone:musicNowPlaying') || 'Sin musica');
+    setMusicNowPlaying(window.localStorage.getItem('gcphone:musicNowPlaying') || t('home.music_idle', language()));
 
     const onMusicStorage = () => {
-      setMusicNowPlaying(window.localStorage.getItem('gcphone:musicNowPlaying') || 'Sin musica');
+      setMusicNowPlaying(window.localStorage.getItem('gcphone:musicNowPlaying') || t('home.music_idle', language()));
     };
 
     window.addEventListener('storage', onMusicStorage);
@@ -231,11 +236,11 @@ export function HomeScreen() {
   });
   
   const formatTime = (date: Date) => {
-    return date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+    return formatTimeI18n(date, language(), { hour: '2-digit', minute: '2-digit' });
   };
   
   const formatDate = (date: Date) => {
-    return date.toLocaleDateString('es-ES', { 
+    return formatDateI18n(date, language(), {
       weekday: 'long', 
       day: 'numeric', 
       month: 'long' 
@@ -265,9 +270,9 @@ export function HomeScreen() {
         <div class={styles.time}>{formatTime(currentTime())}</div>
         <div class={styles.icons}>
           <button class={styles.editBtn} onClick={() => setEditing((v) => !v)}>
-            {editing() ? 'OK' : 'Editar'}
+            {editing() ? t('home.done', language()) : t('home.edit', language())}
           </button>
-          <button class={styles.searchBtn} onClick={openSearch}>Buscar</button>
+          <button class={styles.searchBtn} onClick={openSearch}>{t('home.search', language())}</button>
 
         </div>
       </div>
@@ -279,14 +284,14 @@ export function HomeScreen() {
 
       <div class={styles.widgetsRow}>
         <button class={styles.widgetCard} onClick={() => router.navigate('maps')}>
-          <span class={styles.widgetLabel}>Mapas</span>
-          <strong>{currentTime().toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}</strong>
-          <small>Abrir navegacion rapida</small>
+          <span class={styles.widgetLabel}>{t('home.widget_maps', language())}</span>
+          <strong>{formatDateI18n(currentTime(), language(), { day: '2-digit', month: 'short' })}</strong>
+          <small>{t('home.widget_maps_hint', language())}</small>
         </button>
         <button class={styles.widgetCard} onClick={() => router.navigate('music')}>
-          <span class={styles.widgetLabel}>Now Playing</span>
+          <span class={styles.widgetLabel}>{t('home.now_playing', language())}</span>
           <strong>{musicNowPlaying()}</strong>
-          <small>Toca para abrir Musica</small>
+          <small>{t('home.widget_music_hint', language())}</small>
         </button>
       </div>
 
@@ -338,8 +343,8 @@ export function HomeScreen() {
                 }}
                 onClick={() => openApp(app)}
               >
-                <img src={app.icon} alt={app.name} />
-                <span class={styles.appName}>{app.name}</span>
+                <img src={app.icon} alt={appName(app.id, app.name, language())} />
+                <span class={styles.appName}>{appName(app.id, app.name, language())}</span>
                 <Show when={editing()}>
                   <span class={styles.unpinBadge}>⋮</span>
                 </Show>
@@ -348,7 +353,7 @@ export function HomeScreen() {
                 </Show>
               </button>
               <Show when={editing()}>
-                <span class={styles.dragHint}>Arrastra</span>
+                <span class={styles.dragHint}>{t('home.drag', language())}</span>
               </Show>
             </div>
           )}
@@ -382,8 +387,8 @@ export function HomeScreen() {
             <div class={styles.folderOverlay} onClick={() => setOpenFolderId(null)}>
               <div class={styles.folderPanel} onClick={(e) => e.stopPropagation()}>
                 <div class={styles.folderHeader}>
-                  <strong>{folder()?.name || 'Carpeta'}</strong>
-                  <button onClick={() => setOpenFolderId(null)}>Cerrar</button>
+                  <strong>{folder()?.name || t('home.folder_default', language())}</strong>
+                  <button onClick={() => setOpenFolderId(null)}>{t('home.close', language())}</button>
                 </div>
                 <div class={styles.folderGrid}>
                   <For each={folder()?.apps || []}>
@@ -395,8 +400,8 @@ export function HomeScreen() {
                           openApp(app);
                         }}
                       >
-                        <img src={app.icon} alt={app.name} />
-                        <span>{app.name}</span>
+                        <img src={app.icon} alt={appName(app.id, app.name, language())} />
+                        <span>{appName(app.id, app.name, language())}</span>
                       </button>
                     )}
                   </For>
@@ -415,31 +420,31 @@ export function HomeScreen() {
                 class={styles.searchInput}
                 type="text"
                 value={searchQuery()}
-                placeholder="Buscar en telefono"
+                placeholder={t('home.search_placeholder', language())}
                 onInput={(e) => setSearchQuery(e.currentTarget.value)}
                 autofocus
               />
-              <button class={styles.searchClose} onClick={closeSearch}>Cancelar</button>
+              <button class={styles.searchClose} onClick={closeSearch}>{t('home.search_cancel', language())}</button>
             </div>
 
             <Show when={searchLoading()}>
-              <div class={styles.searchEmpty}>Indexando contenido...</div>
+              <div class={styles.searchEmpty}>{t('home.search_indexing', language())}</div>
             </Show>
 
             <Show when={!searchLoading() && searchQuery().trim() && searchResults().apps.length + searchResults().contacts.length + searchResults().conversations.length + searchResults().calls.length === 0}>
-              <div class={styles.searchEmpty}>Sin resultados</div>
+              <div class={styles.searchEmpty}>{t('home.search_empty', language())}</div>
             </Show>
 
             <div class={styles.searchResults}>
               <Show when={searchResults().apps.length > 0}>
                 <section>
-                  <h4>Apps</h4>
+                  <h4>{t('home.section_apps', language())}</h4>
                   <For each={searchResults().apps}>
                     {(app) => (
                       <button class={styles.searchItem} onClick={() => { closeSearch(); router.navigate(app.route); }}>
-                        <img src={app.icon} alt={app.name} />
+                        <img src={app.icon} alt={appName(app.id, app.name, language())} />
                         <div>
-                          <strong>{app.name}</strong>
+                          <strong>{appName(app.id, app.name, language())}</strong>
                           <span>{app.route}</span>
                         </div>
                       </button>
@@ -450,7 +455,7 @@ export function HomeScreen() {
 
               <Show when={searchResults().contacts.length > 0}>
                 <section>
-                  <h4>Contactos</h4>
+                  <h4>{t('home.section_contacts', language())}</h4>
                   <For each={searchResults().contacts}>
                     {(entry) => (
                       <button class={styles.searchItem} onClick={() => { closeSearch(); router.navigate('contacts'); }}>
@@ -467,7 +472,7 @@ export function HomeScreen() {
 
               <Show when={searchResults().conversations.length > 0}>
                 <section>
-                  <h4>Chats</h4>
+                  <h4>{t('home.section_chats', language())}</h4>
                   <For each={searchResults().conversations}>
                     {(entry) => (
                       <button class={styles.searchItem} onClick={() => openMessagesThread(entry.number)}>
@@ -484,7 +489,7 @@ export function HomeScreen() {
 
               <Show when={searchResults().calls.length > 0}>
                 <section>
-                  <h4>Llamadas</h4>
+                  <h4>{t('home.section_calls', language())}</h4>
                   <For each={searchResults().calls}>
                     {(entry) => (
                       <button class={styles.searchItem} onClick={() => { closeSearch(); router.navigate('calls'); }}>

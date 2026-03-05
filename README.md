@@ -51,6 +51,40 @@ It is a structural modernization.
 
 ---
 
+## Recent updates (Mar 2026)
+
+This is the latest stabilization pass applied to this fork.
+
+### Security and validation
+
+- Added NUI request hardening with per-session token rotation, request sequence, and request signature.
+- Added callback gate in client Lua before executing NUI callbacks.
+- Added player-state checks for critical flows in QBCore bridge and server modules.
+- Wallet, Clips, and Documents callbacks now verify source/target player state before sensitive actions.
+
+### Frontend behavior
+
+- Replaced browser `alert/prompt/confirm` usage with in-phone dialog/alert flows.
+- Moved dialogs to render inside the phone screen container (not centered on full viewport).
+- Replaced emoji-based controls in Gallery with icon assets.
+- Refactored repeated tab/button markup in updated apps into small reusable components.
+
+### FiveM compatibility
+
+- Removed `backdrop-filter` usage from app styles to avoid runtime issues in FiveM NUI.
+
+### Localization
+
+- Added JSON-based locale structure for easy maintenance.
+- Integrated `ox_lib` locale support on Lua side using `lib.locale()` and `shared/locales/*.json`.
+
+### Codebase cleanup
+
+- Resolved pending merge conflicts in server modules.
+- Removed stale inline comments in updated hot paths.
+
+---
+
 ## Attribution
 
 This repository contains a derivative work of:

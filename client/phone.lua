@@ -1,5 +1,3 @@
--- Creado/Modificado por JericoFX
-
 local KeyOpenClose = Config.Phone.KeyOpen
 local menuIsOpen = false
 local hasFocus = false
@@ -53,6 +51,7 @@ function TogglePhone()
         
         lib.callback('gcphone:getPhoneData', false, function(data)
             if data then
+                data.nuiAuthToken = RotateNuiAuthToken()
                 SendNUIMessage({
                     action = 'showPhone',
                     data = data
