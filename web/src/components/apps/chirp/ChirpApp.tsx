@@ -7,6 +7,7 @@ import { AppScaffold } from '../../shared/layout';
 import { useAppCache } from '../../../hooks';
 import { MediaLightbox } from '../../shared/ui/MediaLightbox';
 import { Modal, ModalActions, ModalButton, FormField } from '../../shared/ui/Modal';
+import { EmojiPickerButton } from '../../shared/ui/EmojiPicker';
 import styles from './ChirpApp.module.scss';
 
 interface ChirpTweet {
@@ -586,8 +587,8 @@ export function ChirpApp() {
         size="md"
       >
         <div class={styles.composerContent}>
-          <textarea
-            class={styles.composerTextarea}
+          <EmojiPickerButton value={composerText()} onChange={setComposerText} maxLength={280} />
+      <textarea class={styles.composerTextarea}
             placeholder="Que esta pasando?"
             value={composerText()}
             onInput={(e) => setComposerText(e.currentTarget.value)}

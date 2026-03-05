@@ -11,6 +11,7 @@ import { ActionSheet } from '../../shared/ui/ActionSheet';
 import { MediaLightbox } from '../../shared/ui/MediaLightbox';
 import { SkeletonList } from '../../shared/ui/SkeletonList';
 import { VirtualList } from '../../shared/ui/VirtualList';
+import { EmojiPickerButton } from '../../shared/ui/EmojiPicker';
 import { AppScaffold } from '../../shared/layout';
 import styles from './MessagesApp.module.scss';
 
@@ -383,6 +384,7 @@ function ConversationView(props: {
       </Show>
 
       <div class={styles.inputContainer}>
+        <EmojiPickerButton value={props.messageInput} onChange={props.onInput} maxLength={800} />
         <button class={styles.attachBtn} onClick={() => setShowAttachSheet(true)}>＋</button>
         <input
           type="text"

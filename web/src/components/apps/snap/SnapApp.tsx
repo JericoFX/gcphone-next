@@ -8,6 +8,7 @@ import { useAppCache } from '../../../hooks';
 import { MediaLightbox } from '../../shared/ui/MediaLightbox';
 import { Modal, ModalActions, ModalButton } from '../../shared/ui/Modal';
 import { ActionSheet } from '../../shared/ui/ActionSheet';
+import { EmojiPickerButton } from '../../shared/ui/EmojiPicker';
 import styles from './SnapApp.module.scss';
 
 interface SnapPost {
@@ -417,8 +418,8 @@ export function SnapApp() {
             </div>
 
             <Show when={postMode() === 'post'}>
-              <textarea
-                class={styles.captionInput}
+              <EmojiPickerButton value={postCaption()} onChange={setPostCaption} maxLength={2200} />
+      <textarea class={styles.captionInput}
                 placeholder="Escribe un caption..."
                 value={postCaption()}
                 onInput={(e) => setPostCaption(e.currentTarget.value)}
