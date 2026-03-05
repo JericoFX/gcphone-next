@@ -49,7 +49,7 @@ export function EmojiPickerButton(props: EmojiPickerProps) {
       try {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
-          setRecentEmojis(parsed.slice(0, 20));
+          setRecentEmojis(parsed.slice(0, 6));
         }
       } catch (e) {
         // Invalid JSON, ignore
@@ -81,7 +81,7 @@ export function EmojiPickerButton(props: EmojiPickerProps) {
   const saveRecentEmoji = (emoji: string) => {
     setRecentEmojis((prev) => {
       const filtered = prev.filter((e) => e !== emoji);
-      const updated = [emoji, ...filtered].slice(0, 20);
+      const updated = [emoji, ...filtered].slice(0, 6);
       localStorage.setItem('gcphone:recentEmojis', JSON.stringify(updated));
       return updated;
     });
@@ -119,7 +119,7 @@ export function EmojiPickerButton(props: EmojiPickerProps) {
             <div class={styles.category}>
               <div class={styles.categoryTitle}>Recientes</div>
               <div class={styles.emojiGrid}>
-                <For each={recentEmojis().slice(0, 20)}>
+                <For each={recentEmojis().slice(0, 6)}>
                   {(emoji) => (
                     <button
                       class={styles.emoji}
