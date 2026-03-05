@@ -7,6 +7,10 @@ import { APP_DEFINITIONS } from '../../../config/apps';
 import { appName, t } from '../../../i18n';
 import styles from './SettingsApp.module.scss';
 
+// Audio player for ringtone preview
+let currentAudio: HTMLAudioElement | null = null;
+let currentRingtoneId: string | null = null;
+
 type SettingsTab = 'appearance' | 'sound' | 'security' | 'advanced';
 
 const wallpapers = [
@@ -295,6 +299,40 @@ export function SettingsApp() {
     </div>
   );
 
+  const playRingtonePreview = (ringtoneId: string) => {
+    // Stop current audio if playing
+    if (currentAudio) {
+      currentAudio.pause();
+      currentAudio.currentTime = 0;
+      currentAudio = null;
+    }
+    
+    // If clicking the same ringtone that's playing, just stop it
+    if (currentRingtoneId === ringtoneId) {
+      currentRingtoneId = null;
+      return;
+    }
+    
+    // Play new ringtone
+    const audio = new Audio(`./audio/ringtones/${ringtoneId}`);
+    audio.volume = phoneState.settings.volume;
+    audio.play().catch(() => {
+      // Audio playback failed (browser policy, etc.)
+    });
+    
+    currentAudio = audio;
+    currentRingtoneId = ringtoneId;
+    
+    // Auto-stop after 5 seconds
+    setTimeout(() => {
+      if (currentAudio === audio) {
+        audio.pause();
+        currentAudio = null;
+        currentRingtoneId = null;
+      }
+    }, 5000);
+  };
+
   const renderSound = () => (
     <div class={styles.sectionContainer}>
       <div class={styles.sectionCard}>
@@ -347,17 +385,29 @@ export function SettingsApp() {
         <div class={styles.ringtoneList}>
           <For each={ringtones}>
             {(ringtone) => (
-              <button
+              <div
                 class={styles.ringtoneItem}
                 classList={{ [styles.selected]: phoneState.settings.ringtone === ringtone.id }}
-                onClick={() => phoneActions.setRingtone(ringtone.id)}
               >
                 <div class={styles.ringtoneIcon}>{ringtone.icon}</div>
                 <span class={styles.ringtoneName}>{ringtone.name}</span>
-                <Show when={phoneState.settings.ringtone === ringtone.id}>
-                  <span class={styles.ringtoneStatus}>✓</span>
-                </Show>
-              </button>
+                <div class={styles.ringtoneActions}>
+                  <button
+                    class={styles.previewBtn}
+                    onClick={() => playRingtonePreview(ringtone.id)}
+                    title="Escuchar"
+                  >
+                    {currentRingtoneId === ringtone.id ? '⏹️' : '▶️'}
+                  </button>
+                  <button
+                    class={styles.selectBtn}
+                    classList={{ [styles.selected]: phoneState.settings.ringtone === ringtone.id }}
+                    onClick={() => phoneActions.setRingtone(ringtone.id)}
+                  >
+                    {phoneState.settings.ringtone === ringtone.id ? '✓' : t('common.select', language())}
+                  </button>
+                </div>
+              </div>
             )}
           </For>
         </div>
@@ -546,19 +596,6 @@ export function SettingsApp() {
           </div>
           <div class={styles.toggleItem}>
             <span class={styles.toggleLabel}>
-              <span class={`${styles.toggleIcon} ${styles['icon-system']}`}>📶</span>
-              Datos móviles
-            </span>
-            <div
-              class={styles.toggleSwitch}
-              classList={{ [styles.active]: notifications.mobileData }}
-              onClick={() => notificationsActions.setMobileData(!notifications.mobileData)}
-            >
-              <div class={styles.toggleThumb} />
-            </div>
-          </div>
-          <div class={styles.toggleItem}>
-            <span class={styles.toggleLabel}>
               <span class={`${styles.toggleIcon} ${styles['icon-system']}`}>🔇</span>
               Modo silencio
             </span>
@@ -566,19 +603,6 @@ export function SettingsApp() {
               class={styles.toggleSwitch}
               classList={{ [styles.active]: notifications.silentMode }}
               onClick={() => notificationsActions.setSilentMode(!notifications.silentMode)}
-            >
-              <div class={styles.toggleThumb} />
-            </div>
-          </div>
-          <div class={styles.toggleItem}>
-            <span class={styles.toggleLabel}>
-              <span class={`${styles.toggleIcon} ${styles['icon-system']}`}>🔄</span>
-              Bloqueo de rotación
-            </span>
-            <div
-              class={styles.toggleSwitch}
-              classList={{ [styles.active]: notifications.rotationLock }}
-              onClick={() => notificationsActions.setRotationLock(!notifications.rotationLock)}
             >
               <div class={styles.toggleThumb} />
             </div>
