@@ -483,6 +483,13 @@
   }
 }
 
+.captionContainer {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
 .captionInput {
   width: 100%;
   padding: 12px;

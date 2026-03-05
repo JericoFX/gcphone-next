@@ -13,6 +13,7 @@ import { connectWaveSocket, disconnectWaveSocket, getWaveRecent, isWaveSocketCon
 import { ActionSheet } from '../../shared/ui/ActionSheet';
 import { MediaLightbox } from '../../shared/ui/MediaLightbox';
 import { VirtualList } from '../../shared/ui/VirtualList';
+import { EmojiPickerButton } from '../../shared/ui/EmojiPicker';
 import { AppScaffold } from '../../shared/layout';
 import styles from './WaveChatApp.module.scss';
 
@@ -663,6 +664,7 @@ export function WaveChatApp() {
                   )}
                 </For>
                 <div class={styles.inputContainer}>
+                  <EmojiPickerButton value={groupMessageInput()} onChange={setGroupMessageInput} maxLength={800} />
                   <input value={groupMessageInput()} onInput={(e) => {
                     const next = e.currentTarget.value;
                     setGroupMessageInput(next);
@@ -825,6 +827,7 @@ function ConversationView(props: {
         <button class={styles.attachBtn} onClick={() => props.setShowAttachSheet(true)}>
           ＋
         </button>
+        <EmojiPickerButton value={props.messageInput} onChange={props.onInput} maxLength={800} />
         <input
           type="text"
           placeholder="Mensaje"
