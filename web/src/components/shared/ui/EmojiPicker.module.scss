@@ -42,9 +42,25 @@
 .category {
   padding: 12px;
   border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  max-height: 280px;
+  overflow-y: auto;
+  overflow-x: hidden;
 
   &:last-child {
     border-bottom: none;
+  }
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 3px;
   }
 }
 
