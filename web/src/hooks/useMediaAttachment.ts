@@ -1,6 +1,8 @@
 import { createSignal } from 'solid-js';
 import { fetchNui } from '@/utils/fetchNui';
 import { sanitizeMediaUrl } from '@/utils/sanitize';
+import { uiPrompt } from '@/utils/uiDialog';
+import { uiAlert } from '@/utils/uiAlert';
 
 export interface UseMediaAttachmentOptions {
   onAttached?: (url: string) => void;
@@ -57,8 +59,8 @@ export function useMediaAttachment(options: UseMediaAttachmentOptions = {}) {
     }
   };
 
-  const attachByUrl = () => {
-    const input = window.prompt('Pega URL de imagen, video o audio');
+  const attachByUrl = async () => {
+    const input = await uiPrompt('Pega URL de imagen, video o audio', { title: 'Adjuntar' });
     if (!input?.trim()) return false;
 
     const nextUrl = sanitizeMediaUrl(input.trim());
@@ -69,7 +71,7 @@ export function useMediaAttachment(options: UseMediaAttachmentOptions = {}) {
       return true;
     }
 
-    window.alert('URL invalida o formato no permitido');
+    uiAlert('URL invalida o formato no permitido');
     options.onError?.('URL invalida');
     return false;
   };

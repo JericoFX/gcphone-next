@@ -1,6 +1,7 @@
 import { For, Show, batch, createEffect, createMemo, createSignal, onCleanup, onMount } from 'solid-js';
 import { usePhone } from '../../store/phone';
 import { useNotifications } from '../../store/notifications';
+import { formatDate, formatTime, t } from '../../i18n';
 import styles from './LockScreen.module.scss';
 
 export function LockScreen() {
@@ -11,6 +12,7 @@ export function LockScreen() {
   const [attempts, setAttempts] = createSignal(0);
   const [currentTime, setCurrentTime] = createSignal(new Date());
   const [showPad, setShowPad] = createSignal(false);
+  const language = () => phoneState.settings.language || 'es';
 
   let timer: number | undefined;
 
@@ -51,8 +53,8 @@ export function LockScreen() {
     setCode((prev) => prev + num);
   };
 
-  const formatTime = (date: Date) => date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
-  const formatDate = (date: Date) => date.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
+  const formatClockTime = (date: Date) => formatTime(date, language(), { hour: '2-digit', minute: '2-digit' });
+  const formatClockDate = (date: Date) => formatDate(date, language(), { weekday: 'long', day: 'numeric', month: 'long' });
 
   const keypadKeys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', 'del'];
 
@@ -61,8 +63,8 @@ export function LockScreen() {
       <div class={styles.backgroundGlow} />
 
       <div class={styles.timeBlock}>
-        <div class={styles.time}>{formatTime(currentTime())}</div>
-        <div class={styles.date}>{formatDate(currentTime())}</div>
+        <div class={styles.time}>{formatClockTime(currentTime())}</div>
+        <div class={styles.date}>{formatClockDate(currentTime())}</div>
       </div>
 
       <div class={styles.widgetsRow}>
@@ -104,7 +106,7 @@ export function LockScreen() {
               ))}
             </div>
             <Show when={attempts() > 0}>
-              <span class={styles.errorMsg}>PIN incorrecto ({attempts()})</span>
+                <span class={styles.errorMsg}>PIN incorrecto ({attempts()})</span>
             </Show>
           </div>
 
@@ -121,8 +123,8 @@ export function LockScreen() {
           </div>
 
           <div class={styles.sheetActions}>
-            <button onClick={() => setShowPad(false)}>Cancelar</button>
-            <button onClick={submitUnlock}>Desbloquear</button>
+            <button onClick={() => setShowPad(false)}>{t('lock.cancel', language())}</button>
+            <button onClick={submitUnlock}>{t('lock.unlock', language())}</button>
           </div>
         </div>
       </Show>

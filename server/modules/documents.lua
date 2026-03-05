@@ -1,6 +1,3 @@
--- Creado/Modificado por JericoFX
--- Documents - Backend con soporte NFC
-
 local function SafeString(value, maxLen)
     if type(value) ~= 'string' then return nil end
     local trimmed = value:gsub('%s+', ' '):gsub('^%s+', ''):gsub('%s+$', '')
@@ -33,9 +30,26 @@ local function BuildDocCode(identifier, docType)
     return string.upper(string.sub(tostring(GetHashKey(seed)), -8))
 end
 
--- Get my documents
+local function RequirePlayerIdentifier(source)
+    local src = tonumber(source)
+    if not src or src <= 0 then return nil end
+
+    if type(GetPlayer) == 'function' and not GetPlayer(src) then
+        return nil
+    end
+
+    if type(IsPlayerActionAllowed) == 'function' then
+        local allowed = IsPlayerActionAllowed(src)
+        if not allowed then
+            return nil
+        end
+    end
+
+    return GetIdentifier(src)
+end
+
 lib.callback.register('gcphone:documents:getList', function(source)
-    local identifier = GetIdentifier(source)
+    local identifier = RequirePlayerIdentifier(source)
     if not identifier then return {} end
 
     return MySQL.query.await(
@@ -44,9 +58,8 @@ lib.callback.register('gcphone:documents:getList', function(source)
     ) or {}
 end)
 
--- Create document
 lib.callback.register('gcphone:documents:create', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = RequirePlayerIdentifier(source)
     if not identifier then return { success = false, error = 'INVALID_SOURCE' } end
     if type(data) ~= 'table' then return { success = false, error = 'INVALID_DATA' } end
 
@@ -76,9 +89,8 @@ lib.callback.register('gcphone:documents:create', function(source, data)
     }
 end)
 
--- Delete document
 lib.callback.register('gcphone:documents:delete', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = RequirePlayerIdentifier(source)
     if not identifier then return { success = false, error = 'INVALID_SOURCE' } end
     local id = tonumber(type(data) == 'table' and data.documentId or nil)
     if not id then return { success = false, error = 'INVALID_DOCUMENT' } end
@@ -87,9 +99,8 @@ lib.callback.register('gcphone:documents:delete', function(source, data)
     return { success = true }
 end)
 
--- Enable/Disable NFC for document
 lib.callback.register('gcphone:documents:toggleNFC', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = RequirePlayerIdentifier(source)
     if not identifier then return { success = false, error = 'INVALID_SOURCE' } end
     
     local id = tonumber(type(data) == 'table' and data.documentId or nil)
@@ -105,117 +116,16 @@ lib.callback.register('gcphone:documents:toggleNFC', function(source, data)
     return { success = true }
 end)
 
--- Scan NFC (read document via NFC)
 lib.callback.register('gcphone:documents:scanNFC', function(source, data)
     return { success = false, error = 'NFC_USE_OX_TARGET' }
 end)
 
--- Verify document by code (manual verification)
 lib.callback.register('gcphone:documents:verify', function(source, data)
     return { success = false, error = 'VERIFY_DISABLED_USE_OX_TARGET' }
 end)
 
--- Legacy implementation disabled to keep NFC flow only through ox_target
---[[
-lib.callback.register('gcphone:documents:scanNFC', function(source, data)
-    if type(data) ~= 'table' then return { success = false, error = 'INVALID_DATA' } end
-    
-    local verificationCode = SafeString(data.code)
-    if not verificationCode then return { success = false, error = 'INVALID_CODE' } end
-
-    -- Find document by verification code
-    local doc = MySQL.single.await(
-        'SELECT d.*, n.phone_number FROM phone_documents d ' ..
-        'LEFT JOIN phone_numbers n ON d.identifier = n.identifier ' ..
-        'WHERE d.verification_code = ? AND d.nfc_enabled = 1',
-        { verificationCode }
-    )
-
-    if not doc then
-        return { success = false, error = 'DOCUMENT_NOT_FOUND' }
-    end
-
-    -- Check if expired
-    if doc.expires_at then
-        local expires = os.time({year=tonumber(doc.expires_at:sub(1,4)), month=tonumber(doc.expires_at:sub(6,7)), day=tonumber(doc.expires_at:sub(9,10))})
-        if os.time() > expires then
-            return { success = false, error = 'DOCUMENT_EXPIRED' }
-        end
-    end
-
-    -- Record scan
-    local scannerIdentifier = GetIdentifier(source)
-    MySQL.insert.await(
-        'INSERT INTO phone_documents_nfc_scans (document_id, scanned_by, scan_type) VALUES (?, ?, ?)',
-        { doc.id, scannerIdentifier, 'nfc' }
-    )
-
-    -- Return document info (without sensitive data)
-    return {
-        success = true,
-        document = {
-            doc_type = doc.doc_type,
-            title = doc.title,
-            holder_name = doc.holder_name,
-            holder_number = doc.holder_number,
-            expires_at = doc.expires_at,
-            verification_code = doc.verification_code,
-            scanned_at = os.date('%Y-%m-%d %H:%M:%S')
-        }
-    }
-end)
-
--- Verify document by code (manual verification)
-lib.callback.register('gcphone:documents:verify', function(source, data)
-    if type(data) ~= 'table' then return { success = false, error = 'INVALID_DATA' } end
-    
-    local code = SafeString(data.code)
-    if not code then return { success = false, error = 'INVALID_CODE' } end
-
-    local doc = MySQL.single.await(
-        'SELECT d.*, n.phone_number FROM phone_documents d ' ..
-        'LEFT JOIN phone_numbers n ON d.identifier = n.identifier ' ..
-        'WHERE d.verification_code = ?',
-        { code }
-    )
-
-    if not doc then
-        return { success = false, error = 'DOCUMENT_NOT_FOUND' }
-    end
-
-    -- Check expiration
-    local isExpired = false
-    if doc.expires_at then
-        local expires = os.time({year=tonumber(doc.expires_at:sub(1,4)), month=tonumber(doc.expires_at:sub(6,7)), day=tonumber(doc.expires_at:sub(9,10))})
-        isExpired = os.time() > expires
-    end
-
-    -- Record verification
-    local verifierIdentifier = GetIdentifier(source)
-    MySQL.insert.await(
-        'INSERT INTO phone_documents_nfc_scans (document_id, scanned_by, scan_type) VALUES (?, ?, ?)',
-        { doc.id, verifierIdentifier, 'manual' }
-    )
-
-    return {
-        success = true,
-        valid = not isExpired,
-        expired = isExpired,
-        document = {
-            doc_type = doc.doc_type,
-            title = doc.title,
-            holder_name = doc.holder_name,
-            holder_number = doc.holder_number,
-            expires_at = doc.expires_at,
-            verification_code = doc.verification_code
-        }
-    }
-end)
-]]
-
--- Get scan history for my documents
 lib.callback.register('gcphone:documents:getScanHistory', function(source)
-    local identifier = GetIdentifier(source)
+    local identifier = RequirePlayerIdentifier(source)
     if not identifier then return {} end
 
     return MySQL.query.await([[
@@ -228,11 +138,10 @@ lib.callback.register('gcphone:documents:getScanHistory', function(source)
     ]], { identifier }) or {}
 end)
 
--- Share document with nearby player (via ox_target)
 lib.callback.register('gcphone:documents:share', function(source, data)
     if type(data) ~= 'table' then return { success = false, error = 'INVALID_DATA' } end
     
-    local identifier = GetIdentifier(source)
+    local identifier = RequirePlayerIdentifier(source)
     if not identifier then return { success = false, error = 'INVALID_SOURCE' } end
     
     local documentId = tonumber(data.documentId)
@@ -241,8 +150,17 @@ lib.callback.register('gcphone:documents:share', function(source, data)
     if not documentId or not targetServerId then
         return { success = false, error = 'INVALID_PARAMS' }
     end
+
+    if type(GetPlayer) == 'function' and not GetPlayer(targetServerId) then
+        return { success = false, error = 'TARGET_OFFLINE' }
+    end
+    if type(IsPlayerActionAllowed) == 'function' then
+        local allowed = IsPlayerActionAllowed(targetServerId)
+        if not allowed then
+            return { success = false, error = 'TARGET_UNAVAILABLE' }
+        end
+    end
     
-    -- Get the document
     local doc = MySQL.single.await(
         'SELECT d.*, n.phone_number FROM phone_documents d ' ..
         'LEFT JOIN phone_numbers n ON d.identifier = n.identifier ' ..
@@ -254,7 +172,6 @@ lib.callback.register('gcphone:documents:share', function(source, data)
         return { success = false, error = 'DOCUMENT_NOT_FOUND_OR_NFC_DISABLED' }
     end
     
-    -- Check if document is expired
     if doc.expires_at then
         local expires = os.time({year=tonumber(doc.expires_at:sub(1,4)), month=tonumber(doc.expires_at:sub(6,7)), day=tonumber(doc.expires_at:sub(9,10))})
         if os.time() > expires then
@@ -262,16 +179,18 @@ lib.callback.register('gcphone:documents:share', function(source, data)
         end
     end
     
-    -- Get sender info
     local senderName = GetName(source) or 'Ciudadano'
     
-    -- Record the share
+    local targetIdentifier = GetIdentifierFromPlayer(targetServerId)
+    if not targetIdentifier then
+        return { success = false, error = 'TARGET_OFFLINE' }
+    end
+
     MySQL.insert.await(
         'INSERT INTO phone_documents_nfc_scans (document_id, scanned_by, scan_type) VALUES (?, ?, ?)',
-        { doc.id, GetIdentifierFromPlayer(targetServerId), 'shared' }
+        { doc.id, targetIdentifier, 'shared' }
     )
     
-    -- Send document to target player
     TriggerClientEvent('gcphone:receiveSharedDocument', targetServerId, {
         document = {
             doc_type = doc.doc_type,
@@ -288,17 +207,15 @@ lib.callback.register('gcphone:documents:share', function(source, data)
     return { success = true }
 end)
 
--- Helper function to get identifier from player server ID
 function GetIdentifierFromPlayer(serverId)
     for _, playerId in ipairs(GetPlayers()) do
         if tonumber(playerId) == serverId then
-            return GetIdentifier(playerId)
+            return RequirePlayerIdentifier(playerId)
         end
     end
     return nil
 end
 
--- Get document types
 lib.callback.register('gcphone:documents:getTypes', function(source)
     return {
         { id = 'id', name = 'DNI / ID', icon = 'ID', color = '#007aff' },

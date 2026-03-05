@@ -14,11 +14,12 @@ files {
     'web/dist/index.html',
     
     'shared/config.lua',
-    'shared/locales/*.lua',
+    'shared/locales/*.json',
 }
 
 shared_scripts {
     '@ox_lib/init.lua',
+    'shared/locale.lua',
     'shared/config.lua',
 }
 

@@ -1,6 +1,15 @@
--- Creado/Modificado por JericoFX
-
 local Bridge = nil
+
+local function L(key, ...)
+    if type(locale) == 'function' then
+        local ok, value = pcall(locale, key, ...)
+        if ok and type(value) == 'string' then
+            return value
+        end
+    end
+
+    return key
+end
 
 local function bridgeCall(name, ...)
     local fn = rawget(_G, name)
@@ -26,7 +35,7 @@ local function normalizeNotification(payload)
     return {
         id = sanitizeText(payload.id or ('srv-' .. tostring(os.time()) .. '-' .. tostring(math.random(1000, 9999))), 64),
         appId = sanitizeText(payload.appId or 'system', 24),
-        title = title ~= '' and title or 'Notificacion',
+        title = title ~= '' and title or L('notification_default'),
         message = message,
         icon = sanitizeText(payload.icon, 8),
         durationMs = math.max(1200, math.min(tonumber(payload.durationMs) or 3200, 12000)),
@@ -75,13 +84,14 @@ CreateThread(function()
         RemoveMoney = function(source, amount, accountType, reason) return bridgeCall('RemoveMoney', source, amount, accountType, reason) end,
         GetJob = function(source) return bridgeCall('GetJob', source) end,
         GetSourceFromIdentifier = function(identifier) return bridgeCall('GetSourceFromIdentifier', identifier) end,
+        IsPlayerActionAllowed = function(source) return bridgeCall('IsPlayerActionAllowed', source) end,
     }
 
-    print('^2[gcphone-next]^7 Server initialized')
+    print(('^2[gcphone-next]^7 %s'):format(L('server_initialized')))
     
     -- Check database version
     local dbVersion = exports['gcphone-next'].GetDatabaseVersion and exports['gcphone-next'].GetDatabaseVersion() or 0
-    print(string.format('^2[gcphone-next]^7 Database version: %d', dbVersion))
+    print(string.format('^2[gcphone-next]^7 %s', L('database_version', dbVersion)))
 end)
 
 exports('GetBridge', function()
@@ -114,6 +124,10 @@ end)
 
 exports('GetSourceFromIdentifier', function(identifier)
     return bridgeCall('GetSourceFromIdentifier', identifier)
+end)
+
+exports('IsPlayerActionAllowed', function(source)
+    return bridgeCall('IsPlayerActionAllowed', source)
 end)
 
 exports('SendPhoneNotification', function(target, payload)

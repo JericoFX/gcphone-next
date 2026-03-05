@@ -2,6 +2,8 @@ import { createEffect, createMemo, createSignal, For, onCleanup, Show } from 'so
 import { useRouter } from '../../Phone/PhoneFrame';
 import { fetchNui } from '../../../utils/fetchNui';
 import { sanitizeMediaUrl, sanitizeText } from '../../../utils/sanitize';
+import { uiPrompt } from '../../../utils/uiDialog';
+import { uiAlert } from '../../../utils/uiAlert';
 import { ActionSheet } from '../../shared/ui/ActionSheet';
 import { MediaLightbox } from '../../shared/ui/MediaLightbox';
 import styles from './MarketApp.module.scss';
@@ -99,14 +101,14 @@ export function MarketApp() {
     }
   };
 
-  const attachByUrl = () => {
-    const input = window.prompt('Pega URL de imagen');
+  const attachByUrl = async () => {
+    const input = await uiPrompt('Pega URL de imagen', { title: 'Adjuntar en market' });
     const nextUrl = sanitizeMediaUrl(input);
     if (nextUrl) {
       setPhotoUrl(nextUrl);
       return;
     }
-    if (input && input.trim()) window.alert('URL invalida o formato no permitido');
+    if (input && input.trim()) uiAlert('URL invalida o formato no permitido');
   };
 
   const markSold = async (listingId: number) => {

@@ -7,6 +7,19 @@ import { ScreenState } from '../../shared/ui/ScreenState';
 import { SkeletonList } from '../../shared/ui/SkeletonList';
 import styles from './GalleryApp.module.scss';
 
+function PlainIconButton(props: {
+  class?: string;
+  onClick: () => void;
+  label: string;
+  icon: string;
+}) {
+  return (
+    <button class={props.class || 'ios-icon-btn'} onClick={props.onClick} aria-label={props.label}>
+      <img src={props.icon} alt="" />
+    </button>
+  );
+}
+
 export function GalleryApp() {
   const router = useRouter();
   const phoneActions = usePhoneActions();
@@ -119,13 +132,9 @@ export function GalleryApp() {
   return (
     <div class="ios-page">
       <div class="ios-nav">
-        <button class="ios-icon-btn" onClick={() => router.goBack()}>
-          ‹
-        </button>
+        <button class="ios-icon-btn" onClick={() => router.goBack()}>‹</button>
         <div class="ios-nav-title">Galeria</div>
-        <button class="ios-icon-btn" onClick={takePhoto}>
-          📷
-        </button>
+        <PlainIconButton onClick={takePhoto} label="Camara" icon="./img/icons_ios/camera.svg" />
       </div>
       
       <div class="ios-content">
@@ -160,9 +169,7 @@ export function GalleryApp() {
       
       <Show when={selectedPhoto()}>
         <div class={styles.viewer}>
-          <button class={styles.closeBtn} onClick={() => setSelectedPhoto(null)}>
-            ✕
-          </button>
+          <PlainIconButton class={styles.closeBtn} onClick={() => setSelectedPhoto(null)} label="Cerrar" icon="./img/icons_ios/ui-close.svg" />
           <button class={styles.navBtn} classList={{ [styles.disabled]: currentPhotoIndex() <= 0 }} onClick={() => viewOffset(-1)}>
             ‹
           </button>

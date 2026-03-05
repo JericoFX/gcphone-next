@@ -1,5 +1,6 @@
 import { Show, createEffect, createSignal } from 'solid-js';
 import { useNotifications } from '../../../store/notifications';
+import { getStoredLanguage, t } from '../../../i18n';
 import styles from './PhoneNotificationBanner.module.scss';
 
 interface Props {
@@ -44,7 +45,7 @@ export function PhoneNotificationBanner(props: Props) {
             class={styles.pulseLine}
             classList={{ [styles.preview]: !!props.preview }}
             onClick={() => setPeekOpen((value) => !value)}
-            aria-label="Abrir notificacion"
+            aria-label={t('notify.open', getStoredLanguage())}
           />
           <Show when={peekOpen() || !!props.preview}>
             <button class={styles.peekCard} classList={{ [styles.preview]: !!props.preview }} onClick={openNotification}>

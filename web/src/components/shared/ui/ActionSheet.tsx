@@ -1,4 +1,5 @@
 import { For, Show } from 'solid-js';
+import { getStoredLanguage, tl } from '../../../i18n';
 import styles from './ActionSheet.module.scss';
 
 export interface ActionSheetAction {
@@ -20,7 +21,7 @@ export function ActionSheet(props: ActionSheetProps) {
       <div class={styles.overlay} onClick={props.onClose}>
         <div class={styles.sheet} onClick={(e) => e.stopPropagation()}>
           <Show when={props.title}>
-            <div class={styles.title}>{props.title}</div>
+            <div class={styles.title}>{tl(props.title || '', getStoredLanguage())}</div>
           </Show>
 
           <div class={styles.list}>
@@ -37,14 +38,14 @@ export function ActionSheet(props: ActionSheetProps) {
                     props.onClose();
                   }}
                 >
-                  {action.label}
+                  {tl(action.label, getStoredLanguage())}
                 </button>
               )}
             </For>
           </div>
 
           <button class={styles.cancel} onClick={props.onClose}>
-            Cancelar
+            {tl('Cancelar', getStoredLanguage())}
           </button>
         </div>
       </div>

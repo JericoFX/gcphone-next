@@ -1,6 +1,7 @@
 import { For, Show, createEffect, createMemo, createSignal, onCleanup } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { usePhone } from '../../../store/phone';
+import { t } from '../../../i18n';
 import { fetchNui } from '../../../utils/fetchNui';
 import styles from './MusicApp.module.scss';
 
@@ -33,6 +34,7 @@ const DEFAULT_THUMB = './img/icons_ios/music.svg';
 export function MusicApp() {
   const router = useRouter();
   const [phoneState] = usePhone();
+  const language = () => phoneState.settings.language || 'es';
 
   const [query, setQuery] = createSignal('');
   const [searching, setSearching] = createSignal(false);
@@ -40,7 +42,7 @@ export function MusicApp() {
   const [results, setResults] = createSignal<SearchItem[]>([]);
 
   const [manualUrl, setManualUrl] = createSignal('');
-  const [nowPlaying, setNowPlaying] = createSignal('Sin reproduccion activa');
+  const [nowPlaying, setNowPlaying] = createSignal(t('music.no_playback', language()));
   const [isPlaying, setIsPlaying] = createSignal(false);
   const [isPaused, setIsPaused] = createSignal(false);
 
@@ -57,7 +59,7 @@ export function MusicApp() {
   });
 
   const persistNowPlaying = (title: string) => {
-    const value = title?.trim() || 'Sin musica';
+    const value = title?.trim() || t('music.no_music', language());
     window.localStorage.setItem('gcphone:musicNowPlaying', value);
     window.dispatchEvent(new StorageEvent('storage', { key: 'gcphone:musicNowPlaying', newValue: value }));
   };
@@ -157,7 +159,7 @@ export function MusicApp() {
 
     const list = Array.isArray(response.results) ? response.results : [];
     setResults(list);
-    setSearchError(list.length === 0 ? 'Sin resultados.' : '');
+    setSearchError(list.length === 0 ? t('music.no_results', language()) : '');
   };
 
   const playFromResult = async (track: SearchItem) => {
@@ -222,8 +224,8 @@ export function MusicApp() {
     await fetchNui('musicStop');
     setIsPlaying(false);
     setIsPaused(false);
-    setNowPlaying('Sin reproduccion activa');
-    persistNowPlaying('Sin musica');
+    setNowPlaying(t('music.no_playback', language()));
+    persistNowPlaying(t('music.no_music', language()));
     setStatus('Detenido.');
     setBusyAction(false);
   };
@@ -253,7 +255,7 @@ export function MusicApp() {
         <button class="ios-icon-btn" onClick={() => router.goBack()}>
           ‹
         </button>
-        <div class="ios-nav-title">Music Deck</div>
+        <div class="ios-nav-title">{t('music.title', language())}</div>
       </div>
 
       <div class={`ios-content ${styles.content}`}>
@@ -268,20 +270,20 @@ export function MusicApp() {
 
         <section class="ios-list">
           <div class="ios-row">
-            <span class="ios-label">Buscar en YouTube</span>
+            <span class="ios-label">{t('music.search_yt', language())}</span>
             <span class="ios-value">{results().length}</span>
           </div>
           <div class={styles.searchRow}>
             <input
               class={`ios-input ${styles.searchInput}`}
               type="text"
-              placeholder="Ej: Daft Punk - One More Time"
+              placeholder={t('music.search_example', language())}
               value={query()}
               disabled={!catalogEnabled()}
               onInput={(e) => setQuery(e.currentTarget.value)}
             />
             <button class="ios-primary-btn" disabled={searching() || !catalogEnabled()} onClick={searchCatalog}>
-              {searching() ? 'Buscando...' : 'Buscar'}
+              {searching() ? t('music.searching', language()) : t('music.search', language())}
             </button>
           </div>
           <Show when={searchError()}>
@@ -297,7 +299,7 @@ export function MusicApp() {
                   <img src={item.thumbnail || DEFAULT_THUMB} alt={item.title} loading="lazy" />
                   <div class={styles.trackMeta}>
                     <div class={styles.trackTitle}>{item.title}</div>
-                    <div class={styles.trackChannel}>{item.channel || 'Canal sin nombre'}</div>
+                    <div class={styles.trackChannel}>{item.channel || t('music.channel_unnamed', language())}</div>
                   </div>
                   <div class={styles.trackAction}>Play</div>
                 </button>
@@ -308,25 +310,25 @@ export function MusicApp() {
 
         <section class="ios-list">
           <div class="ios-row">
-            <span class="ios-label">URL manual</span>
+            <span class="ios-label">{t('music.manual_url', language())}</span>
           </div>
           <div class={styles.searchRow}>
             <input
               class={`ios-input ${styles.searchInput}`}
               type="text"
-              placeholder="https://youtube.com/watch?v=..."
+              placeholder={t('music.manual_url_placeholder', language())}
               value={manualUrl()}
               onInput={(e) => setManualUrl(e.currentTarget.value)}
             />
             <button class="ios-secondary-btn" disabled={!manualUrl().trim() || busyAction()} onClick={playManual}>
-              Enviar
+              {t('settings.apply', language())}
             </button>
           </div>
         </section>
 
         <section class="ios-list">
           <div class="ios-row">
-            <span class="ios-label">Controles</span>
+            <span class="ios-label">{t('music.controls', language())}</span>
           </div>
 
           <div class={styles.controls}>
@@ -343,7 +345,7 @@ export function MusicApp() {
 
           <div class={styles.sliderGroup}>
             <div class={styles.sliderLabel}>
-              <span>Volumen</span>
+              <span>{t('settings.volume', language())}</span>
               <strong>{volume()}%</strong>
             </div>
             <input
@@ -352,8 +354,11 @@ export function MusicApp() {
               min="0"
               max="100"
               value={volume()}
+              style={{ '--value-percent': `${volume()}%` }}
               onInput={(e) => {
-                void syncAudioControls(Number(e.currentTarget.value), distance());
+                const val = Number(e.currentTarget.value);
+                e.currentTarget.style.setProperty('--value-percent', `${val}%`);
+                void syncAudioControls(val, distance());
               }}
             />
           </div>
@@ -369,8 +374,11 @@ export function MusicApp() {
               min="5"
               max="30"
               value={distance()}
+              style={{ '--value-percent': `${((distance() - 5) / (30 - 5)) * 100}%` }}
               onInput={(e) => {
-                void syncAudioControls(volume(), Number(e.currentTarget.value));
+                const val = Number(e.currentTarget.value);
+                e.currentTarget.style.setProperty('--value-percent', `${((val - 5) / (30 - 5)) * 100}%`);
+                void syncAudioControls(volume(), val);
               }}
             />
           </div>

@@ -1,6 +1,7 @@
 import { For, Show, createEffect, createSignal, onCleanup, onMount } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { fetchNui } from '../../../utils/fetchNui';
+import { uiAlert } from '../../../utils/uiAlert';
 import { AppScaffold } from '../../shared/layout';
 import { useAppCache } from '../../../hooks';
 import { MediaLightbox } from '../../shared/ui/MediaLightbox';
@@ -215,7 +216,7 @@ export function DarkRoomsApp() {
 
     const payload = await requestJoinRoom(room, joinPassword().trim());
     if (!payload.success) {
-      alert(payload.error === 'INVALID_PASSWORD' ? 'Clave incorrecta.' : 'No se pudo entrar a la sala.');
+      uiAlert(payload.error === 'INVALID_PASSWORD' ? 'Clave incorrecta.' : 'No se pudo entrar a la sala.');
       return;
     }
 
@@ -253,7 +254,7 @@ export function DarkRoomsApp() {
 
   const createRoom = async () => {
     if (!roomName().trim()) {
-      alert('El nombre de la sala es obligatorio');
+      uiAlert('El nombre de la sala es obligatorio');
       return;
     }
 
@@ -266,7 +267,7 @@ export function DarkRoomsApp() {
     }, { success: false });
 
     if (!payload?.success) {
-      alert(`Crear sala fallo: ${payload?.error || 'ERROR'}`);
+      uiAlert(`Crear sala fallo: ${payload?.error || 'ERROR'}`);
       return;
     }
 
@@ -285,7 +286,7 @@ export function DarkRoomsApp() {
   const createPost = async () => {
     const room = selectedRoom();
     if (!room || !postTitle().trim()) {
-      alert('El titulo es obligatorio');
+      uiAlert('El titulo es obligatorio');
       return;
     }
 
@@ -300,7 +301,7 @@ export function DarkRoomsApp() {
     setLoading(false);
 
     if (!payload?.success) {
-      alert(`Publicar fallo: ${payload?.error || 'ERROR'}`);
+      uiAlert(`Publicar fallo: ${payload?.error || 'ERROR'}`);
       return;
     }
 
@@ -323,7 +324,7 @@ export function DarkRoomsApp() {
   const createComment = async () => {
     const post = selectedPost();
     if (!post || !commentText().trim()) {
-      alert('El comentario no puede estar vacio');
+      uiAlert('El comentario no puede estar vacio');
       return;
     }
 
@@ -335,7 +336,7 @@ export function DarkRoomsApp() {
     }, { success: false });
 
     if (!payload?.success) {
-      alert(`Comentar fallo: ${payload?.error || 'ERROR'}`);
+      uiAlert(`Comentar fallo: ${payload?.error || 'ERROR'}`);
       return;
     }
 

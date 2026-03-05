@@ -1,6 +1,8 @@
 import { For, Show, createEffect, createMemo, createSignal, onCleanup, onMount } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { fetchNui } from '../../../utils/fetchNui';
+import { getStoredLanguage, t } from '../../../i18n';
+import { uiPrompt } from '../../../utils/uiDialog';
 import { resolveMediaType, sanitizeMediaUrl, sanitizeText } from '../../../utils/sanitize';
 import styles from './CameraApp.module.scss';
 
@@ -24,6 +26,7 @@ function targetLabel(target: CameraTarget) {
 
 export function CameraApp() {
   const router = useRouter();
+  const language = () => getStoredLanguage();
   const [effect, setEffect] = createSignal<CameraEffect>('normal');
   const [fov, setFov] = createSignal(52);
   const [blur, setBlur] = createSignal(0);
@@ -179,7 +182,7 @@ export function CameraApp() {
   };
 
   const publishClipFromUrl = async () => {
-    const input = window.prompt('Pega URL de video para Clips (mp4/webm/mov/m3u8)');
+    const input = await uiPrompt('Pega URL de video para Clips (mp4/webm/mov/m3u8)', { title: 'Publicar clip' });
     const videoUrl = sanitizeMediaUrl(input);
     if (!videoUrl || resolveMediaType(videoUrl) !== 'video') {
       if (input && input.trim()) {
@@ -285,13 +288,13 @@ export function CameraApp() {
             <div class={styles.targetPill}>{targetLabel(target())}</div>
           </div>
           <div class={styles.topActions}>
-            <button class={styles.iconBtn} classList={{ [styles.iconBtnActive]: flash() }} onClick={() => setFlash((v) => !v)} title="Flash">
+            <button class={styles.iconBtn} classList={{ [styles.iconBtnActive]: flash() }} onClick={() => setFlash((v) => !v)} title={t('camera.flash', language())}>
               ⚡
             </button>
-            <button class={styles.iconBtn} classList={{ [styles.iconBtnActive]: selfie() }} onClick={() => setSelfie((v) => !v)} title="Cambiar camara">
+            <button class={styles.iconBtn} classList={{ [styles.iconBtnActive]: selfie() }} onClick={() => setSelfie((v) => !v)} title={t('camera.switch', language())}>
               ⇄
             </button>
-            <button class={styles.iconBtn} onClick={() => router.navigate('gallery')} title="Galeria">
+            <button class={styles.iconBtn} onClick={() => router.navigate('gallery')} title={t('camera.gallery', language())}>
               🖼
             </button>
           </div>
@@ -315,15 +318,41 @@ export function CameraApp() {
           <div class={styles.effectBadge}>FX: {effect().toUpperCase()}</div>
           <div class={styles.sliderRow}>
             <span>FOV</span>
-            <input class="ios-slider" type="range" min="25" max="90" step="1" value={fov()} onInput={(e) => setFov(Number(e.currentTarget.value))} />
+            <input 
+              class="ios-slider-dark" 
+              type="range" 
+              min="25" 
+              max="90" 
+              step="1" 
+              value={fov()} 
+              style={{ '--value-percent': `${((fov() - 25) / (90 - 25)) * 100}%` }}
+              onInput={(e) => {
+                const val = Number(e.currentTarget.value);
+                e.currentTarget.style.setProperty('--value-percent', `${((val - 25) / (90 - 25)) * 100}%`);
+                setFov(val);
+              }} 
+            />
             <strong>{fovPercent()}%</strong>
           </div>
           <div class={styles.sliderRow}>
             <span>Blur</span>
-            <input class="ios-slider" type="range" min="0" max="70" step="1" value={blur()} onInput={(e) => setBlur(Number(e.currentTarget.value))} />
+            <input 
+              class="ios-slider-dark" 
+              type="range" 
+              min="0" 
+              max="70" 
+              step="1" 
+              value={blur()} 
+              style={{ '--value-percent': `${(blur() / 70) * 100}%` }}
+              onInput={(e) => {
+                const val = Number(e.currentTarget.value);
+                e.currentTarget.style.setProperty('--value-percent', `${(val / 70) * 100}%`);
+                setBlur(val);
+              }} 
+            />
             <strong>{blur()}%</strong>
           </div>
-          <input class={styles.captionInput} maxlength="140" placeholder="Leyenda opcional" value={caption()} onInput={(e) => setCaption(e.currentTarget.value)} />
+          <input class={styles.captionInput} maxlength="140" placeholder={t('camera.caption_placeholder', language())} value={caption()} onInput={(e) => setCaption(e.currentTarget.value)} />
         </div>
 
         <div class={styles.shutterWrap}>
@@ -334,9 +363,9 @@ export function CameraApp() {
 
         <Show when={target() === 'clips'}>
           <div class={styles.clipsRow}>
-            <button class="ios-btn" onClick={() => void publishClipFromRecording()}>Grabar clip</button>
-            <button class="ios-btn" onClick={() => void publishClipFromGallery()}>Galeria video</button>
-            <button class="ios-btn ios-btn-primary" onClick={() => void publishClipFromUrl()}>Publicar clip</button>
+            <button class="ios-btn" onClick={() => void publishClipFromRecording()}>{t('camera.record_clip', language())}</button>
+            <button class="ios-btn" onClick={() => void publishClipFromGallery()}>{t('camera.gallery_video', language())}</button>
+            <button class="ios-btn ios-btn-primary" onClick={() => void publishClipFromUrl()}>{t('camera.publish_clip', language())}</button>
           </div>
         </Show>
       </div>
@@ -349,8 +378,8 @@ export function CameraApp() {
         <div class={styles.lastRow}>
           <img src={lastUrl()} alt="ultima captura" />
           <div class={styles.lastActions}>
-            <button class="ios-btn" onClick={() => void shareSnapPost()}>Snap post</button>
-            <button class="ios-btn" onClick={() => void shareSnapStory()}>Snap story</button>
+            <button class="ios-btn" onClick={() => void shareSnapPost()}>{t('camera.snap_post', language())}</button>
+            <button class="ios-btn" onClick={() => void shareSnapStory()}>{t('camera.snap_story', language())}</button>
             <button class="ios-btn" onClick={() => void shareChirp()}>Chirp</button>
           </div>
         </div>

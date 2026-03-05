@@ -1,4 +1,5 @@
 import { Show, type ParentComponent, type ParentProps } from 'solid-js';
+import { getStoredLanguage, tl } from '../../../i18n';
 import styles from './Modal.module.scss';
 
 export interface ModalProps extends ParentProps {
@@ -24,7 +25,7 @@ export const Modal: ParentComponent<ModalProps> = (props) => {
         >
           <Show when={props.title}>
             <div class={styles.header}>
-              <h2 class={styles.title}>{props.title}</h2>
+              <h2 class={styles.title}>{tl(props.title || '', getStoredLanguage())}</h2>
             </div>
           </Show>
           <div class={styles.content}>{props.children}</div>
@@ -62,7 +63,7 @@ export function ModalButton(props: ModalButtonProps) {
       onClick={props.onClick}
       disabled={props.disabled}
     >
-      {props.label}
+      {tl(props.label, getStoredLanguage())}
     </button>
   );
 }
@@ -80,13 +81,13 @@ export interface FormFieldProps {
 export function FormField(props: FormFieldProps) {
   return (
     <div classList={{ [styles.field]: true, [props.class || '']: !!props.class }}>
-      <label class={styles.label}>{props.label}</label>
+      <label class={styles.label}>{tl(props.label, getStoredLanguage())}</label>
       <input
         class="ios-input"
         type={props.type || 'text'}
         value={props.value}
         onInput={(e) => props.onChange(e.currentTarget.value)}
-        placeholder={props.placeholder}
+        placeholder={props.placeholder ? tl(props.placeholder, getStoredLanguage()) : undefined}
         disabled={props.disabled}
       />
     </div>
@@ -106,12 +107,12 @@ export interface FormTextareaProps {
 export function FormTextarea(props: FormTextareaProps) {
   return (
     <div classList={{ [styles.field]: true, [props.class || '']: !!props.class }}>
-      <label class={styles.label}>{props.label}</label>
+      <label class={styles.label}>{tl(props.label, getStoredLanguage())}</label>
       <textarea
         class="ios-textarea"
         value={props.value}
         onInput={(e) => props.onChange(e.currentTarget.value)}
-        placeholder={props.placeholder}
+        placeholder={props.placeholder ? tl(props.placeholder, getStoredLanguage()) : undefined}
         rows={props.rows || 3}
         disabled={props.disabled}
       />

@@ -2,6 +2,9 @@ import { For, Show, createEffect, createMemo, createSignal, onCleanup } from 'so
 import { useRouter } from '../../Phone/PhoneFrame';
 import { fetchNui } from '../../../utils/fetchNui';
 import { timeAgo } from '../../../utils/misc';
+import { uiConfirm } from '../../../utils/uiDialog';
+import { uiAlert } from '../../../utils/uiAlert';
+import { useNuiEvent } from '../../../utils/useNui';
 import { AppScaffold } from '../../shared/layout';
 import { useAppCache } from '../../../hooks';
 import { Modal, ModalActions, ModalButton } from '../../shared/ui/Modal';
@@ -44,28 +47,32 @@ interface ScannedDoc {
   scanned_at: string;
 }
 
+function TabToggle(props: {
+  active: boolean;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button class={styles.tabBtn} classList={{ [styles.active]: props.active }} onClick={props.onClick}>
+      {props.label}
+    </button>
+  );
+}
+
 export function DocumentsApp() {
   const router = useRouter();
   const cache = useAppCache('documents');
-
-  // Data
   const [documents, setDocuments] = createSignal<Document[]>([]);
   const [docTypes, setDocTypes] = createSignal<DocType[]>([]);
   const [scanHistory, setScanHistory] = createSignal<ScanHistory[]>([]);
   const [selectedDoc, setSelectedDoc] = createSignal<Document | null>(null);
-
-  // Tabs
   const [activeTab, setActiveTab] = createSignal<'my' | 'nfc' | 'history'>('my');
-
-  // UI State
   const [loading, setLoading] = createSignal(false);
   const [showComposer, setShowComposer] = createSignal(false);
   const [showDocPicker, setShowDocPicker] = createSignal(false);
   const [docPickerTarget, setDocPickerTarget] = createSignal<number | null>(null);
   const [receivedDoc, setReceivedDoc] = createSignal<ScannedDoc & { from?: string; shared_at?: string } | null>(null);
   const [lastNfcRouteKey, setLastNfcRouteKey] = createSignal('');
-
-  // Composer
   const [composerType, setComposerType] = createSignal('id');
   const [composerTitle, setComposerTitle] = createSignal('');
   const [composerHolderName, setComposerHolderName] = createSignal('');
@@ -75,45 +82,35 @@ export function DocumentsApp() {
 
   const loadData = async () => {
     setLoading(true);
-    
-    // Load document types
+
     const types = await fetchNui<DocType[]>('documentsGetTypes', {}, []);
     setDocTypes(types || []);
-    
-    // Load my documents
+
     const docs = await fetchNui<Document[]>('documentsGetList', {}, []);
     setDocuments(docs || []);
-    
-    // Load scan history
+
     const history = await fetchNui<ScanHistory[]>('documentsGetScanHistory', {}, []);
     setScanHistory(history || []);
-    
+
     setLoading(false);
   };
 
+  useNuiEvent<{ targetServerId?: number }>('openDocumentPicker', (payload) => {
+    setDocPickerTarget(payload?.targetServerId || null);
+    setShowDocPicker(true);
+  });
+
+  useNuiEvent<{ document?: ScannedDoc; from?: string; shared_at?: string }>('receiveSharedDocument', (payload) => {
+    if (!payload?.document) return;
+    setReceivedDoc({
+      ...payload.document,
+      from: payload.from,
+      shared_at: payload.shared_at,
+    });
+  });
+
   createEffect(() => {
     void loadData();
-    
-    // Listen for document picker events from ox_target
-    const handleMessage = (event: MessageEvent) => {
-      if (event?.data?.action === 'openDocumentPicker') {
-        setDocPickerTarget(event.data.data?.targetServerId || null);
-        setShowDocPicker(true);
-      }
-      if (event?.data?.action === 'receiveSharedDocument') {
-        const doc = event.data.data?.document;
-        if (doc) {
-          setReceivedDoc({
-            ...doc,
-            from: event.data.data.from,
-            shared_at: event.data.data.shared_at
-          });
-        }
-      }
-    };
-    
-    window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
   });
 
   createEffect(() => {
@@ -172,7 +169,7 @@ export function DocumentsApp() {
 
   const createDocument = async () => {
     if (!composerTitle().trim()) {
-      alert('El titulo es obligatorio');
+      uiAlert('El titulo es obligatorio');
       return;
     }
 
@@ -195,12 +192,12 @@ export function DocumentsApp() {
       setComposerExpires('');
       await loadData();
     } else {
-      alert(result?.error || 'Error al crear documento');
+      uiAlert(result?.error || 'Error al crear documento');
     }
   };
 
   const deleteDocument = async (id: number) => {
-    if (!confirm('¿Eliminar este documento?')) return;
+    if (!(await uiConfirm('¿Eliminar este documento?', { title: 'Eliminar documento' }))) return;
     
     await fetchNui('documentsDelete', { documentId: id });
     await loadData();
@@ -228,39 +225,19 @@ export function DocumentsApp() {
       setShowDocPicker(false);
       setDocPickerTarget(null);
     } else {
-      alert(result?.error || 'Error al compartir documento');
+      uiAlert(result?.error || 'Error al compartir documento');
     }
   };
 
   return (
     <AppScaffold title="Documentos" subtitle="Tus documentos digitales" onBack={() => router.goBack()} bodyClass={styles.body}>
       <div class={styles.documentsApp}>
-        {/* Tabs */}
         <div class={styles.tabs}>
-          <button
-            class={styles.tabBtn}
-            classList={{ [styles.active]: activeTab() === 'my' }}
-            onClick={() => setActiveTab('my')}
-          >
-            Mis Docs
-          </button>
-          <button
-            class={styles.tabBtn}
-            classList={{ [styles.active]: activeTab() === 'nfc' }}
-            onClick={() => setActiveTab('nfc')}
-          >
-            NFC
-          </button>
-          <button
-            class={styles.tabBtn}
-            classList={{ [styles.active]: activeTab() === 'history' }}
-            onClick={() => setActiveTab('history')}
-          >
-            Historial
-          </button>
+          <TabToggle active={activeTab() === 'my'} label="Mis Docs" onClick={() => setActiveTab('my')} />
+          <TabToggle active={activeTab() === 'nfc'} label="NFC" onClick={() => setActiveTab('nfc')} />
+          <TabToggle active={activeTab() === 'history'} label="Historial" onClick={() => setActiveTab('history')} />
         </div>
 
-        {/* My Documents */}
         <Show when={activeTab() === 'my'}>
           <div class={styles.documentsList}>
             <Show when={loading() && documents().length === 0}>
@@ -307,13 +284,11 @@ export function DocumentsApp() {
             </Show>
           </div>
 
-          {/* FAB */}
-          <button class={styles.fab} onClick={() => setShowComposer(true)}>
+            <button class={styles.fab} onClick={() => setShowComposer(true)}>
             <span>+</span>
           </button>
         </Show>
 
-        {/* NFC Tab */}
         <Show when={activeTab() === 'nfc'}>
           <div class={styles.scanSection}>
             <div class={styles.scanOptions}>
@@ -340,7 +315,6 @@ export function DocumentsApp() {
           </div>
         </Show>
 
-        {/* History Tab */}
         <Show when={activeTab() === 'history'}>
           <div class={styles.historyList}>
             <Show when={scanHistory().length === 0}>
@@ -369,7 +343,6 @@ export function DocumentsApp() {
           </div>
         </Show>
 
-        {/* Document Detail Modal */}
         <Show when={selectedDoc()}>
           <div class={styles.detailModal}>
             <button class={styles.closeBtn} onClick={() => setSelectedDoc(null)}>
@@ -442,7 +415,6 @@ export function DocumentsApp() {
           </div>
         </Show>
 
-        {/* Composer Modal */}
         <Modal
           open={showComposer()}
           title="Nuevo Documento"
@@ -531,7 +503,6 @@ export function DocumentsApp() {
           </ModalActions>
         </Modal>
 
-        {/* Document Picker Modal - for ox_target sharing */}
         <Modal
           open={showDocPicker()}
           title="Seleccionar Documento"
@@ -571,7 +542,6 @@ export function DocumentsApp() {
           </ModalActions>
         </Modal>
 
-        {/* Received Document Modal */}
         <Show when={receivedDoc()}>
           <div class={styles.scanResultModal}>
             <button class={styles.closeBtn} onClick={() => setReceivedDoc(null)}>
