@@ -23,14 +23,39 @@ const wallpapers = [
   './img/background/tokio.jpg',
 ];
 
-const coques = ['funda_azul.png', 'funda_roja.png', 'funda_negra.png'];
+const coques = [
+  { id: 'funda_azul.png', name: 'Azul', color: '#4A90D9' },
+  { id: 'funda_roja.png', name: 'Roja', color: '#D94A4A' },
+  { id: 'funda_negra.png', name: 'Negra', color: '#333333' },
+];
 
 const ringtones = [
-  { id: 'ring.ogg', name: 'Classic Ring' },
-  { id: 'ring2.ogg', name: 'Tone Two' },
-  { id: 'iphone11.ogg', name: 'iPhone Style' },
-  { id: 'casa_papel.ogg', name: 'Casa de Papel' },
-  { id: 'bella_ciao.ogg', name: 'Bella Ciao' },
+  { id: 'ring.ogg', name: 'Classic Ring', icon: '🔔' },
+  { id: 'ring2.ogg', name: 'Tone Two', icon: '🎵' },
+  { id: 'iphone11.ogg', name: 'iPhone Style', icon: '📱' },
+  { id: 'casa_papel.ogg', name: 'Casa de Papel', icon: '🎭' },
+  { id: 'bella_ciao.ogg', name: 'Bella Ciao', icon: '🎺' },
+];
+
+const languages = [
+  { code: 'es', name: 'Español', flag: '🇪🇸' },
+  { code: 'en', name: 'English', flag: '🇬🇧' },
+  { code: 'pt', name: 'Português', flag: '🇵🇹' },
+  { code: 'fr', name: 'Français', flag: '🇫🇷' },
+];
+
+const audioProfiles = [
+  { id: 'normal', name: 'Normal', desc: 'Uso general', icon: '🔊' },
+  { id: 'street', name: 'Calle', desc: 'Exterior ruidoso', icon: '🏙️' },
+  { id: 'vehicle', name: 'Vehículo', desc: 'En movimiento', icon: '🚗' },
+  { id: 'silent', name: 'Silencio', desc: 'Sin sonido', icon: '🔇' },
+];
+
+const navItems: { id: SettingsTab; label: string; icon: string }[] = [
+  { id: 'appearance', label: 'Apariencia', icon: '🎨' },
+  { id: 'sound', label: 'Sonido', icon: '🔊' },
+  { id: 'security', label: 'Seguridad', icon: '🔒' },
+  { id: 'advanced', label: 'Avanzado', icon: '⚙️' },
 ];
 
 export function SettingsApp() {
@@ -40,11 +65,10 @@ export function SettingsApp() {
 
   const [tab, setTab] = createSignal<SettingsTab>('appearance');
   const [urlInput, setUrlInput] = createSignal('');
-  const [codeA, setCodeA] = createSignal('');
-  const [codeB, setCodeB] = createSignal('');
+  const [pinStep, setPinStep] = createSignal(1);
+  const [pinCode, setPinCode] = createSignal('');
+  const [pinConfirm, setPinConfirm] = createSignal('');
   const [status, setStatus] = createSignal<{ type: 'ok' | 'error'; text: string } | null>(null);
-  const [haptics, setHaptics] = createSignal(true);
-  const [animations, setAnimations] = createSignal(true);
   const [liveLocationEnabled, setLiveLocationEnabled] = createSignal(false);
   const [liveLocationInterval, setLiveLocationInterval] = createSignal<5 | 10>(10);
   const [liveLocationStatus, setLiveLocationStatus] = createSignal('');
@@ -83,7 +107,7 @@ export function SettingsApp() {
       const response = await fetchNui<{ success?: boolean }>('stopLiveLocation', {}, { success: false });
       if (response?.success) {
         setLiveLocationEnabled(false);
-        setLiveLocationStatus('Ubicacion activa desactivada.');
+        setLiveLocationStatus('Ubicación activa desactivada');
       }
       return;
     }
@@ -94,7 +118,7 @@ export function SettingsApp() {
       .filter((value) => value.length > 0);
 
     if (recipients.length === 0) {
-      setLiveLocationStatus('No tienes contactos para compartir.');
+      setLiveLocationStatus('No tienes contactos para compartir');
       return;
     }
 
@@ -107,11 +131,11 @@ export function SettingsApp() {
 
     if (response?.success) {
       setLiveLocationEnabled(true);
-      setLiveLocationStatus(`Ubicacion activa habilitada cada ${liveLocationInterval()}s.`);
+      setLiveLocationStatus(`Ubicación activa cada ${liveLocationInterval()}s`);
       return;
     }
 
-    setLiveLocationStatus(response?.error || 'No se pudo activar ubicacion activa.');
+    setLiveLocationStatus(response?.error || 'No se pudo activar ubicación');
   };
 
   const randomWallpaper = () => {
@@ -126,34 +150,541 @@ export function SettingsApp() {
     setUrlInput('');
   };
 
-  const savePin = () => {
-    const a = codeA().trim();
-    const b = codeB().trim();
-
-    if (!/^\d{4}$/.test(a)) {
-      setStatus({ type: 'error', text: 'El PIN debe tener 4 digitos' });
-      return;
+  const handlePinDigit = (digit: string) => {
+    if (pinStep() === 1) {
+      if (pinCode().length < 4) {
+        setPinCode(pinCode() + digit);
+        if (pinCode().length === 3) {
+          setPinStep(2);
+        }
+      }
+    } else {
+      if (pinConfirm().length < 4) {
+        setPinConfirm(pinConfirm() + digit);
+        if (pinConfirm().length === 3) {
+          validateAndSavePin();
+        }
+      }
     }
-
-    if (a !== b) {
-      setStatus({ type: 'error', text: 'Los PIN no coinciden' });
-      return;
-    }
-
-    phoneActions.setLockCode(a);
-    batch(() => {
-      setCodeA('');
-      setCodeB('');
-      setStatus({ type: 'ok', text: 'PIN actualizado correctamente' });
-    });
   };
 
-  const SettingToggle = (props: { label: string; active: boolean; onClick: () => void }) => (
-    <div class="ios-row">
-      <span class="ios-label">{props.label}</span>
-      <button class="ios18-switch" role="switch" aria-checked={props.active ? 'true' : 'false'} onClick={props.onClick}>
-        <span class="ios18-switch__thumb" />
-      </button>
+  const handlePinBackspace = () => {
+    if (pinStep() === 2 && pinConfirm().length === 0) {
+      setPinStep(1);
+      setPinCode(pinCode().slice(0, -1));
+    } else if (pinStep() === 2) {
+      setPinConfirm(pinConfirm().slice(0, -1));
+    } else {
+      setPinCode(pinCode().slice(0, -1));
+    }
+    setStatus(null);
+  };
+
+  const validateAndSavePin = () => {
+    const code = pinCode();
+    const confirm = pinConfirm();
+
+    if (code !== confirm) {
+      setStatus({ type: 'error', text: 'Los PIN no coinciden' });
+      setPinStep(1);
+      setPinCode('');
+      setPinConfirm('');
+      return;
+    }
+
+    phoneActions.setLockCode(code);
+    setStatus({ type: 'ok', text: 'PIN guardado correctamente' });
+    setTimeout(() => {
+      setPinStep(1);
+      setPinCode('');
+      setPinConfirm('');
+      setStatus(null);
+    }, 2000);
+  };
+
+  const getCurrentPin = () => pinStep() === 1 ? pinCode() : pinConfirm();
+
+  const renderNav = () => (
+    <div class={styles.navGrid}>
+      <For each={navItems}>
+        {(item) => (
+          <button
+            class={styles.navItem}
+            classList={{ [styles.active]: tab() === item.id }}
+            onClick={() => {
+              setTab(item.id);
+              setStatus(null);
+            }}
+          >
+            <div class={styles.navIcon}>{item.icon}</div>
+            <span class={styles.navLabel}>{item.label}</span>
+          </button>
+        )}
+      </For>
+    </div>
+  );
+
+  const renderAppearance = () => (
+    <div class={styles.sectionContainer}>
+      <div class={styles.sectionCard}>
+        <div class={styles.sectionHeader}>
+          <div class={`${styles.sectionIcon} ${styles['icon-wallpaper']}`}>🖼️</div>
+          <span class={styles.sectionTitle}>Fondo de pantalla</span>
+        </div>
+
+        <Show when={phoneState.settings.wallpaper}>
+          <div class={styles.wallpaperPreview}>
+            <img src={phoneState.settings.wallpaper} alt="Current wallpaper" />
+          </div>
+        </Show>
+
+        <div class={styles.wallpaperGrid}>
+          <For each={wallpapers}>
+            {(wallpaper) => (
+              <button
+                class={styles.wallpaperItem}
+                classList={{ [styles.selected]: phoneState.settings.wallpaper === wallpaper }}
+                onClick={() => phoneActions.setWallpaper(wallpaper)}
+              >
+                <img src={wallpaper} alt="Wallpaper" />
+              </button>
+            )}
+          </For>
+        </div>
+
+        <div class={styles.quickActions}>
+          <button class={styles.actionBtn} onClick={() => fetchNui('openGallery', { selectWallpaper: true })}>
+            📷 Galería
+          </button>
+          <button class={styles.actionBtn} onClick={randomWallpaper}>
+            🎲 Aleatorio
+          </button>
+        </div>
+
+        <div class={styles.customUrlInput}>
+          <input
+            type="url"
+            placeholder="https://example.com/wallpaper.jpg"
+            value={urlInput()}
+            onInput={(e) => setUrlInput(e.currentTarget.value)}
+          />
+          <button onClick={applyUrlWallpaper}>Aplicar</button>
+        </div>
+      </div>
+
+      <div class={styles.sectionCard}>
+        <div class={styles.sectionHeader}>
+          <div class={`${styles.sectionIcon} ${styles['icon-frame']}`}>📱</div>
+          <span class={styles.sectionTitle}>Funda del teléfono</span>
+        </div>
+        <div class={styles.frameOptions}>
+          <For each={coques}>
+            {(coque) => (
+              <button
+                class={styles.frameOption}
+                classList={{ [styles.selected]: phoneState.settings.coque === coque.id }}
+                onClick={() => phoneActions.setCoque(coque.id)}
+              >
+                <div class={styles.framePreview} style={{ background: coque.color }}>
+                  <img src={`./img/coque/${coque.id}`} alt={coque.name} />
+                </div>
+                <span class={styles.frameLabel}>{coque.name}</span>
+              </button>
+            )}
+          </For>
+        </div>
+      </div>
+
+      <div class={styles.sectionCard}>
+        <div class={styles.sectionHeader}>
+          <div class={`${styles.sectionIcon} ${styles['icon-theme']}`}>🌓</div>
+          <span class={styles.sectionTitle}>Tema</span>
+        </div>
+        <div class={styles.themeOptions}>
+          <button
+            class={styles.themeOption}
+            classList={{ [styles.selected]: phoneState.settings.theme === 'auto' }}
+            onClick={() => phoneActions.setTheme('auto')}
+          >
+            <div class={styles.themeIcon}>🌓</div>
+            <span class={styles.themeLabel}>Auto</span>
+          </button>
+          <button
+            class={styles.themeOption}
+            classList={{ [styles.selected]: phoneState.settings.theme === 'light' }}
+            onClick={() => phoneActions.setTheme('light')}
+          >
+            <div class={styles.themeIcon}>☀️</div>
+            <span class={styles.themeLabel}>Claro</span>
+          </button>
+          <button
+            class={styles.themeOption}
+            classList={{ [styles.selected]: phoneState.settings.theme === 'dark' }}
+            onClick={() => phoneActions.setTheme('dark')}
+          >
+            <div class={styles.themeIcon}>🌙</div>
+            <span class={styles.themeLabel}>Oscuro</span>
+          </button>
+        </div>
+      </div>
+
+      <div class={styles.sectionCard}>
+        <div class={styles.sectionHeader}>
+          <div class={`${styles.sectionIcon} ${styles['icon-language']}`}>🌐</div>
+          <span class={styles.sectionTitle}>Idioma</span>
+        </div>
+        <div class={styles.languageOptions}>
+          <For each={languages}>
+            {(lang) => (
+              <button
+                class={styles.langOption}
+                classList={{ [styles.selected]: language() === lang.code }}
+                onClick={() => phoneActions.setLanguage(lang.code as 'es' | 'en' | 'pt' | 'fr')}
+              >
+                <div class={styles.langFlag}>{lang.flag}</div>
+                <span class={styles.langName}>{lang.name}</span>
+              </button>
+            )}
+          </For>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderSound = () => (
+    <div class={styles.sectionContainer}>
+      <div class={styles.sectionCard}>
+        <div class={styles.sectionHeader}>
+          <div class={`${styles.sectionIcon} ${styles['icon-volume']}`}>🔊</div>
+          <span class={styles.sectionTitle}>Volumen</span>
+        </div>
+        <div class={styles.volumeControl}>
+          <span>🔇</span>
+          <input
+            class={styles.volumeSlider}
+            type="range"
+            min="0"
+            max="100"
+            value={Math.round(phoneState.settings.volume * 100)}
+            onInput={(e) => phoneActions.setVolume(Number(e.currentTarget.value) / 100)}
+          />
+          <span>🔊</span>
+          <span class={styles.volumeValue}>{Math.round(phoneState.settings.volume * 100)}%</span>
+        </div>
+      </div>
+
+      <div class={styles.sectionCard}>
+        <div class={styles.sectionHeader}>
+          <div class={`${styles.sectionIcon} ${styles['icon-profile']}`}>🎧</div>
+          <span class={styles.sectionTitle}>Perfil de audio</span>
+        </div>
+        <div class={styles.audioProfiles}>
+          <For each={audioProfiles}>
+            {(profile) => (
+              <button
+                class={styles.profileOption}
+                classList={{ [styles.selected]: phoneState.settings.audioProfile === profile.id }}
+                onClick={() => phoneActions.setAudioProfile(profile.id as 'normal' | 'street' | 'vehicle' | 'silent')}
+              >
+                <span class={styles.profileIcon}>{profile.icon}</span>
+                <span class={styles.profileName}>{profile.name}</span>
+                <span class={styles.profileDesc}>{profile.desc}</span>
+              </button>
+            )}
+          </For>
+        </div>
+      </div>
+
+      <div class={styles.sectionCard}>
+        <div class={styles.sectionHeader}>
+          <div class={`${styles.sectionIcon} ${styles['icon-ringtone']}`}>🎵</div>
+          <span class={styles.sectionTitle}>Tono de llamada</span>
+        </div>
+        <div class={styles.ringtoneList}>
+          <For each={ringtones}>
+            {(ringtone) => (
+              <button
+                class={styles.ringtoneItem}
+                classList={{ [styles.selected]: phoneState.settings.ringtone === ringtone.id }}
+                onClick={() => phoneActions.setRingtone(ringtone.id)}
+              >
+                <div class={styles.ringtoneIcon}>{ringtone.icon}</div>
+                <span class={styles.ringtoneName}>{ringtone.name}</span>
+                <Show when={phoneState.settings.ringtone === ringtone.id}>
+                  <span class={styles.ringtoneStatus}>✓</span>
+                </Show>
+              </button>
+            )}
+          </For>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderSecurity = () => (
+    <div class={styles.sectionContainer}>
+      <div class={styles.sectionCard}>
+        <div class={styles.pinContainer}>
+          <div class={styles.pinTitle}>
+            {pinStep() === 1 ? 'Ingresa un PIN de 4 dígitos' : 'Confirma tu PIN'}
+          </div>
+
+          <div class={styles.pinDots}>
+            <For each={[0, 1, 2, 3]}>
+              {(i) => (
+                <div
+                  class={styles.pinDot}
+                  classList={{ [styles.filled]: getCurrentPin().length > i }}
+                />
+              )}
+            </For>
+          </div>
+
+          <div class={styles.pinKeypad}>
+            <For each={['1', '2', '3', '4', '5', '6', '7', '8', '9']}>
+              {(digit) => (
+                <button class={styles.pinKey} onClick={() => handlePinDigit(digit)}>
+                  {digit}
+                </button>
+              )}
+            </For>
+            <div />
+            <button class={styles.pinKey} onClick={() => handlePinDigit('0')}>
+              0
+            </button>
+            <button class={styles.pinBackspace} onClick={handlePinBackspace}>
+              ⌫
+            </button>
+          </div>
+
+          <Show when={status()}>
+            {(msg) => (
+              <div class={`${styles.pinMessage} ${styles[msg().type]}`}>
+                {msg().text}
+              </div>
+            )}
+          </Show>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderAdvanced = () => (
+    <div class={styles.sectionContainer}>
+      <div class={styles.sectionCard}>
+        <div class={styles.sectionHeader}>
+          <div class={`${styles.sectionIcon} ${styles['icon-notifications']}`}>🔔</div>
+          <span class={styles.sectionTitle}>Notificaciones por app</span>
+        </div>
+        <div class={styles.notificationsGrid}>
+          <For each={APP_DEFINITIONS.filter((app) => phoneState.enabledApps.includes(app.id))}>
+            {(app) => {
+              const unreadCount = notificationsActions.getUnreadCount(app.id);
+              return (
+                <div class={styles.notificationApp}>
+                  <div class={styles.notificationAppIcon}>
+                    <img src={app.icon} alt={appName(app.id, app.name, language())} />
+                  </div>
+                  <div class={styles.notificationAppInfo}>
+                    <div class={styles.notificationAppName}>
+                      {appName(app.id, app.name, language())}
+                    </div>
+                    <div class={styles.notificationAppStatus}>
+                      {unreadCount > 0 ? `${unreadCount} sin leer` : 'Al día'}
+                    </div>
+                  </div>
+                  <Show when={unreadCount > 0}>
+                    <div class={styles.notificationBadge}>{unreadCount}</div>
+                  </Show>
+                  <Show when={unreadCount === 0}>
+                    <div class={styles.notificationOk}>✓</div>
+                  </Show>
+                </div>
+              );
+            }}
+          </For>
+        </div>
+        <button
+          class={styles.clearAllBtn}
+          onClick={() => {
+            for (const app of APP_DEFINITIONS) {
+              notificationsActions.markAppAsRead(app.id);
+            }
+          }}
+        >
+          Marcar todas como leídas
+        </button>
+      </div>
+
+      <div class={styles.sectionCard}>
+        <div class={styles.sectionHeader}>
+          <div class={`${styles.sectionIcon} ${styles['icon-location']}`}>📍</div>
+          <span class={styles.sectionTitle}>Ubicación en tiempo real</span>
+        </div>
+        <div class={styles.liveLocationControl}>
+          <div class={styles.locationToggle}>
+            <div class={styles.locationLabel}>
+              <div class={`${styles.locationIcon} ${styles['icon-location']}`}>📍</div>
+              <div>
+                <div class={styles.locationText}>Compartir ubicación</div>
+                <div class={styles.locationStatus}>
+                  {liveLocationEnabled() ? 'Activo' : 'Inactivo'}
+                </div>
+              </div>
+            </div>
+            <div
+              class={styles.toggleSwitch}
+              classList={{ [styles.active]: liveLocationEnabled() }}
+              onClick={() => void toggleLiveLocation()}
+            >
+              <div class={styles.toggleThumb} />
+            </div>
+          </div>
+
+          <Show when={liveLocationEnabled()}>
+            <div class={styles.locationFrequency}>
+              <button
+                class={styles.freqBtn}
+                classList={{ [styles.selected]: liveLocationInterval() === 5 }}
+                onClick={() => void updateLiveLocationInterval(5)}
+              >
+                Cada 5s
+              </button>
+              <button
+                class={styles.freqBtn}
+                classList={{ [styles.selected]: liveLocationInterval() === 10 }}
+                onClick={() => void updateLiveLocationInterval(10)}
+              >
+                Cada 10s
+              </button>
+            </div>
+          </Show>
+
+          <Show when={liveLocationStatus()}>
+            <div class={`${styles.statusMessage} ${liveLocationEnabled() ? styles.success : styles.error}`}>
+              {liveLocationStatus()}
+            </div>
+          </Show>
+        </div>
+      </div>
+
+      <div class={styles.sectionCard}>
+        <div class={styles.sectionHeader}>
+          <div class={`${styles.sectionIcon} ${styles['icon-system']}`}>⚙️</div>
+          <span class={styles.sectionTitle}>Sistema</span>
+        </div>
+        <div class={styles.togglesList}>
+          <div class={styles.toggleItem}>
+            <span class={styles.toggleLabel}>
+              <span class={`${styles.toggleIcon} ${styles['icon-system']}`}>✈️</span>
+              Modo avión
+            </span>
+            <div
+              class={styles.toggleSwitch}
+              classList={{ [styles.active]: notifications.airplaneMode }}
+              onClick={() => notificationsActions.setAirplaneMode(!notifications.airplaneMode)}
+            >
+              <div class={styles.toggleThumb} />
+            </div>
+          </div>
+          <div class={styles.toggleItem}>
+            <span class={styles.toggleLabel}>
+              <span class={`${styles.toggleIcon} ${styles['icon-system']}`}>🌙</span>
+              No molestar
+            </span>
+            <div
+              class={styles.toggleSwitch}
+              classList={{ [styles.active]: notifications.doNotDisturb }}
+              onClick={() => notificationsActions.setDoNotDisturb(!notifications.doNotDisturb)}
+            >
+              <div class={styles.toggleThumb} />
+            </div>
+          </div>
+          <div class={styles.toggleItem}>
+            <span class={styles.toggleLabel}>
+              <span class={`${styles.toggleIcon} ${styles['icon-system']}`}>📶</span>
+              Datos móviles
+            </span>
+            <div
+              class={styles.toggleSwitch}
+              classList={{ [styles.active]: notifications.mobileData }}
+              onClick={() => notificationsActions.setMobileData(!notifications.mobileData)}
+            >
+              <div class={styles.toggleThumb} />
+            </div>
+          </div>
+          <div class={styles.toggleItem}>
+            <span class={styles.toggleLabel}>
+              <span class={`${styles.toggleIcon} ${styles['icon-system']}`}>🔇</span>
+              Modo silencio
+            </span>
+            <div
+              class={styles.toggleSwitch}
+              classList={{ [styles.active]: notifications.silentMode }}
+              onClick={() => notificationsActions.setSilentMode(!notifications.silentMode)}
+            >
+              <div class={styles.toggleThumb} />
+            </div>
+          </div>
+          <div class={styles.toggleItem}>
+            <span class={styles.toggleLabel}>
+              <span class={`${styles.toggleIcon} ${styles['icon-system']}`}>🔄</span>
+              Bloqueo de rotación
+            </span>
+            <div
+              class={styles.toggleSwitch}
+              classList={{ [styles.active]: notifications.rotationLock }}
+              onClick={() => notificationsActions.setRotationLock(!notifications.rotationLock)}
+            >
+              <div class={styles.toggleThumb} />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class={styles.sectionCard}>
+        <div class={styles.sectionHeader}>
+          <div class={`${styles.sectionIcon} ${styles['icon-volume']}`}>☀️</div>
+          <span class={styles.sectionTitle}>Brillo</span>
+        </div>
+        <div class={styles.volumeControl}>
+          <span>🌑</span>
+          <input
+            class={styles.volumeSlider}
+            type="range"
+            min="40"
+            max="120"
+            value={Math.round(notifications.brightness * 100)}
+            onInput={(e) => {
+              const val = Number(e.currentTarget.value);
+              notificationsActions.setBrightness(val / 100);
+            }}
+          />
+          <span>☀️</span>
+          <span class={styles.volumeValue}>{Math.round(notifications.brightness * 100)}%</span>
+        </div>
+      </div>
+
+      <div class={styles.sectionCard}>
+        <div class={styles.sectionHeader}>
+          <div class={`${styles.sectionIcon} ${styles['icon-info']}`}>ℹ️</div>
+          <span class={styles.sectionTitle}>Información</span>
+        </div>
+        <div class={styles.appInfo}>
+          <div class={styles.infoRow}>
+            <span class={styles.infoLabel}>Número</span>
+            <span class={styles.infoValue}>{phoneState.settings.phoneNumber || 'No asignado'}</span>
+          </div>
+          <div class={styles.infoRow}>
+            <span class={styles.infoLabel}>Versión</span>
+            <span class={styles.infoValue}>2.1.0</span>
+          </div>
+          <div class={styles.infoRow}>
+            <span class={styles.infoLabel}>Framework</span>
+            <span class={styles.infoValue}>GCPhone Next</span>
+          </div>
+        </div>
+      </div>
     </div>
   );
 
@@ -165,328 +696,17 @@ export function SettingsApp() {
       </div>
 
       <div class={`ios-content ${styles.settingsCanvas}`}>
-        <div class={`ios-segment ${styles.settingsTabs}`}>
-          <button class="ios-segment-btn" classList={{ 'ios-segment-btn-active': tab() === 'appearance' }} onClick={() => setTab('appearance')}>{t('settings.tab.appearance', language())}</button>
-          <button class="ios-segment-btn" classList={{ 'ios-segment-btn-active': tab() === 'sound' }} onClick={() => setTab('sound')}>{t('settings.tab.sound', language())}</button>
-          <button class="ios-segment-btn" classList={{ 'ios-segment-btn-active': tab() === 'security' }} onClick={() => setTab('security')}>{t('settings.tab.security', language())}</button>
-          <button class="ios-segment-btn" classList={{ 'ios-segment-btn-active': tab() === 'advanced' }} onClick={() => setTab('advanced')}>{t('settings.tab.advanced', language())}</button>
+        <div class={styles.settingsHeader}>
+          <div class={styles.settingsTitle}>{t('settings.title', language())}</div>
+          <div class={styles.settingsSubtitle}>Personaliza tu experiencia</div>
         </div>
 
-        <Show when={tab() === 'appearance'}>
-          <div class="ios-section-title">{t('settings.wallpapers', language())}</div>
-          <div class={`ios-card ${styles.wallpaperCard}`}>
-            <div class="ios-grid-3">
-              <For each={wallpapers}>
-                {(wallpaper) => (
-                  <button
-                    class={styles.wallpaperItem}
-                    classList={{ [styles.selected]: phoneState.settings.wallpaper === wallpaper }}
-                    onClick={() => phoneActions.setWallpaper(wallpaper)}
-                  >
-                    <img src={wallpaper} alt="Wallpaper" />
-                  </button>
-                )}
-              </For>
-            </div>
-          </div>
+        {renderNav()}
 
-          <div class="ios-section-title">{t('settings.wallpaper_source', language())}</div>
-          <div class="ios-list">
-            <div class="ios-row">
-              <span class="ios-label">{t('settings.from_gallery', language())}</span>
-              <button class="ios-btn ios-btn-primary" onClick={() => fetchNui('openGallery', { selectWallpaper: true })}>{t('settings.choose', language())}</button>
-            </div>
-            <div class="ios-row">
-              <span class="ios-label">{t('settings.random_api', language())}</span>
-              <button class="ios-btn" onClick={randomWallpaper}>{t('settings.apply', language())}</button>
-            </div>
-          </div>
-
-          <div class="ios-section-title">{t('settings.manual_url', language())}</div>
-          <div class={`ios-card ${styles.inlineForm}`}>
-            <input class="ios-input" type="url" placeholder="https://example.com/wallpaper.jpg" value={urlInput()} onInput={(e) => setUrlInput(e.currentTarget.value)} />
-            <button class="ios-btn ios-btn-primary" onClick={applyUrlWallpaper}>{t('settings.apply', language())}</button>
-          </div>
-
-          <div class="ios-section-title">{t('settings.frame', language())}</div>
-          <div class={`ios-card ${styles.inlineForm}`}>
-            <select class="ios-select" value={phoneState.settings.coque} onChange={(e) => phoneActions.setCoque(e.currentTarget.value)}>
-              <For each={coques}>{(coque) => <option value={coque}>{coque}</option>}</For>
-            </select>
-          </div>
-
-          <div class="ios-section-title">{t('settings.theme', language())}</div>
-          <div class="ios-list">
-            <div class="ios-row">
-              <span class="ios-label">{t('settings.appearance', language())}</span>
-              <div class="ios-segment">
-                <button
-                  class="ios-segment-btn"
-                  classList={{ 'ios-segment-btn-active': phoneState.settings.theme === 'auto' }}
-                  onClick={() => phoneActions.setTheme('auto')}
-                >
-                  Auto
-                </button>
-                <button
-                  class="ios-segment-btn"
-                  classList={{ 'ios-segment-btn-active': phoneState.settings.theme === 'light' }}
-                  onClick={() => phoneActions.setTheme('light')}
-                >
-                  Claro
-                </button>
-                <button
-                  class="ios-segment-btn"
-                  classList={{ 'ios-segment-btn-active': phoneState.settings.theme === 'dark' }}
-                  onClick={() => phoneActions.setTheme('dark')}
-                >
-                  Oscuro
-                </button>
-              </div>
-            </div>
-            <div class="ios-row">
-              <span class="ios-label">{t('settings.language', language())}</span>
-              <div class="ios-segment">
-                <button
-                  class="ios-segment-btn"
-                  classList={{ 'ios-segment-btn-active': (phoneState.settings.language || 'es') === 'es' }}
-                  onClick={() => phoneActions.setLanguage('es')}
-                >
-                  ES
-                </button>
-                <button
-                  class="ios-segment-btn"
-                  classList={{ 'ios-segment-btn-active': (phoneState.settings.language || 'es') === 'en' }}
-                  onClick={() => phoneActions.setLanguage('en')}
-                >
-                  EN
-                </button>
-                <button
-                  class="ios-segment-btn"
-                  classList={{ 'ios-segment-btn-active': (phoneState.settings.language || 'es') === 'pt' }}
-                  onClick={() => phoneActions.setLanguage('pt')}
-                >
-                  PT
-                </button>
-                <button
-                  class="ios-segment-btn"
-                  classList={{ 'ios-segment-btn-active': (phoneState.settings.language || 'es') === 'fr' }}
-                  onClick={() => phoneActions.setLanguage('fr')}
-                >
-                  FR
-                </button>
-              </div>
-            </div>
-          </div>
-        </Show>
-
-        <Show when={tab() === 'sound'}>
-          <div class="ios-section-title">{t('settings.volume', language())}</div>
-          <div class={`ios-card ${styles.inlineForm}`}>
-            <input
-              type="range"
-              min="0"
-              max="100"
-              value={Math.round(phoneState.settings.volume * 100)}
-              onInput={(e) => phoneActions.setVolume(Number(e.currentTarget.value) / 100)}
-            />
-            <span class="ios-chip">{Math.round(phoneState.settings.volume * 100)}%</span>
-          </div>
-
-          <div class="ios-section-title">{t('settings.audio_profile', language())}</div>
-          <div class="ios-list">
-            <div class="ios-row">
-              <span class="ios-label">{t('settings.context', language())}</span>
-              <div class="ios-segment">
-                <button
-                  class="ios-segment-btn"
-                  classList={{ 'ios-segment-btn-active': (phoneState.settings.audioProfile || 'normal') === 'normal' }}
-                  onClick={() => phoneActions.setAudioProfile('normal')}
-                >
-                  Normal
-                </button>
-                <button
-                  class="ios-segment-btn"
-                  classList={{ 'ios-segment-btn-active': (phoneState.settings.audioProfile || 'normal') === 'street' }}
-                  onClick={() => phoneActions.setAudioProfile('street')}
-                >
-                  Calle
-                </button>
-                <button
-                  class="ios-segment-btn"
-                  classList={{ 'ios-segment-btn-active': (phoneState.settings.audioProfile || 'normal') === 'vehicle' }}
-                  onClick={() => phoneActions.setAudioProfile('vehicle')}
-                >
-                  Vehiculo
-                </button>
-                <button
-                  class="ios-segment-btn"
-                  classList={{ 'ios-segment-btn-active': (phoneState.settings.audioProfile || 'normal') === 'silent' }}
-                  onClick={() => phoneActions.setAudioProfile('silent')}
-                >
-                  Silencio
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div class="ios-section-title">{t('settings.ringtone', language())}</div>
-          <div class="ios-list">
-            <For each={ringtones}>
-              {(ringtone) => (
-                <div class="ios-row">
-                  <span class="ios-label">{ringtone.name}</span>
-                  <button
-                    class="ios-btn"
-                    classList={{ 'ios-btn-primary': phoneState.settings.ringtone === ringtone.id }}
-                    onClick={() => phoneActions.setRingtone(ringtone.id)}
-                  >
-                    {phoneState.settings.ringtone === ringtone.id ? 'Activo' : 'Usar'}
-                  </button>
-                </div>
-              )}
-            </For>
-          </div>
-        </Show>
-
-        <Show when={tab() === 'security'}>
-          <div class="ios-section-title">{t('settings.pin_lock', language())}</div>
-          <div class={`ios-card ${styles.pinCard}`}>
-            <input class="ios-input" type="password" maxlength="4" placeholder={t('settings.new_pin', language())} value={codeA()} onInput={(e) => setCodeA(e.currentTarget.value)} />
-            <input class="ios-input" type="password" maxlength="4" placeholder={t('settings.confirm_pin', language())} value={codeB()} onInput={(e) => setCodeB(e.currentTarget.value)} />
-            <button class="ios-btn ios-btn-primary" onClick={savePin}>{t('settings.save_pin', language())}</button>
-            <Show when={status()}>
-              {(msg) => <div class={msg().type === 'ok' ? styles.ok : styles.error}>{msg().text}</div>}
-            </Show>
-          </div>
-        </Show>
-
-        <Show when={tab() === 'advanced'}>
-          <div class="ios-section-title">{t('settings.app_notifications', language())}</div>
-          <div class={`ios-card ${styles.notificationCard}`}>
-            <For each={APP_DEFINITIONS.filter((app) => phoneState.enabledApps.includes(app.id))}>
-              {(app) => {
-                const unreadCount = notificationsActions.getUnreadCount(app.id);
-                return (
-                  <div class={styles.notificationRow}>
-                    <img src={app.icon} alt={appName(app.id, app.name, language())} class={styles.notificationIcon} />
-                    <span class={styles.notificationName}>{appName(app.id, app.name, language())}</span>
-                    <Show when={unreadCount > 0}>
-                      <span class={styles.notificationBadge}>{unreadCount}</span>
-                    </Show>
-                    <Show when={unreadCount === 0}>
-                      <span class={styles.notificationOk}>✓</span>
-                    </Show>
-                  </div>
-                );
-              }}
-            </For>
-            <button 
-              class={`ios-btn ${styles.clearAllBtn}`}
-              onClick={() => {
-                for (const app of APP_DEFINITIONS) {
-                  notificationsActions.markAppAsRead(app.id);
-                }
-              }}
-            >
-              Marcar todas como leidas
-            </button>
-          </div>
-
-          <div class="ios-section-title">{t('settings.system', language())}</div>
-          <div class="ios-list">
-            <div class="ios-row">
-              <span class="ios-label">Compartir ubicacion activa</span>
-              <button class="ios-btn" classList={{ 'ios-btn-primary': liveLocationEnabled() }} onClick={() => void toggleLiveLocation()}>
-                {liveLocationEnabled() ? 'Activo' : 'Inactivo'}
-              </button>
-            </div>
-            <div class={`ios-row ${styles.liveLocationRow}`}>
-              <span class="ios-label">Frecuencia</span>
-              <div class="ios-segment">
-                <button class="ios-segment-btn" classList={{ 'ios-segment-btn-active': liveLocationInterval() === 5 }} onClick={() => void updateLiveLocationInterval(5)}>
-                  5s
-                </button>
-                <button class="ios-segment-btn" classList={{ 'ios-segment-btn-active': liveLocationInterval() === 10 }} onClick={() => void updateLiveLocationInterval(10)}>
-                  10s
-                </button>
-              </div>
-            </div>
-            <Show when={liveLocationStatus()}>
-              <div class={`ios-row ${styles.liveLocationStatus}`}>{liveLocationStatus()}</div>
-            </Show>
-            <div class="ios-row">
-              <span class="ios-label">Zona drag superior</span>
-              <span class="ios-value">Minima</span>
-            </div>
-            <SettingToggle label="Modo avion" active={notifications.airplaneMode} onClick={() => notificationsActions.setAirplaneMode(!notifications.airplaneMode)} />
-            <SettingToggle label="No molestar" active={notifications.doNotDisturb} onClick={() => notificationsActions.setDoNotDisturb(!notifications.doNotDisturb)} />
-            <SettingToggle label="Datos moviles" active={notifications.mobileData} onClick={() => notificationsActions.setMobileData(!notifications.mobileData)} />
-            <SettingToggle label="Modo silencio" active={notifications.silentMode} onClick={() => notificationsActions.setSilentMode(!notifications.silentMode)} />
-            <SettingToggle label="Bloqueo de rotacion" active={notifications.rotationLock} onClick={() => notificationsActions.setRotationLock(!notifications.rotationLock)} />
-            <div class="ios-row">
-              <span class="ios-label">Brillo</span>
-              <input
-                class="ios-slider"
-                type="range"
-                min="40"
-                max="120"
-                value={Math.round(notifications.brightness * 100)}
-                style={{ '--value-percent': `${((Math.round(notifications.brightness * 100) - 40) / (120 - 40)) * 100}%` }}
-                onInput={(e) => {
-                  const val = Number(e.currentTarget.value);
-                  e.currentTarget.style.setProperty('--value-percent', `${((val - 40) / (120 - 40)) * 100}%`);
-                  notificationsActions.setBrightness(val / 100);
-                }}
-              />
-              <span class="ios-value">{Math.round(notifications.brightness * 100)}%</span>
-            </div>
-            <div class="ios-row">
-              <span class="ios-label">Volumen</span>
-              <input
-                class="ios-slider"
-                type="range"
-                min="0"
-                max="100"
-                value={Math.round(phoneState.settings.volume * 100)}
-                style={{ '--value-percent': `${Math.round(phoneState.settings.volume * 100)}%` }}
-                onInput={(e) => {
-                  const val = Number(e.currentTarget.value);
-                  e.currentTarget.style.setProperty('--value-percent', `${val}%`);
-                  phoneActions.setVolume(val / 100);
-                }}
-              />
-              <span class="ios-value">{Math.round(phoneState.settings.volume * 100)}%</span>
-            </div>
-          </div>
-
-          <div class="ios-section-title">Telefono</div>
-          <div class="ios-list">
-            <div class="ios-row">
-              <span class="ios-label">Numero</span>
-              <span class="ios-value">{phoneState.settings.phoneNumber || 'No asignado'}</span>
-            </div>
-            <div class="ios-row">
-              <span class="ios-label">Version</span>
-              <span class="ios-value">2.1.0</span>
-            </div>
-            <div class="ios-row">
-              <span class="ios-label">Framework visual</span>
-              <span class="ios-value">Konsta-inspired iOS (MIT)</span>
-            </div>
-            <div class="ios-row">
-              <span class="ios-label">Animaciones UI</span>
-              <button class="ios-btn" classList={{ 'ios-btn-primary': animations() }} onClick={() => setAnimations((v) => !v)}>
-                {animations() ? 'Activo' : 'Inactivo'}
-              </button>
-            </div>
-            <div class="ios-row">
-              <span class="ios-label">Haptics</span>
-              <button class="ios-btn" classList={{ 'ios-btn-primary': haptics() }} onClick={() => setHaptics((v) => !v)}>
-                {haptics() ? 'Activo' : 'Inactivo'}
-              </button>
-            </div>
-          </div>
-        </Show>
+        <Show when={tab() === 'appearance'}>{renderAppearance()}</Show>
+        <Show when={tab() === 'sound'}>{renderSound()}</Show>
+        <Show when={tab() === 'security'}>{renderSecurity()}</Show>
+        <Show when={tab() === 'advanced'}>{renderAdvanced()}</Show>
       </div>
     </div>
   );
