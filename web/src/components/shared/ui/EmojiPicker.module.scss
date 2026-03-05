@@ -27,8 +27,8 @@
   bottom: 60px;
   left: 50%;
   transform: translateX(-50%);
-  width: 300px;
-  max-height: 340px;
+  width: 280px;
+  max-height: 300px;
   background: #FFFFFF;
   border-radius: 16px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
@@ -42,7 +42,7 @@
 .category {
   padding: 12px;
   border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-  max-height: 280px;
+  max-height: 220px;
   overflow-y: auto;
   overflow-x: hidden;
 
@@ -81,12 +81,12 @@
 }
 
 .emoji {
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   border: none;
   border-radius: 8px;
   background: transparent;
-  font-size: 24px;
+  font-size: 22px;
   cursor: pointer;
   transition: all 0.15s ease;
   display: flex;
