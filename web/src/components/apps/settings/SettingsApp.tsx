@@ -274,62 +274,6 @@ export function SettingsApp() {
 
       <div class={styles.sectionCard}>
         <div class={styles.sectionHeader}>
-          <div class={`${styles.sectionIcon} ${styles['icon-frame']}`}>📱</div>
-          <span class={styles.sectionTitle}>Funda del teléfono</span>
-        </div>
-        <div class={styles.frameOptions}>
-          <For each={coques}>
-            {(coque) => (
-              <button
-                class={styles.frameOption}
-                classList={{ [styles.selected]: phoneState.settings.coque === coque.id }}
-                onClick={() => phoneActions.setCoque(coque.id)}
-              >
-                <div class={styles.framePreview} style={{ background: coque.color }}>
-                  <img src={`./img/coque/${coque.id}`} alt={coque.name} />
-                </div>
-                <span class={styles.frameLabel}>{coque.name}</span>
-              </button>
-            )}
-          </For>
-        </div>
-      </div>
-
-      <div class={styles.sectionCard}>
-        <div class={styles.sectionHeader}>
-          <div class={`${styles.sectionIcon} ${styles['icon-theme']}`}>🌓</div>
-          <span class={styles.sectionTitle}>Tema</span>
-        </div>
-        <div class={styles.themeOptions}>
-          <button
-            class={styles.themeOption}
-            classList={{ [styles.selected]: phoneState.settings.theme === 'auto' }}
-            onClick={() => phoneActions.setTheme('auto')}
-          >
-            <div class={styles.themeIcon}>🌓</div>
-            <span class={styles.themeLabel}>Auto</span>
-          </button>
-          <button
-            class={styles.themeOption}
-            classList={{ [styles.selected]: phoneState.settings.theme === 'light' }}
-            onClick={() => phoneActions.setTheme('light')}
-          >
-            <div class={styles.themeIcon}>☀️</div>
-            <span class={styles.themeLabel}>Claro</span>
-          </button>
-          <button
-            class={styles.themeOption}
-            classList={{ [styles.selected]: phoneState.settings.theme === 'dark' }}
-            onClick={() => phoneActions.setTheme('dark')}
-          >
-            <div class={styles.themeIcon}>🌙</div>
-            <span class={styles.themeLabel}>Oscuro</span>
-          </button>
-        </div>
-      </div>
-
-      <div class={styles.sectionCard}>
-        <div class={styles.sectionHeader}>
           <div class={`${styles.sectionIcon} ${styles['icon-language']}`}>🌐</div>
           <span class={styles.sectionTitle}>Idioma</span>
         </div>
