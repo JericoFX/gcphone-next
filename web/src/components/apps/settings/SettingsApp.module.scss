@@ -1,7 +1,5 @@
 .app {
-  background:
-    radial-gradient(120% 90% at 0% -10%, rgba(255, 169, 116, 0.2), transparent 58%),
-    linear-gradient(180deg, #fbfaf8 0%, #f6f2ed 58%, #efe7df 100%);
+  background: #F2F2F7;
 }
 
 .settings-canvas {
@@ -16,13 +14,13 @@
 .settings-title {
   font-size: 28px;
   font-weight: 800;
-  color: #1a1a1a;
+  color: #111111;
   margin-bottom: 4px;
 }
 
 .settings-subtitle {
   font-size: 14px;
-  color: #8e7d6b;
+  color: rgba(17,17,17,.52);
 }
 
 .nav-grid {
@@ -37,8 +35,8 @@
   flex-direction: column;
   align-items: center;
   padding: 10px 8px;
-  background: rgba(255, 255, 255, 0.92);
-  border: 1px solid rgba(155, 114, 80, 0.12);
+  background: #FFFFFF;
+  border: 1px solid rgba(0, 0, 0, 0.12);
   border-radius: 12px;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
@@ -46,7 +44,7 @@
 
   &:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(155, 114, 80, 0.15);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   }
 
   &.active {
@@ -69,7 +67,7 @@
 .nav-label {
   font-size: 12px;
   font-weight: 600;
-  color: #5d3d28;
+  color: #111111;
 }
 
 .section-container {
@@ -88,8 +86,8 @@
 }
 
 .section-card {
-  background: rgba(255, 255, 255, 0.92);
-  border: 1px solid rgba(155, 114, 80, 0.12);
+  background: #FFFFFF;
+  border: 1px solid rgba(0, 0, 0, 0.12);
   border-radius: 14px;
   padding: 16px;
   margin-bottom: 16px;
@@ -102,7 +100,7 @@
   gap: 10px;
   margin-bottom: 14px;
   padding-bottom: 10px;
-  border-bottom: 1px solid rgba(155, 114, 80, 0.1);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
 }
 
 .section-icon {
@@ -118,7 +116,7 @@
 .section-title {
   font-size: 15px;
   font-weight: 700;
-  color: #1a1a1a;
+  color: #111111;
 }
 
 .wallpaper-grid {
@@ -149,7 +147,7 @@
 }
 
 .wallpaper-item.selected {
-  border-color: #c87943;
+  border-color: #007AFF;
   box-shadow: 0 0 0 2px rgba(200, 121, 67, 0.2);
 }
 
@@ -180,17 +178,17 @@
   justify-content: center;
   gap: 6px;
   padding: 10px 12px;
-  background: rgba(155, 114, 80, 0.08);
-  border: 1px solid rgba(155, 114, 80, 0.15);
+  background: rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(0, 0, 0, 0.15);
   border-radius: 10px;
   font-size: 12px;
   font-weight: 600;
-  color: #5d3d28;
+  color: #111111;
   cursor: pointer;
   transition: all 0.2s ease;
 
   &:hover {
-    background: rgba(155, 114, 80, 0.15);
+    background: rgba(0, 0, 0, 0.15);
   }
 }
 
@@ -202,10 +200,10 @@
   input {
     flex: 1;
     padding: 10px 12px;
-    border: 1px solid rgba(155, 114, 80, 0.2);
+    border: 1px solid rgba(0, 0, 0, 0.2);
     border-radius: 10px;
     font-size: 13px;
-    background: rgba(255, 255, 255, 0.8);
+    background: #FFFFFF;
 
     &::placeholder {
       color: #9e8a74;
@@ -214,7 +212,7 @@
 
   button {
     padding: 10px 16px;
-    background: #c87943;
+    background: #007AFF;
     color: white;
     border: none;
     border-radius: 10px;
@@ -237,7 +235,7 @@
 .frame-option {
   flex: 1;
   padding: 12px;
-  background: rgba(255, 255, 255, 0.8);
+  background: #FFFFFF;
   border: 2px solid transparent;
   border-radius: 10px;
   cursor: pointer;
@@ -249,7 +247,7 @@
   }
 
   &.selected {
-    border-color: #c87943;
+    border-color: #007AFF;
     background: rgba(200, 121, 67, 0.05);
   }
 }
@@ -270,7 +268,7 @@
 
 .frame-label {
   font-size: 11px;
-  color: #5d3d28;
+  color: #111111;
   font-weight: 500;
 }
 
@@ -286,7 +284,7 @@
   flex-direction: column;
   align-items: center;
   padding: 14px 8px;
-  background: rgba(255, 255, 255, 0.8);
+  background: #FFFFFF;
   border: 2px solid transparent;
   border-radius: 12px;
   cursor: pointer;
@@ -297,7 +295,7 @@
   }
 
   &.selected {
-    border-color: #c87943;
+    border-color: #007AFF;
     background: rgba(200, 121, 67, 0.08);
   }
 }
@@ -316,7 +314,7 @@
 .theme-label {
   font-size: 11px;
   font-weight: 600;
-  color: #5d3d28;
+  color: #111111;
 }
 
 .language-options {
@@ -329,7 +327,7 @@
   display: flex;
   align-items: center;
   padding: 12px;
-  background: rgba(255, 255, 255, 0.8);
+  background: #FFFFFF;
   border: 1px solid transparent;
   border-radius: 10px;
   cursor: pointer;
@@ -340,7 +338,7 @@
   }
 
   &.selected {
-    border-color: #c87943;
+    border-color: #007AFF;
     background: rgba(200, 121, 67, 0.08);
   }
 }
@@ -359,7 +357,7 @@
 .lang-name {
   font-size: 13px;
   font-weight: 600;
-  color: #1a1a1a;
+  color: #111111;
 }
 
 .volume-control {
@@ -373,7 +371,7 @@
   height: 6px;
   -webkit-appearance: none;
   appearance: none;
-  background: rgba(155, 114, 80, 0.15);
+  background: rgba(0, 0, 0, 0.15);
   border-radius: 3px;
   cursor: pointer;
 
@@ -382,7 +380,7 @@
     appearance: none;
     width: 18px;
     height: 18px;
-    background: #c87943;
+    background: #007AFF;
     border-radius: 50%;
     cursor: pointer;
     box-shadow: 0 2px 6px rgba(200, 121, 67, 0.4);
@@ -394,7 +392,7 @@
   text-align: right;
   font-size: 14px;
   font-weight: 700;
-  color: #c87943;
+  color: #007AFF;
 }
 
 .audio-profiles {
@@ -407,7 +405,7 @@
   display: flex;
   flex-direction: column;
   padding: 14px;
-  background: rgba(255, 255, 255, 0.8);
+  background: #FFFFFF;
   border: 2px solid transparent;
   border-radius: 12px;
   cursor: pointer;
@@ -418,7 +416,7 @@
   }
 
   &.selected {
-    border-color: #c87943;
+    border-color: #007AFF;
     background: rgba(200, 121, 67, 0.08);
   }
 }
@@ -431,12 +429,12 @@
 .profile-name {
   font-size: 12px;
   font-weight: 600;
-  color: #5d3d28;
+  color: #111111;
 }
 
 .profile-desc {
   font-size: 10px;
-  color: #8e7d6b;
+  color: rgba(17,17,17,.52);
   margin-top: 2px;
 }
 
@@ -450,7 +448,7 @@
   display: flex;
   align-items: center;
   padding: 12px 14px;
-  background: rgba(255, 255, 255, 0.8);
+  background: #FFFFFF;
   border: 1px solid transparent;
   border-radius: 10px;
   cursor: pointer;
@@ -461,7 +459,7 @@
   }
 
   &.selected {
-    border-color: #c87943;
+    border-color: #007AFF;
     background: rgba(200, 121, 67, 0.08);
   }
 }
@@ -481,13 +479,13 @@
   flex: 1;
   font-size: 13px;
   font-weight: 500;
-  color: #1a1a1a;
+  color: #111111;
 }
 
 .ringtone-status {
   font-size: 12px;
   font-weight: 600;
-  color: #c87943;
+  color: #007AFF;
 }
 
 .pin-container {
@@ -500,7 +498,7 @@
 .pin-title {
   font-size: 16px;
   font-weight: 700;
-  color: #1a1a1a;
+  color: #111111;
   margin-bottom: 20px;
 }
 
@@ -514,11 +512,11 @@
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  background: rgba(155, 114, 80, 0.2);
+  background: rgba(0, 0, 0, 0.2);
   transition: all 0.2s ease;
 
   &.filled {
-    background: #c87943;
+    background: #007AFF;
   }
 }
 
@@ -533,10 +531,10 @@
   height: 60px;
   border-radius: 50%;
   border: none;
-  background: rgba(255, 255, 255, 0.9);
+  background: #FFFFFF;
   font-size: 22px;
   font-weight: 600;
-  color: #1a1a1a;
+  color: #111111;
   cursor: pointer;
   transition: all 0.15s ease;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
@@ -556,13 +554,13 @@
   height: 60px;
   border-radius: 50%;
   border: none;
-  background: rgba(155, 114, 80, 0.1);
+  background: rgba(0, 0, 0, 0.1);
   font-size: 18px;
   cursor: pointer;
   transition: all 0.15s ease;
 
   &:hover {
-    background: rgba(155, 114, 80, 0.2);
+    background: rgba(0, 0, 0, 0.2);
   }
 }
 
@@ -595,7 +593,7 @@
   display: flex;
   align-items: center;
   padding: 12px 14px;
-  background: rgba(255, 255, 255, 0.8);
+  background: #FFFFFF;
   border-radius: 10px;
   transition: all 0.2s ease;
 }
@@ -621,12 +619,12 @@
 .notification-app-name {
   font-size: 14px;
   font-weight: 600;
-  color: #1a1a1a;
+  color: #111111;
 }
 
 .notification-app-status {
   font-size: 11px;
-  color: #8e7d6b;
+  color: rgba(17,17,17,.52);
 }
 
 .notification-badge {
@@ -664,7 +662,7 @@
   border-radius: 10px;
   font-size: 13px;
   font-weight: 600;
-  color: #c87943;
+  color: #007AFF;
   cursor: pointer;
   transition: all 0.2s ease;
 
@@ -683,7 +681,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 14px 0;
-  border-bottom: 1px solid rgba(155, 114, 80, 0.08);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
 
   &:last-child {
     border-bottom: none;
@@ -696,7 +694,7 @@
   gap: 10px;
   font-size: 14px;
   font-weight: 500;
-  color: #1a1a1a;
+  color: #111111;
 }
 
 .toggle-icon {
@@ -713,7 +711,7 @@
   width: 50px;
   height: 28px;
   border-radius: 14px;
-  background: rgba(155, 114, 80, 0.2);
+  background: rgba(0, 0, 0, 0.2);
   position: relative;
   cursor: pointer;
   transition: background 0.2s ease;
@@ -741,7 +739,7 @@
 
 .slider-control {
   padding: 14px 0;
-  border-bottom: 1px solid rgba(155, 114, 80, 0.08);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
 
   &:last-child {
     border-bottom: none;
@@ -761,13 +759,13 @@
   gap: 10px;
   font-size: 14px;
   font-weight: 500;
-  color: #1a1a1a;
+  color: #111111;
 }
 
 .slider-value {
   font-size: 13px;
   font-weight: 600;
-  color: #c87943;
+  color: #007AFF;
 }
 
 .slider-track {
@@ -775,7 +773,7 @@
   height: 6px;
   -webkit-appearance: none;
   appearance: none;
-  background: rgba(155, 114, 80, 0.15);
+  background: rgba(0, 0, 0, 0.15);
   border-radius: 3px;
   cursor: pointer;
 
@@ -784,7 +782,7 @@
     appearance: none;
     width: 20px;
     height: 20px;
-    background: #c87943;
+    background: #007AFF;
     border-radius: 50%;
     cursor: pointer;
     box-shadow: 0 2px 6px rgba(200, 121, 67, 0.4);
@@ -802,7 +800,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 10px 0;
-  border-bottom: 1px solid rgba(155, 114, 80, 0.08);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
 
   &:last-child {
     border-bottom: none;
@@ -811,13 +809,13 @@
 
 .info-label {
   font-size: 13px;
-  color: #8e7d6b;
+  color: rgba(17,17,17,.52);
 }
 
 .info-value {
   font-size: 13px;
   font-weight: 600;
-  color: #1a1a1a;
+  color: #111111;
 }
 
 .live-location-control {
@@ -831,7 +829,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 14px;
-  background: rgba(255, 255, 255, 0.8);
+  background: #FFFFFF;
   border-radius: 10px;
 }
 
@@ -854,12 +852,12 @@
 .location-text {
   font-size: 14px;
   font-weight: 600;
-  color: #1a1a1a;
+  color: #111111;
 }
 
 .location-status {
   font-size: 12px;
-  color: #8e7d6b;
+  color: rgba(17,17,17,.52);
 }
 
 .location-frequency {
@@ -870,12 +868,12 @@
 .freq-btn {
   flex: 1;
   padding: 10px;
-  background: rgba(255, 255, 255, 0.8);
+  background: #FFFFFF;
   border: 1px solid transparent;
   border-radius: 8px;
   font-size: 12px;
   font-weight: 600;
-  color: #5d3d28;
+  color: #111111;
   cursor: pointer;
   transition: all 0.2s ease;
 
@@ -884,9 +882,9 @@
   }
 
   &.selected {
-    border-color: #c87943;
+    border-color: #007AFF;
     background: rgba(200, 121, 67, 0.1);
-    color: #c87943;
+    color: #007AFF;
   }
 }
 
