@@ -10,6 +10,7 @@ export interface AppDefinition {
 export const APP_DEFINITIONS: AppDefinition[] = [
   { id: 'contacts', name: 'Contactos', icon: './img/icons_ios/contacts.svg', route: 'contacts', defaultHome: true },
   { id: 'messages', name: 'Mensajes', icon: './img/icons_ios/messages.svg', route: 'messages', defaultHome: true },
+  { id: 'mail', name: 'Mail', icon: './img/icons_ios/mail.svg', route: 'mail', defaultHome: true },
   { id: 'calls', name: 'Llamadas', icon: './img/icons_ios/calls.svg', route: 'calls', defaultHome: true },
   { id: 'settings', name: 'Ajustes', icon: './img/icons_ios/settings.svg', route: 'settings', defaultHome: true },
   { id: 'gallery', name: 'Galeria', icon: './img/icons_ios/gallery.svg', route: 'gallery', defaultHome: true },
