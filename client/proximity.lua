@@ -620,4 +620,6 @@ CreateThread(function()
     end
 end)
 
+exports('GetSnapLiveAudioStatus', GetLiveAudioStatus)
+
 exports('GetNearbyPlayers', GetNearbyPlayers)
