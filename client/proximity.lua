@@ -649,7 +649,12 @@ CreateThread(function()
                 LiveAudioLastVolume = roundedVolume
             end
 
-            Wait(waitMs)
+            local sleepMs = waitMs
+            if (not targetOnline) and (not listening) and (roundedVolume <= 0.01) then
+                sleepMs = math.max(waitMs, 700)
+            end
+
+            Wait(sleepMs)
         end
     end
 end)
