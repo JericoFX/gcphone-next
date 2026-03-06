@@ -140,6 +140,15 @@ function normalizeLiveMessage(input: unknown): SnapLiveSocketMessage | null {
   return normalized;
 }
 
+function getLiveAudioDisabledMessage(reason: string): string {
+  if (reason === 'local_disabled') return 'Audio de proximidad desactivado localmente';
+  if (reason === 'owner_offline') return 'Emisor no disponible';
+  if (reason === 'stream_not_live') return 'Live finalizado';
+  if (reason === 'rate_limited') return 'Intentando reconectar audio...';
+  if (reason === 'stream_unavailable') return 'Audio de proximidad no disponible';
+  return 'Audio live estandar activo';
+}
+
 const SNAP_MOCK_LIVE_ID = -999001;
 const SNAP_MOCK_USERS = ['mika', 'luna', 'santi', 'mery', 'rodrigo'];
 const SNAP_MOCK_LINES = [
@@ -559,9 +568,7 @@ export function SnapApp() {
     if (!payload?.success || !payload?.enabled) {
       setLiveKitRemoteAudioVolume(1);
       const reason = String(payload?.reason || '');
-      if (reason === 'local_disabled') {
-        setStatusMessage('Audio de proximidad desactivado localmente');
-      }
+      setStatusMessage(getLiveAudioDisabledMessage(reason));
       return;
     }
 
