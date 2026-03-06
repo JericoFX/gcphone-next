@@ -20,6 +20,13 @@ interface NewsArticle {
   category?: string;
 }
 
+interface NewsScaleform {
+  preset: 'breaking' | 'ticker' | 'flash';
+  headline: string;
+  subtitle: string;
+  ticker: string;
+}
+
 interface MockLiveMessage {
   id: number;
   user: string;
@@ -52,6 +59,10 @@ export function NewsApp() {
   const [query, setQuery] = createSignal('');
   const [mockLiveEnabled, setMockLiveEnabled] = createSignal(false);
   const [mockLiveMessages, setMockLiveMessages] = createSignal<MockLiveMessage[]>([]);
+  const [scalePreset, setScalePreset] = createSignal<NewsScaleform['preset']>('breaking');
+  const [scaleHeadline, setScaleHeadline] = createSignal('ULTIMO MOMENTO');
+  const [scaleSubtitle, setScaleSubtitle] = createSignal('Cobertura en vivo');
+  const [scaleTicker, setScaleTicker] = createSignal('Desarrollo en curso...');
 
   let stopNewsMock: (() => void) | undefined;
 
@@ -72,6 +83,19 @@ export function NewsApp() {
     };
     window.addEventListener('phone:keyUp', onKey as EventListener);
     onCleanup(() => window.removeEventListener('phone:keyUp', onKey as EventListener));
+  });
+
+  createEffect(() => {
+    const id = liveArticleId();
+    if (!id) return;
+    (async () => {
+      const sf = await fetchNui<NewsScaleform | null>('newsGetScaleform', { articleId: id }, null);
+      if (!sf) return;
+      setScalePreset((sf.preset || 'breaking') as NewsScaleform['preset']);
+      setScaleHeadline(sanitizeText(sf.headline || '', 80) || 'ULTIMO MOMENTO');
+      setScaleSubtitle(sanitizeText(sf.subtitle || '', 120) || 'Cobertura en vivo');
+      setScaleTicker(sanitizeText(sf.ticker || '', 180) || 'Desarrollo en curso...');
+    })();
   });
 
   createEffect(() => {
@@ -181,11 +205,33 @@ export function NewsApp() {
       title: title().trim() || 'Transmision en vivo',
       content: content().trim() || 'Cobertura en vivo',
       category: sanitizeText(category(), 30) || 'general',
+      scaleform: {
+        preset: scalePreset(),
+        headline: sanitizeText(scaleHeadline(), 80),
+        subtitle: sanitizeText(scaleSubtitle(), 120),
+        ticker: sanitizeText(scaleTicker(), 180),
+      },
     });
 
     if (result?.success && result.articleId) {
       setLiveArticleId(result.articleId);
       await load();
+    }
+  };
+
+  const applyScaleform = async () => {
+    if (!liveArticleId()) return;
+    const result = await fetchNui<{ success?: boolean }>('newsSetScaleform', {
+      articleId: liveArticleId(),
+      scaleform: {
+        preset: scalePreset(),
+        headline: sanitizeText(scaleHeadline(), 80),
+        subtitle: sanitizeText(scaleSubtitle(), 120),
+        ticker: sanitizeText(scaleTicker(), 180),
+      },
+    });
+    if (result?.success) {
+      uiAlert('Scaleform actualizado');
     }
   };
 
@@ -261,6 +307,28 @@ export function NewsApp() {
         <Show when={mockLiveEnabled()}>
           <div class={styles.mockLivePanel}>
             <div class={styles.mockLiveHeader}>Mock chat live (max 20)</div>
+            <div class={styles.mockLiveStage}>
+              <div class={styles.mockLiveBadge}>LIVE</div>
+              <div class={styles.mockLiveStageText}>
+                <strong>{sanitizeText(scaleHeadline(), 80) || 'Vista previa de video'}</strong>
+                <span>{sanitizeText(scaleSubtitle(), 120) || 'Area reservada para stream en vivo'}</span>
+              </div>
+              <div class={styles.mockLiveViewerCount}>12 viendo</div>
+              <div class={styles.mockLiveTicker}>{sanitizeText(scaleTicker(), 180)}</div>
+            </div>
+
+            <div class={styles.scaleformControls}>
+              <select value={scalePreset()} onChange={(e) => setScalePreset(e.currentTarget.value as NewsScaleform['preset'])}>
+                <option value="breaking">Breaking</option>
+                <option value="ticker">Ticker</option>
+                <option value="flash">Flash</option>
+              </select>
+              <input value={scaleHeadline()} onInput={(e) => setScaleHeadline(sanitizeText(e.currentTarget.value, 80))} placeholder="Headline" />
+              <input value={scaleSubtitle()} onInput={(e) => setScaleSubtitle(sanitizeText(e.currentTarget.value, 120))} placeholder="Subtitle" />
+              <input value={scaleTicker()} onInput={(e) => setScaleTicker(sanitizeText(e.currentTarget.value, 180))} placeholder="Ticker" />
+              <button onClick={() => void applyScaleform()} disabled={!liveArticleId()}>Aplicar al live</button>
+            </div>
+
             <div class={styles.mockLiveList}>
               <For each={mockLiveMessages()}>
                 {(entry) => (
