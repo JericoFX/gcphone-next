@@ -219,6 +219,7 @@ export function SnapApp() {
   let floatingTimers = new Map<string, number>();
   let stopSnapMockFeed: (() => void) | undefined;
   let liveAudioWatchdogTimer: number | undefined;
+  let liveAudioRetryTimer: number | undefined;
 
   // FAB Tooltip
   let fabTimeout: number;
@@ -391,6 +392,10 @@ export function SnapApp() {
       window.clearTimeout(timer);
     }
     floatingTimers.clear();
+    if (liveAudioRetryTimer) {
+      window.clearTimeout(liveAudioRetryTimer);
+      liveAudioRetryTimer = undefined;
+    }
     void stopLiveAudioProximity();
     disconnectSnapLiveSocket();
     disconnectLiveKit();
@@ -552,6 +557,11 @@ export function SnapApp() {
   });
 
   const startLiveAudioProximity = async (liveId: number, owner: boolean) => {
+    if (liveAudioRetryTimer) {
+      window.clearTimeout(liveAudioRetryTimer);
+      liveAudioRetryTimer = undefined;
+    }
+
     setLiveAudioProximityEnabled(false);
     setLiveAudioHeartbeatAt(0);
     setLiveAudioWatchdogMs(2400);
@@ -569,6 +579,15 @@ export function SnapApp() {
       setLiveKitRemoteAudioVolume(1);
       const reason = String(payload?.reason || '');
       setStatusMessage(getLiveAudioDisabledMessage(reason));
+
+      if (!owner && reason === 'rate_limited') {
+        liveAudioRetryTimer = window.setTimeout(() => {
+          const current = activeLive();
+          if (!current || Number(current.id) !== Number(liveId)) return;
+          void startLiveAudioProximity(liveId, false);
+        }, 1600);
+      }
+
       return;
     }
 
@@ -606,6 +625,11 @@ export function SnapApp() {
   };
 
   const stopLiveAudioProximity = async () => {
+    if (liveAudioRetryTimer) {
+      window.clearTimeout(liveAudioRetryTimer);
+      liveAudioRetryTimer = undefined;
+    }
+
     setLiveAudioProximityEnabled(false);
     setLiveAudioHeartbeatAt(0);
     setLiveAudioWatchdogMs(2400);
