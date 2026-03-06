@@ -108,13 +108,6 @@ interface SnapLiveAudioStatusResponse {
   active?: boolean;
   activeListen?: boolean;
   currentVolume?: number;
-  localEnabled?: boolean;
-}
-
-interface SnapLiveAudioSetLocalResponse {
-  success?: boolean;
-  enabled?: boolean;
-  active?: boolean;
 }
 
 function cleanLiveText(value: unknown, maxLength: number): string {
@@ -148,12 +141,11 @@ function normalizeLiveMessage(input: unknown): SnapLiveSocketMessage | null {
 }
 
 function getLiveAudioDisabledMessage(reason: string): string {
-  if (reason === 'local_disabled') return 'Audio de proximidad desactivado localmente';
   if (reason === 'owner_offline') return 'Emisor no disponible';
   if (reason === 'stream_not_live') return 'Live finalizado';
   if (reason === 'rate_limited') return 'Intentando reconectar audio...';
   if (reason === 'stream_unavailable') return 'Audio de proximidad no disponible';
-  return 'Audio live estandar activo';
+  return 'Audio pausado hasta recuperar proximidad';
 }
 
 const SNAP_MOCK_LIVE_ID = -999001;
@@ -215,7 +207,6 @@ export function SnapApp() {
   const [liveAudioNear, setLiveAudioNear] = createSignal(false);
   const [liveAudioTargetOnline, setLiveAudioTargetOnline] = createSignal(true);
   const [liveAudioDistanceMeters, setLiveAudioDistanceMeters] = createSignal(-1);
-  const [liveAudioLocalEnabled, setLiveAudioLocalEnabled] = createSignal(true);
 
   // Create Post
   const [showCreatePost, setShowCreatePost] = createSignal(false);
@@ -369,19 +360,14 @@ export function SnapApp() {
     setLiveAudioNear(false);
     setLiveAudioTargetOnline(true);
     setLiveAudioDistanceMeters(-1);
-    setLiveKitRemoteAudioVolume(1);
+    setLiveKitRemoteAudioVolume(0);
 
     const reason = String(payload?.reason || '');
-    if (reason === 'local_toggle') {
-      setLiveAudioLocalEnabled(false);
-      setStatusMessage('Audio de proximidad desactivado localmente');
-      return;
-    }
     if (reason === 'command_stop' || reason === 'manual_stop') {
-      setStatusMessage('Audio live estandar activo');
+      setStatusMessage('Audio pausado: proximidad requerida');
       return;
     }
-    setStatusMessage('Audio live estandar por fallback');
+    setStatusMessage('Audio pausado hasta recuperar proximidad');
   });
 
   let lastSharedMedia = '';
@@ -441,8 +427,8 @@ export function SnapApp() {
 
       setLiveAudioProximityEnabled(false);
       setLiveKitRemoteAudioPriority(null);
-      setLiveKitRemoteAudioVolume(1);
-      setStatusMessage('Audio live estandar por fallback');
+      setLiveKitRemoteAudioVolume(0);
+      setStatusMessage('Audio pausado hasta recuperar proximidad');
       void fetchNui('snapLiveAudioStop', {}, { success: true });
     }, 1000);
 
@@ -579,10 +565,6 @@ export function SnapApp() {
     setLiveAudioDistanceMeters(-1);
     setLiveKitRemoteAudioPriority(null);
 
-    const localAudioStatus = await fetchNui<SnapLiveAudioStatusResponse>('snapLiveAudioStatus', {}, { localEnabled: true });
-    const localEnabled = localAudioStatus?.localEnabled !== false;
-    setLiveAudioLocalEnabled(localEnabled);
-
     if (owner || liveId < 1) {
       setLiveKitRemoteAudioVolume(1);
       return;
@@ -590,11 +572,8 @@ export function SnapApp() {
 
     const payload = await fetchNui<SnapLiveAudioStartResponse>('snapLiveAudioStart', { liveId }, { success: false, enabled: false });
     if (!payload?.success || !payload?.enabled) {
-      setLiveKitRemoteAudioVolume(1);
+      setLiveKitRemoteAudioVolume(0);
       const reason = String(payload?.reason || '');
-      if (reason === 'local_disabled') {
-        setLiveAudioLocalEnabled(false);
-      }
       setStatusMessage(getLiveAudioDisabledMessage(reason));
 
       if (!owner && reason === 'rate_limited') {
@@ -613,40 +592,8 @@ export function SnapApp() {
       const heartbeatWindow = Math.max(1600, Math.min(12000, Math.floor(intervalMs * 6)));
       setLiveAudioWatchdogMs(heartbeatWindow);
     }
-    setLiveAudioLocalEnabled(true);
     setLiveAudioHeartbeatAt(Date.now());
     setLiveAudioProximityEnabled(true);
-  };
-
-  const toggleLiveAudioLocalEnabled = async () => {
-    const nextEnabled = !liveAudioLocalEnabled();
-    const response = await fetchNui<SnapLiveAudioSetLocalResponse>(
-      'snapLiveAudioSetLocalEnabled',
-      { enabled: nextEnabled },
-      { success: false, enabled: liveAudioLocalEnabled(), active: false },
-    );
-
-    const effectiveEnabled = response?.enabled === true;
-    setLiveAudioLocalEnabled(effectiveEnabled);
-
-    if (!effectiveEnabled) {
-      setLiveAudioProximityEnabled(false);
-      setLiveAudioHeartbeatAt(0);
-      setLiveAudioNear(false);
-      setLiveAudioTargetOnline(true);
-      setLiveAudioDistanceMeters(-1);
-      setLiveKitRemoteAudioVolume(1);
-      setStatusMessage('Audio de proximidad desactivado localmente');
-      return;
-    }
-
-    setStatusMessage('Audio de proximidad activado');
-    const live = activeLive();
-    if (!live || isLiveOwner()) {
-      return;
-    }
-
-    await startLiveAudioProximity(Number(live.id), false);
   };
 
   const syncLiveAudioFromClientStatus = async () => {
@@ -686,7 +633,7 @@ export function SnapApp() {
     setLiveAudioTargetOnline(true);
     setLiveAudioDistanceMeters(-1);
     setLiveKitRemoteAudioPriority(null);
-    setLiveKitRemoteAudioVolume(1);
+    setLiveKitRemoteAudioVolume(0);
     await fetchNui('snapLiveAudioStop', {}, { success: true });
   };
 
@@ -1469,16 +1416,6 @@ export function SnapApp() {
                     <small>{Math.round(liveAudioDistanceMeters())}m</small>
                   </Show>
                 </div>
-              </Show>
-              <Show when={!isLiveOwner()}>
-                <button
-                  class={styles.liveChatToggle}
-                  classList={{ [styles.liveAudioToggleOff]: !liveAudioLocalEnabled() }}
-                  onClick={() => void toggleLiveAudioLocalEnabled()}
-                  title={liveAudioLocalEnabled() ? 'Desactivar audio cercano' : 'Activar audio cercano'}
-                >
-                  🎧
-                </button>
               </Show>
               <button class={styles.liveChatToggle} onClick={() => setLiveChatOpen((prev) => !prev)}>💬</button>
             </div>
