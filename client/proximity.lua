@@ -345,6 +345,35 @@ local LiveAudioSession = nil
 local LiveAudioLastState = nil
 local LiveAudioLastVolume = nil
 
+local function GetLiveAudioStatus()
+    if not LiveAudioSession then
+        return {
+            active = false,
+            currentVolume = 0.0,
+            lastVolume = LiveAudioLastVolume,
+        }
+    end
+
+    local targetPlayer = GetPlayerFromServerId(LiveAudioSession.targetServerId or -1)
+    return {
+        active = true,
+        liveId = LiveAudioSession.liveId,
+        targetServerId = LiveAudioSession.targetServerId,
+        targetOnline = targetPlayer ~= -1,
+        listenDistance = LiveAudioSession.listenDistance,
+        leaveBuffer = LiveAudioSession.leaveBuffer,
+        minVolume = LiveAudioSession.minVolume,
+        maxVolume = LiveAudioSession.maxVolume,
+        distanceCurve = LiveAudioSession.distanceCurve,
+        volumeSmoothing = LiveAudioSession.volumeSmoothing,
+        useMumbleRangeClamp = LiveAudioSession.useMumbleRangeClamp,
+        updateIntervalMs = LiveAudioSession.updateIntervalMs,
+        activeListen = LiveAudioSession.activeListen == true,
+        currentVolume = LiveAudioSession.currentVolume,
+        lastVolume = LiveAudioLastVolume,
+    }
+end
+
 local function ClampNumber(value, min, max)
     local n = tonumber(value)
     if not n then return min end
@@ -479,6 +508,30 @@ RegisterNUICallback('snapLiveAudioStop', function(_, cb)
     LiveAudioLastVolume = nil
     cb({ success = true })
 end)
+
+RegisterNUICallback('snapLiveAudioStatus', function(_, cb)
+    cb(GetLiveAudioStatus())
+end)
+
+RegisterCommand('gcphone_liveauudio_status', function()
+    local status = GetLiveAudioStatus()
+    local asJson = json.encode(status)
+    print(('[gcphone] liveaudio status: %s'):format(asJson or '{}'))
+
+    if status.active then
+        lib.notify({
+            title = 'Snap Live Audio',
+            description = ('Activo | Vol %.2f'):format(tonumber(status.currentVolume) or 0.0),
+            type = 'inform'
+        })
+    else
+        lib.notify({
+            title = 'Snap Live Audio',
+            description = 'Inactivo',
+            type = 'inform'
+        })
+    end
+end, false)
 
 CreateThread(function()
     while true do
