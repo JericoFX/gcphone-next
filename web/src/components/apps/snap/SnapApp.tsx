@@ -821,7 +821,15 @@ export function SnapApp() {
     const response = await sendSnapLiveMessage(String(stream.id), content);
     if (response?.success) {
       setLiveMessageInput('');
+      return;
     }
+
+    if (response?.error === 'SOCKET_OFFLINE') {
+      setStatusMessage('Chat live desconectado');
+      return;
+    }
+
+    setStatusMessage('No se pudo enviar el mensaje');
   };
 
   const sendReaction = async (reaction: string) => {
@@ -842,7 +850,13 @@ export function SnapApp() {
       }, 2600);
       return;
     }
-    await sendSnapLiveReaction(String(stream.id), reaction);
+    const response = await sendSnapLiveReaction(String(stream.id), reaction);
+    if (response?.success) return;
+    if (response?.error === 'SOCKET_OFFLINE') {
+      setStatusMessage('Live desconectado temporalmente');
+      return;
+    }
+    setStatusMessage('No se pudo enviar reaccion');
   };
 
   const removeLiveMessage = async (messageId: string) => {
@@ -853,7 +867,9 @@ export function SnapApp() {
       setLiveFloating((prev) => prev.filter((entry) => entry.id !== messageId));
       return;
     }
-    await deleteSnapLiveMessage(String(stream.id), messageId);
+    const response = await deleteSnapLiveMessage(String(stream.id), messageId);
+    if (response?.success) return;
+    setStatusMessage('No se pudo eliminar el mensaje');
   };
 
   const muteLiveUser = async (username: string) => {
@@ -863,7 +879,9 @@ export function SnapApp() {
       setMutedUsers((prev) => (prev.includes(username) ? prev : [...prev, username]));
       return;
     }
-    await muteSnapLiveUser(String(stream.id), username);
+    const response = await muteSnapLiveUser(String(stream.id), username);
+    if (response?.success) return;
+    setStatusMessage('No se pudo silenciar al usuario');
   };
 
   const openStory = (index: number) => {
