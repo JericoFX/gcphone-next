@@ -29,6 +29,22 @@ local function NormalizeMediaType(value)
     return 'image'
 end
 
+local function SanitizeScaleform(data)
+    data = type(data) == 'table' and data or {}
+    local preset = SanitizeText(data.preset, 20)
+    if preset == '' then preset = 'breaking' end
+    if preset ~= 'breaking' and preset ~= 'ticker' and preset ~= 'flash' then
+        preset = 'breaking'
+    end
+
+    return {
+        preset = preset,
+        headline = SanitizeText(data.headline, 80),
+        subtitle = SanitizeText(data.subtitle, 120),
+        ticker = SanitizeText(data.ticker, 180),
+    }
+end
+
 local function ResolveAuthorProfile(identifier, source)
     local fallback = GetName(source) or 'Unknown'
     local account = MySQL.single.await(
@@ -167,6 +183,8 @@ lib.callback.register('gcphone:news:startLive', function(source, data)
     if content == '' then content = 'Cobertura en vivo' end
     if category == '' then category = 'general' end
 
+    local scaleform = SanitizeScaleform(data.scaleform)
+
     local articleId = MySQL.insert.await(
         'INSERT INTO phone_news (identifier, author_name, author_avatar, author_verified, title, content, category, is_live, live_viewers) VALUES (?, ?, ?, ?, ?, ?, ?, 1, 0)',
         { identifier, name, avatar, verified and 1 or 0, title, content, category, 1, 0 }
@@ -175,17 +193,46 @@ lib.callback.register('gcphone:news:startLive', function(source, data)
     ActiveLiveNews[articleId] = {
         source = source,
         identifier = identifier,
-        startTime = os.time()
+        startTime = os.time(),
+        scaleform = scaleform,
     }
     
     local article = MySQL.single.await(
         'SELECT * FROM phone_news WHERE id = ?',
         { articleId }
     )
+    article.scaleform = scaleform
     
     TriggerClientEvent('gcphone:news:liveStarted', -1, article)
     
     return true, { articleId = articleId }
+end)
+
+lib.callback.register('gcphone:news:setScaleform', function(source, data)
+    local identifier = GetIdentifier(source)
+    if not identifier then return false end
+    if type(data) ~= 'table' then return false end
+
+    local articleId = tonumber(data.articleId)
+    if not articleId or articleId < 1 then return false end
+
+    local liveData = ActiveLiveNews[articleId]
+    if not liveData or liveData.identifier ~= identifier then
+        return false
+    end
+
+    local scaleform = SanitizeScaleform(data.scaleform)
+    liveData.scaleform = scaleform
+    TriggerClientEvent('gcphone:news:scaleformUpdated', -1, articleId, scaleform)
+    return true
+end)
+
+lib.callback.register('gcphone:news:getScaleform', function(source, articleId)
+    local id = tonumber(articleId)
+    if not id or id < 1 then return nil end
+    local liveData = ActiveLiveNews[id]
+    if not liveData then return nil end
+    return liveData.scaleform
 end)
 
 lib.callback.register('gcphone:news:endLive', function(source, articleId)
