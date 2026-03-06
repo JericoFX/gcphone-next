@@ -53,6 +53,7 @@ server_scripts {
     'server/modules/documents.lua',
     'server/modules/chirp.lua',
     'server/modules/snap.lua',
+    'server/modules/social.lua',
     'server/modules/garage.lua',
     'server/modules/market.lua',
     'server/modules/yellowpages.lua',
