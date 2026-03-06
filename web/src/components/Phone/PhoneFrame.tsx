@@ -44,6 +44,7 @@ const lazyApps = {
   calls: lazy(() => import('../apps/calls/CallsApp').then(m => ({ default: m.CallsApp }))),
   contacts: lazy(() => import('../apps/contacts/ContactsApp').then(m => ({ default: m.ContactsApp }))),
   messages: lazy(() => import('../apps/messages/MessagesApp').then(m => ({ default: m.MessagesApp }))),
+  mail: lazy(() => import('../apps/mail/MailApp').then(m => ({ default: m.MailApp }))),
   settings: lazy(() => import('../apps/settings/SettingsApp').then(m => ({ default: m.SettingsApp }))),
   bank: lazy(() => import('../apps/bank/BankApp').then(m => ({ default: m.BankApp }))),
   wallet: lazy(() => import('../apps/wallet/WalletApp').then(m => ({ default: m.WalletApp }))),
