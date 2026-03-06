@@ -5,6 +5,7 @@ import { timeAgo } from '../../../utils/misc';
 import { resolveMediaType, sanitizeMediaUrl, sanitizeText } from '../../../utils/sanitize';
 import { uiPrompt } from '../../../utils/uiDialog';
 import { uiAlert } from '../../../utils/uiAlert';
+import { startMockLiveFeed } from '../../../utils/liveMock';
 import { ActionSheet } from '../../shared/ui/ActionSheet';
 import { MediaLightbox } from '../../shared/ui/MediaLightbox';
 import { AppScaffold } from '../../shared/layout';
@@ -18,6 +19,22 @@ interface NewsArticle {
   created_at?: string;
   category?: string;
 }
+
+interface MockLiveMessage {
+  id: number;
+  user: string;
+  text: string;
+  at: string;
+}
+
+const NEWS_MOCK_USERS = ['Cronista', 'Mika', 'Luna', 'Santi', 'Mery'];
+const NEWS_MOCK_LINES = [
+  'Cobertura impecable 👏',
+  'Gracias por informar en vivo',
+  'Se escucha claro ✅',
+  'Actualicen sobre trafico por favor',
+  'Muy buen trabajo equipo',
+];
 
 export function NewsApp() {
   const router = useRouter();
@@ -33,6 +50,10 @@ export function NewsApp() {
   const [showAttachSheet, setShowAttachSheet] = createSignal(false);
   const [viewerUrl, setViewerUrl] = createSignal<string | null>(null);
   const [query, setQuery] = createSignal('');
+  const [mockLiveEnabled, setMockLiveEnabled] = createSignal(false);
+  const [mockLiveMessages, setMockLiveMessages] = createSignal<MockLiveMessage[]>([]);
+
+  let stopNewsMock: (() => void) | undefined;
 
   const load = async () => {
     const data = await fetchNui<NewsArticle[]>('newsGetArticles', { category: selectedCategory(), limit: 50, offset: 0 }, []);
@@ -51,6 +72,35 @@ export function NewsApp() {
     };
     window.addEventListener('phone:keyUp', onKey as EventListener);
     onCleanup(() => window.removeEventListener('phone:keyUp', onKey as EventListener));
+  });
+
+  createEffect(() => {
+    if (!mockLiveEnabled()) {
+      stopNewsMock?.();
+      stopNewsMock = undefined;
+      return;
+    }
+
+    stopNewsMock = startMockLiveFeed({
+      users: NEWS_MOCK_USERS,
+      lines: NEWS_MOCK_LINES,
+      onMessage: (entry) => {
+        const when = new Date(entry.createdAt);
+        const at = `${String(when.getHours()).padStart(2, '0')}:${String(when.getMinutes()).padStart(2, '0')}`;
+        const next: MockLiveMessage = {
+          id: Number(entry.id.replace(/\D/g, '').slice(0, 9)) || Date.now(),
+          user: entry.user,
+          text: entry.text,
+          at,
+        };
+        setMockLiveMessages((prev) => [...prev.slice(-19), next]);
+      },
+    });
+
+    onCleanup(() => {
+      stopNewsMock?.();
+      stopNewsMock = undefined;
+    });
   });
 
   const publish = async () => {
@@ -139,6 +189,46 @@ export function NewsApp() {
     }
   };
 
+  const toggleMockLive = () => {
+    const next = !mockLiveEnabled();
+    setMockLiveEnabled(next);
+    if (!next) {
+      setMockLiveMessages([]);
+      return;
+    }
+    setMockLiveMessages([
+      {
+        id: Date.now(),
+        user: 'Cronista',
+        text: 'Arrancamos mock live de noticias',
+        at: 'ahora',
+      },
+    ]);
+  };
+
+  const editProfile = async () => {
+    const account = await fetchNui<any>('snapGetAccount', {});
+    if (!account) return;
+    const nextNameInput = await uiPrompt('Nombre visible para Snap/Clips/Noticias', {
+      title: 'Perfil',
+      defaultValue: account.display_name || '',
+      placeholder: 'Tu nombre',
+    });
+    if (nextNameInput === null) return;
+    const nextName = sanitizeText(nextNameInput, 50);
+    if (!nextName) return;
+
+    const ok = await fetchNui<{ success?: boolean }>('snapUpdateAccount', {
+      displayName: nextName,
+      avatar: account.avatar || undefined,
+      bio: account.bio || undefined,
+      isPrivate: !!account.is_private,
+    });
+    if (ok?.success) {
+      uiAlert('Perfil actualizado');
+    }
+  };
+
   const categoryOptions = createMemo(() => ['all', ...categories().filter((entry) => entry !== 'all')]);
 
   const visibleArticles = createMemo(() => {
@@ -161,8 +251,29 @@ export function NewsApp() {
             <option value="all">Todas</option>
             <For each={categories()}>{(c) => <option value={c}>{c}</option>}</For>
           </select>
-          <button class={styles.liveBtn} onClick={toggleLive}>{liveArticleId() ? 'Terminar live' : 'Iniciar live'}</button>
+          <div class={styles.liveActions}>
+            <button class={styles.liveBtn} onClick={toggleLive}>{liveArticleId() ? 'Terminar live' : 'Iniciar live'}</button>
+            <button class={styles.mockBtn} onClick={toggleMockLive}>{mockLiveEnabled() ? 'Mock off' : 'Mock live'}</button>
+            <button class={styles.profileBtn} onClick={() => void editProfile()}>Perfil</button>
+          </div>
         </div>
+
+        <Show when={mockLiveEnabled()}>
+          <div class={styles.mockLivePanel}>
+            <div class={styles.mockLiveHeader}>Mock chat live (max 20)</div>
+            <div class={styles.mockLiveList}>
+              <For each={mockLiveMessages()}>
+                {(entry) => (
+                  <div class={styles.mockLiveItem}>
+                    <strong>{entry.user}</strong>
+                    <span>{entry.text}</span>
+                    <small>{entry.at}</small>
+                  </div>
+                )}
+              </For>
+            </div>
+          </div>
+        </Show>
 
         <div class={styles.feed}>
           <For each={articles()}>
