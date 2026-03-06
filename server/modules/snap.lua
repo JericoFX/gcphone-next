@@ -404,9 +404,23 @@ lib.callback.register('gcphone:snap:getLiveStreams', function(source)
 end)
 
 lib.callback.register('gcphone:snap:getLiveAudioSession', function(source, data)
+    if HitRateLimit(source, 'snap_live_audio_session', 1200, 8) then
+        return { enabled = false, reason = 'rate_limited' }
+    end
+
     local cfg = GetSnapLiveAudioConfig()
     if not cfg.enabled then
         return { enabled = false, reason = 'disabled' }
+    end
+
+    local identifier = GetIdentifier(source)
+    if not identifier then
+        return { enabled = false, reason = 'missing_identity' }
+    end
+
+    local viewerAccount = GetAccount(identifier)
+    if not viewerAccount then
+        return { enabled = false, reason = 'missing_account' }
     end
 
     if type(data) ~= 'table' then
@@ -429,6 +443,14 @@ lib.callback.register('gcphone:snap:getLiveAudioSession', function(source, data)
 
     if not GetPlayerName(stream.source) then
         return { enabled = false, reason = 'owner_offline' }
+    end
+
+    local liveStillActive = MySQL.scalar.await(
+        'SELECT 1 FROM phone_snap_posts WHERE id = ? AND is_live = 1 LIMIT 1',
+        { liveId }
+    )
+    if not liveStillActive then
+        return { enabled = false, reason = 'stream_not_live' }
     end
 
     return {
