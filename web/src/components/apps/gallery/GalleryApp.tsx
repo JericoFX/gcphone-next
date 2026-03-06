@@ -1,7 +1,10 @@
 import { createSignal, For, Show, createEffect, onCleanup, createMemo } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { usePhoneActions } from '../../../store/phone';
+import { useContacts } from '../../../store/contacts';
 import { fetchNui } from '../../../utils/fetchNui';
+import { sanitizeMediaUrl, sanitizePhone } from '../../../utils/sanitize';
+import { uiPrompt } from '../../../utils/uiDialog';
 import { ActionSheet } from '../../shared/ui/ActionSheet';
 import { ScreenState } from '../../shared/ui/ScreenState';
 import { SkeletonList } from '../../shared/ui/SkeletonList';
@@ -23,11 +26,13 @@ function PlainIconButton(props: {
 export function GalleryApp() {
   const router = useRouter();
   const phoneActions = usePhoneActions();
+  const [contactsState] = useContacts();
   const [photos, setPhotos] = createSignal<any[]>([]);
   const [selectedPhoto, setSelectedPhoto] = createSignal<any>(null);
   const [selectedIndex, setSelectedIndex] = createSignal(-1);
   const [loading, setLoading] = createSignal(true);
   const [showActions, setShowActions] = createSignal(false);
+  const [shareChatApp, setShareChatApp] = createSignal<'messages' | 'wavechat' | null>(null);
   const [query, setQuery] = createSignal('');
 
   const openPhotoAt = (index: number) => {
@@ -51,6 +56,12 @@ export function GalleryApp() {
     if (!q) return photos();
     return photos().filter((item) => String(item?.url || '').toLowerCase().includes(q));
   });
+
+  const shareContacts = createMemo(() =>
+    [...contactsState.contacts].sort((a, b) =>
+      a.display.localeCompare(b.display, undefined, { sensitivity: 'base' })
+    )
+  );
   
   const loadPhotos = async () => {
     const result = await fetchNui('getGallery', undefined, []);
@@ -123,6 +134,44 @@ export function GalleryApp() {
     loadPhotos();
   };
 
+  const shareToMessages = async (app: 'messages' | 'wavechat') => {
+    const mediaUrl = sanitizeMediaUrl(selectedPhoto()?.url);
+    if (!mediaUrl) return;
+    setShareChatApp(app);
+    setShowActions(false);
+  };
+
+  const shareToChatNumber = (numberInput: string) => {
+    const app = shareChatApp();
+    const mediaUrl = sanitizeMediaUrl(selectedPhoto()?.url);
+    const number = sanitizePhone(numberInput);
+    if (!app || !mediaUrl || !number) return;
+    setShareChatApp(null);
+    setSelectedPhoto(null);
+    router.navigate(app, { phoneNumber: number, attachmentUrl: mediaUrl });
+  };
+
+  const shareToChatManual = async () => {
+    const app = shareChatApp();
+    if (!app) return;
+    const input = await uiPrompt('Numero para compartir', {
+      title: app === 'messages' ? 'Compartir en Mensajes' : 'Compartir en WaveChat',
+    });
+    shareToChatNumber(typeof input === 'string' ? input : '');
+  };
+
+  const shareToFeedApp = (app: 'chirp' | 'snap') => {
+    const mediaUrl = sanitizeMediaUrl(selectedPhoto()?.url);
+    if (!mediaUrl) return;
+    setShowActions(false);
+    setSelectedPhoto(null);
+    if (app === 'chirp') {
+      router.navigate('chirp', { composeMedia: mediaUrl });
+      return;
+    }
+    router.navigate('snap', { postMedia: mediaUrl, openComposer: '1' });
+  };
+
   const currentPhotoIndex = () => {
     const current = selectedPhoto();
     if (!current) return -1;
@@ -189,8 +238,25 @@ export function GalleryApp() {
         title="Foto"
         onClose={() => setShowActions(false)}
         actions={[
+          { label: 'Compartir en Mensajes', tone: 'primary', onClick: () => void shareToMessages('messages') },
+          { label: 'Compartir en WaveChat', onClick: () => void shareToMessages('wavechat') },
+          { label: 'Compartir en Chirp', onClick: () => shareToFeedApp('chirp') },
+          { label: 'Compartir en Snap', onClick: () => shareToFeedApp('snap') },
           { label: 'Usar como fondo', tone: 'primary', onClick: setAsWallpaper },
           { label: 'Eliminar foto', tone: 'danger', onClick: deletePhoto },
+        ]}
+      />
+
+      <ActionSheet
+        open={!!shareChatApp()}
+        title={shareChatApp() === 'messages' ? 'Compartir en Mensajes' : 'Compartir en WaveChat'}
+        onClose={() => setShareChatApp(null)}
+        actions={[
+          ...shareContacts().map((contact) => ({
+            label: `${contact.display} (${contact.number})`,
+            onClick: () => shareToChatNumber(contact.number),
+          })),
+          { label: 'Ingresar numero', tone: 'primary' as const, onClick: () => void shareToChatManual() },
         ]}
       />
     </div>

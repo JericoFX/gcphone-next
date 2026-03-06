@@ -109,6 +109,18 @@ export function SnapApp() {
     void loadData();
   });
 
+  let lastSharedMedia = '';
+  createEffect(() => {
+    const params = router.params();
+    const sharedMedia = sanitizeMediaUrl(typeof params.postMedia === 'string' ? params.postMedia : '');
+    const openComposer = params.openComposer === '1';
+    if (!openComposer || !sharedMedia || sharedMedia === lastSharedMedia) return;
+    lastSharedMedia = sharedMedia;
+    setPostMedia(sharedMedia);
+    setPostMode('post');
+    setShowCreatePost(true);
+  });
+
   createEffect(() => {
     const onKey = (e: CustomEvent<string>) => {
       if (e.detail === 'Backspace') {

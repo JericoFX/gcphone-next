@@ -376,3 +376,46 @@
   color: #fff;
   background: linear-gradient(180deg, #4cb66a, #359b52);
 }
+
+.contact-card {
+  min-width: 180px;
+  border-radius: 10px;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.86);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  display: grid;
+  gap: 4px;
+}
+
+.contact-card-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: #4b6f5a;
+}
+
+.contact-card-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1f3f2d;
+}
+
+.contact-card-number {
+  font-size: 12px;
+  color: #4b6f5a;
+}
+
+.contact-card-btn {
+  min-height: 28px;
+  border: none;
+  border-radius: 8px;
+  background: rgba(52, 127, 75, 0.16);
+  color: #2d6d49;
+  font-size: 12px;
+  font-weight: 700;
+
+  &:disabled {
+    opacity: 0.65;
+  }
+}

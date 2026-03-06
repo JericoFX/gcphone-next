@@ -1,7 +1,11 @@
 import { createSignal, For, Show, createEffect, onCleanup, batch, createMemo } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { useContacts } from '../../../store/contacts';
+import { useMessages } from '../../../store/messages';
 import { fetchNui } from '../../../utils/fetchNui';
+import { sanitizePhone } from '../../../utils/sanitize';
+import { buildSharedContactMessage } from '../../../utils/contactShare';
+import { uiPrompt } from '../../../utils/uiDialog';
 import { generateColorForString, getBestFontColor } from '../../../utils/misc';
 import { ActionSheet } from '../../shared/ui/ActionSheet';
 import { ScreenState } from '../../shared/ui/ScreenState';
@@ -11,6 +15,7 @@ import styles from './ContactsApp.module.scss';
 export function ContactsApp() {
   const router = useRouter();
   const [contactsState, contactsActions] = useContacts();
+  const [, messagesActions] = useMessages();
   const [showForm, setShowForm] = createSignal(false);
   const [editingContact, setEditingContact] = createSignal<number | null>(null);
   const [formName, setFormName] = createSignal('');
@@ -19,6 +24,8 @@ export function ContactsApp() {
   const [search, setSearch] = createSignal('');
   const [loading, setLoading] = createSignal(true);
   const [actionContact, setActionContact] = createSignal<any | null>(null);
+  const [shareContact, setShareContact] = createSignal<any | null>(null);
+  const [shareChannel, setShareChannel] = createSignal<'messages' | 'wavechat' | null>(null);
   const [tab, setTab] = createSignal<'todos' | 'favoritos'>('todos');
   const [recentCalls, setRecentCalls] = createSignal<string[]>([]);
 
@@ -30,6 +37,12 @@ export function ContactsApp() {
   };
 
   const contactsCounter = createMemo(() => filteredContacts().length);
+  const shareTargets = createMemo(() => {
+    const current = shareContact();
+    return [...contactsState.contacts]
+      .filter((contact) => !current || contact.id !== current.id)
+      .sort((a, b) => a.display.localeCompare(b.display, undefined, { sensitivity: 'base' }));
+  });
 
   createEffect(() => {
     const handle = setTimeout(() => setLoading(false), 120);
@@ -114,6 +127,32 @@ export function ContactsApp() {
   
   const handleSelect = (contact: { number: string; display: string }) => {
     router.navigate('messages.view', { number: contact.number, display: contact.display });
+  };
+
+  const openShareContact = () => {
+    if (!actionContact()) return;
+    setShareContact(actionContact());
+    setShareChannel(null);
+    setActionContact(null);
+  };
+
+  const sendSharedContact = async (numberInput: string) => {
+    const target = sanitizePhone(numberInput);
+    const source = shareContact();
+    const channel = shareChannel() || 'messages';
+    if (!target || !source) return;
+    const payload = buildSharedContactMessage(source.display, source.number);
+    if (!payload) return;
+    const sent = await messagesActions.send(target, payload);
+    if (!sent) return;
+    setShareContact(null);
+    setShareChannel(null);
+    router.navigate(channel, { phoneNumber: target });
+  };
+
+  const shareToManualNumber = async () => {
+    const input = await uiPrompt('Numero para compartir contacto', { title: 'Compartir contacto' });
+    await sendSharedContact(typeof input === 'string' ? input : '');
   };
   
   return (
@@ -288,6 +327,10 @@ export function ContactsApp() {
             },
           },
           {
+            label: 'Compartir contacto',
+            onClick: openShareContact,
+          },
+          {
             label: 'Eliminar',
             tone: 'danger',
             onClick: async () => {
@@ -295,6 +338,35 @@ export function ContactsApp() {
               await deleteContact(actionContact().id);
             },
           },
+        ]}
+      />
+
+      <ActionSheet
+        open={!!shareContact() && !shareChannel()}
+        title="Compartir contacto por"
+        onClose={() => {
+          setShareContact(null);
+          setShareChannel(null);
+        }}
+        actions={[
+          { label: 'Mensajes', tone: 'primary', onClick: () => { setShareChannel('messages'); } },
+          { label: 'WaveChat', onClick: () => { setShareChannel('wavechat'); } },
+        ]}
+      />
+
+      <ActionSheet
+        open={!!shareContact() && !!shareChannel()}
+        title={shareChannel() === 'wavechat' ? 'Enviar en WaveChat' : 'Enviar en Mensajes'}
+        onClose={() => {
+          setShareContact(null);
+          setShareChannel(null);
+        }}
+        actions={[
+          ...shareTargets().map((contact) => ({
+            label: `${contact.display} (${contact.number})`,
+            onClick: () => void sendSharedContact(contact.number),
+          })),
+          { label: 'Ingresar numero', tone: 'primary' as const, onClick: () => void shareToManualNumber() },
         ]}
       />
     </div>
