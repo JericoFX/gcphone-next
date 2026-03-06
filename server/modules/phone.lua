@@ -42,6 +42,7 @@ end
 local AllowedApps = {
     contacts = true,
     messages = true,
+    mail = true,
     calls = true,
     settings = true,
     gallery = true,
@@ -67,7 +68,7 @@ local AllowedApps = {
 }
 
 local DefaultLayout = {
-    home = { 'contacts', 'messages', 'calls', 'settings', 'gallery', 'camera', 'bank', 'wallet', 'documents', 'wavechat', 'music', 'chirp', 'snap', 'clips', 'darkrooms', 'yellowpages', 'market', 'news', 'garage', 'clock', 'notes', 'maps', 'weather' },
+    home = { 'contacts', 'messages', 'mail', 'calls', 'settings', 'gallery', 'camera', 'bank', 'wallet', 'documents', 'wavechat', 'music', 'chirp', 'snap', 'clips', 'darkrooms', 'yellowpages', 'market', 'news', 'garage', 'clock', 'notes', 'maps', 'weather' },
     menu = { 'appstore' }
 }
 
@@ -88,6 +89,7 @@ local function GetFeatureFlags()
         documents = resolveConvarBool('gcphone_feature_documents', defaults.Documents ~= false),
         music = resolveConvarBool('gcphone_feature_music', defaults.Music ~= false),
         yellowpages = resolveConvarBool('gcphone_feature_yellowpages', defaults.YellowPages ~= false),
+        mail = resolveConvarBool('gcphone_feature_mail', defaults.Mail ~= false),
     }
 end
 
@@ -112,6 +114,7 @@ local function BuildEnabledApps(flags)
     if not flags.documents then enabled.documents = nil end
     if not flags.music then enabled.music = nil end
     if not flags.yellowpages then enabled.yellowpages = nil end
+    if not flags.mail then enabled.mail = nil end
 
     return enabled
 end
