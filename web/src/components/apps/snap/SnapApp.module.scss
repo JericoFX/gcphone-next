@@ -642,6 +642,60 @@
   z-index: 5;
 }
 
+.liveTopBarRight {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.liveAudioBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 10px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #ffffff;
+  font-size: 11px;
+  line-height: 1;
+
+  small {
+    opacity: 0.75;
+    font-size: 10px;
+  }
+}
+
+.liveAudioBadgeDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #8c8c8c;
+}
+
+.liveAudioBadgeNear {
+  background: rgba(20, 104, 48, 0.72);
+
+  .liveAudioBadgeDot {
+    background: #63f08f;
+  }
+}
+
+.liveAudioBadgeFar {
+  background: rgba(109, 69, 7, 0.72);
+
+  .liveAudioBadgeDot {
+    background: #ffcb5a;
+  }
+}
+
+.liveAudioBadgeOffline {
+  background: rgba(92, 16, 16, 0.72);
+
+  .liveAudioBadgeDot {
+    background: #ff8a8a;
+  }
+}
+
 .liveOwnerInfo {
   padding: 8px 12px;
   border-radius: 999px;
