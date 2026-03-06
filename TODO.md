@@ -114,3 +114,10 @@ Implementar las ideas tecnicas buenas de `lb-phone` en nuestro telefono, sin cop
 - [ ] Commit H: onboarding social shared + wiring apps.
 - [ ] Commit I: QA fixes + regression pass.
 - [ ] Commit J: audio live/proximidad (feature flag + fallback + QA).
+
+## K - Compatibilidad ESX completa (futuro)
+- [ ] Auditoria de todos los callbacks para paridad QBCore/ESX.
+- [ ] Unificar obtencion de job/grade/identifier para permisos por trabajo.
+- [ ] Validar flujos Mail/Snap/Chirp/Clips/News en ESX real.
+- [ ] Corregir edge-cases de cuentas offline/online en ESX.
+- [ ] Documentar matriz de compatibilidad final por framework.
