@@ -8,6 +8,7 @@ import { useAppCache } from '../../../hooks';
 import { MediaLightbox } from '../../shared/ui/MediaLightbox';
 import { Modal, ModalActions, ModalButton } from '../../shared/ui/Modal';
 import { EmojiPickerButton } from '../../shared/ui/EmojiPicker';
+import { uiPrompt } from '../../../utils/uiDialog';
 import styles from './ClipsApp.module.scss';
 
 interface Clip {
@@ -217,6 +218,30 @@ export function ClipsApp() {
     router.navigate('camera', { target: 'clips' });
   };
 
+  const editProfile = async () => {
+    const account = await fetchNui<any>('snapGetAccount', {});
+    if (!account) return;
+    const nextNameInput = await uiPrompt('Nombre visible para Snap/Clips/Noticias', {
+      title: 'Perfil',
+      defaultValue: account.display_name || '',
+      placeholder: 'Tu nombre',
+    });
+    if (nextNameInput === null) return;
+    const nextName = sanitizeText(nextNameInput, 50);
+    if (!nextName) return;
+
+    const ok = await fetchNui<{ success?: boolean }>('snapUpdateAccount', {
+      displayName: nextName,
+      avatar: account.avatar || undefined,
+      bio: account.bio || undefined,
+      isPrivate: !!account.is_private,
+    });
+    if (ok?.success) {
+      setStatusMessage('Perfil actualizado');
+      await loadClips();
+    }
+  };
+
   const togglePause = (clipId: number) => {
     setPausedClips(prev => {
       const next = new Set(prev);
@@ -263,6 +288,9 @@ export function ClipsApp() {
             onClick={() => setCurrentTab('myVideos')}
           >
             Mis Videos
+          </button>
+          <button class={styles.profileBtn} onClick={() => void editProfile()}>
+            Perfil
           </button>
         </div>
 

@@ -158,6 +158,22 @@
   pointer-events: auto;
 }
 
+.profileBtn {
+  margin-left: auto;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.95);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.22);
+  }
+}
+
 .sideActionsShifted {
   right: 196px;
 }

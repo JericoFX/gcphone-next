@@ -29,6 +29,29 @@ local function NormalizeMediaType(value)
     return 'image'
 end
 
+local function ResolveAuthorProfile(identifier, source)
+    local fallback = GetName(source) or 'Unknown'
+    local account = MySQL.single.await(
+        'SELECT username, display_name, avatar FROM phone_snap_accounts WHERE identifier = ? LIMIT 1',
+        { identifier }
+    )
+    if not account then
+        return fallback, nil
+    end
+
+    local display = SanitizeText(account.display_name, 80)
+    local username = SanitizeText(account.username, 30)
+    local avatar = SanitizeMediaUrl(account.avatar)
+
+    if display ~= '' then
+        return display, avatar
+    end
+    if username ~= '' then
+        return username, avatar
+    end
+    return fallback, avatar
+end
+
 local ActiveLiveNews = {}
 local SecurityResource = GetCurrentResourceName()
 
@@ -79,7 +102,7 @@ lib.callback.register('gcphone:news:publishArticle', function(source, data)
 
     if type(data) ~= 'table' then return false end
     
-    local name = GetName(source) or 'Unknown'
+    local name, avatar = ResolveAuthorProfile(identifier, source)
 
     local newsMs = (Config.Security and Config.Security.RateLimits and Config.Security.RateLimits.news) or 2500
     if HitRateLimit(source, 'news_publish', newsMs, 1) then
@@ -105,7 +128,7 @@ lib.callback.register('gcphone:news:publishArticle', function(source, data)
     
     local articleId = MySQL.insert.await(
         'INSERT INTO phone_news (identifier, author_name, author_avatar, author_verified, title, content, media_url, media_type, category) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        { identifier, name, nil, verified and 1 or 0, title, content, mediaUrl, mediaType, category }
+        { identifier, name, avatar, verified and 1 or 0, title, content, mediaUrl, mediaType, category }
     )
     
     local article = MySQL.single.await(
@@ -124,7 +147,7 @@ lib.callback.register('gcphone:news:startLive', function(source, data)
 
     data = type(data) == 'table' and data or {}
     
-    local name = GetName(source) or 'Unknown'
+    local name, avatar = ResolveAuthorProfile(identifier, source)
 
     local newsMs = (Config.Security and Config.Security.RateLimits and Config.Security.RateLimits.news) or 2500
     if HitRateLimit(source, 'news_live', newsMs, 1) then
@@ -146,7 +169,7 @@ lib.callback.register('gcphone:news:startLive', function(source, data)
 
     local articleId = MySQL.insert.await(
         'INSERT INTO phone_news (identifier, author_name, author_avatar, author_verified, title, content, category, is_live, live_viewers) VALUES (?, ?, ?, ?, ?, ?, ?, 1, 0)',
-        { identifier, name, nil, verified and 1 or 0, title, content, category, 1, 0 }
+        { identifier, name, avatar, verified and 1 or 0, title, content, category, 1, 0 }
     )
     
     ActiveLiveNews[articleId] = {

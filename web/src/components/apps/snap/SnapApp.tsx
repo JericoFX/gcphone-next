@@ -6,6 +6,7 @@ import { resolveMediaType, sanitizeMediaUrl, sanitizeText } from '../../../utils
 import { useNuiEvent } from '../../../utils/useNui';
 import { fetchLiveKitToken, fetchSocketToken } from '../../../utils/realtimeAuth';
 import { connectLiveKit, disconnectLiveKit, setLiveKitCameraEnabled, setLiveKitMicrophoneEnabled } from '../../../utils/livekit';
+import { startMockLiveFeed } from '../../../utils/liveMock';
 import {
   connectSnapLiveSocket,
   disconnectSnapLiveSocket,
@@ -65,6 +66,18 @@ interface LiveStartResponse {
   error?: string;
 }
 
+const SNAP_MOCK_LIVE_ID = -999001;
+const SNAP_MOCK_USERS = ['mika', 'luna', 'santi', 'mery', 'rodrigo'];
+const SNAP_MOCK_LINES = [
+  'Se ve re bien 🔥',
+  'Vamos snap live 🙌',
+  'Que buena toma 😮',
+  'Jajaja top 😂',
+  'Saludos desde LS ❤️',
+  'Audio ok ✅',
+  'Subi ese tema 🎵',
+];
+
 export function SnapApp() {
   const router = useRouter();
   const cache = useAppCache('snap');
@@ -105,6 +118,7 @@ export function SnapApp() {
 
   let storyTick: number | undefined;
   let floatingTimers = new Map<string, number>();
+  let stopSnapMockFeed: (() => void) | undefined;
 
   // FAB Tooltip
   let fabTimeout: number;
@@ -262,6 +276,11 @@ export function SnapApp() {
     return stream.username === username;
   });
 
+  const isMockLive = createMemo(() => {
+    const stream = activeLive();
+    return !!stream && Number(stream.id) < 0;
+  });
+
   const openLiveViewer = async (live: SnapLive) => {
     const owner = !!(myAccount()?.username && live.username && myAccount()?.username === live.username);
     setStatusMessage('');
@@ -272,6 +291,11 @@ export function SnapApp() {
     setLiveReactions([]);
     setMutedUsers([]);
     setViewerMuted(false);
+
+    if (Number(live.id) < 0) {
+      setLiveConnected(true);
+      return;
+    }
 
     const roomName = `snaplive-${live.id}`;
     const tokenPayload = await fetchLiveKitToken(roomName, owner, 1800);
@@ -331,12 +355,18 @@ export function SnapApp() {
 
   const closeLiveViewer = async () => {
     const stream = activeLive();
+    const isMock = !!stream && Number(stream.id) < 0;
     if (stream) {
-      leaveSnapLiveRoom(String(stream.id));
-      if (liveStreaming() && isLiveOwner()) {
+      if (!isMock) {
+        leaveSnapLiveRoom(String(stream.id));
+      }
+      if (!isMock && liveStreaming() && isLiveOwner()) {
         await fetchNui('snapEndLive', stream.id);
       }
     }
+
+    stopSnapMockFeed?.();
+    stopSnapMockFeed = undefined;
 
     for (const timer of floatingTimers.values()) {
       window.clearTimeout(timer);
@@ -355,6 +385,10 @@ export function SnapApp() {
     setLiveReactions([]);
     setMutedUsers([]);
     setViewerMuted(false);
+    if (isMock) {
+      setLiveStreams((prev) => prev.filter((entry) => Number(entry.id) >= 0));
+      return;
+    }
     await loadData();
   };
 
@@ -377,6 +411,20 @@ export function SnapApp() {
     await openLiveViewer(stream);
   };
 
+  const startMockLive = async () => {
+    setShowActionSheet(false);
+    const stream: SnapLive = {
+      id: SNAP_MOCK_LIVE_ID,
+      username: myAccount()?.username || 'mock_host',
+      display_name: `${myAccount()?.display_name || 'Host'} (Mock)`,
+      avatar: myAccount()?.avatar,
+      live_viewers: 7,
+    };
+    setLiveStreams((prev) => [stream, ...prev.filter((entry) => Number(entry.id) >= 0)]);
+    setLiveStreaming(false);
+    await openLiveViewer(stream);
+  };
+
   const sendLiveMessage = async () => {
     if (viewerMuted()) {
       setStatusMessage('Estas silenciado en este live');
@@ -386,6 +434,26 @@ export function SnapApp() {
     const stream = activeLive();
     const content = sanitizeText(liveMessageInput(), 300);
     if (!stream || !content) return;
+    if (Number(stream.id) < 0) {
+      const message: SnapLiveSocketMessage = {
+        id: `${Date.now()}-${Math.random()}`,
+        liveId: String(stream.id),
+        username: myAccount()?.username || 'viewer',
+        avatar: myAccount()?.avatar,
+        content,
+        isMention: false,
+        createdAt: Date.now(),
+      };
+      setLiveMessages((prev) => [...prev.slice(-19), message]);
+      setLiveFloating((prev) => [...prev.slice(-3), message]);
+      const timer = window.setTimeout(() => {
+        setLiveFloating((prev) => prev.filter((entry) => entry.id !== message.id));
+        floatingTimers.delete(message.id);
+      }, 4200);
+      floatingTimers.set(message.id, timer);
+      setLiveMessageInput('');
+      return;
+    }
     const response = await sendSnapLiveMessage(String(stream.id), content);
     if (response?.success) {
       setLiveMessageInput('');
@@ -395,18 +463,42 @@ export function SnapApp() {
   const sendReaction = async (reaction: string) => {
     const stream = activeLive();
     if (!stream) return;
+    if (Number(stream.id) < 0) {
+      const payload: SnapLiveReaction = {
+        id: `${Date.now()}-${Math.random()}`,
+        liveId: String(stream.id),
+        username: myAccount()?.username || 'viewer',
+        avatar: myAccount()?.avatar,
+        reaction,
+        createdAt: Date.now(),
+      };
+      setLiveReactions((prev) => [...prev.slice(-10), payload]);
+      window.setTimeout(() => {
+        setLiveReactions((prev) => prev.filter((entry) => entry.id !== payload.id));
+      }, 2600);
+      return;
+    }
     await sendSnapLiveReaction(String(stream.id), reaction);
   };
 
   const removeLiveMessage = async (messageId: string) => {
     const stream = activeLive();
     if (!stream || !isLiveOwner()) return;
+    if (Number(stream.id) < 0) {
+      setLiveMessages((prev) => prev.filter((entry) => entry.id !== messageId));
+      setLiveFloating((prev) => prev.filter((entry) => entry.id !== messageId));
+      return;
+    }
     await deleteSnapLiveMessage(String(stream.id), messageId);
   };
 
   const muteLiveUser = async (username: string) => {
     const stream = activeLive();
     if (!stream || !isLiveOwner()) return;
+    if (Number(stream.id) < 0) {
+      setMutedUsers((prev) => (prev.includes(username) ? prev : [...prev, username]));
+      return;
+    }
     await muteSnapLiveUser(String(stream.id), username);
   };
 
@@ -458,6 +550,58 @@ export function SnapApp() {
     onCleanup(() => {
       if (storyTick) window.clearInterval(storyTick);
       storyTick = undefined;
+    });
+  });
+
+  createEffect(() => {
+    const stream = activeLive();
+    if (!stream || Number(stream.id) >= 0) {
+      stopSnapMockFeed?.();
+      stopSnapMockFeed = undefined;
+      return;
+    }
+
+    const mentionTarget = myAccount()?.username ? `@${myAccount()?.username}` : '@host';
+    stopSnapMockFeed = startMockLiveFeed({
+      users: SNAP_MOCK_USERS,
+      lines: SNAP_MOCK_LINES,
+      mentionTarget,
+      onMessage: (entry) => {
+        if (mutedUsers().includes(entry.user)) return;
+        const message: SnapLiveSocketMessage = {
+          id: entry.id,
+          liveId: String(stream.id),
+          username: entry.user,
+          content: entry.text,
+          isMention: entry.isMention,
+          createdAt: entry.createdAt,
+        };
+        setLiveMessages((prev) => [...prev.slice(-19), message]);
+        setLiveFloating((prev) => [...prev.slice(-3), message]);
+        const timer = window.setTimeout(() => {
+          setLiveFloating((prev) => prev.filter((msg) => msg.id !== message.id));
+          floatingTimers.delete(message.id);
+        }, 4200);
+        floatingTimers.set(message.id, timer);
+      },
+      onReaction: (entry) => {
+        const payload: SnapLiveReaction = {
+          id: entry.id,
+          liveId: String(stream.id),
+          username: entry.user,
+          reaction: entry.reaction,
+          createdAt: entry.createdAt,
+        };
+        setLiveReactions((prev) => [...prev.slice(-10), payload]);
+        window.setTimeout(() => {
+          setLiveReactions((prev) => prev.filter((it) => it.id !== payload.id));
+        }, 2600);
+      },
+    });
+
+    onCleanup(() => {
+      stopSnapMockFeed?.();
+      stopSnapMockFeed = undefined;
     });
   });
 
@@ -658,6 +802,7 @@ export function SnapApp() {
           { label: '🖼 Galeria', tone: 'primary', onClick: () => { setShowActionSheet(false); setShowCreatePost(true); } },
           { label: '✨ Subir Story', onClick: () => { setPostMode('story'); setShowActionSheet(false); setShowCreatePost(true); } },
           { label: '🔴 Iniciar Live', onClick: () => void startLive() },
+          { label: '🧪 Mock Live', onClick: () => void startMockLive() },
         ]}
       />
 
@@ -798,7 +943,9 @@ export function SnapApp() {
           <div class={styles.liveTopBar}>
             <div class={styles.liveOwnerInfo}>
               <strong>{activeLive()?.display_name || activeLive()?.username || 'Live'}</strong>
-              <span>{liveConnected() ? 'EN VIVO' : 'Conectando...'}</span>
+              <span>
+                {isMockLive() ? 'MOCK LIVE' : (liveConnected() ? 'EN VIVO' : 'Conectando...')}
+              </span>
             </div>
             <button class={styles.liveChatToggle} onClick={() => setLiveChatOpen((prev) => !prev)}>💬</button>
           </div>

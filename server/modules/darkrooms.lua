@@ -2,6 +2,21 @@
 
 local LastRoomActionBySource = {}
 
+local ROOM_ICON_ALLOWLIST = {
+    ['🌙'] = true,
+    ['💀'] = true,
+    ['👁️'] = true,
+    ['🕯️'] = true,
+    ['🧿'] = true,
+    ['🩸'] = true,
+    ['🕸️'] = true,
+    ['🔮'] = true,
+    ['☠️'] = true,
+    ['🔥'] = true,
+    ['⚡'] = true,
+    ['🦇'] = true,
+}
+
 local function SanitizeText(value, maxLength)
     if type(value) ~= 'string' then return '' end
     local text = value:gsub('[%z\1-\31\127]', '')
@@ -21,7 +36,10 @@ end
 local function SanitizeEmoji(value)
     local text = SanitizeText(value, 4)
     if text == '' then return '🌙' end
-    return text
+    if ROOM_ICON_ALLOWLIST[text] then
+        return text
+    end
+    return '🌙'
 end
 
 local function SanitizeMediaUrl(value)

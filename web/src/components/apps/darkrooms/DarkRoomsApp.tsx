@@ -54,6 +54,8 @@ const roomTag = (room: Pick<Room, 'slug' | 'name'>) => {
 const isVideo = (url?: string) => !!url && /\.(mp4|webm|mov|m3u8)(\?|$)/i.test(url);
 const isAudio = (url?: string) => !!url && /\.(mp3|ogg|wav|m4a|aac)(\?|$)/i.test(url);
 
+const ROOM_ICON_PRESETS = ['🌙', '💀', '👁️', '🕯️', '🧿', '🩸', '🕸️', '🔮', '☠️', '🔥', '⚡', '🦇'];
+
 function MediaBlock(props: { url?: string; compact?: boolean; onOpen?: (url: string) => void }) {
   if (!props.url) return null;
   if (isVideo(props.url)) {
@@ -258,11 +260,13 @@ export function DarkRoomsApp() {
       return;
     }
 
+    const icon = ROOM_ICON_PRESETS.includes(roomIcon()) ? roomIcon() : ROOM_ICON_PRESETS[0];
+
     const payload = await fetchNui<{ success?: boolean; error?: string }>('darkroomsCreateRoom', {
       name: roomName().trim(),
       slug: roomSlug().trim() || roomName().toLowerCase().replace(/\s+/g, '-'),
       description: roomDescription().trim(),
-      icon: roomIcon().trim(),
+      icon,
       password: isPrivateRoom() ? roomPassword().trim() : '',
     }, { success: false });
 
@@ -660,12 +664,23 @@ export function DarkRoomsApp() {
           onChange={setRoomSlug} 
           placeholder="mercado"
         />
-        <FormField 
-          label="Icono" 
-          value={roomIcon()} 
-          onChange={setRoomIcon} 
-          placeholder="🌙"
-        />
+        <div class={styles.formField}>
+          <label class={styles.formLabel}>Icono</label>
+          <div class={styles.emojiPresetGrid}>
+            <For each={ROOM_ICON_PRESETS}>
+              {(emoji) => (
+                <button
+                  class={styles.emojiPreset}
+                  classList={{ [styles.emojiPresetActive]: roomIcon() === emoji }}
+                  onClick={() => setRoomIcon(emoji)}
+                  type="button"
+                >
+                  {emoji}
+                </button>
+              )}
+            </For>
+          </div>
+        </div>
         <div class={styles.formField}>
           <label class={styles.formLabel}>Descripcion</label>
           <textarea
