@@ -66,6 +66,45 @@ end
 
 local ActiveStreams = {}
 
+local function RefreshFollowCounts(accountId, targetAccountId)
+    if accountId then
+        MySQL.update.await(
+            'UPDATE phone_snap_accounts SET following = (SELECT COUNT(*) FROM phone_snap_following WHERE follower_id = ?) WHERE id = ?',
+            { accountId, accountId }
+        )
+    end
+
+    if targetAccountId then
+        MySQL.update.await(
+            'UPDATE phone_snap_accounts SET followers = (SELECT COUNT(*) FROM phone_snap_following WHERE following_id = ?) WHERE id = ?',
+            { targetAccountId, targetAccountId }
+        )
+    end
+end
+
+local function UpsertSocialNotification(accountIdentifier, fromIdentifier, appType, notificationType, referenceId, referenceType, contentPreview)
+    if not accountIdentifier or not fromIdentifier then return end
+
+    MySQL.insert.await([[
+        INSERT INTO phone_social_notifications
+            (account_identifier, from_identifier, app_type, notification_type, reference_id, reference_type, content_preview)
+        VALUES
+            (?, ?, ?, ?, ?, ?, ?)
+        ON DUPLICATE KEY UPDATE
+            is_read = 0,
+            created_at = CURRENT_TIMESTAMP,
+            content_preview = VALUES(content_preview)
+    ]], {
+        accountIdentifier,
+        fromIdentifier,
+        appType,
+        notificationType,
+        referenceId,
+        referenceType,
+        contentPreview,
+    })
+end
+
 lib.callback.register('gcphone:snap:getAccount', function(source)
     local identifier = GetIdentifier(source)
     if not identifier then return nil end
@@ -327,51 +366,220 @@ lib.callback.register('gcphone:snap:follow', function(source, data)
     
     local account = GetAccount(identifier)
     if not account then return false end
+
+    if account.id == targetAccountId then
+        return { following = false, requested = false, error = 'self_target' }
+    end
+
+    local targetAccount = MySQL.single.await(
+        'SELECT id, identifier, is_private FROM phone_snap_accounts WHERE id = ?',
+        { targetAccountId }
+    )
+    if not targetAccount then
+        return { following = false, requested = false, error = 'target_not_found' }
+    end
     
     local existing = MySQL.scalar.await(
-        'SELECT 1 FROM phone_chirp_following WHERE follower_id = ? AND following_id = ?',
+        'SELECT 1 FROM phone_snap_following WHERE follower_id = ? AND following_id = ?',
         { account.id, targetAccountId }
     )
     
     if existing then
         MySQL.execute.await(
-            'DELETE FROM phone_chirp_following WHERE follower_id = ? AND following_id = ?',
+            'DELETE FROM phone_snap_following WHERE follower_id = ? AND following_id = ?',
             { account.id, targetAccountId }
         )
-        
-        MySQL.update.await(
-            'UPDATE phone_snap_accounts SET following = GREATEST(0, following - 1) WHERE id = ?',
-            { account.id }
-        )
-        
-        MySQL.update.await(
-            'UPDATE phone_snap_accounts SET followers = GREATEST(0, followers - 1) WHERE id = ?',
-            { targetAccountId }
-        )
-        
-        return { following = false }
-    else
-        MySQL.insert.await(
-            'INSERT INTO phone_chirp_following (follower_id, following_id) VALUES (?, ?)',
-            { account.id, targetAccountId }
-        )
-        
-        MySQL.update.await(
-            'UPDATE phone_snap_accounts SET following = following + 1 WHERE id = ?',
-            { account.id }
-        )
-        
-        MySQL.update.await(
-            'UPDATE phone_snap_accounts SET followers = followers + 1 WHERE id = ?',
-            { targetAccountId }
-        )
-        
-        return { following = true }
+
+        RefreshFollowCounts(account.id, targetAccountId)
+
+        return { following = false, requested = false }
     end
+
+    if tonumber(targetAccount.is_private) == 1 then
+        local pendingRequest = MySQL.scalar.await([[
+            SELECT 1
+            FROM phone_friend_requests
+            WHERE from_identifier = ?
+              AND to_identifier = ?
+              AND type = 'snap'
+              AND status = 'pending'
+        ]], { identifier, targetAccount.identifier })
+
+        if pendingRequest then
+            MySQL.update.await([[
+                UPDATE phone_friend_requests
+                SET status = 'cancelled', responded_at = CURRENT_TIMESTAMP
+                WHERE from_identifier = ?
+                  AND to_identifier = ?
+                  AND type = 'snap'
+                  AND status = 'pending'
+            ]], { identifier, targetAccount.identifier })
+
+            return { following = false, requested = false, cancelled = true }
+        end
+
+        MySQL.insert.await([[
+            INSERT INTO phone_friend_requests (from_identifier, to_identifier, type, status, created_at, responded_at)
+            VALUES (?, ?, 'snap', 'pending', CURRENT_TIMESTAMP, NULL)
+            ON DUPLICATE KEY UPDATE
+                status = 'pending',
+                responded_at = NULL,
+                created_at = CURRENT_TIMESTAMP
+        ]], { identifier, targetAccount.identifier })
+
+        UpsertSocialNotification(targetAccount.identifier, identifier, 'snap', 'follow_request', account.id, 'account', account.display_name)
+
+        return { following = false, requested = true }
+    end
+
+    MySQL.insert.await(
+        'INSERT IGNORE INTO phone_snap_following (follower_id, following_id) VALUES (?, ?)',
+        { account.id, targetAccountId }
+    )
+
+    MySQL.update.await([[
+        UPDATE phone_friend_requests
+        SET status = 'accepted', responded_at = CURRENT_TIMESTAMP
+        WHERE from_identifier = ?
+          AND to_identifier = ?
+          AND type = 'snap'
+          AND status = 'pending'
+    ]], { identifier, targetAccount.identifier })
+
+    RefreshFollowCounts(account.id, targetAccountId)
+
+    return { following = true, requested = false }
+end)
+
+lib.callback.register('gcphone:snap:getPendingFollowRequests', function(source)
+    local identifier = GetIdentifier(source)
+    if not identifier then return {} end
+
+    return MySQL.query.await([[
+        SELECT
+            fr.id,
+            fr.from_identifier,
+            fr.created_at,
+            a.id as account_id,
+            a.username,
+            a.display_name,
+            a.avatar,
+            a.bio,
+            a.verified
+        FROM phone_friend_requests fr
+        JOIN phone_snap_accounts a ON a.identifier = fr.from_identifier
+        WHERE fr.to_identifier = ?
+          AND fr.type = 'snap'
+          AND fr.status = 'pending'
+        ORDER BY fr.created_at DESC
+    ]], { identifier }) or {}
+end)
+
+lib.callback.register('gcphone:snap:getSentFollowRequests', function(source)
+    local identifier = GetIdentifier(source)
+    if not identifier then return {} end
+
+    return MySQL.query.await([[
+        SELECT
+            fr.id,
+            fr.to_identifier,
+            fr.created_at,
+            a.id as account_id,
+            a.username,
+            a.display_name,
+            a.avatar,
+            a.bio,
+            a.verified
+        FROM phone_friend_requests fr
+        JOIN phone_snap_accounts a ON a.identifier = fr.to_identifier
+        WHERE fr.from_identifier = ?
+          AND fr.type = 'snap'
+          AND fr.status = 'pending'
+        ORDER BY fr.created_at DESC
+    ]], { identifier }) or {}
+end)
+
+lib.callback.register('gcphone:snap:respondFollowRequest', function(source, data)
+    local identifier = GetIdentifier(source)
+    if not identifier then return false end
+    if type(data) ~= 'table' then return false end
+
+    local requestId = tonumber(data.requestId)
+    local accept = data.accept == true
+    if not requestId or requestId < 1 then return false end
+
+    local request = MySQL.single.await([[
+        SELECT id, from_identifier, to_identifier
+        FROM phone_friend_requests
+        WHERE id = ?
+          AND to_identifier = ?
+          AND type = 'snap'
+          AND status = 'pending'
+    ]], { requestId, identifier })
+
+    if not request then
+        return false
+    end
+
+    local status = accept and 'accepted' or 'rejected'
+    MySQL.update.await(
+        'UPDATE phone_friend_requests SET status = ?, responded_at = CURRENT_TIMESTAMP WHERE id = ?',
+        { status, request.id }
+    )
+
+    if not accept then
+        return true
+    end
+
+    local targetAccount = GetAccount(identifier)
+    local requesterAccount = GetAccount(request.from_identifier)
+    if not targetAccount or not requesterAccount then
+        return false
+    end
+
+    MySQL.insert.await(
+        'INSERT IGNORE INTO phone_snap_following (follower_id, following_id) VALUES (?, ?)',
+        { requesterAccount.id, targetAccount.id }
+    )
+
+    RefreshFollowCounts(requesterAccount.id, targetAccount.id)
+    UpsertSocialNotification(request.from_identifier, identifier, 'snap', 'follow_accepted', targetAccount.id, 'account', targetAccount.display_name)
+
+    return true
+end)
+
+lib.callback.register('gcphone:snap:cancelFollowRequest', function(source, data)
+    local identifier = GetIdentifier(source)
+    if not identifier then return false end
+    if type(data) ~= 'table' then return false end
+
+    local targetAccountId = tonumber(data.targetAccountId)
+    if not targetAccountId or targetAccountId < 1 then return false end
+
+    local targetAccount = MySQL.single.await(
+        'SELECT identifier FROM phone_snap_accounts WHERE id = ?',
+        { targetAccountId }
+    )
+    if not targetAccount then return false end
+
+    MySQL.update.await([[
+        UPDATE phone_friend_requests
+        SET status = 'cancelled', responded_at = CURRENT_TIMESTAMP
+        WHERE from_identifier = ?
+          AND to_identifier = ?
+          AND type = 'snap'
+          AND status = 'pending'
+    ]], { identifier, targetAccount.identifier })
+
+    return true
 end)
 
 lib.callback.register('gcphone:snap:getProfile', function(source, data)
-    local accountId = data.accountId
+    local identifier = GetIdentifier(source)
+    if type(data) ~= 'table' then return nil end
+
+    local accountId = tonumber(data.accountId)
+    if not accountId or accountId < 1 then return nil end
     
     local account = MySQL.single.await(
         'SELECT * FROM phone_snap_accounts WHERE id = ?',
@@ -380,13 +588,58 @@ lib.callback.register('gcphone:snap:getProfile', function(source, data)
     
     if not account then return nil end
     
-    local posts = MySQL.query.await(
-        'SELECT * FROM phone_snap_posts WHERE account_id = ? AND is_live = 0 ORDER BY created_at DESC LIMIT 50',
-        { accountId }
-    ) or {}
+    local viewerAccount = identifier and GetAccount(identifier) or nil
+
+    local isOwnProfile = viewerAccount and viewerAccount.id == account.id
+    local isFollowing = false
+    local requestedByMe = false
+    local requestedFromThem = false
+
+    if viewerAccount and not isOwnProfile then
+        isFollowing = MySQL.scalar.await(
+            'SELECT 1 FROM phone_snap_following WHERE follower_id = ? AND following_id = ? LIMIT 1',
+            { viewerAccount.id, account.id }
+        ) and true or false
+
+        requestedByMe = MySQL.scalar.await([[
+            SELECT 1
+            FROM phone_friend_requests
+            WHERE from_identifier = ?
+              AND to_identifier = ?
+              AND type = 'snap'
+              AND status = 'pending'
+            LIMIT 1
+        ]], { viewerAccount.identifier, account.identifier }) and true or false
+
+        requestedFromThem = MySQL.scalar.await([[
+            SELECT 1
+            FROM phone_friend_requests
+            WHERE from_identifier = ?
+              AND to_identifier = ?
+              AND type = 'snap'
+              AND status = 'pending'
+            LIMIT 1
+        ]], { account.identifier, viewerAccount.identifier }) and true or false
+    end
+
+    local canViewPosts = (tonumber(account.is_private) ~= 1) or isOwnProfile or isFollowing
+    local posts = {}
+    if canViewPosts then
+        posts = MySQL.query.await(
+            'SELECT * FROM phone_snap_posts WHERE account_id = ? AND is_live = 0 ORDER BY created_at DESC LIMIT 50',
+            { accountId }
+        ) or {}
+    end
     
     return {
         account = account,
-        posts = posts
+        posts = posts,
+        relationship = {
+            isFollowing = isFollowing,
+            requestedByMe = requestedByMe,
+            requestedFromThem = requestedFromThem,
+            isOwnProfile = isOwnProfile,
+            canViewPosts = canViewPosts,
+        }
     }
 end)
