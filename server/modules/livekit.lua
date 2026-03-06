@@ -30,6 +30,26 @@ local function IsParticipantOfCall(callId, source)
     return source == call.transmitterSrc or source == call.receiverSrc
 end
 
+local function IsSnapLiveParticipant(liveId, source)
+    local identifier = GetIdentifier(source)
+    if not identifier then return false, false end
+
+    local stream = MySQL.single.await([[
+        SELECT p.account_id, a.identifier
+        FROM phone_snap_posts p
+        JOIN phone_snap_accounts a ON a.id = p.account_id
+        WHERE p.id = ? AND p.is_live = 1
+        LIMIT 1
+    ]], { liveId })
+
+    if not stream then
+        return false, false
+    end
+
+    local isOwner = stream.identifier == identifier
+    return true, isOwner
+end
+
 local function CleanupExpiredRequests()
     local now = GetGameTimer()
     for id, data in pairs(PendingTokenRequests) do
@@ -73,28 +93,45 @@ lib.callback.register('gcphone:livekit:getToken', function(source, data)
         return { success = false, error = 'INVALID_ROOM' }
     end
 
-    local callId = roomName:match('^call%-(%d+)$')
-    if not callId then
-        return { success = false, error = 'INVALID_ROOM_FORMAT' }
-    end
-    callId = tonumber(callId)
-    if not callId then
-        return { success = false, error = 'INVALID_CALL_ID' }
-    end
-
-    if not IsParticipantOfCall(callId, source) then
-        return { success = false, error = 'NOT_CALL_PARTICIPANT' }
-    end
-
-    local identity = SafeString('player:' .. tostring(identifier), 64)
-    local participantName = SafeString(GetName(source) or ('player-' .. tostring(source)), 64)
-    local maxDuration = tonumber(data and data.maxDuration) or 300
-
     local grants = {
         canPublish = not (type(data) == 'table' and data.publish == false),
         canSubscribe = true,
         canPublishData = true,
     }
+
+    local callId = roomName:match('^call%-(%d+)$')
+    if callId then
+        callId = tonumber(callId)
+        if not callId then
+            return { success = false, error = 'INVALID_CALL_ID' }
+        end
+
+        if not IsParticipantOfCall(callId, source) then
+            return { success = false, error = 'NOT_CALL_PARTICIPANT' }
+        end
+    else
+        local liveId = roomName:match('^snaplive%-(%d+)$')
+        if not liveId then
+            return { success = false, error = 'INVALID_ROOM_FORMAT' }
+        end
+
+        liveId = tonumber(liveId)
+        if not liveId then
+            return { success = false, error = 'INVALID_LIVE_ID' }
+        end
+
+        local valid, isOwner = IsSnapLiveParticipant(liveId, source)
+        if not valid then
+            return { success = false, error = 'NOT_LIVE_PARTICIPANT' }
+        end
+
+        -- Verified: only stream owner can publish in snap live room
+        grants.canPublish = isOwner
+    end
+
+    local identity = SafeString('player:' .. tostring(identifier), 64)
+    local participantName = SafeString(GetName(source) or ('player-' .. tostring(source)), 64)
+    local maxDuration = tonumber(data and data.maxDuration) or 300
 
     local requestId = NextRequestId()
     local p = promise.new()

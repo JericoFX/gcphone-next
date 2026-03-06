@@ -20,6 +20,38 @@ let currentHandlers: {
   onReconnect?: () => void;
   onReconnectFailed?: () => void;
 } | null = null;
+
+export interface SnapLiveSocketMessage {
+  id: string;
+  liveId: string;
+  username: string;
+  avatar?: string;
+  content: string;
+  isMention: boolean;
+  createdAt: number;
+}
+
+export interface SnapLiveReaction {
+  id: string;
+  liveId: string;
+  username: string;
+  avatar?: string;
+  reaction: string;
+  createdAt: number;
+}
+
+type SnapLiveAck = { success?: boolean; error?: string };
+
+let liveSocket: Socket | null = null;
+let liveCurrentHandlers: {
+  onMessage?: (message: SnapLiveSocketMessage) => void;
+  onReaction?: (payload: SnapLiveReaction) => void;
+  onMessageDeleted?: (payload: { liveId: string; messageId: string }) => void;
+  onUserMuted?: (payload: { liveId: string; username: string }) => void;
+  onDisconnect?: () => void;
+  onReconnect?: () => void;
+  onReconnectFailed?: () => void;
+} | null = null;
 export function disconnectWaveSocket() {
   if (socket) {
     socket.disconnect();
@@ -93,6 +125,110 @@ export function getWaveRecent(roomId: string, limit = 100): Promise<AckPayload> 
 export function sendWaveMessage(roomId: string, content: string): Promise<AckPayload> {
   return new Promise<AckPayload>((resolve) => {
     socket?.emit('wavechat:send', { roomId, content }, (payload: AckPayload) => {
+      resolve(payload || { success: false });
+    });
+  });
+}
+
+export function disconnectSnapLiveSocket() {
+  if (liveSocket) {
+    liveSocket.disconnect();
+    liveSocket = null;
+  }
+  liveCurrentHandlers = null;
+}
+
+export function connectSnapLiveSocket(host: string, token: string, handlers?: {
+  onMessage?: (message: SnapLiveSocketMessage) => void;
+  onReaction?: (payload: SnapLiveReaction) => void;
+  onMessageDeleted?: (payload: { liveId: string; messageId: string }) => void;
+  onUserMuted?: (payload: { liveId: string; username: string }) => void;
+  onDisconnect?: () => void;
+  onReconnect?: () => void;
+  onReconnectFailed?: () => void;
+}) {
+  disconnectSnapLiveSocket();
+  liveCurrentHandlers = handlers || null;
+  liveSocket = io(host, {
+    auth: { token },
+    transports: ['websocket'],
+    reconnection: true,
+    reconnectionAttempts: 5,
+    reconnectionDelay: 1000,
+    reconnectionDelayMax: 5000,
+    randomizationFactor: 0.5,
+  });
+
+  if (handlers?.onMessage) {
+    liveSocket.on('snaplive:message', handlers.onMessage);
+  }
+  if (handlers?.onReaction) {
+    liveSocket.on('snaplive:reaction', handlers.onReaction);
+  }
+  if (handlers?.onMessageDeleted) {
+    liveSocket.on('snaplive:messageDeleted', handlers.onMessageDeleted);
+  }
+  if (handlers?.onUserMuted) {
+    liveSocket.on('snaplive:userMuted', handlers.onUserMuted);
+  }
+  if (handlers?.onDisconnect) {
+    liveSocket.on('disconnect', handlers.onDisconnect);
+  }
+
+  liveSocket.io.on('reconnect', () => {
+    liveCurrentHandlers?.onReconnect?.();
+  });
+  liveSocket.io.on('reconnect_failed', () => {
+    liveCurrentHandlers?.onReconnectFailed?.();
+  });
+  liveSocket.on('connect_error', (error) => {
+    if (error.message === 'INVALID_TOKEN' || error.message === 'TOKEN_EXPIRED') {
+      liveCurrentHandlers?.onReconnectFailed?.();
+    }
+  });
+
+  return liveSocket;
+}
+
+export function isSnapLiveSocketConnected() {
+  return Boolean(liveSocket && liveSocket.connected);
+}
+
+export function joinSnapLiveRoom(liveId: string) {
+  liveSocket?.emit('snaplive:joinRoom', { liveId });
+}
+
+export function leaveSnapLiveRoom(liveId: string) {
+  liveSocket?.emit('snaplive:leaveRoom', { liveId });
+}
+
+export function sendSnapLiveMessage(liveId: string, content: string): Promise<SnapLiveAck> {
+  return new Promise<SnapLiveAck>((resolve) => {
+    liveSocket?.emit('snaplive:send', { liveId, content }, (payload: SnapLiveAck) => {
+      resolve(payload || { success: false });
+    });
+  });
+}
+
+export function sendSnapLiveReaction(liveId: string, reaction: string): Promise<SnapLiveAck> {
+  return new Promise<SnapLiveAck>((resolve) => {
+    liveSocket?.emit('snaplive:reaction', { liveId, reaction }, (payload: SnapLiveAck) => {
+      resolve(payload || { success: false });
+    });
+  });
+}
+
+export function deleteSnapLiveMessage(liveId: string, messageId: string): Promise<SnapLiveAck> {
+  return new Promise<SnapLiveAck>((resolve) => {
+    liveSocket?.emit('snaplive:deleteMessage', { liveId, messageId }, (payload: SnapLiveAck) => {
+      resolve(payload || { success: false });
+    });
+  });
+}
+
+export function muteSnapLiveUser(liveId: string, username: string): Promise<SnapLiveAck> {
+  return new Promise<SnapLiveAck>((resolve) => {
+    liveSocket?.emit('snaplive:muteUser', { liveId, username }, (payload: SnapLiveAck) => {
       resolve(payload || { success: false });
     });
   });
