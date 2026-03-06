@@ -341,4 +341,154 @@ RegisterNUICallback('shareDocument', function(data, cb)
     end, data)
 end)
 
+local LiveAudioSession = nil
+local LiveAudioLastState = nil
+local LiveAudioLastVolume = nil
+
+local function ClampNumber(value, min, max)
+    local n = tonumber(value)
+    if not n then return min end
+    if n < min then return min end
+    if n > max then return max end
+    return n
+end
+
+local function PushLiveAudioState(state)
+    SendNUIMessage({
+        action = 'gcphone:snap:proximityState',
+        data = state,
+    })
+end
+
+local function PushLiveAudioVolume(payload)
+    SendNUIMessage({
+        action = 'gcphone:snap:proximityVolume',
+        data = payload,
+    })
+end
+
+local function ComputeLiveAudioVolume(distance, maxDistance, minVolume, maxVolume)
+    local safeDistance = ClampNumber(maxDistance, 1.0, 80.0)
+    local d = ClampNumber(distance, 0.0, safeDistance)
+    local normalized = 1.0 - (d / safeDistance)
+    local volume = minVolume + (maxVolume - minVolume) * normalized
+    return ClampNumber(volume, 0.0, 1.0)
+end
+
+RegisterNUICallback('snapLiveAudioStart', function(data, cb)
+    local liveId = tonumber(type(data) == 'table' and data.liveId or nil)
+    if not liveId or liveId < 1 then
+        cb({ success = false, enabled = false, reason = 'invalid_live' })
+        return
+    end
+
+    lib.callback('gcphone:snap:getLiveAudioSession', false, function(payload)
+        if type(payload) ~= 'table' or payload.enabled ~= true then
+            LiveAudioSession = nil
+            LiveAudioLastState = nil
+            LiveAudioLastVolume = nil
+            cb({ success = true, enabled = false, reason = type(payload) == 'table' and payload.reason or 'disabled' })
+            return
+        end
+
+        LiveAudioSession = {
+            liveId = liveId,
+            targetServerId = tonumber(payload.targetServerId),
+            listenDistance = ClampNumber(payload.listenDistance, 3.0, 80.0),
+            minVolume = ClampNumber(payload.minVolume, 0.0, 1.0),
+            maxVolume = ClampNumber(payload.maxVolume, 0.0, 1.0),
+            updateIntervalMs = math.floor(ClampNumber(payload.updateIntervalMs, 120, 1500)),
+        }
+
+        if LiveAudioSession.maxVolume < LiveAudioSession.minVolume then
+            LiveAudioSession.maxVolume = LiveAudioSession.minVolume
+        end
+
+        LiveAudioLastState = nil
+        LiveAudioLastVolume = nil
+
+        cb({
+            success = true,
+            enabled = true,
+            config = {
+                listenDistance = LiveAudioSession.listenDistance,
+                minVolume = LiveAudioSession.minVolume,
+                maxVolume = LiveAudioSession.maxVolume,
+                updateIntervalMs = LiveAudioSession.updateIntervalMs,
+            }
+        })
+    end, { liveId = liveId })
+end)
+
+RegisterNUICallback('snapLiveAudioStop', function(_, cb)
+    if LiveAudioSession then
+        PushLiveAudioState({
+            liveId = LiveAudioSession.liveId,
+            listening = false,
+            targetOnline = false,
+            distance = -1,
+        })
+    end
+
+    LiveAudioSession = nil
+    LiveAudioLastState = nil
+    LiveAudioLastVolume = nil
+    cb({ success = true })
+end)
+
+CreateThread(function()
+    while true do
+        local session = LiveAudioSession
+
+        if not session then
+            Wait(500)
+        else
+            local waitMs = session.updateIntervalMs or 220
+            local targetPlayer = GetPlayerFromServerId(session.targetServerId or -1)
+            local targetOnline = targetPlayer ~= -1
+            local listening = false
+            local distance = -1.0
+            local volume = 1.0
+
+            if targetOnline then
+                local targetPed = GetPlayerPed(targetPlayer)
+                if targetPed and targetPed > 0 then
+                    local fromCoords = GetEntityCoords(cache.ped)
+                    local toCoords = GetEntityCoords(targetPed)
+                    distance = #(fromCoords - toCoords)
+                    listening = distance <= session.listenDistance
+
+                    if listening then
+                        volume = ComputeLiveAudioVolume(distance, session.listenDistance, session.minVolume, session.maxVolume)
+                    else
+                        volume = 0.0
+                    end
+                end
+            end
+
+            local nextState = ('%s|%s|%s'):format(session.liveId, tostring(listening), tostring(targetOnline))
+            if nextState ~= LiveAudioLastState then
+                PushLiveAudioState({
+                    liveId = session.liveId,
+                    listening = listening,
+                    targetOnline = targetOnline,
+                    distance = distance,
+                })
+                LiveAudioLastState = nextState
+            end
+
+            local roundedVolume = math.floor(volume * 100 + 0.5) / 100
+            if roundedVolume ~= LiveAudioLastVolume then
+                PushLiveAudioVolume({
+                    liveId = session.liveId,
+                    volume = roundedVolume,
+                })
+                LiveAudioLastVolume = roundedVolume
+            end
+
+            Wait(waitMs)
+        end
+    end
+end)
+
 exports('GetNearbyPlayers', GetNearbyPlayers)

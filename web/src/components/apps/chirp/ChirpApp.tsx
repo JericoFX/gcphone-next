@@ -36,6 +36,18 @@ interface ChirpComment {
   created_at?: string;
 }
 
+interface ChirpFollowRequest {
+  id: number;
+  account_id: number;
+  from_identifier?: string;
+  to_identifier?: string;
+  username?: string;
+  display_name?: string;
+  avatar?: string;
+  verified?: boolean;
+  created_at?: string;
+}
+
 type TabMode = 'forYou' | 'following' | 'myActivity';
 
 export function ChirpApp() {
@@ -50,6 +62,9 @@ export function ChirpApp() {
   // Data
   const [tweets, setTweets] = createSignal<ChirpTweet[]>([]);
   const [comments, setComments] = createSignal<ChirpComment[]>([]);
+  const [myAccount, setMyAccount] = createSignal<any>(null);
+  const [pendingRequests, setPendingRequests] = createSignal<ChirpFollowRequest[]>([]);
+  const [sentRequests, setSentRequests] = createSignal<ChirpFollowRequest[]>([]);
 
   // UI State
   const [loading, setLoading] = createSignal(false);
@@ -69,6 +84,14 @@ export function ChirpApp() {
   const [deleteCommentId, setDeleteCommentId] = createSignal<number | null>(null);
   const [showAttachUrlModal, setShowAttachUrlModal] = createSignal(false);
   const [attachUrlInput, setAttachUrlInput] = createSignal('');
+  const [showProfileModal, setShowProfileModal] = createSignal(false);
+  const [showRequestsModal, setShowRequestsModal] = createSignal(false);
+  const [requestsLoading, setRequestsLoading] = createSignal(false);
+
+  const [profileDisplayName, setProfileDisplayName] = createSignal('');
+  const [profileAvatar, setProfileAvatar] = createSignal('');
+  const [profileBio, setProfileBio] = createSignal('');
+  const [profilePrivate, setProfilePrivate] = createSignal(false);
 
   // Viewer
   const [viewerUrl, setViewerUrl] = createSignal<string | null>(null);
@@ -106,8 +129,28 @@ export function ChirpApp() {
     setLoading(false);
   };
 
+  const loadSocialState = async () => {
+    const account = await fetchNui('chirpGetAccount', {}, null);
+    setMyAccount(account);
+    setProfileDisplayName(account?.display_name || '');
+    setProfileAvatar(account?.avatar || '');
+    setProfileBio(account?.bio || '');
+    setProfilePrivate(account?.is_private === 1 || account?.is_private === true);
+
+    setRequestsLoading(true);
+    const incoming = await fetchNui<ChirpFollowRequest[]>('chirpGetPendingFollowRequests', {}, []);
+    const outgoing = await fetchNui<ChirpFollowRequest[]>('chirpGetSentFollowRequests', {}, []);
+    setPendingRequests(incoming || []);
+    setSentRequests(outgoing || []);
+    setRequestsLoading(false);
+  };
+
   createEffect(() => {
     void loadTweets();
+  });
+
+  onMount(() => {
+    void loadSocialState();
   });
 
   let lastSharedMedia = '';

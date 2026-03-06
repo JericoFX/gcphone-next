@@ -48,6 +48,8 @@ let liveCurrentHandlers: {
   onReaction?: (payload: SnapLiveReaction) => void;
   onMessageDeleted?: (payload: { liveId: string; messageId: string }) => void;
   onUserMuted?: (payload: { liveId: string; username: string }) => void;
+  onUserUnmuted?: (payload: { liveId: string; username: string }) => void;
+  onUserKicked?: (payload: { liveId: string; username: string }) => void;
   onDisconnect?: () => void;
   onReconnect?: () => void;
   onReconnectFailed?: () => void;
@@ -143,6 +145,8 @@ export function connectSnapLiveSocket(host: string, token: string, handlers?: {
   onReaction?: (payload: SnapLiveReaction) => void;
   onMessageDeleted?: (payload: { liveId: string; messageId: string }) => void;
   onUserMuted?: (payload: { liveId: string; username: string }) => void;
+  onUserUnmuted?: (payload: { liveId: string; username: string }) => void;
+  onUserKicked?: (payload: { liveId: string; username: string }) => void;
   onDisconnect?: () => void;
   onReconnect?: () => void;
   onReconnectFailed?: () => void;
@@ -170,6 +174,12 @@ export function connectSnapLiveSocket(host: string, token: string, handlers?: {
   }
   if (handlers?.onUserMuted) {
     liveSocket.on('snaplive:userMuted', handlers.onUserMuted);
+  }
+  if (handlers?.onUserUnmuted) {
+    liveSocket.on('snaplive:userUnmuted', handlers.onUserUnmuted);
+  }
+  if (handlers?.onUserKicked) {
+    liveSocket.on('snaplive:userKicked', handlers.onUserKicked);
   }
   if (handlers?.onDisconnect) {
     liveSocket.on('disconnect', handlers.onDisconnect);

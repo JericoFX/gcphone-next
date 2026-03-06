@@ -66,6 +66,37 @@ end
 
 local ActiveStreams = {}
 
+local function GetSnapLiveAudioConfig()
+    local config = Config.Snap and Config.Snap.LiveAudio or {}
+
+    local listenDistance = tonumber(config.ListenDistance) or 25.0
+    if listenDistance < 3.0 then listenDistance = 3.0 end
+    if listenDistance > 80.0 then listenDistance = 80.0 end
+
+    local minVolume = tonumber(config.MinVolume) or 0.08
+    if minVolume < 0.0 then minVolume = 0.0 end
+    if minVolume > 1.0 then minVolume = 1.0 end
+
+    local maxVolume = tonumber(config.MaxVolume) or 1.0
+    if maxVolume < 0.0 then maxVolume = 0.0 end
+    if maxVolume > 1.0 then maxVolume = 1.0 end
+    if maxVolume < minVolume then
+        maxVolume = minVolume
+    end
+
+    local updateIntervalMs = tonumber(config.UpdateIntervalMs) or 220
+    if updateIntervalMs < 120 then updateIntervalMs = 120 end
+    if updateIntervalMs > 1500 then updateIntervalMs = 1500 end
+
+    return {
+        enabled = config.Enabled == true,
+        listenDistance = listenDistance,
+        minVolume = minVolume,
+        maxVolume = maxVolume,
+        updateIntervalMs = math.floor(updateIntervalMs),
+    }
+end
+
 local function RefreshFollowCounts(accountId, targetAccountId)
     if accountId then
         MySQL.update.await(
@@ -354,6 +385,45 @@ lib.callback.register('gcphone:snap:getLiveStreams', function(source)
         WHERE p.is_live = 1
         ORDER BY p.live_viewers DESC
     ]]) or {}
+end)
+
+lib.callback.register('gcphone:snap:getLiveAudioSession', function(source, data)
+    local cfg = GetSnapLiveAudioConfig()
+    if not cfg.enabled then
+        return { enabled = false, reason = 'disabled' }
+    end
+
+    if type(data) ~= 'table' then
+        return { enabled = false, reason = 'invalid_payload' }
+    end
+
+    local liveId = tonumber(data.liveId)
+    if not liveId or liveId < 1 then
+        return { enabled = false, reason = 'invalid_live' }
+    end
+
+    local stream = ActiveStreams[liveId]
+    if not stream or type(stream.source) ~= 'number' then
+        return { enabled = false, reason = 'stream_unavailable' }
+    end
+
+    if stream.source == source then
+        return { enabled = false, reason = 'owner' }
+    end
+
+    if not GetPlayerName(stream.source) then
+        return { enabled = false, reason = 'owner_offline' }
+    end
+
+    return {
+        enabled = true,
+        liveId = liveId,
+        targetServerId = stream.source,
+        listenDistance = cfg.listenDistance,
+        minVolume = cfg.minVolume,
+        maxVolume = cfg.maxVolume,
+        updateIntervalMs = cfg.updateIntervalMs,
+    }
 end)
 
 lib.callback.register('gcphone:snap:follow', function(source, data)
