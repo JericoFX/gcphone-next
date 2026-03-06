@@ -996,6 +996,118 @@ local MIGRATIONS = {
                 KEY `idx_created` (`created_at`)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci]]
         }
+    },
+
+    {
+        version = 10,
+        name = "mail_foundation",
+        description = "Mail tables, indexes and triggers managed by Lua migrations",
+        statements = {
+            [[CREATE TABLE IF NOT EXISTS `phone_mail_accounts` (
+                `id` INT AUTO_INCREMENT PRIMARY KEY,
+                `identifier` VARCHAR(50) NOT NULL,
+                `alias` VARCHAR(32) NOT NULL,
+                `domain` VARCHAR(64) NOT NULL,
+                `email` VARCHAR(128) NOT NULL,
+                `password_hash` CHAR(64) NOT NULL,
+                `is_primary` TINYINT(1) DEFAULT 1,
+                `last_login_at` TIMESTAMP NULL DEFAULT NULL,
+                `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                UNIQUE KEY `uniq_mail_email` (`email`),
+                UNIQUE KEY `uniq_mail_identifier_alias` (`identifier`, `alias`),
+                KEY `idx_mail_accounts_identifier` (`identifier`),
+                KEY `idx_mail_accounts_domain` (`domain`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci]],
+
+            [[CREATE TABLE IF NOT EXISTS `phone_mail_boxes` (
+                `account_id` INT PRIMARY KEY,
+                `unread_count` INT NOT NULL DEFAULT 0,
+                `total_count` INT NOT NULL DEFAULT 0,
+                `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                CONSTRAINT `fk_mail_boxes_account`
+                    FOREIGN KEY (`account_id`) REFERENCES `phone_mail_accounts`(`id`)
+                    ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci]],
+
+            [[CREATE TABLE IF NOT EXISTS `phone_mail_messages` (
+                `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
+                `sender_account_id` INT NOT NULL,
+                `recipient_email` VARCHAR(128) NOT NULL,
+                `recipient_account_id` INT DEFAULT NULL,
+                `subject` VARCHAR(120) DEFAULT NULL,
+                `body` TEXT NOT NULL,
+                `attachments` LONGTEXT DEFAULT NULL,
+                `is_read` TINYINT(1) NOT NULL DEFAULT 0,
+                `is_deleted_sender` TINYINT(1) NOT NULL DEFAULT 0,
+                `is_deleted_recipient` TINYINT(1) NOT NULL DEFAULT 0,
+                `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                KEY `idx_mail_messages_sender` (`sender_account_id`, `created_at`),
+                KEY `idx_mail_messages_recipient` (`recipient_account_id`, `created_at`),
+                KEY `idx_mail_messages_recipient_email` (`recipient_email`),
+                CONSTRAINT `fk_mail_messages_sender`
+                    FOREIGN KEY (`sender_account_id`) REFERENCES `phone_mail_accounts`(`id`)
+                    ON DELETE CASCADE,
+                CONSTRAINT `fk_mail_messages_recipient`
+                    FOREIGN KEY (`recipient_account_id`) REFERENCES `phone_mail_accounts`(`id`)
+                    ON DELETE SET NULL
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci]],
+
+            [[DROP TRIGGER IF EXISTS `tr_mail_accounts_after_insert`]],
+            [[DROP TRIGGER IF EXISTS `tr_mail_messages_before_insert`]],
+            [[DROP TRIGGER IF EXISTS `tr_mail_messages_after_insert`]],
+            [[DROP TRIGGER IF EXISTS `tr_mail_messages_after_update`]],
+            [[DROP TRIGGER IF EXISTS `tr_mail_messages_after_delete`]],
+
+            [[CREATE TRIGGER IF NOT EXISTS `tr_mail_accounts_after_insert`
+                AFTER INSERT ON `phone_mail_accounts`
+                FOR EACH ROW
+                INSERT IGNORE INTO `phone_mail_boxes` (`account_id`, `unread_count`, `total_count`)
+                VALUES (NEW.`id`, 0, 0)]],
+
+            [[CREATE TRIGGER IF NOT EXISTS `tr_mail_messages_before_insert`
+                BEFORE INSERT ON `phone_mail_messages`
+                FOR EACH ROW
+                SET NEW.`recipient_email` = LOWER(TRIM(NEW.`recipient_email`))]],
+
+            [[CREATE TRIGGER IF NOT EXISTS `tr_mail_messages_after_insert`
+                AFTER INSERT ON `phone_mail_messages`
+                FOR EACH ROW
+                UPDATE `phone_mail_boxes`
+                SET `total_count` = `total_count` + 1,
+                    `unread_count` = `unread_count` + IF(NEW.`is_read` = 1, 0, 1),
+                    `updated_at` = CURRENT_TIMESTAMP
+                WHERE `account_id` = NEW.`recipient_account_id`]],
+
+            [[CREATE TRIGGER IF NOT EXISTS `tr_mail_messages_after_update`
+                AFTER UPDATE ON `phone_mail_messages`
+                FOR EACH ROW
+                UPDATE `phone_mail_boxes`
+                SET `unread_count` = GREATEST(`unread_count` - 1, 0),
+                    `updated_at` = CURRENT_TIMESTAMP
+                WHERE `account_id` = NEW.`recipient_account_id`
+                  AND OLD.`is_read` = 0
+                  AND NEW.`is_read` = 1]],
+
+            [[CREATE TRIGGER IF NOT EXISTS `tr_mail_messages_after_delete`
+                AFTER DELETE ON `phone_mail_messages`
+                FOR EACH ROW
+                UPDATE `phone_mail_boxes`
+                SET `total_count` = GREATEST(`total_count` - 1, 0),
+                    `unread_count` = GREATEST(`unread_count` - IF(OLD.`is_read` = 0, 1, 0), 0),
+                    `updated_at` = CURRENT_TIMESTAMP
+                WHERE `account_id` = OLD.`recipient_account_id`]],
+
+            [[CALL `sp_gcphone_cleanup_add_rule`(
+                'retention_mail_messages',
+                'delete',
+                'phone_mail_messages',
+                NULL,
+                'created_at < (NOW() - INTERVAL 90 DAY)',
+                60
+            )]]
+        }
     }
 }
 
