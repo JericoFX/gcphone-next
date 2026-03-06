@@ -9,7 +9,7 @@ import {
 import { createStore } from 'solid-js/store';
 import { fetchNui } from '../utils/fetchNui';
 import { useNuiCustomEvent } from '../utils/useNui';
-import type { AppLayout, PhoneFeatureFlags, PhoneSettings, PhoneState } from '../types';
+import type { AppLayout, PhoneFeatureFlags, PhoneSettings, PhoneState, PhoneSetupState } from '../types';
 import { APP_IDS, DEFAULT_HOME_APPS, DEFAULT_MENU_APPS } from '../config/apps';
 import { isEnvBrowser } from '../utils/misc';
 
@@ -19,8 +19,10 @@ interface PhoneContextValue {
     show: () => void;
     hide: () => void;
     toggle: () => void;
-    unlock: (code: string) => boolean;
+    unlock: (code: string) => Promise<boolean>;
     lock: () => void;
+    refreshSetupState: () => Promise<void>;
+    completeSetup: (payload: { pin: string; snapUsername: string; chirpUsername: string; clipsUsername: string }) => Promise<{ success: boolean; error?: string }>;
     setWallpaper: (url: string) => void;
     setRingtone: (ringtone: string) => void;
     setVolume: (volume: number) => void;
@@ -63,9 +65,24 @@ const defaultFeatureFlags: PhoneFeatureFlags = {
   yellowpages: true,
 };
 
+const defaultSetupState: PhoneSetupState = {
+  requiresSetup: false,
+  hasSnap: true,
+  hasChirp: true,
+  hasClips: true,
+};
+
 const defaultLayout: AppLayout = {
   home: [...DEFAULT_HOME_APPS],
   menu: [...DEFAULT_MENU_APPS]
+};
+
+type PhonePayload = PhoneSettings & {
+  appLayout?: AppLayout;
+  enabledApps?: string[];
+  featureFlags?: Partial<PhoneFeatureFlags>;
+  requiresSetup?: boolean;
+  setup?: PhoneSetupState;
 };
 
 function normalizeLayout(layout?: Partial<AppLayout> | null, enabledApps: string[] = APP_IDS): AppLayout {
@@ -152,6 +169,8 @@ export const PhoneProvider: ParentComponent = (props) => {
     appLayout: { ...defaultLayout },
     enabledApps: [...APP_IDS],
     featureFlags: { ...defaultFeatureFlags },
+    requiresSetup: false,
+    setup: { ...defaultSetupState },
   });
 
   const setLayout = (layout?: Partial<AppLayout> | null, enabledApps = state.enabledApps) => {
@@ -169,8 +188,9 @@ export const PhoneProvider: ParentComponent = (props) => {
     toggle: () => {
       setState('visible', v => !v);
     },
-    unlock: (code: string) => {
-      if (state.settings.lockCode === code) {
+    unlock: async (code: string) => {
+      const payload = await fetchNui<{ success?: boolean; unlocked?: boolean }>('phoneVerifyPin', { pin: code }, { success: false, unlocked: false });
+      if (payload?.success && payload?.unlocked) {
         setState('locked', false);
         return true;
       }
@@ -178,6 +198,41 @@ export const PhoneProvider: ParentComponent = (props) => {
     },
     lock: () => {
       setState('locked', true);
+    },
+    refreshSetupState: async () => {
+      const payload = await fetchNui<{ success?: boolean; requiresSetup?: boolean; setup?: PhoneSetupState }>(
+        'phoneGetSetupState',
+        {},
+        { success: false, requiresSetup: true, setup: { ...defaultSetupState, requiresSetup: true } },
+      );
+
+      setState('requiresSetup', payload?.requiresSetup === true);
+      setState('setup', {
+        ...defaultSetupState,
+        ...(payload?.setup || {}),
+        requiresSetup: payload?.requiresSetup === true,
+      });
+    },
+    completeSetup: async (payload) => {
+      const response = await fetchNui<{ success?: boolean; error?: string; requiresSetup?: boolean; setup?: PhoneSetupState }>(
+        'phoneCompleteSetup',
+        payload,
+        { success: false, error: 'NO_RESPONSE' },
+      );
+
+      if (response?.success) {
+        setState('requiresSetup', response.requiresSetup === true);
+        setState('setup', {
+          ...defaultSetupState,
+          ...(response.setup || {}),
+          requiresSetup: response.requiresSetup === true,
+        });
+      }
+
+      return {
+        success: response?.success === true,
+        error: response?.error,
+      };
     },
     setWallpaper: (url: string) => {
       setState('settings', 'wallpaper', url);
@@ -251,7 +306,7 @@ export const PhoneProvider: ParentComponent = (props) => {
     }
   };
   
-  useNuiCustomEvent<PhoneSettings & { appLayout?: AppLayout; enabledApps?: string[]; featureFlags?: Partial<PhoneFeatureFlags> }>('phone:init', (data) => {
+  useNuiCustomEvent<PhonePayload>('phone:init', (data) => {
     const flags = normalizeFeatureFlags(data?.featureFlags);
     const enabledApps = Array.isArray(data?.enabledApps) && data.enabledApps.length > 0
       ? data.enabledApps.filter((id): id is string => typeof id === 'string' && APP_IDS.includes(id))
@@ -266,24 +321,36 @@ export const PhoneProvider: ParentComponent = (props) => {
           wallpaper: data.wallpaper || defaultSettings.wallpaper,
           ringtone: data.ringtone || defaultSettings.ringtone,
           volume: data.volume ?? defaultSettings.volume,
-          lockCode: data.lockCode || defaultSettings.lockCode,
+          lockCode: '',
           coque: data.coque || defaultSettings.coque,
           theme: data.theme || defaultSettings.theme,
           language: normalizeLanguage(data.language || window.localStorage.getItem('gcphone:language')),
           audioProfile: data.audioProfile || defaultSettings.audioProfile,
         });
       setLayout(data?.appLayout || defaultLayout, enabledApps);
+      setState('requiresSetup', data?.requiresSetup === true);
+      setState('setup', {
+        ...defaultSetupState,
+        ...(data?.setup || {}),
+        requiresSetup: data?.requiresSetup === true,
+      });
+      if (data?.requiresSetup === true) {
+        setState('locked', false);
+      }
       });
   });
 
-  useNuiCustomEvent<PhoneSettings & { appLayout?: AppLayout; enabledApps?: string[]; featureFlags?: Partial<PhoneFeatureFlags> }>('phone:show', (data) => {
+  useNuiCustomEvent<PhonePayload>('phone:show', (data) => {
     const flags = normalizeFeatureFlags(data?.featureFlags || state.featureFlags);
     const enabledApps = Array.isArray(data?.enabledApps) && data.enabledApps.length > 0
       ? data.enabledApps.filter((id): id is string => typeof id === 'string' && APP_IDS.includes(id))
       : state.enabledApps;
 
     batch(() => {
+      const needsSetup = data?.requiresSetup === true;
+      const shouldLock = useLockScreen && !isEnvBrowser() && !needsSetup;
       setState('visible', true);
+      setState('locked', shouldLock);
       setState('initialized', true);
       setState('featureFlags', flags);
       setState('enabledApps', enabledApps);
@@ -292,14 +359,20 @@ export const PhoneProvider: ParentComponent = (props) => {
           phoneNumber: data.phoneNumber || state.settings.phoneNumber,
            wallpaper: data.wallpaper || state.settings.wallpaper,
            ringtone: data.ringtone || state.settings.ringtone,
-           volume: data.volume ?? state.settings.volume,
-            lockCode: data.lockCode || state.settings.lockCode,
+            volume: data.volume ?? state.settings.volume,
+             lockCode: '',
             coque: data.coque || state.settings.coque,
             theme: data.theme || state.settings.theme,
             language: normalizeLanguage(data.language || state.settings.language || window.localStorage.getItem('gcphone:language')),
             audioProfile: data.audioProfile || state.settings.audioProfile,
           });
         setLayout(data.appLayout || state.appLayout, enabledApps);
+        setState('requiresSetup', data?.requiresSetup === true);
+        setState('setup', {
+          ...defaultSetupState,
+          ...(data?.setup || state.setup || {}),
+          requiresSetup: data?.requiresSetup === true,
+        });
         }
      });
   });

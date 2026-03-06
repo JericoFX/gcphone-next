@@ -62,6 +62,13 @@ export interface PhoneFeatureFlags {
   yellowpages: boolean;
 }
 
+export interface PhoneSetupState {
+  requiresSetup: boolean;
+  hasSnap?: boolean;
+  hasChirp?: boolean;
+  hasClips?: boolean;
+}
+
 export interface PhoneState {
   visible: boolean;
   locked: boolean;
@@ -70,6 +77,8 @@ export interface PhoneState {
   appLayout: AppLayout;
   enabledApps: string[];
   featureFlags: PhoneFeatureFlags;
+  requiresSetup: boolean;
+  setup: PhoneSetupState;
 }
 
 export interface PhoneNotification {

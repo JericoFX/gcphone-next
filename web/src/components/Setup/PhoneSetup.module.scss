@@ -1,0 +1,64 @@
+.setupRoot {
+  min-height: 100%;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: radial-gradient(circle at top, rgba(58, 86, 189, 0.35), transparent 58%);
+}
+
+.card {
+  width: 100%;
+  background: rgba(9, 13, 29, 0.86);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 16px;
+  display: grid;
+  gap: 10px;
+}
+
+.card h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.card p {
+  margin: 0;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.card label {
+  display: grid;
+  gap: 5px;
+  font-size: 12px;
+}
+
+.card input {
+  width: 100%;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.22);
+  color: #fff;
+}
+
+.card button {
+  border: 0;
+  border-radius: 11px;
+  padding: 10px;
+  color: #fff;
+  font-weight: 700;
+  background: linear-gradient(120deg, #2f4ed0, #1f80d7);
+}
+
+.card button:disabled {
+  opacity: 0.6;
+}
+
+.error {
+  color: #ffc6c6;
+}
+
+.hint {
+  opacity: 0.7;
+}

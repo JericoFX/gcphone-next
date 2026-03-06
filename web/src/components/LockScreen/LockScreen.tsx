@@ -26,8 +26,8 @@ export function LockScreen() {
     if (timer) clearInterval(timer);
   });
 
-  const submitUnlock = () => {
-    if (phoneActions.unlock(code())) {
+  const submitUnlock = async () => {
+    if (await phoneActions.unlock(code())) {
       batch(() => {
         setCode('');
         setAttempts(0);
@@ -45,7 +45,7 @@ export function LockScreen() {
   };
 
   createEffect(() => {
-    if (code().length === 4) submitUnlock();
+    if (code().length === 4) void submitUnlock();
   });
 
   const handleKeyPress = (num: string) => {
@@ -124,7 +124,7 @@ export function LockScreen() {
 
           <div class={styles.sheetActions}>
             <button onClick={() => setShowPad(false)}>{t('lock.cancel', language())}</button>
-            <button onClick={submitUnlock}>{t('lock.unlock', language())}</button>
+            <button onClick={() => void submitUnlock()}>{t('lock.unlock', language())}</button>
           </div>
         </div>
       </Show>
