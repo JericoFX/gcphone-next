@@ -5,7 +5,7 @@ import { timeAgo } from '../../../utils/misc';
 import { resolveMediaType, sanitizeMediaUrl, sanitizeText } from '../../../utils/sanitize';
 import { useNuiEvent } from '../../../utils/useNui';
 import { fetchLiveKitToken, fetchSocketToken } from '../../../utils/realtimeAuth';
-import { connectLiveKit, disconnectLiveKit, setLiveKitCameraEnabled, setLiveKitMicrophoneEnabled } from '../../../utils/livekit';
+import { connectLiveKit, disconnectLiveKit, setLiveKitCameraEnabled, setLiveKitMicrophoneEnabled, setLiveKitRemoteAudioVolume } from '../../../utils/livekit';
 import { startMockLiveFeed } from '../../../utils/liveMock';
 import {
   connectSnapLiveSocket,
@@ -22,7 +22,7 @@ import {
 import { AppScaffold } from '../../shared/layout';
 import { useAppCache } from '../../../hooks';
 import { MediaLightbox } from '../../shared/ui/MediaLightbox';
-import { Modal, ModalActions, ModalButton } from '../../shared/ui/Modal';
+import { Modal, ModalActions, ModalButton, FormField } from '../../shared/ui/Modal';
 import { ActionSheet } from '../../shared/ui/ActionSheet';
 import { EmojiPickerButton } from '../../shared/ui/EmojiPicker';
 import styles from './SnapApp.module.scss';
@@ -60,10 +60,40 @@ interface SnapLive {
   live_viewers?: number;
 }
 
+interface SnapFollowRequest {
+  id: number;
+  account_id: number;
+  from_identifier?: string;
+  to_identifier?: string;
+  username?: string;
+  display_name?: string;
+  avatar?: string;
+  verified?: boolean;
+  created_at?: string;
+}
+
 interface LiveStartResponse {
   success?: boolean;
   payload?: { postId?: number };
   error?: string;
+}
+
+interface SnapLiveAudioStartResponse {
+  success?: boolean;
+  enabled?: boolean;
+  reason?: string;
+}
+
+interface SnapLiveProximityState {
+  liveId?: number;
+  listening?: boolean;
+  targetOnline?: boolean;
+  distance?: number;
+}
+
+interface SnapLiveProximityVolume {
+  liveId?: number;
+  volume?: number;
 }
 
 const SNAP_MOCK_LIVE_ID = -999001;
@@ -87,6 +117,8 @@ export function SnapApp() {
   const [stories, setStories] = createSignal<SnapStory[]>([]);
   const [liveStreams, setLiveStreams] = createSignal<SnapLive[]>([]);
   const [myAccount, setMyAccount] = createSignal<any>(null);
+  const [pendingRequests, setPendingRequests] = createSignal<SnapFollowRequest[]>([]);
+  const [sentRequests, setSentRequests] = createSignal<SnapFollowRequest[]>([]);
 
   // UI State
   const [loading, setLoading] = createSignal(false);
@@ -97,6 +129,14 @@ export function SnapApp() {
   const [showActionSheet, setShowActionSheet] = createSignal(false);
   const [statusMessage, setStatusMessage] = createSignal('');
   const [deletePostId, setDeletePostId] = createSignal<number | null>(null);
+  const [showProfileModal, setShowProfileModal] = createSignal(false);
+  const [showRequestsModal, setShowRequestsModal] = createSignal(false);
+  const [requestsLoading, setRequestsLoading] = createSignal(false);
+
+  const [profileDisplayName, setProfileDisplayName] = createSignal('');
+  const [profileAvatar, setProfileAvatar] = createSignal('');
+  const [profileBio, setProfileBio] = createSignal('');
+  const [profilePrivate, setProfilePrivate] = createSignal(false);
 
   // Live Viewer
   const [activeLive, setActiveLive] = createSignal<SnapLive | null>(null);
@@ -109,6 +149,7 @@ export function SnapApp() {
   const [viewerMuted, setViewerMuted] = createSignal(false);
   const [liveStreaming, setLiveStreaming] = createSignal(false);
   const [liveConnected, setLiveConnected] = createSignal(false);
+  const [liveAudioProximityEnabled, setLiveAudioProximityEnabled] = createSignal(false);
 
   // Create Post
   const [showCreatePost, setShowCreatePost] = createSignal(false);
@@ -137,6 +178,10 @@ export function SnapApp() {
     // Load account
     const account = await fetchNui('snapGetAccount', {});
     setMyAccount(account);
+    setProfileDisplayName(account?.display_name || '');
+    setProfileAvatar(account?.avatar || '');
+    setProfileBio(account?.bio || '');
+    setProfilePrivate(account?.is_private === 1 || account?.is_private === true);
     
     // Load posts
     const postsCacheKey = 'snap:feed';
@@ -152,8 +197,22 @@ export function SnapApp() {
     // Load live streams
     const liveData = await fetchNui<SnapLive[]>('snapGetLiveStreams', {});
     setLiveStreams(liveData || []);
+
+    const incoming = await fetchNui<SnapFollowRequest[]>('snapGetPendingFollowRequests', {}, []);
+    const outgoing = await fetchNui<SnapFollowRequest[]>('snapGetSentFollowRequests', {}, []);
+    setPendingRequests(incoming || []);
+    setSentRequests(outgoing || []);
     
     setLoading(false);
+  };
+
+  const refreshFollowRequests = async () => {
+    setRequestsLoading(true);
+    const incoming = await fetchNui<SnapFollowRequest[]>('snapGetPendingFollowRequests', {}, []);
+    const outgoing = await fetchNui<SnapFollowRequest[]>('snapGetSentFollowRequests', {}, []);
+    setPendingRequests(incoming || []);
+    setSentRequests(outgoing || []);
+    setRequestsLoading(false);
   };
 
   createEffect(() => {
@@ -186,6 +245,47 @@ export function SnapApp() {
     }
   });
 
+  useNuiEvent<SnapLiveProximityState>('gcphone:snap:proximityState', (payload) => {
+    const live = activeLive();
+    if (!live) return;
+    if (!liveAudioProximityEnabled()) return;
+    if (Number(payload?.liveId) !== Number(live.id)) return;
+
+    if (viewerMuted()) {
+      setStatusMessage('Estas silenciado en este live');
+      setLiveKitRemoteAudioVolume(0);
+      return;
+    }
+
+    if (payload?.targetOnline === false) {
+      setStatusMessage('Live sin emisor cercano');
+      setLiveKitRemoteAudioVolume(0);
+      return;
+    }
+
+    if (payload?.listening === false) {
+      setStatusMessage('Acercate para escuchar el live');
+      setLiveKitRemoteAudioVolume(0);
+      return;
+    }
+
+    setStatusMessage('');
+  });
+
+  useNuiEvent<SnapLiveProximityVolume>('gcphone:snap:proximityVolume', (payload) => {
+    const live = activeLive();
+    if (!live) return;
+    if (!liveAudioProximityEnabled()) return;
+    if (Number(payload?.liveId) !== Number(live.id)) return;
+    if (viewerMuted()) {
+      setLiveKitRemoteAudioVolume(0);
+      return;
+    }
+    const volume = Number(payload?.volume);
+    if (!Number.isFinite(volume)) return;
+    setLiveKitRemoteAudioVolume(volume);
+  });
+
   let lastSharedMedia = '';
   createEffect(() => {
     const params = router.params();
@@ -203,6 +303,7 @@ export function SnapApp() {
       window.clearTimeout(timer);
     }
     floatingTimers.clear();
+    void stopLiveAudioProximity();
     disconnectSnapLiveSocket();
     disconnectLiveKit();
     if (storyTick) {
@@ -255,6 +356,47 @@ export function SnapApp() {
     setDeletePostId(null);
   };
 
+  const saveProfile = async () => {
+    const res = await fetchNui<{ success?: boolean }>('snapUpdateAccount', {
+      displayName: profileDisplayName().trim(),
+      avatar: profileAvatar().trim(),
+      bio: profileBio().trim(),
+      isPrivate: profilePrivate(),
+    });
+
+    if (res?.success) {
+      setStatusMessage('Perfil actualizado');
+      setShowProfileModal(false);
+      await loadData();
+      return;
+    }
+
+    setStatusMessage('No se pudo actualizar el perfil');
+  };
+
+  const respondFollowRequest = async (requestId: number, accept: boolean) => {
+    const res = await fetchNui<{ success?: boolean }>('snapRespondFollowRequest', {
+      requestId,
+      accept,
+    });
+
+    if (res?.success) {
+      setStatusMessage(accept ? 'Solicitud aceptada' : 'Solicitud rechazada');
+      await refreshFollowRequests();
+    }
+  };
+
+  const cancelSentRequest = async (targetAccountId: number) => {
+    const res = await fetchNui<{ success?: boolean }>('snapCancelFollowRequest', {
+      targetAccountId,
+    });
+
+    if (res?.success) {
+      setStatusMessage('Solicitud cancelada');
+      await refreshFollowRequests();
+    }
+  };
+
   const formatStoryTime = (expiresAt?: string) => {
     if (!expiresAt) return '';
     const remaining = Math.max(0, new Date(expiresAt).getTime() - Date.now());
@@ -280,6 +422,28 @@ export function SnapApp() {
     const stream = activeLive();
     return !!stream && Number(stream.id) < 0;
   });
+
+  const startLiveAudioProximity = async (liveId: number, owner: boolean) => {
+    setLiveAudioProximityEnabled(false);
+    if (owner || liveId < 1) {
+      setLiveKitRemoteAudioVolume(1);
+      return;
+    }
+
+    const payload = await fetchNui<SnapLiveAudioStartResponse>('snapLiveAudioStart', { liveId }, { success: false, enabled: false });
+    if (!payload?.success || !payload?.enabled) {
+      setLiveKitRemoteAudioVolume(1);
+      return;
+    }
+
+    setLiveAudioProximityEnabled(true);
+  };
+
+  const stopLiveAudioProximity = async () => {
+    setLiveAudioProximityEnabled(false);
+    setLiveKitRemoteAudioVolume(1);
+    await fetchNui('snapLiveAudioStop', {}, { success: true });
+  };
 
   const openLiveViewer = async (live: SnapLive) => {
     const owner = !!(myAccount()?.username && live.username && myAccount()?.username === live.username);
@@ -338,16 +502,36 @@ export function SnapApp() {
             setMutedUsers((prev) => (prev.includes(username) ? prev : [...prev, username]));
             if (username === myAccount()?.username) {
               setViewerMuted(true);
+              if (liveAudioProximityEnabled()) {
+                setStatusMessage('Estas silenciado en este live');
+                setLiveKitRemoteAudioVolume(0);
+              }
             }
+          },
+          onUserUnmuted: ({ username }) => {
+            setMutedUsers((prev) => prev.filter((entry) => entry !== username));
+            if (username === myAccount()?.username) {
+              setViewerMuted(false);
+              if (liveAudioProximityEnabled()) {
+                setStatusMessage('');
+              }
+            }
+          },
+          onUserKicked: ({ username }) => {
+            if (username !== myAccount()?.username) return;
+            setStatusMessage('Te expulsaron del live');
+            void closeLiveViewer();
           },
         });
         joinSnapLiveRoom(String(live.id));
       }
 
       setLiveConnected(true);
+      await startLiveAudioProximity(Number(live.id), owner);
     } catch (_err) {
       setStatusMessage('No se pudo conectar al live');
       setActiveLive(null);
+      await stopLiveAudioProximity();
       disconnectLiveKit();
       disconnectSnapLiveSocket();
     }
@@ -374,6 +558,7 @@ export function SnapApp() {
     floatingTimers.clear();
 
     disconnectSnapLiveSocket();
+    await stopLiveAudioProximity();
     disconnectLiveKit();
     setActiveLive(null);
     setLiveStreaming(false);
@@ -385,6 +570,7 @@ export function SnapApp() {
     setLiveReactions([]);
     setMutedUsers([]);
     setViewerMuted(false);
+    setLiveAudioProximityEnabled(false);
     if (isMock) {
       setLiveStreams((prev) => prev.filter((entry) => Number(entry.id) >= 0));
       return;
@@ -693,6 +879,29 @@ export function SnapApp() {
             {statusMessage()}
           </div>
         </Show>
+
+        <div class={styles.socialPanel}>
+          <div class={styles.socialMeta}>
+            <strong>{myAccount()?.display_name || myAccount()?.username || 'Perfil'}</strong>
+            <span>
+              {pendingRequests().length} pendientes · {sentRequests().length} enviadas
+            </span>
+          </div>
+          <div class={styles.socialActions}>
+            <button class={styles.socialActionBtn} onClick={() => setShowProfileModal(true)}>
+              Perfil
+            </button>
+            <button
+              class={styles.socialActionBtn}
+              onClick={() => {
+                setShowRequestsModal(true);
+                void refreshFollowRequests();
+              }}
+            >
+              Solicitudes
+            </button>
+          </div>
+        </div>
 
         <Show when={liveStreams().length > 0}>
           <div class={styles.liveSection}>
@@ -1027,6 +1236,96 @@ export function SnapApp() {
           </Show>
         </div>
       </Show>
+
+      <Modal
+        open={showProfileModal()}
+        title="Editar perfil"
+        onClose={() => setShowProfileModal(false)}
+        size="sm"
+      >
+        <FormField label="Nombre visible">
+          <input
+            value={profileDisplayName()}
+            onInput={(e) => setProfileDisplayName(sanitizeText(e.currentTarget.value, 50))}
+            placeholder="Tu nombre"
+          />
+        </FormField>
+        <FormField label="Avatar (URL)">
+          <input
+            value={profileAvatar()}
+            onInput={(e) => setProfileAvatar(sanitizeText(e.currentTarget.value, 255))}
+            placeholder="https://..."
+          />
+        </FormField>
+        <FormField label="Bio">
+          <textarea
+            value={profileBio()}
+            onInput={(e) => setProfileBio(sanitizeText(e.currentTarget.value, 160))}
+            rows={3}
+            placeholder="Conta algo sobre vos"
+          />
+        </FormField>
+        <label class={styles.privacyRow}>
+          <input
+            type="checkbox"
+            checked={profilePrivate()}
+            onChange={(e) => setProfilePrivate(e.currentTarget.checked)}
+          />
+          <span>Cuenta privada</span>
+        </label>
+        <ModalActions>
+          <ModalButton label="Cancelar" onClick={() => setShowProfileModal(false)} />
+          <ModalButton label="Guardar" tone="primary" onClick={() => void saveProfile()} />
+        </ModalActions>
+      </Modal>
+
+      <Modal
+        open={showRequestsModal()}
+        title="Solicitudes"
+        onClose={() => setShowRequestsModal(false)}
+        size="lg"
+      >
+        <div class={styles.requestsBlock}>
+          <h4>Recibidas</h4>
+          <Show when={!requestsLoading()} fallback={<p>Cargando...</p>}>
+            <Show when={pendingRequests().length > 0} fallback={<p>Sin pendientes.</p>}>
+              <For each={pendingRequests()}>
+                {(request) => (
+                  <div class={styles.requestRow}>
+                    <div class={styles.requestIdentity}>
+                      <strong>{request.display_name || request.username || 'Usuario'}</strong>
+                      <span>@{request.username || request.from_identifier || 'user'}</span>
+                    </div>
+                    <div class={styles.requestActions}>
+                      <button onClick={() => void respondFollowRequest(request.id, false)}>Rechazar</button>
+                      <button class={styles.acceptBtn} onClick={() => void respondFollowRequest(request.id, true)}>Aceptar</button>
+                    </div>
+                  </div>
+                )}
+              </For>
+            </Show>
+          </Show>
+        </div>
+
+        <div class={styles.requestsBlock}>
+          <h4>Enviadas</h4>
+          <Show when={sentRequests().length > 0} fallback={<p>Sin solicitudes enviadas.</p>}>
+            <For each={sentRequests()}>
+              {(request) => (
+                <div class={styles.requestRow}>
+                  <div class={styles.requestIdentity}>
+                    <strong>{request.display_name || request.username || 'Usuario'}</strong>
+                    <span>@{request.username || request.to_identifier || 'user'}</span>
+                  </div>
+                  <div class={styles.requestActions}>
+                    <button onClick={() => void cancelSentRequest(request.account_id)}>Cancelar</button>
+                  </div>
+                </div>
+              )}
+            </For>
+          </Show>
+        </div>
+      </Modal>
 
       <Modal
         open={deletePostId() !== null}

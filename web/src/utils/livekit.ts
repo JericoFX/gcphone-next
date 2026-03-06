@@ -4,6 +4,28 @@ let room: Room | null = null;
 let callTimeoutId: ReturnType<typeof setTimeout> | null = null;
 let callStartTime: number | null = null;
 let maxDuration: number = 0;
+const remoteAudioByTrackSid = new Map<string, HTMLMediaElement>();
+
+function clearRemoteAudioRegistry() {
+  remoteAudioByTrackSid.clear();
+}
+
+function clampVolume(value: number): number {
+  if (!Number.isFinite(value)) return 1;
+  if (value <= 0) return 0;
+  if (value >= 1) return 1;
+  return value;
+}
+
+function registerRemoteAudio(trackSid: string, element: HTMLMediaElement) {
+  if (!trackSid) return;
+  remoteAudioByTrackSid.set(trackSid, element);
+}
+
+function unregisterRemoteAudio(trackSid: string) {
+  if (!trackSid) return;
+  remoteAudioByTrackSid.delete(trackSid);
+}
 
 export function getLiveKitRoom() {
   return room;
@@ -45,6 +67,7 @@ export async function connectLiveKit(url: string, token: string, maxDurationSeco
   if (room) {
     room.disconnect();
     room = null;
+    clearRemoteAudioRegistry();
   }
 
   if (callTimeoutId) {
@@ -76,6 +99,8 @@ export async function connectLiveKit(url: string, token: string, maxDurationSeco
       element.autoplay = true;
       if (track.kind === Track.Kind.Video) {
         (element as HTMLVideoElement).playsInline = true;
+      } else {
+        registerRemoteAudio(publication.trackSid, element);
       }
       handlers?.onTrackSubscribed?.({
         participantIdentity: participant.identity,
@@ -87,6 +112,9 @@ export async function connectLiveKit(url: string, token: string, maxDurationSeco
     .on(RoomEvent.TrackUnsubscribed, (track, publication, participant) => {
       if (track.kind !== Track.Kind.Video && track.kind !== Track.Kind.Audio) return;
       track.detach();
+      if (track.kind === Track.Kind.Audio) {
+        unregisterRemoteAudio(publication.trackSid);
+      }
       handlers?.onTrackUnsubscribed?.({
         participantIdentity: participant.identity,
         trackSid: publication.trackSid,
@@ -150,6 +178,15 @@ export function disconnectLiveKit() {
   
   room.disconnect();
   room = null;
+  clearRemoteAudioRegistry();
   callStartTime = null;
   maxDuration = 0;
+}
+
+export function setLiveKitRemoteAudioVolume(volume: number) {
+  const nextVolume = clampVolume(volume);
+  remoteAudioByTrackSid.forEach((element) => {
+    element.volume = nextVolume;
+    element.muted = nextVolume <= 0.001;
+  });
 }

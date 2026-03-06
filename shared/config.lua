@@ -178,6 +178,13 @@ Config.Snap = {
     MaxPostsPerDay = 50,
     AllowLive = true,
     MaxLiveDuration = 3600,
+    LiveAudio = {
+        Enabled = false,
+        ListenDistance = 25.0,
+        MinVolume = 0.08,
+        MaxVolume = 1.0,
+        UpdateIntervalMs = 220,
+    },
 }
 
 Config.Garage = {

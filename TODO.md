@@ -1,90 +1,112 @@
-# TODO - Integracion de ideas LB (sin copiar UX ni estructura)
+# TODO manana - ideas LB -> gcphone-next
 
-## Estado actual
-- [x] Revertir commit roto que metio `lb-phone` completo por error.
-- [ ] Rehacer implementacion limpia, incremental y con un commit por feature.
+## Objetivo
+Implementar las ideas tecnicas buenas de `lb-phone` en nuestro telefono, sin copiar su UX/flujo visual.
 
-## Regla base del proyecto
-- [ ] Tomar patrones tecnicos de LB, pero NO copiar tablas/flujo/UI tal cual.
-- [ ] Mantener identidad visual actual de `gcphone-next` (iOS-like), con layout propio.
-- [ ] Mantener chat live efimero (sin persistencia) y moderacion del owner.
+## Lo que ya quedo hecho hoy (commits)
+- [x] A - `feat(social): add follow-request foundation schema`
+- [x] B - `feat(snap): add private follow-request workflow and profile relation states`
+- [x] C - `feat(chirp): add private follow-request workflow and relationship-aware profiles`
+- [x] D - `feat(social): add notification inbox callbacks and retention cleanup`
+- [x] E - `feat(nui): wire snap/chirp follow-request and social notification callbacks`
 
-## Fase 1 - Social schema minimo (inspirado en LB)
-- [ ] Agregar soporte de privacidad en Chirp (`is_private`) para paridad con Snap.
-- [ ] Normalizar requests de follow por app (snap/chirp) en tabla dedicada y consistente.
-- [ ] Agregar `status` completo en requests: `pending`, `accepted`, `rejected`, `cancelled`.
-- [ ] Agregar `responded_at` en requests para auditoria simple.
-- [ ] Crear tabla de notificaciones sociales deduplicadas por app/evento/referencia.
-- [ ] Agregar indices para: inbox requests, pendientes por owner, unread notifications.
+## Ideas concretas sacadas de LB (a implementar/adaptar)
 
-## Fase 2 - Migracion y compatibilidad de datos
-- [ ] Migrar datos de requests viejos a nueva estructura (idempotente).
-- [ ] Conservar compatibilidad temporal para no romper front ya desplegado.
-- [ ] Limpiar/normalizar requests invalidos (self-request, cuentas inexistentes).
+### 1) Follow system por app (LB: Instagram/Twitter)
+- [x] Base backend lista (Snap/Chirp con private + requests).
+- [ ] Ajustar UX completa de estados: `Seguir` / `Pendiente` / `Siguiendo`.
+- [ ] Asegurar simetria en todos los paths (follow directo, request, cancel, accept, reject, unfollow).
 
-## Fase 3 - Backend Snap (paridad follow/request)
-- [ ] Implementar `sendFollowRequest` con validaciones server-side.
-- [ ] Implementar `cancelFollowRequest`.
-- [ ] Implementar `acceptFollowRequest` y `rejectFollowRequest`.
-- [ ] Mantener `follow/unfollow` directo solo cuando cuenta destino es publica.
-- [ ] Exponer `getPendingRequests` para owner.
-- [ ] Exponer `getSentRequests` para emisor.
-- [ ] En `getProfile`, devolver flags: `isFollowing`, `requested`, `requestedByMe`.
-- [ ] Emitir notificaciones deduplicadas (`follow_request`, `follow_accepted`).
+### 2) Requests robustas (LB: follow_requests)
+- [x] Estados y timestamps base (`pending/accepted/rejected/cancelled`, `responded_at`).
+- [ ] Revisar migracion de datos legacy para que quede 100% idempotente en servidores viejos.
+- [ ] Evitar requests huérfanas (cuentas borradas/corruptas).
 
-## Fase 4 - Backend Chirp (misma semantica que Snap)
-- [ ] Replicar flujo completo de request/accept/reject/cancel en Chirp.
-- [ ] Ajustar feed/perfil para cuentas privadas (si no sigue, restringir contenido).
-- [ ] Mantener comportamiento publico por defecto para cuentas nuevas.
+### 3) Notificaciones sociales deduplicadas (LB: notifications + dedupe)
+- [x] Tabla + insercion dedupe + callbacks de inbox.
+- [ ] Integrar en UI (centro de notificaciones social visible en app).
+- [ ] Marcar leidas/leer todo desde frontend real (no solo callback disponible).
 
-## Fase 5 - Perfil social unificado (idea de account switcher de LB, adaptada)
-- [ ] Definir fuente de verdad de perfil social (username/display/avatar/bio/verified).
-- [ ] Reutilizarla en Snap, Chirp, Clips y News sin duplicar logica.
-- [ ] Evitar drift entre apps al actualizar perfil desde una sola app.
+### 4) Cuenta social unificada (LB: account switcher pattern)
+- [ ] Definir fuente de verdad de perfil social (username, display, avatar, bio, privacidad, verified).
+- [ ] Dejar Snap/Chirp/Clips/News leyendo del mismo perfil para evitar drift.
+- [ ] Resolver conflictos de updates simultaneos entre apps.
 
-## Fase 6 - NUI bridge y contratos
-- [ ] Agregar callbacks NUI para requests y notificaciones sociales.
-- [ ] Estandarizar payloads (`success`, `error`, `data`) para Snap/Chirp.
-- [ ] Revisar compatibilidad `cbSuccess` vs retorno crudo donde aplique.
+### 5) Retencion/limpieza (LB: auto delete notifications)
+- [x] Cleanup agregado para `phone_social_notifications`.
+- [ ] Revisar intervalo y politica final por config (si se quiere custom por app).
 
-## Fase 7 - Frontend social (que no se vea igual a LB)
-- [ ] Crear vista propia de requests pendientes/enviadas para Snap.
-- [ ] Crear vista propia de requests pendientes/enviadas para Chirp.
-- [ ] Mostrar estados claros de relacion: Seguir / Solicitud enviada / Siguiendo.
-- [ ] Ajustar copy/espaciados/jerarquia visual para estilo propio del proyecto.
-- [ ] Mantener consistencia de componentes existentes (sin meter patrones externos).
+### 6) Seguridad defensiva (LB: guard clauses consistentes)
+- [x] Validaciones base server-side ya agregadas en nuevos endpoints.
+- [ ] Revisar todos los endpoints legacy de follow/profile para hardening parejo.
+- [ ] Auditoria final de self-target, duplicados, race conditions y responses consistentes.
 
-## Fase 8 - Onboarding social unificado
-- [ ] Mostrar onboarding de perfil social al primer uso de apps sociales.
-- [ ] Campos minimos: username, display name, avatar, bio, privacidad.
-- [ ] Validaciones fuertes (longitud, caracteres permitidos, URL avatar segura).
-- [ ] Reusar componente compartido en Snap/Chirp/Clips/News.
+### 7) Audio live/proximidad (LB: hearNearby + recordNearby, adaptado)
+- [ ] Definir modo de audio para lives Snap sin copiar LB 1:1.
+- [ ] Mantener `snaplive-*` en LiveKit como base principal.
+- [ ] Agregar capa opcional de proximidad (feature flag):
+  - [ ] Near listeners entran/salen por distancia configurable.
+  - [ ] Volumen dinamico por distancia.
+  - [ ] Owner/participantes con prioridad de mezcla.
+- [ ] No persistir audio ni mensajes live (seguir efimero).
+- [ ] Moderacion de owner aplicada tambien al audio (mute/kick de participantes en vivo).
+- [ ] Guardar compatibilidad con pma-voice/mumble cuando este disponible.
+- [ ] Fallback seguro: si falla proximidad, live sigue funcionando por LiveKit normal.
 
-## Fase 9 - Notificaciones y retencion
-- [ ] Integrar notificaciones de follow request/accepted en centro de notificaciones.
-- [ ] Agregar regla de limpieza para notificaciones sociales antiguas.
+## Lo que falta hacer manana (orden recomendado)
 
-## Fase 10 - Seguridad y hardening (tomado de patrones LB)
-- [ ] Guard clauses en todos los callbacks nuevos.
-- [ ] Nunca confiar estado del cliente para follow/request/accept.
-- [ ] Bloquear acciones self-target y duplicadas.
-- [ ] Evitar inserciones dobles con unique + control de errores limpio.
+## F - Snap UI (requests + estados follow)
+- [ ] Panel de solicitudes en Snap con listas `Recibidas` y `Enviadas`.
+- [ ] Botones `Aceptar/Rechazar/Cancelar` conectados a callbacks nuevos.
+- [ ] Editor de perfil Snap conectado a `snapUpdateAccount`.
+- [ ] Mostrar estado de relacion en vistas de perfil (cuando toque).
+- [ ] Ajustar estilos para que quede propio de gcphone-next (no look LB).
 
-## Fase 11 - QA / smoke tests
-- [ ] Caso: cuenta privada Snap recibe request, acepta y aparece follow.
-- [ ] Caso: cuenta privada Chirp rechaza request y no hay follow.
-- [ ] Caso: cancel request limpia estado en ambos perfiles.
-- [ ] Caso: notificaciones deduplicadas (sin spam por reintentos).
-- [ ] Caso: onboarding solo primer uso y luego no reaparece.
-- [ ] Regresion: Snap live, stories autoplay, Clips short-video, emoji picker siguen OK.
+## G - Chirp UI (requests + estados follow)
+- [ ] Strip social bajo tabs en Chirp (pendientes/enviadas + accesos rapidos).
+- [ ] Modal de solicitudes y modal de perfil conectados a callbacks nuevos.
+- [ ] Soporte `is_private` en editor Chirp (toggle + persistencia).
+- [ ] Refrescar feed/estado luego de aceptar/rechazar/cancelar.
 
-## Commits planificados (1 feature = 1 commit)
-- [ ] Commit A: social schema + migration base.
-- [ ] Commit B: snap follow request backend completo.
-- [ ] Commit C: chirp follow request backend completo.
-- [ ] Commit D: social notifications backend + cleanup rule.
-- [ ] Commit E: NUI bridge callbacks sociales.
-- [ ] Commit F: Snap UI requests + estados follow.
-- [ ] Commit G: Chirp UI requests + estados follow.
-- [ ] Commit H: onboarding social unificado (shared component + wiring).
-- [ ] Commit I: QA fixes y regresiones finales.
+## H - Onboarding social unificado
+- [ ] Crear componente shared para onboarding social primer uso.
+- [ ] Campos minimos: username, display_name, avatar, bio, is_private.
+- [ ] Reutilizar en Snap, Chirp, Clips, News.
+- [ ] Gate de primer uso para no mostrarlo cada vez.
+
+## I - Pulido final + QA
+- [ ] Tests smoke manuales:
+  - [ ] Snap private: request -> accept -> follow real.
+  - [ ] Snap private: request -> reject.
+  - [ ] Chirp private: request -> cancel.
+  - [ ] Notificaciones: no duplicados por spam click/reintentos.
+  - [ ] Perfil unificado refleja cambios en las 4 apps.
+- [ ] Regression suite visual/funcional:
+  - [ ] Snap live efimero + moderacion owner.
+  - [ ] Stories autoplay.
+  - [ ] Clips short-video (sin overlay raro).
+  - [ ] Emoji picker (6 recientes max).
+  - [ ] Settings simplificados (sin phone case/themes).
+- [ ] Correr build/lint final y corregir errores.
+
+## J - Audio (implementacion por fases)
+- [ ] Fase J1: contrato server/client de proximidad (sin activar por defecto).
+- [ ] Fase J2: eventos de entrada/salida de radio de escucha para live.
+- [ ] Fase J3: control de volumen por distancia + pruebas de rendimiento.
+- [ ] Fase J4: controles owner (mute/kick) reflejados en UI live.
+- [ ] Fase J5: smoke test con 3 escenarios:
+  - [ ] LiveKit solo.
+  - [ ] LiveKit + proximidad activa.
+  - [ ] Degradacion/fallback sin cortar stream.
+
+## Regla de diseño (importante)
+- [ ] No copiar layout/estructura de LB.
+- [ ] Mantener lenguaje actual de gcphone-next (iOS-like, limpio, compacto).
+- [ ] Textos, orden visual y componentes con identidad propia.
+
+## Plan de commits manana (1 feature = 1 commit)
+- [ ] Commit F: Snap UI requests + profile editor.
+- [ ] Commit G: Chirp UI requests + profile editor + private toggle.
+- [ ] Commit H: onboarding social shared + wiring apps.
+- [ ] Commit I: QA fixes + regression pass.
+- [ ] Commit J: audio live/proximidad (feature flag + fallback + QA).
