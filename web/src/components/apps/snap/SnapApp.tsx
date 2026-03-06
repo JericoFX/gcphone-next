@@ -701,6 +701,23 @@ export function SnapApp() {
             setStatusMessage('Te expulsaron del live');
             void closeLiveViewer();
           },
+          onDisconnect: () => {
+            setStatusMessage('Reconectando chat del live...');
+          },
+          onReconnect: () => {
+            setStatusMessage('');
+            if (!liveAudioProximityEnabled() && !owner) {
+              void startLiveAudioProximity(Number(live.id), false);
+              return;
+            }
+
+            if (liveAudioProximityEnabled()) {
+              void syncLiveAudioFromClientStatus();
+            }
+          },
+          onReconnectFailed: () => {
+            setStatusMessage('Sin conexion de chat live');
+          },
         });
         joinSnapLiveRoom(String(live.id));
       }
