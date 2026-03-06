@@ -18,6 +18,11 @@ Config.Phone = {
     },
 
     WarningMessageCount = 100,
+    Setup = {
+        RequireOnFirstUse = true,
+        MinPinLength = 4,
+        MaxPinLength = 4,
+    },
 }
 
 Config.Contacts = {
@@ -229,6 +234,13 @@ Config.News = {
         { id = 'events', label = 'Eventos', icon = '🎉' },
         { id = 'business', label = 'Negocios', icon = '💼' },
     },
+}
+
+Config.PublishJobs = {
+    news = { 'news', 'reporter', 'journalist' },
+    chirp = {},
+    snap = {},
+    clips = {},
 }
 
 Config.Proximity = {

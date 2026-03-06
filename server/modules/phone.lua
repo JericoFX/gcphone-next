@@ -100,6 +100,71 @@ local function SafeLanguage(value)
     return nil
 end
 
+local function SafePin(value)
+    if type(value) ~= 'string' then return nil end
+    local trimmed = value:gsub('%s+', '')
+    if not trimmed:match('^%d+$') then return nil end
+
+    local setup = Config.Phone and Config.Phone.Setup or {}
+    local minLen = tonumber(setup.MinPinLength) or 4
+    local maxLen = tonumber(setup.MaxPinLength) or 6
+    if maxLen < minLen then maxLen = minLen end
+
+    if #trimmed < minLen or #trimmed > maxLen then
+        return nil
+    end
+
+    return trimmed
+end
+
+local function SafeUsername(value)
+    if type(value) ~= 'string' then return nil end
+    local username = value:lower():gsub('[%s]+', '')
+    username = username:gsub('[^a-z0-9._-]', '')
+    if username == '' then return nil end
+    if #username < 3 or #username > 32 then return nil end
+    if username:match('^[._-]') or username:match('[._-]$') then return nil end
+    return username
+end
+
+local function UsernameExists(tableName, username, identifier)
+    if not username then return true end
+    local sql = string.format('SELECT 1 FROM `%s` WHERE username = ? AND identifier != ? LIMIT 1', tableName)
+    return MySQL.scalar.await(sql, { username, identifier or '' }) ~= nil
+end
+
+local function ResolveSetupState(identifier)
+    if not identifier then return { requiresSetup = true } end
+
+    local phone = MySQL.single.await(
+        'SELECT is_setup, clips_username FROM phone_numbers WHERE identifier = ? LIMIT 1',
+        { identifier }
+    )
+
+    local snap = MySQL.scalar.await(
+        'SELECT username FROM phone_snap_accounts WHERE identifier = ? LIMIT 1',
+        { identifier }
+    )
+    local chirp = MySQL.scalar.await(
+        'SELECT username FROM phone_chirp_accounts WHERE identifier = ? LIMIT 1',
+        { identifier }
+    )
+
+    local hasSnap = type(snap) == 'string' and snap ~= ''
+    local hasChirp = type(chirp) == 'string' and chirp ~= ''
+    local hasClips = phone and type(phone.clips_username) == 'string' and phone.clips_username ~= ''
+
+    local explicitlySetup = phone and tonumber(phone.is_setup) == 1
+    local complete = explicitlySetup and hasSnap and hasChirp and hasClips
+
+    return {
+        requiresSetup = not complete,
+        hasSnap = hasSnap,
+        hasChirp = hasChirp,
+        hasClips = hasClips,
+    }
+end
+
 local function BuildEnabledApps(flags)
     local enabled = {}
     for appId, _ in pairs(AllowedApps) do
@@ -198,7 +263,7 @@ local function GetOrCreatePhone(source)
     local imei = GenerateIMEI()
     
     MySQL.insert.await(
-        'INSERT INTO phone_numbers (identifier, phone_number, imei, wallpaper, ringtone, volume, lock_code, coque, theme, language, audio_profile) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        'INSERT INTO phone_numbers (identifier, phone_number, imei, wallpaper, ringtone, volume, lock_code, pin_hash, is_setup, coque, theme, language, audio_profile, clips_username) VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, NULL)',
         { 
             identifier, 
             phoneNumber, 
@@ -207,6 +272,7 @@ local function GetOrCreatePhone(source)
             Config.Phone.DefaultSettings.ringtone,
             Config.Phone.DefaultSettings.volume,
             Config.Phone.DefaultSettings.lockCode,
+            (Config.Phone and Config.Phone.Setup and Config.Phone.Setup.RequireOnFirstUse ~= false) and 0 or 1,
             Config.Phone.DefaultSettings.coque,
             Config.Phone.DefaultSettings.theme,
             Config.Phone.DefaultSettings.language or 'es',
@@ -233,13 +299,15 @@ lib.callback.register('gcphone:getPhoneData', function(source)
     local savedLayout = layoutRaw and layoutRaw ~= '' and json.decode(layoutRaw) or nil
     local appLayout = NormalizeLayout(savedLayout, enabledApps)
     
+    local setup = ResolveSetupState(phone.identifier)
+
     return {
         phoneNumber = phone.phone_number,
         imei = phone.imei,
         wallpaper = phone.wallpaper,
         ringtone = phone.ringtone,
         volume = phone.volume,
-        lockCode = phone.lock_code,
+        lockCode = '',
         coque = phone.coque,
         theme = phone.theme or 'light',
         language = phone.language or 'es',
@@ -247,6 +315,131 @@ lib.callback.register('gcphone:getPhoneData', function(source)
         appLayout = appLayout,
         enabledApps = EnabledList(enabledApps),
         featureFlags = featureFlags,
+        requiresSetup = setup.requiresSetup,
+        setup = setup,
+    }
+end)
+
+lib.callback.register('gcphone:phone:getSetupState', function(source)
+    local identifier = GetIdentifier(source)
+    if not identifier then
+        return { success = false, error = 'MISSING_IDENTIFIER', requiresSetup = true }
+    end
+
+    local setup = ResolveSetupState(identifier)
+    return {
+        success = true,
+        requiresSetup = setup.requiresSetup,
+        setup = setup,
+    }
+end)
+
+lib.callback.register('gcphone:phone:completeSetup', function(source, data)
+    local identifier = GetIdentifier(source)
+    if not identifier then
+        return { success = false, error = 'MISSING_IDENTIFIER' }
+    end
+
+    if type(data) ~= 'table' then
+        return { success = false, error = 'INVALID_PAYLOAD' }
+    end
+
+    local pin = SafePin(data.pin)
+    local snapUsername = SafeUsername(data.snapUsername)
+    local chirpUsername = SafeUsername(data.chirpUsername)
+    local clipsUsername = SafeUsername(data.clipsUsername)
+    if not pin or not snapUsername or not chirpUsername or not clipsUsername then
+        return { success = false, error = 'INVALID_SETUP_DATA' }
+    end
+
+    if UsernameExists('phone_snap_accounts', snapUsername, identifier) then
+        return { success = false, error = 'SNAP_USERNAME_TAKEN' }
+    end
+    if UsernameExists('phone_chirp_accounts', chirpUsername, identifier) then
+        return { success = false, error = 'CHIRP_USERNAME_TAKEN' }
+    end
+    if UsernameExists('phone_clips_accounts', clipsUsername, identifier) then
+        return { success = false, error = 'CLIPS_USERNAME_TAKEN' }
+    end
+
+    local name = GetName(source) or 'User'
+
+    local ok, err = pcall(function()
+        MySQL.insert.await(
+            [[
+                INSERT INTO phone_snap_accounts (identifier, username, display_name, avatar)
+                VALUES (?, ?, ?, NULL)
+                ON DUPLICATE KEY UPDATE username = VALUES(username), display_name = VALUES(display_name)
+            ]],
+            { identifier, snapUsername, name }
+        )
+        MySQL.insert.await(
+            [[
+                INSERT INTO phone_chirp_accounts (identifier, username, display_name, avatar)
+                VALUES (?, ?, ?, NULL)
+                ON DUPLICATE KEY UPDATE username = VALUES(username), display_name = VALUES(display_name)
+            ]],
+            { identifier, chirpUsername, name }
+        )
+        MySQL.insert.await(
+            [[
+                INSERT INTO phone_clips_accounts (identifier, username, display_name, avatar)
+                VALUES (?, ?, ?, NULL)
+                ON DUPLICATE KEY UPDATE username = VALUES(username), display_name = VALUES(display_name)
+            ]],
+            { identifier, clipsUsername, name }
+        )
+
+        MySQL.update.await(
+            'UPDATE phone_numbers SET lock_code = ?, pin_hash = SHA2(?, 256), is_setup = 1, clips_username = ? WHERE identifier = ?',
+            { pin, pin, clipsUsername, identifier }
+        )
+    end)
+
+    if not ok then
+        return { success = false, error = 'SETUP_FAILED', detail = tostring(err) }
+    end
+
+    local setup = ResolveSetupState(identifier)
+    return {
+        success = true,
+        requiresSetup = setup.requiresSetup,
+        setup = setup,
+    }
+end)
+
+lib.callback.register('gcphone:phone:verifyPin', function(source, data)
+    local identifier = GetIdentifier(source)
+    if not identifier then
+        return { success = false, unlocked = false, error = 'MISSING_IDENTIFIER' }
+    end
+
+    local pin = SafePin(type(data) == 'table' and data.pin or nil)
+    if not pin then
+        return { success = false, unlocked = false, error = 'INVALID_PIN' }
+    end
+
+    local phone = MySQL.single.await(
+        'SELECT lock_code, pin_hash FROM phone_numbers WHERE identifier = ? LIMIT 1',
+        { identifier }
+    )
+    if not phone then
+        return { success = false, unlocked = false, error = 'PHONE_NOT_FOUND' }
+    end
+
+    local unlocked = false
+    if type(phone.pin_hash) == 'string' and phone.pin_hash ~= '' then
+        unlocked = MySQL.scalar.await(
+            'SELECT 1 WHERE SHA2(?, 256) = ?',
+            { pin, phone.pin_hash }
+        ) ~= nil
+    else
+        unlocked = tostring(phone.lock_code or '') == pin
+    end
+
+    return {
+        success = true,
+        unlocked = unlocked,
     }
 end)
 
@@ -299,8 +492,8 @@ lib.callback.register('gcphone:setLockCode', function(source, data)
     if not code then return false end
     
     MySQL.update.await(
-        'UPDATE phone_numbers SET lock_code = ? WHERE identifier = ?',
-        { code, identifier }
+        'UPDATE phone_numbers SET lock_code = ?, pin_hash = SHA2(?, 256) WHERE identifier = ?',
+        { code, code, identifier }
     )
     
     return true
@@ -434,7 +627,7 @@ RegisterNetEvent('QBCore:Server:PlayerLoaded', function(Player)
             wallpaper = phone.wallpaper,
             ringtone = phone.ringtone,
             volume = phone.volume,
-            lockCode = phone.lock_code,
+            lockCode = '',
             coque = phone.coque,
             theme = phone.theme or 'light',
             language = phone.language or 'es',
@@ -442,6 +635,8 @@ RegisterNetEvent('QBCore:Server:PlayerLoaded', function(Player)
             appLayout = NormalizeLayout(savedLayout, enabledApps),
             enabledApps = EnabledList(enabledApps),
             featureFlags = featureFlags,
+            requiresSetup = ResolveSetupState(phone.identifier).requiresSetup,
+            setup = ResolveSetupState(phone.identifier),
         })
     end
 end)

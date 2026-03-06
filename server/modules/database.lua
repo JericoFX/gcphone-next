@@ -1108,6 +1108,58 @@ local MIGRATIONS = {
                 60
             )]]
         }
+    },
+
+    {
+        version = 11,
+        name = "phone_setup_and_clips_identity",
+        description = "Secure phone setup fields and dedicated clips usernames",
+        statements = {
+            [[ALTER TABLE `phone_numbers`
+                ADD COLUMN IF NOT EXISTS `pin_hash` CHAR(64) NULL AFTER `lock_code`,
+                ADD COLUMN IF NOT EXISTS `is_setup` TINYINT(1) NOT NULL DEFAULT 1 AFTER `pin_hash`,
+                ADD COLUMN IF NOT EXISTS `clips_username` VARCHAR(32) NULL AFTER `audio_profile`]],
+
+            [[CREATE UNIQUE INDEX IF NOT EXISTS `idx_phone_numbers_clips_username`
+                ON `phone_numbers` (`clips_username`)]],
+
+            [[UPDATE `phone_numbers`
+                SET `pin_hash` = SHA2(`lock_code`, 256)
+                WHERE (`pin_hash` IS NULL OR `pin_hash` = '')
+                  AND `lock_code` IS NOT NULL
+                  AND `lock_code` != '']],
+
+            [[UPDATE `phone_numbers`
+                SET `is_setup` = 1
+                WHERE `is_setup` IS NULL]],
+
+            [[CREATE TABLE IF NOT EXISTS `phone_clips_accounts` (
+                `id` INT AUTO_INCREMENT PRIMARY KEY,
+                `identifier` VARCHAR(50) NOT NULL,
+                `username` VARCHAR(32) NOT NULL,
+                `display_name` VARCHAR(50) DEFAULT NULL,
+                `avatar` VARCHAR(500) DEFAULT NULL,
+                `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                UNIQUE KEY `uniq_clips_identifier` (`identifier`),
+                UNIQUE KEY `uniq_clips_username` (`username`),
+                KEY `idx_clips_identifier` (`identifier`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci]],
+
+            [[INSERT INTO `phone_clips_accounts` (`identifier`, `username`, `display_name`, `avatar`)
+                SELECT s.`identifier`, s.`username`, s.`display_name`, s.`avatar`
+                FROM `phone_snap_accounts` s
+                WHERE s.`identifier` IS NOT NULL
+                ON DUPLICATE KEY UPDATE
+                    `username` = VALUES(`username`),
+                    `display_name` = VALUES(`display_name`),
+                    `avatar` = VALUES(`avatar`)]],
+
+            [[UPDATE `phone_numbers` n
+                JOIN `phone_clips_accounts` c ON c.`identifier` = n.`identifier`
+                SET n.`clips_username` = c.`username`
+                WHERE n.`clips_username` IS NULL OR n.`clips_username` = '']]
+        }
     }
 }
 
