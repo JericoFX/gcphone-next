@@ -1,8 +1,23 @@
-import { For, Show, createEffect, createSignal, onCleanup } from 'solid-js';
+import { For, Show, createEffect, createMemo, createSignal, onCleanup } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { fetchNui } from '../../../utils/fetchNui';
 import { timeAgo } from '../../../utils/misc';
 import { resolveMediaType, sanitizeMediaUrl, sanitizeText } from '../../../utils/sanitize';
+import { useNuiEvent } from '../../../utils/useNui';
+import { fetchLiveKitToken, fetchSocketToken } from '../../../utils/realtimeAuth';
+import { connectLiveKit, disconnectLiveKit, setLiveKitCameraEnabled, setLiveKitMicrophoneEnabled } from '../../../utils/livekit';
+import {
+  connectSnapLiveSocket,
+  disconnectSnapLiveSocket,
+  deleteSnapLiveMessage,
+  joinSnapLiveRoom,
+  leaveSnapLiveRoom,
+  muteSnapLiveUser,
+  sendSnapLiveMessage,
+  sendSnapLiveReaction,
+  type SnapLiveReaction,
+  type SnapLiveSocketMessage,
+} from '../../../utils/socket';
 import { AppScaffold } from '../../shared/layout';
 import { useAppCache } from '../../../hooks';
 import { MediaLightbox } from '../../shared/ui/MediaLightbox';
@@ -44,6 +59,12 @@ interface SnapLive {
   live_viewers?: number;
 }
 
+interface LiveStartResponse {
+  success?: boolean;
+  payload?: { postId?: number };
+  error?: string;
+}
+
 export function SnapApp() {
   const router = useRouter();
   const cache = useAppCache('snap');
@@ -58,16 +79,32 @@ export function SnapApp() {
   const [loading, setLoading] = createSignal(false);
   const [fabTooltipVisible, setFabTooltipVisible] = createSignal(false);
   const [activeStoryIndex, setActiveStoryIndex] = createSignal<number | null>(null);
+  const [storyProgressPct, setStoryProgressPct] = createSignal(0);
   const [viewerUrl, setViewerUrl] = createSignal<string | null>(null);
   const [showActionSheet, setShowActionSheet] = createSignal(false);
   const [statusMessage, setStatusMessage] = createSignal('');
   const [deletePostId, setDeletePostId] = createSignal<number | null>(null);
+
+  // Live Viewer
+  const [activeLive, setActiveLive] = createSignal<SnapLive | null>(null);
+  const [liveChatOpen, setLiveChatOpen] = createSignal(false);
+  const [liveMessageInput, setLiveMessageInput] = createSignal('');
+  const [liveMessages, setLiveMessages] = createSignal<SnapLiveSocketMessage[]>([]);
+  const [liveFloating, setLiveFloating] = createSignal<SnapLiveSocketMessage[]>([]);
+  const [liveReactions, setLiveReactions] = createSignal<SnapLiveReaction[]>([]);
+  const [mutedUsers, setMutedUsers] = createSignal<string[]>([]);
+  const [viewerMuted, setViewerMuted] = createSignal(false);
+  const [liveStreaming, setLiveStreaming] = createSignal(false);
+  const [liveConnected, setLiveConnected] = createSignal(false);
 
   // Create Post
   const [showCreatePost, setShowCreatePost] = createSignal(false);
   const [postMedia, setPostMedia] = createSignal('');
   const [postCaption, setPostCaption] = createSignal('');
   const [postMode, setPostMode] = createSignal<'post' | 'story'>('post');
+
+  let storyTick: number | undefined;
+  let floatingTimers = new Map<string, number>();
 
   // FAB Tooltip
   let fabTimeout: number;
@@ -109,6 +146,32 @@ export function SnapApp() {
     void loadData();
   });
 
+  const handleStoryVideoTimeUpdate = (event: Event) => {
+    const target = event.currentTarget as HTMLVideoElement | null;
+    if (!target || target.duration <= 0) return;
+    const pct = Math.min(100, (target.currentTime / target.duration) * 100);
+    setStoryProgressPct(pct);
+  };
+
+  const handleStoryVideoEnded = () => {
+    setStoryProgressPct(100);
+    shiftStory(1);
+  };
+
+  useNuiEvent<SnapLive>('gcphone:snap:liveStarted', (live) => {
+    setLiveStreams((prev) => {
+      const next = prev.filter((entry) => entry.id !== live.id);
+      return [live, ...next];
+    });
+  });
+
+  useNuiEvent<number>('gcphone:snap:liveEnded', (liveId) => {
+    setLiveStreams((prev) => prev.filter((entry) => entry.id !== Number(liveId)));
+    if (activeLive()?.id === Number(liveId)) {
+      void closeLiveViewer();
+    }
+  });
+
   let lastSharedMedia = '';
   createEffect(() => {
     const params = router.params();
@@ -121,9 +184,30 @@ export function SnapApp() {
     setShowCreatePost(true);
   });
 
+  onCleanup(() => {
+    for (const timer of floatingTimers.values()) {
+      window.clearTimeout(timer);
+    }
+    floatingTimers.clear();
+    disconnectSnapLiveSocket();
+    disconnectLiveKit();
+    if (storyTick) {
+      window.clearInterval(storyTick);
+      storyTick = undefined;
+    }
+  });
+
   createEffect(() => {
     const onKey = (e: CustomEvent<string>) => {
       if (e.detail === 'Backspace') {
+        if (liveChatOpen()) {
+          setLiveChatOpen(false);
+          return;
+        }
+        if (activeLive()) {
+          void closeLiveViewer();
+          return;
+        }
         if (activeStoryIndex() !== null) {
           setActiveStoryIndex(null);
           return;
@@ -157,17 +241,6 @@ export function SnapApp() {
     setDeletePostId(null);
   };
 
-  const openStory = (index: number) => {
-    setActiveStoryIndex(index);
-  };
-
-  const shiftStory = (offset: number) => {
-    const current = activeStoryIndex();
-    if (current === null) return;
-    const next = Math.max(0, Math.min(stories().length - 1, current + offset));
-    setActiveStoryIndex(next);
-  };
-
   const formatStoryTime = (expiresAt?: string) => {
     if (!expiresAt) return '';
     const remaining = Math.max(0, new Date(expiresAt).getTime() - Date.now());
@@ -176,6 +249,217 @@ export function SnapApp() {
     const mins = Math.floor(remaining / (1000 * 60));
     return `${mins}m`;
   };
+
+  const activeStory = () => {
+    const idx = activeStoryIndex();
+    return idx !== null ? stories()[idx] : null;
+  };
+
+  const isLiveOwner = createMemo(() => {
+    const stream = activeLive();
+    const username = myAccount()?.username;
+    if (!stream || !username) return false;
+    return stream.username === username;
+  });
+
+  const openLiveViewer = async (live: SnapLive) => {
+    const owner = !!(myAccount()?.username && live.username && myAccount()?.username === live.username);
+    setStatusMessage('');
+    setActiveLive(live);
+    setLiveChatOpen(false);
+    setLiveMessages([]);
+    setLiveFloating([]);
+    setLiveReactions([]);
+    setMutedUsers([]);
+    setViewerMuted(false);
+
+    const roomName = `snaplive-${live.id}`;
+    const tokenPayload = await fetchLiveKitToken(roomName, owner, 1800);
+    if (!tokenPayload?.success || !tokenPayload.token || !tokenPayload.url) {
+      setStatusMessage('No se pudo abrir el live');
+      setActiveLive(null);
+      return;
+    }
+
+    try {
+      await connectLiveKit(tokenPayload.url, tokenPayload.token, tokenPayload.maxDuration || 1800);
+      if (owner) {
+        await setLiveKitCameraEnabled(true);
+        await setLiveKitMicrophoneEnabled(true);
+      }
+
+      const auth = await fetchSocketToken();
+      if (auth?.success && auth.host && auth.token) {
+        connectSnapLiveSocket(auth.host, auth.token, {
+          onMessage: (message) => {
+            setLiveMessages((prev) => [...prev.slice(-19), message]);
+            setLiveFloating((prev) => [...prev.slice(-3), message]);
+            const timer = window.setTimeout(() => {
+              setLiveFloating((prev) => prev.filter((entry) => entry.id !== message.id));
+              floatingTimers.delete(message.id);
+            }, 4200);
+            floatingTimers.set(message.id, timer);
+          },
+          onReaction: (reaction) => {
+            setLiveReactions((prev) => [...prev.slice(-10), reaction]);
+            window.setTimeout(() => {
+              setLiveReactions((prev) => prev.filter((entry) => entry.id !== reaction.id));
+            }, 2600);
+          },
+          onMessageDeleted: ({ messageId }) => {
+            setLiveMessages((prev) => prev.filter((entry) => entry.id !== messageId));
+            setLiveFloating((prev) => prev.filter((entry) => entry.id !== messageId));
+          },
+          onUserMuted: ({ username }) => {
+            setMutedUsers((prev) => (prev.includes(username) ? prev : [...prev, username]));
+            if (username === myAccount()?.username) {
+              setViewerMuted(true);
+            }
+          },
+        });
+        joinSnapLiveRoom(String(live.id));
+      }
+
+      setLiveConnected(true);
+    } catch (_err) {
+      setStatusMessage('No se pudo conectar al live');
+      setActiveLive(null);
+      disconnectLiveKit();
+      disconnectSnapLiveSocket();
+    }
+  };
+
+  const closeLiveViewer = async () => {
+    const stream = activeLive();
+    if (stream) {
+      leaveSnapLiveRoom(String(stream.id));
+      if (liveStreaming() && isLiveOwner()) {
+        await fetchNui('snapEndLive', stream.id);
+      }
+    }
+
+    for (const timer of floatingTimers.values()) {
+      window.clearTimeout(timer);
+    }
+    floatingTimers.clear();
+
+    disconnectSnapLiveSocket();
+    disconnectLiveKit();
+    setActiveLive(null);
+    setLiveStreaming(false);
+    setLiveConnected(false);
+    setLiveChatOpen(false);
+    setLiveMessageInput('');
+    setLiveMessages([]);
+    setLiveFloating([]);
+    setLiveReactions([]);
+    setMutedUsers([]);
+    setViewerMuted(false);
+    await loadData();
+  };
+
+  const startLive = async () => {
+    setShowActionSheet(false);
+    const result = await fetchNui<LiveStartResponse>('snapStartLive', {});
+    if (!result?.success || !result.payload?.postId) {
+      setStatusMessage('No se pudo iniciar el live');
+      return;
+    }
+
+    const stream: SnapLive = {
+      id: result.payload.postId,
+      username: myAccount()?.username,
+      display_name: myAccount()?.display_name,
+      avatar: myAccount()?.avatar,
+      live_viewers: 0,
+    };
+    setLiveStreaming(true);
+    await openLiveViewer(stream);
+  };
+
+  const sendLiveMessage = async () => {
+    if (viewerMuted()) {
+      setStatusMessage('Estas silenciado en este live');
+      return;
+    }
+
+    const stream = activeLive();
+    const content = sanitizeText(liveMessageInput(), 300);
+    if (!stream || !content) return;
+    const response = await sendSnapLiveMessage(String(stream.id), content);
+    if (response?.success) {
+      setLiveMessageInput('');
+    }
+  };
+
+  const sendReaction = async (reaction: string) => {
+    const stream = activeLive();
+    if (!stream) return;
+    await sendSnapLiveReaction(String(stream.id), reaction);
+  };
+
+  const removeLiveMessage = async (messageId: string) => {
+    const stream = activeLive();
+    if (!stream || !isLiveOwner()) return;
+    await deleteSnapLiveMessage(String(stream.id), messageId);
+  };
+
+  const muteLiveUser = async (username: string) => {
+    const stream = activeLive();
+    if (!stream || !isLiveOwner()) return;
+    await muteSnapLiveUser(String(stream.id), username);
+  };
+
+  const openStory = (index: number) => {
+    setStoryProgressPct(0);
+    setActiveStoryIndex(index);
+  };
+
+  const shiftStory = (offset: number) => {
+    const current = activeStoryIndex();
+    if (current === null) return;
+    const next = current + offset;
+    if (next < 0 || next >= stories().length) {
+      setActiveStoryIndex(null);
+      setStoryProgressPct(0);
+      return;
+    }
+    setStoryProgressPct(0);
+    setActiveStoryIndex(next);
+  };
+
+  createEffect(() => {
+    const story = activeStory();
+    if (!story) {
+      if (storyTick) window.clearInterval(storyTick);
+      storyTick = undefined;
+      setStoryProgressPct(0);
+      return;
+    }
+
+    if (story.media_type === 'video') {
+      return;
+    }
+
+    const durationMs = 5000;
+    const startedAt = Date.now();
+    if (storyTick) window.clearInterval(storyTick);
+    storyTick = window.setInterval(() => {
+      const elapsed = Date.now() - startedAt;
+      const pct = Math.min(100, (elapsed / durationMs) * 100);
+      setStoryProgressPct(pct);
+      if (pct >= 100) {
+        window.clearInterval(storyTick);
+        storyTick = undefined;
+        shiftStory(1);
+      }
+    }, 100);
+
+    onCleanup(() => {
+      if (storyTick) window.clearInterval(storyTick);
+      storyTick = undefined;
+    });
+  });
 
   const publishPost = async () => {
     const media = sanitizeMediaUrl(postMedia());
@@ -227,11 +511,6 @@ export function SnapApp() {
     setShowActionSheet(false);
   };
 
-  const activeStory = () => {
-    const idx = activeStoryIndex();
-    return idx !== null ? stories()[idx] : null;
-  };
-
   return (
     <AppScaffold title="Snap" subtitle="Comparte momentos" onBack={() => router.goBack()} bodyClass={styles.body}>
       <div class={styles.snapApp}>
@@ -277,7 +556,7 @@ export function SnapApp() {
             <div class={styles.liveList}>
               <For each={liveStreams()}>
                 {(live) => (
-                  <div class={styles.liveItem}>
+                  <button class={styles.liveItem} onClick={() => void openLiveViewer(live)}>
                     <div class={styles.liveAvatar}>
                       {live.avatar ? (
                         <img src={live.avatar} alt="" />
@@ -288,7 +567,7 @@ export function SnapApp() {
                     </div>
                     <span class={styles.liveName}>{live.display_name || live.username}</span>
                     <span class={styles.liveViewers}>{live.live_viewers || 0} viendo</span>
-                  </div>
+                  </button>
                 )}
               </For>
             </div>
@@ -378,6 +657,7 @@ export function SnapApp() {
           { label: '📷 Camara', tone: 'primary', onClick: openCamera },
           { label: '🖼 Galeria', tone: 'primary', onClick: () => { setShowActionSheet(false); setShowCreatePost(true); } },
           { label: '✨ Subir Story', onClick: () => { setPostMode('story'); setShowActionSheet(false); setShowCreatePost(true); } },
+          { label: '🔴 Iniciar Live', onClick: () => void startLive() },
         ]}
       />
 
@@ -481,7 +761,7 @@ export function SnapApp() {
           <div class={styles.storyProgress}>
             <div 
               class={styles.progressBar}
-              style={{ width: `${((activeStoryIndex() || 0) + 1) / stories().length * 100}%` }}
+              style={{ width: `${storyProgressPct()}%` }}
             />
           </div>
 
@@ -493,9 +773,11 @@ export function SnapApp() {
           {resolveMediaType(activeStory()?.media_url) === 'video' ? (
             <video 
               src={activeStory()?.media_url} 
-              controls 
               playsinline 
               autoplay
+              muted={false}
+              onTimeUpdate={handleStoryVideoTimeUpdate}
+              onEnded={handleStoryVideoEnded}
               class={styles.storyMedia}
             />
           ) : (
@@ -505,6 +787,97 @@ export function SnapApp() {
               class={styles.storyMedia}
             />
           )}
+        </div>
+      </Show>
+
+      {/* Live Viewer */}
+      <Show when={activeLive()}>
+        <div class={styles.liveViewer}>
+          <button class={styles.storyClose} onClick={() => void closeLiveViewer()}>✕</button>
+
+          <div class={styles.liveTopBar}>
+            <div class={styles.liveOwnerInfo}>
+              <strong>{activeLive()?.display_name || activeLive()?.username || 'Live'}</strong>
+              <span>{liveConnected() ? 'EN VIVO' : 'Conectando...'}</span>
+            </div>
+            <button class={styles.liveChatToggle} onClick={() => setLiveChatOpen((prev) => !prev)}>💬</button>
+          </div>
+
+          <div class={styles.liveVideoCanvas}>
+            <div class={styles.livePlaceholder}>LiveKit video stream</div>
+          </div>
+
+          <div class={styles.liveFloatingLayer}>
+            <For each={liveFloating()}>
+              {(message) => (
+                <div class={styles.liveFloatingMessage} classList={{ [styles.liveMention]: message.isMention }}>
+                  <strong>@{message.username}</strong>
+                  <p>{message.content}</p>
+                </div>
+              )}
+            </For>
+
+            <For each={liveReactions()}>
+              {(reaction) => (
+                <div class={styles.liveReactionBubble}>{reaction.reaction}</div>
+              )}
+            </For>
+          </div>
+
+          <div class={styles.liveReactionRow}>
+            <button onClick={() => void sendReaction('👍')}>👍</button>
+            <button onClick={() => void sendReaction('❤️')}>❤️</button>
+            <button onClick={() => void sendReaction('😂')}>😂</button>
+            <button onClick={() => void sendReaction('🔥')}>🔥</button>
+            <button onClick={() => void sendReaction('👏')}>👏</button>
+          </div>
+
+          <Show when={liveChatOpen()}>
+            <div class={styles.liveChatPanel}>
+              <div class={styles.liveChatHeader}>Chat en vivo (max 20)</div>
+              <div class={styles.liveChatList}>
+                <For each={liveMessages()}>
+                  {(message) => (
+                    <div class={styles.liveChatItem} classList={{ [styles.liveMention]: message.isMention }}>
+                      <div class={styles.liveChatBody}>
+                        <strong>@{message.username}</strong>
+                        <p>{message.content}</p>
+                      </div>
+                      <Show when={isLiveOwner() && message.username !== myAccount()?.username}>
+                        <div class={styles.liveModerationCol}>
+                          <button onClick={() => void removeLiveMessage(message.id)}>🗑</button>
+                          <button onClick={() => void muteLiveUser(message.username)}>🚫</button>
+                        </div>
+                      </Show>
+                    </div>
+                  )}
+                </For>
+              </div>
+
+              <Show when={viewerMuted()}>
+                <div class={styles.liveMutedBanner}>Estas silenciado en este live</div>
+              </Show>
+
+              <Show
+                when={!isLiveOwner()}
+                fallback={<div class={styles.liveHostHint}>Sos host: hablas en vivo, moderas el chat.</div>}
+              >
+                <div class={styles.liveChatInputRow}>
+                  <EmojiPickerButton value={liveMessageInput()} onChange={setLiveMessageInput} maxLength={300} />
+                  <input
+                    value={liveMessageInput()}
+                    onInput={(e) => setLiveMessageInput(sanitizeText(e.currentTarget.value, 300))}
+                    onKeyDown={(e) => e.key === 'Enter' && void sendLiveMessage()}
+                    placeholder="Escribe en el live..."
+                    disabled={viewerMuted()}
+                  />
+                  <button onClick={() => void sendLiveMessage()} disabled={viewerMuted() || !liveMessageInput().trim()}>
+                    Enviar
+                  </button>
+                </div>
+              </Show>
+            </div>
+          </Show>
         </div>
       </Show>
 
