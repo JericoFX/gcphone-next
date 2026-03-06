@@ -51,6 +51,7 @@ local function EnsureRetentionIndexes()
     EnsureIndex('phone_market', 'idx_market_created', 'ALTER TABLE phone_market ADD INDEX idx_market_created (`created_at`)')
     EnsureIndex('phone_darkrooms_posts', 'idx_darkrooms_posts_created', 'ALTER TABLE phone_darkrooms_posts ADD INDEX idx_darkrooms_posts_created (`created_at`)')
     EnsureIndex('phone_darkrooms_comments', 'idx_darkrooms_comments_created', 'ALTER TABLE phone_darkrooms_comments ADD INDEX idx_darkrooms_comments_created (`created_at`)')
+    EnsureIndex('phone_social_notifications', 'idx_social_notifications_created', 'ALTER TABLE phone_social_notifications ADD INDEX idx_social_notifications_created (`created_at`)')
 end
 
 local function PurgeOldRows()
@@ -67,6 +68,7 @@ local function PurgeOldRows()
     MySQL.query_async('DELETE FROM phone_market WHERE created_at < (NOW() - INTERVAL ? DAY)', { days })
     MySQL.query_async('DELETE FROM phone_darkrooms_posts WHERE created_at < (NOW() - INTERVAL ? DAY)', { days })
     MySQL.query_async('DELETE FROM phone_darkrooms_comments WHERE created_at < (NOW() - INTERVAL ? DAY)', { days })
+    MySQL.query_async('DELETE FROM phone_social_notifications WHERE created_at < (NOW() - INTERVAL ? DAY)', { days })
 end
 
 CreateThread(function()
