@@ -958,6 +958,72 @@ local MIGRATIONS = {
                 KEY `idx_scanned_at` (`scanned_at`)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci]]
         }
+    },
+    
+    {
+        version = 8,
+        name = "social_enhanced_follow_system",
+        description = "Enhanced follow system with requests and notifications for Snap and Chirp",
+        statements = {
+            -- Add is_private to chirp accounts
+            [[ALTER TABLE `phone_chirp_accounts` 
+                ADD COLUMN IF NOT EXISTS `is_private` TINYINT(1) DEFAULT 0 AFTER `verified`]],
+            
+            -- Drop old friend_requests table if exists and create new schema
+            [[DROP TABLE IF EXISTS `phone_friend_requests_old`]],
+            [[RENAME TABLE `phone_friend_requests` TO `phone_friend_requests_old`]],
+            
+            -- Create new enhanced friend requests table with account_ids
+            [[CREATE TABLE IF NOT EXISTS `phone_friend_requests` (
+                `id` INT AUTO_INCREMENT PRIMARY KEY,
+                `from_account_id` INT NOT NULL,
+                `to_account_id` INT NOT NULL,
+                `app_type` ENUM('chirp', 'snap') NOT NULL,
+                `status` ENUM('pending', 'accepted', 'rejected', 'cancelled') DEFAULT 'pending',
+                `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                `responded_at` TIMESTAMP NULL DEFAULT NULL,
+                FOREIGN KEY (`from_account_id`) REFERENCES `phone_snap_accounts`(`id`) ON DELETE CASCADE,
+                FOREIGN KEY (`to_account_id`) REFERENCES `phone_snap_accounts`(`id`) ON DELETE CASCADE,
+                UNIQUE KEY `idx_request` (`from_account_id`, `to_account_id`, `app_type`),
+                KEY `idx_to` (`to_account_id`, `status`),
+                KEY `idx_from` (`from_account_id`, `status`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci]],
+            
+            -- Create social notifications table
+            [[CREATE TABLE IF NOT EXISTS `phone_social_notifications` (
+                `id` INT AUTO_INCREMENT PRIMARY KEY,
+                `account_id` INT NOT NULL,
+                `from_account_id` INT NOT NULL,
+                `app_type` ENUM('chirp', 'snap') NOT NULL,
+                `notification_type` ENUM('follow_request', 'follow_accepted', 'like', 'comment', 'mention') NOT NULL,
+                `reference_id` INT DEFAULT NULL,
+                `reference_type` VARCHAR(20) DEFAULT NULL,
+                `content_preview` VARCHAR(100) DEFAULT NULL,
+                `is_read` TINYINT(1) DEFAULT 0,
+                `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (`account_id`) REFERENCES `phone_snap_accounts`(`id`) ON DELETE CASCADE,
+                FOREIGN KEY (`from_account_id`) REFERENCES `phone_snap_accounts`(`id`) ON DELETE CASCADE,
+                UNIQUE KEY `idx_notification_unique` (`account_id`, `from_account_id`, `app_type`, `notification_type`, `reference_id`),
+                KEY `idx_account_unread` (`account_id`, `is_read`, `created_at`),
+                KEY `idx_created` (`created_at`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci]],
+            
+            -- Cleanup rule for social notifications retention (30 days)
+            [[CALL sp_gcphone_cleanup_add_rule('social_notifications_retention', 'delete', 'phone_social_notifications', NULL, 'created_at < (NOW() - INTERVAL 30 DAY)', 1440)]],
+            
+            -- Migrate data from old friend_requests if possible
+            [[INSERT IGNORE INTO `phone_friend_requests` (`from_account_id`, `to_account_id`, `app_type`, `status`, `created_at`)
+                SELECT 
+                    COALESCE(fa.id, ta.id) as from_account_id,
+                    COALESCE(ta.id, fa.id) as to_account_id,
+                    old.type as app_type,
+                    old.status,
+                    old.created_at
+                FROM `phone_friend_requests_old` old
+                LEFT JOIN `phone_snap_accounts` fa ON fa.identifier = old.from_identifier
+                LEFT JOIN `phone_snap_accounts` ta ON ta.identifier = old.to_identifier
+                WHERE fa.id IS NOT NULL AND ta.id IS NOT NULL]]
+        }
     }
 }
 

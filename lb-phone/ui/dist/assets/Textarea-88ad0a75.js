@@ -1,0 +1,1 @@
+import{r as a,q as c,a as f}from"./index-99e0aeb1.js";const l=a.forwardRef((t,o)=>{const[n,s]=a.useState(!1),u=(e,r)=>{s(r)};return a.useEffect(()=>{c("toggleInput",n,"OK")},[n]),f("textarea",{...t,ref:o,onFocus:e=>{u(t,!0),t.onFocus&&t.onFocus(e)},onBlur:e=>{u(t,!1),t.onBlur&&t.onBlur(e)}})}),I=l;export{I as T};
