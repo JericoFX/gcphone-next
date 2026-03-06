@@ -45,6 +45,7 @@ local AllowedApps = {
     mail = true,
     calls = true,
     settings = true,
+    notifications = true,
     gallery = true,
     camera = true,
     bank = true,
@@ -68,7 +69,7 @@ local AllowedApps = {
 }
 
 local DefaultLayout = {
-    home = { 'contacts', 'messages', 'mail', 'calls', 'settings', 'gallery', 'camera', 'bank', 'wallet', 'documents', 'wavechat', 'music', 'chirp', 'snap', 'clips', 'darkrooms', 'yellowpages', 'market', 'news', 'garage', 'clock', 'notes', 'maps', 'weather' },
+    home = { 'contacts', 'messages', 'mail', 'notifications', 'calls', 'settings', 'gallery', 'camera', 'bank', 'wallet', 'documents', 'wavechat', 'music', 'chirp', 'snap', 'clips', 'darkrooms', 'yellowpages', 'market', 'news', 'garage', 'clock', 'notes', 'maps', 'weather' },
     menu = { 'appstore' }
 }
 

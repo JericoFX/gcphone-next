@@ -265,6 +265,27 @@ lib.callback.register('gcphone:mail:send', function(source, data)
         return { success = false, error = 'SEND_FAILED' }
     end
 
+    if recipient and recipient.id then
+        local recipientIdentifier = MySQL.scalar.await(
+            'SELECT identifier FROM phone_mail_accounts WHERE id = ? LIMIT 1',
+            { recipient.id }
+        )
+
+        if recipientIdentifier then
+            pcall(function()
+                exports[GetCurrentResourceName()]:AddPersistentNotification(recipientIdentifier, {
+                    appId = 'mail',
+                    title = 'Nuevo mail',
+                    content = string.format('%s te envio un correo', account.email or 'Alguien'),
+                    meta = {
+                        mailId = mailId,
+                        sender = account.email,
+                    }
+                })
+            end)
+        end
+    end
+
     return { success = true, id = mailId }
 end)
 

@@ -1160,6 +1160,37 @@ local MIGRATIONS = {
                 SET n.`clips_username` = c.`username`
                 WHERE n.`clips_username` IS NULL OR n.`clips_username` = '']]
         }
+    },
+
+    {
+        version = 12,
+        name = "notifications_inbox",
+        description = "Persistent notification inbox for all apps",
+        statements = {
+            [[CREATE TABLE IF NOT EXISTS `phone_notifications` (
+                `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
+                `identifier` VARCHAR(50) NOT NULL,
+                `app_id` VARCHAR(40) NOT NULL,
+                `title` VARCHAR(80) NOT NULL,
+                `content` VARCHAR(255) NOT NULL,
+                `avatar` VARCHAR(500) DEFAULT NULL,
+                `meta` LONGTEXT DEFAULT NULL,
+                `is_read` TINYINT(1) NOT NULL DEFAULT 0,
+                `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                KEY `idx_notifications_identifier` (`identifier`, `created_at`),
+                KEY `idx_notifications_unread` (`identifier`, `is_read`, `created_at`),
+                KEY `idx_notifications_app` (`identifier`, `app_id`, `created_at`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci]],
+
+            [[CALL `sp_gcphone_cleanup_add_rule`(
+                'retention_notifications',
+                'delete',
+                'phone_notifications',
+                NULL,
+                'created_at < (NOW() - INTERVAL 45 DAY)',
+                60
+            )]]
+        }
     }
 }
 
