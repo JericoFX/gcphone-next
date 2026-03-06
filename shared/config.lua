@@ -181,8 +181,10 @@ Config.Snap = {
     LiveAudio = {
         Enabled = false,
         ListenDistance = 25.0,
+        LeaveBufferMeters = 2.0,
         MinVolume = 0.08,
         MaxVolume = 1.0,
+        VolumeSmoothing = 0.35,
         UpdateIntervalMs = 220,
     },
 }

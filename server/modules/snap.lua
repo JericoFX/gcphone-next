@@ -84,6 +84,14 @@ local function GetSnapLiveAudioConfig()
         maxVolume = minVolume
     end
 
+    local leaveBuffer = tonumber(config.LeaveBufferMeters) or 2.0
+    if leaveBuffer < 0.0 then leaveBuffer = 0.0 end
+    if leaveBuffer > 15.0 then leaveBuffer = 15.0 end
+
+    local volumeSmoothing = tonumber(config.VolumeSmoothing) or 0.35
+    if volumeSmoothing < 0.0 then volumeSmoothing = 0.0 end
+    if volumeSmoothing > 1.0 then volumeSmoothing = 1.0 end
+
     local updateIntervalMs = tonumber(config.UpdateIntervalMs) or 220
     if updateIntervalMs < 120 then updateIntervalMs = 120 end
     if updateIntervalMs > 1500 then updateIntervalMs = 1500 end
@@ -91,8 +99,10 @@ local function GetSnapLiveAudioConfig()
     return {
         enabled = config.Enabled == true,
         listenDistance = listenDistance,
+        leaveBuffer = leaveBuffer,
         minVolume = minVolume,
         maxVolume = maxVolume,
+        volumeSmoothing = volumeSmoothing,
         updateIntervalMs = math.floor(updateIntervalMs),
     }
 end
@@ -420,8 +430,10 @@ lib.callback.register('gcphone:snap:getLiveAudioSession', function(source, data)
         liveId = liveId,
         targetServerId = stream.source,
         listenDistance = cfg.listenDistance,
+        leaveBuffer = cfg.leaveBuffer,
         minVolume = cfg.minVolume,
         maxVolume = cfg.maxVolume,
+        volumeSmoothing = cfg.volumeSmoothing,
         updateIntervalMs = cfg.updateIntervalMs,
     }
 end)
