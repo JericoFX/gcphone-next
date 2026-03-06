@@ -378,8 +378,10 @@ local function GetLiveAudioStatus()
     }
 end
 
-local function StopLiveAudioSession()
+local function StopLiveAudioSession(reason)
+    local disabledLiveId = nil
     if LiveAudioSession then
+        disabledLiveId = LiveAudioSession.liveId
         PushLiveAudioState({
             liveId = LiveAudioSession.liveId,
             listening = false,
@@ -391,6 +393,16 @@ local function StopLiveAudioSession()
     LiveAudioSession = nil
     LiveAudioLastState = nil
     LiveAudioLastVolume = nil
+
+    if disabledLiveId then
+        SendNUIMessage({
+            action = 'gcphone:snap:proximityDisabled',
+            data = {
+                liveId = disabledLiveId,
+                reason = reason or 'stopped',
+            }
+        })
+    end
 end
 
 local function ClampNumber(value, min, max)
@@ -518,7 +530,7 @@ RegisterNUICallback('snapLiveAudioStart', function(data, cb)
 end)
 
 RegisterNUICallback('snapLiveAudioStop', function(_, cb)
-    StopLiveAudioSession()
+    StopLiveAudioSession('manual_stop')
     cb({ success = true })
 end)
 
@@ -549,7 +561,7 @@ end, false)
 RegisterCommand('gcphone_liveauudio_toggle', function()
     LiveAudioLocalEnabled = not LiveAudioLocalEnabled
     if not LiveAudioLocalEnabled then
-        StopLiveAudioSession()
+        StopLiveAudioSession('local_toggle')
     end
 
     lib.notify({
@@ -560,7 +572,7 @@ RegisterCommand('gcphone_liveauudio_toggle', function()
 end, false)
 
 RegisterCommand('gcphone_liveauudio_stop', function()
-    StopLiveAudioSession()
+    StopLiveAudioSession('command_stop')
     lib.notify({
         title = 'Snap Live Audio',
         description = 'Sesion de proximidad detenida',

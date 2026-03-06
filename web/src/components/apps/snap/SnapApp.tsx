@@ -99,6 +99,11 @@ interface SnapLiveProximityVolume {
   volume?: number;
 }
 
+interface SnapLiveProximityDisabled {
+  liveId?: number;
+  reason?: string;
+}
+
 interface SnapLiveAudioStatusResponse {
   active?: boolean;
   activeListen?: boolean;
@@ -336,6 +341,30 @@ export function SnapApp() {
     setLiveKitRemoteAudioVolume(volume);
   });
 
+  useNuiEvent<SnapLiveProximityDisabled>('gcphone:snap:proximityDisabled', (payload) => {
+    const live = activeLive();
+    if (!live) return;
+    if (Number(payload?.liveId) !== Number(live.id)) return;
+
+    setLiveAudioProximityEnabled(false);
+    setLiveAudioHeartbeatAt(0);
+    setLiveAudioNear(false);
+    setLiveAudioTargetOnline(true);
+    setLiveAudioDistanceMeters(-1);
+    setLiveKitRemoteAudioVolume(1);
+
+    const reason = String(payload?.reason || '');
+    if (reason === 'local_toggle') {
+      setStatusMessage('Audio de proximidad desactivado localmente');
+      return;
+    }
+    if (reason === 'command_stop' || reason === 'manual_stop') {
+      setStatusMessage('Audio live estandar activo');
+      return;
+    }
+    setStatusMessage('Audio live estandar por fallback');
+  });
+
   let lastSharedMedia = '';
   createEffect(() => {
     const params = router.params();
@@ -529,6 +558,10 @@ export function SnapApp() {
     const payload = await fetchNui<SnapLiveAudioStartResponse>('snapLiveAudioStart', { liveId }, { success: false, enabled: false });
     if (!payload?.success || !payload?.enabled) {
       setLiveKitRemoteAudioVolume(1);
+      const reason = String(payload?.reason || '');
+      if (reason === 'local_disabled') {
+        setStatusMessage('Audio de proximidad desactivado localmente');
+      }
       return;
     }
 
