@@ -99,19 +99,61 @@ local function GenerateUsername(source)
     return cleanName .. random
 end
 
+local function IsPublishJobAllowed(source)
+    local rules = Config.PublishJobs and Config.PublishJobs.chirp
+    if type(rules) ~= 'table' or #rules == 0 then
+        return true
+    end
+
+    local job = GetJob(source)
+    local jobName = type(job) == 'table' and tostring(job.name or ''):lower() or ''
+    if jobName == '' then
+        return false
+    end
+
+    for _, allowed in ipairs(rules) do
+        if tostring(allowed):lower() == jobName then
+            return true
+        end
+    end
+
+    return false
+end
+
 lib.callback.register('gcphone:chirp:getAccount', function(source)
     local identifier = GetIdentifier(source)
     if not identifier then return nil end
-    
-    local account = GetAccount(identifier)
-    
-    if not account then
-        local name = GetName(source) or 'User'
-        local username = GenerateUsername(source)
-        account = CreateAccount(identifier, username, name, nil)
+
+    return GetAccount(identifier)
+end)
+
+lib.callback.register('gcphone:chirp:createAccount', function(source, data)
+    local identifier = GetIdentifier(source)
+    if not identifier then return false, 'INVALID_PLAYER' end
+    if type(data) ~= 'table' then return false, 'INVALID_PAYLOAD' end
+
+    local username = SanitizeText(tostring(data.username or ''), 32):lower()
+    username = username:gsub('[^a-z0-9._-]', '')
+    if username == '' or #username < 3 then
+        return false, 'INVALID_USERNAME'
     end
-    
-    return account
+
+    local account = GetAccount(identifier)
+    if account then
+        return true, account
+    end
+
+    local occupied = MySQL.scalar.await(
+        'SELECT 1 FROM phone_chirp_accounts WHERE username = ? LIMIT 1',
+        { username }
+    )
+    if occupied then
+        return false, 'USERNAME_TAKEN'
+    end
+
+    local name = GetName(source) or 'User'
+    local created = CreateAccount(identifier, username, name, nil)
+    return created ~= nil, created
 end)
 
 lib.callback.register('gcphone:chirp:updateAccount', function(source, data)
@@ -151,11 +193,6 @@ lib.callback.register('gcphone:chirp:getTweets', function(source, data)
 
     if identifier then
         account = GetAccount(identifier)
-        if not account then
-            local name = GetName(source) or 'User'
-            local username = GenerateUsername(source)
-            account = CreateAccount(identifier, username, name, nil)
-        end
     end
     
     if tab == 'following' and account then
@@ -464,6 +501,10 @@ lib.callback.register('gcphone:chirp:follow', function(source, data)
     
     local account = GetAccount(identifier)
     if not account then return false end
+
+    if not IsPublishJobAllowed(source) then
+        return false, 'NOT_AUTHORIZED_JOB'
+    end
     
     if account.id == targetAccountId then
         return { following = false, requested = false, error = 'self_target' }

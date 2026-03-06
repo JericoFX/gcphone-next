@@ -29,6 +29,27 @@ local function NormalizeMediaType(value)
     return 'image'
 end
 
+local function IsPublishJobAllowed(source)
+    local rules = Config.PublishJobs and Config.PublishJobs.news
+    if type(rules) ~= 'table' or #rules == 0 then
+        return true
+    end
+
+    local job = GetJob(source)
+    local jobName = type(job) == 'table' and tostring(job.name or ''):lower() or ''
+    if jobName == '' then
+        return false
+    end
+
+    for _, allowed in ipairs(rules) do
+        if tostring(allowed):lower() == jobName then
+            return true
+        end
+    end
+
+    return false
+end
+
 local function SanitizeScaleform(data)
     data = type(data) == 'table' and data or {}
     local preset = SanitizeText(data.preset, 20)
@@ -125,6 +146,10 @@ lib.callback.register('gcphone:news:publishArticle', function(source, data)
         return false, 'RATE_LIMITED'
     end
     
+    if not IsPublishJobAllowed(source) then
+        return false, 'NOT_AUTHORIZED_JOB'
+    end
+
     local verified = false
     local job = GetJob(source)
     if job and (job.name == 'police' or job.name == 'news') then
@@ -170,6 +195,10 @@ lib.callback.register('gcphone:news:startLive', function(source, data)
         return false, 'RATE_LIMITED'
     end
     
+    if not IsPublishJobAllowed(source) then
+        return false, 'NOT_AUTHORIZED_JOB'
+    end
+
     local verified = false
     local job = GetJob(source)
     if job and (job.name == 'police' or job.name == 'news') then

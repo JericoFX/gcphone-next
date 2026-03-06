@@ -27,6 +27,35 @@ local function GetSnapAccount(identifier)
     return MySQL.single.await('SELECT id, username, display_name, avatar FROM phone_snap_accounts WHERE identifier = ?', { identifier })
 end
 
+local function GetClipsUsername(identifier)
+    if not identifier then return nil end
+    return MySQL.scalar.await(
+        'SELECT clips_username FROM phone_numbers WHERE identifier = ? LIMIT 1',
+        { identifier }
+    )
+end
+
+local function IsPublishJobAllowed(source)
+    local rules = Config.PublishJobs and Config.PublishJobs.clips
+    if type(rules) ~= 'table' or #rules == 0 then
+        return true
+    end
+
+    local job = GetJob(source)
+    local jobName = type(job) == 'table' and tostring(job.name or ''):lower() or ''
+    if jobName == '' then
+        return false
+    end
+
+    for _, allowed in ipairs(rules) do
+        if tostring(allowed):lower() == jobName then
+            return true
+        end
+    end
+
+    return false
+end
+
 local function RequirePlayerIdentifier(source)
     local src = tonumber(source)
     if not src or src <= 0 then return nil end
@@ -67,11 +96,12 @@ lib.callback.register('gcphone:clips:getFeed', function(source, data)
     local account = identifier and GetSnapAccount(identifier) or nil
 
     local clips = MySQL.query.await([[
-        SELECT c.*, a.username, a.display_name, a.avatar,
+        SELECT c.*, COALESCE(NULLIF(n.clips_username, ''), a.username) AS username, a.display_name, a.avatar,
                (SELECT COUNT(*) FROM phone_clips_comments WHERE clip_id = c.id) as comments_count,
                CASE WHEN c.account_id = ? THEN 1 ELSE 0 END as is_own
         FROM phone_clips_posts c
         JOIN phone_snap_accounts a ON c.account_id = a.id
+        LEFT JOIN phone_numbers n ON n.identifier = a.identifier
         ORDER BY c.created_at DESC
         LIMIT ? OFFSET ?
     ]], { account and account.id or 0, limit, offset }) or {}
@@ -104,11 +134,12 @@ lib.callback.register('gcphone:clips:getMyClips', function(source, data)
     if not account then return {} end
 
     local clips = MySQL.query.await([[
-        SELECT c.*, a.username, a.display_name, a.avatar,
+        SELECT c.*, COALESCE(NULLIF(n.clips_username, ''), a.username) AS username, a.display_name, a.avatar,
                (SELECT COUNT(*) FROM phone_clips_comments WHERE clip_id = c.id) as comments_count,
                1 as is_own
         FROM phone_clips_posts c
         JOIN phone_snap_accounts a ON c.account_id = a.id
+        LEFT JOIN phone_numbers n ON n.identifier = a.identifier
         WHERE c.account_id = ?
         ORDER BY c.created_at DESC
         LIMIT ? OFFSET ?
@@ -132,6 +163,15 @@ lib.callback.register('gcphone:clips:publish', function(source, data)
     local account = GetSnapAccount(identifier)
     if not account then return false, 'Account not found' end
 
+    local clipsUsername = GetClipsUsername(identifier)
+    if type(clipsUsername) ~= 'string' or clipsUsername == '' then
+        return false, 'CLIPS_USERNAME_REQUIRED'
+    end
+
+    if not IsPublishJobAllowed(source) then
+        return false, 'NOT_AUTHORIZED_JOB'
+    end
+
     local clipsMs = (Config.Security and Config.Security.RateLimits and Config.Security.RateLimits.clips) or 1500
     if HitRateLimit(source, 'clips_publish', clipsMs, 1) then
         return false, 'RATE_LIMITED'
@@ -147,9 +187,10 @@ lib.callback.register('gcphone:clips:publish', function(source, data)
     )
 
     local post = MySQL.single.await([[
-        SELECT c.*, a.username, a.display_name, a.avatar, 0 as comments_count, 1 as is_own
+        SELECT c.*, COALESCE(NULLIF(n.clips_username, ''), a.username) AS username, a.display_name, a.avatar, 0 as comments_count, 1 as is_own
         FROM phone_clips_posts c
         JOIN phone_snap_accounts a ON c.account_id = a.id
+        LEFT JOIN phone_numbers n ON n.identifier = a.identifier
         WHERE c.id = ?
     ]], { postId })
 
@@ -214,9 +255,10 @@ lib.callback.register('gcphone:clips:getComments', function(source, data)
     if not clipId then return {} end
 
     return MySQL.query.await([[
-        SELECT c.*, a.username, a.display_name, a.avatar
+        SELECT c.*, COALESCE(NULLIF(n.clips_username, ''), a.username) AS username, a.display_name, a.avatar
         FROM phone_clips_comments c
         JOIN phone_snap_accounts a ON c.account_id = a.id
+        LEFT JOIN phone_numbers n ON n.identifier = a.identifier
         WHERE c.clip_id = ?
         ORDER BY c.created_at ASC
     ]], { clipId }) or {}
@@ -240,9 +282,10 @@ lib.callback.register('gcphone:clips:addComment', function(source, data)
     )
 
     local comment = MySQL.single.await([[
-        SELECT c.*, a.username, a.display_name, a.avatar
+        SELECT c.*, COALESCE(NULLIF(n.clips_username, ''), a.username) AS username, a.display_name, a.avatar
         FROM phone_clips_comments c
         JOIN phone_snap_accounts a ON c.account_id = a.id
+        LEFT JOIN phone_numbers n ON n.identifier = a.identifier
         WHERE c.id = ?
     ]], { commentId })
 
