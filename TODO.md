@@ -42,16 +42,16 @@ Implementar las ideas tecnicas buenas de `lb-phone` en nuestro telefono, sin cop
 - [ ] Auditoria final de self-target, duplicados, race conditions y responses consistentes.
 
 ### 7) Audio live/proximidad (LB: hearNearby + recordNearby, adaptado)
-- [ ] Definir modo de audio para lives Snap sin copiar LB 1:1.
-- [ ] Mantener `snaplive-*` en LiveKit como base principal.
-- [ ] Agregar capa opcional de proximidad (feature flag):
-  - [ ] Near listeners entran/salen por distancia configurable.
-  - [ ] Volumen dinamico por distancia.
-  - [ ] Owner/participantes con prioridad de mezcla.
+- [x] Definir modo de audio para lives Snap sin copiar LB 1:1.
+- [x] Mantener `snaplive-*` en LiveKit como base principal.
+- [x] Agregar capa opcional de proximidad (feature flag):
+  - [x] Near listeners entran/salen por distancia configurable.
+  - [x] Volumen dinamico por distancia.
+  - [x] Owner/participantes con prioridad de mezcla.
 - [ ] No persistir audio ni mensajes live (seguir efimero).
-- [ ] Moderacion de owner aplicada tambien al audio (mute/kick de participantes en vivo).
+- [x] Moderacion de owner aplicada tambien al audio (mute/kick de participantes en vivo).
 - [ ] Guardar compatibilidad con pma-voice/mumble cuando este disponible.
-- [ ] Fallback seguro: si falla proximidad, live sigue funcionando por LiveKit normal.
+- [x] Fallback seguro: si falla proximidad, live sigue funcionando por LiveKit normal.
 
 ## Lo que falta hacer manana (orden recomendado)
 
@@ -90,10 +90,10 @@ Implementar las ideas tecnicas buenas de `lb-phone` en nuestro telefono, sin cop
 - [ ] Correr build/lint final y corregir errores.
 
 ## J - Audio (implementacion por fases)
-- [ ] Fase J1: contrato server/client de proximidad (sin activar por defecto).
-- [ ] Fase J2: eventos de entrada/salida de radio de escucha para live.
-- [ ] Fase J3: control de volumen por distancia + pruebas de rendimiento.
-- [ ] Fase J4: controles owner (mute/kick) reflejados en UI live.
+- [x] Fase J1: contrato server/client de proximidad (sin activar por defecto).
+- [x] Fase J2: eventos de entrada/salida de radio de escucha para live.
+- [x] Fase J3: control de volumen por distancia + pruebas de rendimiento.
+- [x] Fase J4: controles owner (mute/kick) reflejados en UI live.
 - [ ] Fase J5: smoke test con 3 escenarios:
   - [ ] LiveKit solo.
   - [ ] LiveKit + proximidad activa.

@@ -4,7 +4,11 @@ let room: Room | null = null;
 let callTimeoutId: ReturnType<typeof setTimeout> | null = null;
 let callStartTime: number | null = null;
 let maxDuration: number = 0;
-const remoteAudioByTrackSid = new Map<string, HTMLMediaElement>();
+const remoteAudioByTrackSid = new Map<string, { element: HTMLMediaElement; participantIdentity: string }>();
+let remoteAudioMasterVolume = 1;
+let remoteAudioPriorityIdentity: string | null = null;
+let remoteAudioPriorityScale = 1;
+let remoteAudioOthersScale = 1;
 
 function clearRemoteAudioRegistry() {
   remoteAudioByTrackSid.clear();
@@ -17,9 +21,30 @@ function clampVolume(value: number): number {
   return value;
 }
 
-function registerRemoteAudio(trackSid: string, element: HTMLMediaElement) {
+function getParticipantScale(participantIdentity: string): number {
+  if (!remoteAudioPriorityIdentity || !participantIdentity) return 1;
+  if (participantIdentity === remoteAudioPriorityIdentity) {
+    return clampVolume(remoteAudioPriorityScale);
+  }
+  return clampVolume(remoteAudioOthersScale);
+}
+
+function applyRemoteAudioElementVolume(element: HTMLMediaElement, participantIdentity: string) {
+  const scaled = clampVolume(remoteAudioMasterVolume * getParticipantScale(participantIdentity));
+  element.volume = scaled;
+  element.muted = scaled <= 0.001;
+}
+
+function applyRemoteAudioMix() {
+  remoteAudioByTrackSid.forEach(({ element, participantIdentity }) => {
+    applyRemoteAudioElementVolume(element, participantIdentity);
+  });
+}
+
+function registerRemoteAudio(trackSid: string, element: HTMLMediaElement, participantIdentity: string) {
   if (!trackSid) return;
-  remoteAudioByTrackSid.set(trackSid, element);
+  remoteAudioByTrackSid.set(trackSid, { element, participantIdentity });
+  applyRemoteAudioElementVolume(element, participantIdentity);
 }
 
 function unregisterRemoteAudio(trackSid: string) {
@@ -100,7 +125,7 @@ export async function connectLiveKit(url: string, token: string, maxDurationSeco
       if (track.kind === Track.Kind.Video) {
         (element as HTMLVideoElement).playsInline = true;
       } else {
-        registerRemoteAudio(publication.trackSid, element);
+        registerRemoteAudio(publication.trackSid, element, participant.identity || '');
       }
       handlers?.onTrackSubscribed?.({
         participantIdentity: participant.identity,
@@ -179,14 +204,23 @@ export function disconnectLiveKit() {
   room.disconnect();
   room = null;
   clearRemoteAudioRegistry();
+  remoteAudioMasterVolume = 1;
+  remoteAudioPriorityIdentity = null;
+  remoteAudioPriorityScale = 1;
+  remoteAudioOthersScale = 1;
   callStartTime = null;
   maxDuration = 0;
 }
 
 export function setLiveKitRemoteAudioVolume(volume: number) {
-  const nextVolume = clampVolume(volume);
-  remoteAudioByTrackSid.forEach((element) => {
-    element.volume = nextVolume;
-    element.muted = nextVolume <= 0.001;
-  });
+  remoteAudioMasterVolume = clampVolume(volume);
+  applyRemoteAudioMix();
+}
+
+export function setLiveKitRemoteAudioPriority(identity?: string | null, options?: { priorityScale?: number; othersScale?: number }) {
+  const normalizedIdentity = typeof identity === 'string' ? identity.trim() : '';
+  remoteAudioPriorityIdentity = normalizedIdentity.length > 0 ? normalizedIdentity : null;
+  remoteAudioPriorityScale = clampVolume(options?.priorityScale ?? 1);
+  remoteAudioOthersScale = clampVolume(options?.othersScale ?? 1);
+  applyRemoteAudioMix();
 }

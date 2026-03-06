@@ -5,7 +5,7 @@ import { timeAgo } from '../../../utils/misc';
 import { resolveMediaType, sanitizeMediaUrl, sanitizeText } from '../../../utils/sanitize';
 import { useNuiEvent } from '../../../utils/useNui';
 import { fetchLiveKitToken, fetchSocketToken } from '../../../utils/realtimeAuth';
-import { connectLiveKit, disconnectLiveKit, setLiveKitCameraEnabled, setLiveKitMicrophoneEnabled, setLiveKitRemoteAudioVolume } from '../../../utils/livekit';
+import { connectLiveKit, disconnectLiveKit, setLiveKitCameraEnabled, setLiveKitMicrophoneEnabled, setLiveKitRemoteAudioPriority, setLiveKitRemoteAudioVolume } from '../../../utils/livekit';
 import { startMockLiveFeed } from '../../../utils/liveMock';
 import {
   connectSnapLiveSocket,
@@ -82,6 +82,9 @@ interface SnapLiveAudioStartResponse {
   success?: boolean;
   enabled?: boolean;
   reason?: string;
+  config?: {
+    updateIntervalMs?: number;
+  };
 }
 
 interface SnapLiveProximityState {
@@ -150,6 +153,8 @@ export function SnapApp() {
   const [liveStreaming, setLiveStreaming] = createSignal(false);
   const [liveConnected, setLiveConnected] = createSignal(false);
   const [liveAudioProximityEnabled, setLiveAudioProximityEnabled] = createSignal(false);
+  const [liveAudioHeartbeatAt, setLiveAudioHeartbeatAt] = createSignal(0);
+  const [liveAudioWatchdogMs, setLiveAudioWatchdogMs] = createSignal(2400);
 
   // Create Post
   const [showCreatePost, setShowCreatePost] = createSignal(false);
@@ -160,6 +165,7 @@ export function SnapApp() {
   let storyTick: number | undefined;
   let floatingTimers = new Map<string, number>();
   let stopSnapMockFeed: (() => void) | undefined;
+  let liveAudioWatchdogTimer: number | undefined;
 
   // FAB Tooltip
   let fabTimeout: number;
@@ -250,6 +256,7 @@ export function SnapApp() {
     if (!live) return;
     if (!liveAudioProximityEnabled()) return;
     if (Number(payload?.liveId) !== Number(live.id)) return;
+    setLiveAudioHeartbeatAt(Date.now());
 
     if (viewerMuted()) {
       setStatusMessage('Estas silenciado en este live');
@@ -277,6 +284,7 @@ export function SnapApp() {
     if (!live) return;
     if (!liveAudioProximityEnabled()) return;
     if (Number(payload?.liveId) !== Number(live.id)) return;
+    setLiveAudioHeartbeatAt(Date.now());
     if (viewerMuted()) {
       setLiveKitRemoteAudioVolume(0);
       return;
@@ -306,10 +314,50 @@ export function SnapApp() {
     void stopLiveAudioProximity();
     disconnectSnapLiveSocket();
     disconnectLiveKit();
+    if (liveAudioWatchdogTimer) {
+      window.clearInterval(liveAudioWatchdogTimer);
+      liveAudioWatchdogTimer = undefined;
+    }
     if (storyTick) {
       window.clearInterval(storyTick);
       storyTick = undefined;
     }
+  });
+
+  createEffect(() => {
+    if (liveAudioWatchdogTimer) {
+      window.clearInterval(liveAudioWatchdogTimer);
+      liveAudioWatchdogTimer = undefined;
+    }
+
+    if (!liveAudioProximityEnabled()) {
+      return;
+    }
+
+    liveAudioWatchdogTimer = window.setInterval(() => {
+      if (!liveAudioProximityEnabled()) return;
+      if (!activeLive()) return;
+      if (viewerMuted()) return;
+
+      const heartbeatAt = liveAudioHeartbeatAt();
+      const maxIdleMs = liveAudioWatchdogMs();
+      if (heartbeatAt <= 0 || maxIdleMs < 1000) return;
+
+      if (Date.now() - heartbeatAt <= maxIdleMs) return;
+
+      setLiveAudioProximityEnabled(false);
+      setLiveKitRemoteAudioPriority(null);
+      setLiveKitRemoteAudioVolume(1);
+      setStatusMessage('Audio live estandar por fallback');
+      void fetchNui('snapLiveAudioStop', {}, { success: true });
+    }, 1000);
+
+    onCleanup(() => {
+      if (liveAudioWatchdogTimer) {
+        window.clearInterval(liveAudioWatchdogTimer);
+        liveAudioWatchdogTimer = undefined;
+      }
+    });
   });
 
   createEffect(() => {
@@ -425,6 +473,9 @@ export function SnapApp() {
 
   const startLiveAudioProximity = async (liveId: number, owner: boolean) => {
     setLiveAudioProximityEnabled(false);
+    setLiveAudioHeartbeatAt(0);
+    setLiveAudioWatchdogMs(2400);
+    setLiveKitRemoteAudioPriority(null);
     if (owner || liveId < 1) {
       setLiveKitRemoteAudioVolume(1);
       return;
@@ -436,11 +487,20 @@ export function SnapApp() {
       return;
     }
 
+    const intervalMs = Number(payload?.config?.updateIntervalMs);
+    if (Number.isFinite(intervalMs) && intervalMs > 0) {
+      const heartbeatWindow = Math.max(1600, Math.min(12000, Math.floor(intervalMs * 6)));
+      setLiveAudioWatchdogMs(heartbeatWindow);
+    }
+    setLiveAudioHeartbeatAt(Date.now());
     setLiveAudioProximityEnabled(true);
   };
 
   const stopLiveAudioProximity = async () => {
     setLiveAudioProximityEnabled(false);
+    setLiveAudioHeartbeatAt(0);
+    setLiveAudioWatchdogMs(2400);
+    setLiveKitRemoteAudioPriority(null);
     setLiveKitRemoteAudioVolume(1);
     await fetchNui('snapLiveAudioStop', {}, { success: true });
   };
@@ -455,6 +515,7 @@ export function SnapApp() {
     setLiveReactions([]);
     setMutedUsers([]);
     setViewerMuted(false);
+    setLiveKitRemoteAudioPriority(live.username || null, { priorityScale: 1.0, othersScale: 0.45 });
 
     if (Number(live.id) < 0) {
       setLiveConnected(true);
@@ -571,6 +632,7 @@ export function SnapApp() {
     setMutedUsers([]);
     setViewerMuted(false);
     setLiveAudioProximityEnabled(false);
+    setLiveKitRemoteAudioPriority(null);
     if (isMock) {
       setLiveStreams((prev) => prev.filter((entry) => Number(entry.id) >= 0));
       return;
