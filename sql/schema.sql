@@ -135,6 +135,7 @@ CREATE TABLE IF NOT EXISTS `phone_chirp_accounts` (
     `avatar` VARCHAR(255) DEFAULT NULL,
     `bio` VARCHAR(160) DEFAULT NULL,
     `verified` TINYINT(1) DEFAULT 0,
+    `is_private` TINYINT(1) DEFAULT 0,
     `followers` INT DEFAULT 0,
     `following` INT DEFAULT 0,
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -399,11 +400,31 @@ CREATE TABLE IF NOT EXISTS `phone_friend_requests` (
     `from_identifier` VARCHAR(50) NOT NULL,
     `to_identifier` VARCHAR(50) NOT NULL,
     `type` ENUM('chirp', 'snap') NOT NULL,
-    `status` ENUM('pending', 'accepted', 'rejected') DEFAULT 'pending',
+    `status` ENUM('pending', 'accepted', 'rejected', 'cancelled') DEFAULT 'pending',
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    `responded_at` TIMESTAMP NULL DEFAULT NULL,
     KEY `idx_from` (`from_identifier`),
     KEY `idx_to` (`to_identifier`),
+    KEY `idx_to_type_status` (`to_identifier`, `type`, `status`),
+    KEY `idx_from_type_status` (`from_identifier`, `type`, `status`),
     UNIQUE KEY `idx_request` (`from_identifier`, `to_identifier`, `type`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Social notifications (deduplicated per app + event + reference)
+CREATE TABLE IF NOT EXISTS `phone_social_notifications` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `account_identifier` VARCHAR(50) NOT NULL,
+    `from_identifier` VARCHAR(50) NOT NULL,
+    `app_type` ENUM('chirp', 'snap') NOT NULL,
+    `notification_type` ENUM('follow_request', 'follow_accepted', 'like', 'comment', 'mention') NOT NULL,
+    `reference_id` INT DEFAULT NULL,
+    `reference_type` VARCHAR(20) DEFAULT NULL,
+    `content_preview` VARCHAR(100) DEFAULT NULL,
+    `is_read` TINYINT(1) DEFAULT 0,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY `idx_notification_unique` (`account_identifier`, `from_identifier`, `app_type`, `notification_type`, `reference_id`),
+    KEY `idx_account_unread` (`account_identifier`, `is_read`, `created_at`),
+    KEY `idx_created` (`created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Shared locations

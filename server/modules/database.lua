@@ -958,6 +958,44 @@ local MIGRATIONS = {
                 KEY `idx_scanned_at` (`scanned_at`)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci]]
         }
+    },
+
+    {
+        version = 9,
+        name = "social_follow_request_foundation",
+        description = "Add Chirp privacy, richer follow requests and social notifications",
+        statements = {
+            [[ALTER TABLE `phone_chirp_accounts`
+                ADD COLUMN IF NOT EXISTS `is_private` TINYINT(1) DEFAULT 0 AFTER `verified`]],
+
+            [[ALTER TABLE `phone_friend_requests`
+                MODIFY COLUMN `status` ENUM('pending', 'accepted', 'rejected', 'cancelled') DEFAULT 'pending']],
+
+            [[ALTER TABLE `phone_friend_requests`
+                ADD COLUMN IF NOT EXISTS `responded_at` TIMESTAMP NULL DEFAULT NULL AFTER `created_at`]],
+
+            [[CREATE INDEX IF NOT EXISTS `idx_friend_requests_to_type_status`
+                ON `phone_friend_requests` (`to_identifier`, `type`, `status`)]],
+
+            [[CREATE INDEX IF NOT EXISTS `idx_friend_requests_from_type_status`
+                ON `phone_friend_requests` (`from_identifier`, `type`, `status`)]],
+
+            [[CREATE TABLE IF NOT EXISTS `phone_social_notifications` (
+                `id` INT AUTO_INCREMENT PRIMARY KEY,
+                `account_identifier` VARCHAR(50) NOT NULL,
+                `from_identifier` VARCHAR(50) NOT NULL,
+                `app_type` ENUM('chirp', 'snap') NOT NULL,
+                `notification_type` ENUM('follow_request', 'follow_accepted', 'like', 'comment', 'mention') NOT NULL,
+                `reference_id` INT DEFAULT NULL,
+                `reference_type` VARCHAR(20) DEFAULT NULL,
+                `content_preview` VARCHAR(100) DEFAULT NULL,
+                `is_read` TINYINT(1) DEFAULT 0,
+                `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY `idx_notification_unique` (`account_identifier`, `from_identifier`, `app_type`, `notification_type`, `reference_id`),
+                KEY `idx_account_unread` (`account_identifier`, `is_read`, `created_at`),
+                KEY `idx_created` (`created_at`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci]]
+        }
     }
 }
 
