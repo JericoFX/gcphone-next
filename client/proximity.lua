@@ -375,6 +375,20 @@ local function ComputeLiveAudioVolume(distance, maxDistance, minVolume, maxVolum
     return ClampNumber(volume, 0.0, 1.0)
 end
 
+local function SmoothVolume(previous, target, factor)
+    local f = ClampNumber(factor, 0.0, 1.0)
+    if f <= 0.0 then
+        return target
+    end
+
+    local prev = tonumber(previous)
+    if not prev then
+        return target
+    end
+
+    return prev + (target - prev) * f
+end
+
 RegisterNUICallback('snapLiveAudioStart', function(data, cb)
     local liveId = tonumber(type(data) == 'table' and data.liveId or nil)
     if not liveId or liveId < 1 then
@@ -395,9 +409,13 @@ RegisterNUICallback('snapLiveAudioStart', function(data, cb)
             liveId = liveId,
             targetServerId = tonumber(payload.targetServerId),
             listenDistance = ClampNumber(payload.listenDistance, 3.0, 80.0),
+            leaveBuffer = ClampNumber(payload.leaveBuffer, 0.0, 15.0),
             minVolume = ClampNumber(payload.minVolume, 0.0, 1.0),
             maxVolume = ClampNumber(payload.maxVolume, 0.0, 1.0),
+            volumeSmoothing = ClampNumber(payload.volumeSmoothing, 0.0, 1.0),
             updateIntervalMs = math.floor(ClampNumber(payload.updateIntervalMs, 120, 1500)),
+            activeListen = false,
+            currentVolume = nil,
         }
 
         if LiveAudioSession.maxVolume < LiveAudioSession.minVolume then
@@ -412,8 +430,10 @@ RegisterNUICallback('snapLiveAudioStart', function(data, cb)
             enabled = true,
             config = {
                 listenDistance = LiveAudioSession.listenDistance,
+                leaveBuffer = LiveAudioSession.leaveBuffer,
                 minVolume = LiveAudioSession.minVolume,
                 maxVolume = LiveAudioSession.maxVolume,
+                volumeSmoothing = LiveAudioSession.volumeSmoothing,
                 updateIntervalMs = LiveAudioSession.updateIntervalMs,
             }
         })
@@ -444,27 +464,37 @@ CreateThread(function()
             Wait(500)
         else
             local waitMs = session.updateIntervalMs or 220
+            local playerPed = cache.ped
             local targetPlayer = GetPlayerFromServerId(session.targetServerId or -1)
             local targetOnline = targetPlayer ~= -1
             local listening = false
             local distance = -1.0
-            local volume = 1.0
+            local desiredVolume = 0.0
 
-            if targetOnline then
-                local targetPed = GetPlayerPed(targetPlayer)
-                if targetPed and targetPed > 0 then
-                    local fromCoords = GetEntityCoords(cache.ped)
-                    local toCoords = GetEntityCoords(targetPed)
-                    distance = #(fromCoords - toCoords)
-                    listening = distance <= session.listenDistance
+            if playerPed and playerPed > 0 then
+                if targetOnline then
+                    local targetPed = GetPlayerPed(targetPlayer)
+                    if targetPed and targetPed > 0 then
+                        local fromCoords = GetEntityCoords(playerPed)
+                        local toCoords = GetEntityCoords(targetPed)
+                        distance = #(fromCoords - toCoords)
+                        if session.activeListen then
+                            listening = distance <= (session.listenDistance + session.leaveBuffer)
+                        else
+                            listening = distance <= session.listenDistance
+                        end
 
-                    if listening then
-                        volume = ComputeLiveAudioVolume(distance, session.listenDistance, session.minVolume, session.maxVolume)
-                    else
-                        volume = 0.0
+                        session.activeListen = listening
+
+                        if listening then
+                            desiredVolume = ComputeLiveAudioVolume(distance, session.listenDistance, session.minVolume, session.maxVolume)
+                        end
                     end
                 end
             end
+
+            session.currentVolume = SmoothVolume(session.currentVolume, desiredVolume, session.volumeSmoothing)
+            local volume = ClampNumber(session.currentVolume, 0.0, 1.0)
 
             local nextState = ('%s|%s|%s'):format(session.liveId, tostring(listening), tostring(targetOnline))
             if nextState ~= LiveAudioLastState then
