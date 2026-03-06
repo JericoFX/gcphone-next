@@ -161,6 +161,9 @@ export function SnapApp() {
   const [liveAudioProximityEnabled, setLiveAudioProximityEnabled] = createSignal(false);
   const [liveAudioHeartbeatAt, setLiveAudioHeartbeatAt] = createSignal(0);
   const [liveAudioWatchdogMs, setLiveAudioWatchdogMs] = createSignal(2400);
+  const [liveAudioNear, setLiveAudioNear] = createSignal(false);
+  const [liveAudioTargetOnline, setLiveAudioTargetOnline] = createSignal(true);
+  const [liveAudioDistanceMeters, setLiveAudioDistanceMeters] = createSignal(-1);
 
   // Create Post
   const [showCreatePost, setShowCreatePost] = createSignal(false);
@@ -263,6 +266,9 @@ export function SnapApp() {
     if (!liveAudioProximityEnabled()) return;
     if (Number(payload?.liveId) !== Number(live.id)) return;
     setLiveAudioHeartbeatAt(Date.now());
+    setLiveAudioTargetOnline(payload?.targetOnline !== false);
+    setLiveAudioNear(payload?.listening === true);
+    setLiveAudioDistanceMeters(Number.isFinite(Number(payload?.distance)) ? Number(payload?.distance) : -1);
 
     if (viewerMuted()) {
       setStatusMessage('Estas silenciado en este live');
@@ -481,6 +487,9 @@ export function SnapApp() {
     setLiveAudioProximityEnabled(false);
     setLiveAudioHeartbeatAt(0);
     setLiveAudioWatchdogMs(2400);
+    setLiveAudioNear(false);
+    setLiveAudioTargetOnline(true);
+    setLiveAudioDistanceMeters(-1);
     setLiveKitRemoteAudioPriority(null);
     if (owner || liveId < 1) {
       setLiveKitRemoteAudioVolume(1);
@@ -530,6 +539,9 @@ export function SnapApp() {
     setLiveAudioProximityEnabled(false);
     setLiveAudioHeartbeatAt(0);
     setLiveAudioWatchdogMs(2400);
+    setLiveAudioNear(false);
+    setLiveAudioTargetOnline(true);
+    setLiveAudioDistanceMeters(-1);
     setLiveKitRemoteAudioPriority(null);
     setLiveKitRemoteAudioVolume(1);
     await fetchNui('snapLiveAudioStop', {}, { success: true });
@@ -546,6 +558,9 @@ export function SnapApp() {
     setMutedUsers([]);
     setViewerMuted(false);
     setLiveKitRemoteAudioPriority(live.username || null, { priorityScale: 1.0, othersScale: 0.45 });
+    setLiveAudioNear(false);
+    setLiveAudioTargetOnline(true);
+    setLiveAudioDistanceMeters(-1);
 
     if (Number(live.id) < 0) {
       setLiveConnected(true);
@@ -663,6 +678,9 @@ export function SnapApp() {
     setMutedUsers([]);
     setViewerMuted(false);
     setLiveAudioProximityEnabled(false);
+    setLiveAudioNear(false);
+    setLiveAudioTargetOnline(true);
+    setLiveAudioDistanceMeters(-1);
     setLiveKitRemoteAudioPriority(null);
     if (isMock) {
       setLiveStreams((prev) => prev.filter((entry) => Number(entry.id) >= 0));
@@ -1249,7 +1267,27 @@ export function SnapApp() {
                 {isMockLive() ? 'MOCK LIVE' : (liveConnected() ? 'EN VIVO' : 'Conectando...')}
               </span>
             </div>
-            <button class={styles.liveChatToggle} onClick={() => setLiveChatOpen((prev) => !prev)}>💬</button>
+            <div class={styles.liveTopBarRight}>
+              <Show when={liveAudioProximityEnabled() && !isLiveOwner()}>
+                <div
+                  class={styles.liveAudioBadge}
+                  classList={{
+                    [styles.liveAudioBadgeNear]: liveAudioNear() && liveAudioTargetOnline(),
+                    [styles.liveAudioBadgeFar]: !liveAudioNear() && liveAudioTargetOnline(),
+                    [styles.liveAudioBadgeOffline]: !liveAudioTargetOnline(),
+                  }}
+                >
+                  <span class={styles.liveAudioBadgeDot} />
+                  <span>
+                    {!liveAudioTargetOnline() ? 'Sin emisor' : (liveAudioNear() ? 'Audio cercano' : 'Fuera de rango')}
+                  </span>
+                  <Show when={liveAudioDistanceMeters() >= 0}>
+                    <small>{Math.round(liveAudioDistanceMeters())}m</small>
+                  </Show>
+                </div>
+              </Show>
+              <button class={styles.liveChatToggle} onClick={() => setLiveChatOpen((prev) => !prev)}>💬</button>
+            </div>
           </div>
 
           <div class={styles.liveVideoCanvas}>
