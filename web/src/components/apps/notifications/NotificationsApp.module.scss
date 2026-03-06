@@ -1,0 +1,92 @@
+.root {
+  display: grid;
+  gap: 10px;
+}
+
+.topMeta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.topMeta button {
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  border-radius: 8px;
+  padding: 6px 10px;
+}
+
+.error {
+  margin: 0;
+  font-size: 12px;
+  color: #ffc8c8;
+}
+
+.empty {
+  margin: 12px 0 0;
+  text-align: center;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  background: rgba(10, 13, 26, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 8px;
+}
+
+.itemUnread {
+  border-color: rgba(88, 126, 255, 0.65);
+}
+
+.itemMain {
+  text-align: left;
+  background: transparent;
+  border: 0;
+  color: #fff;
+  padding: 0;
+}
+
+.itemHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.itemHeader strong {
+  font-size: 13px;
+}
+
+.itemHeader small {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.58);
+}
+
+.itemMain p {
+  margin: 6px 0;
+  font-size: 12px;
+}
+
+.itemMain span {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.56);
+}
+
+.deleteBtn {
+  align-self: center;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+  border-radius: 8px;
+  padding: 6px 8px;
+  font-size: 11px;
+}
