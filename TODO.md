@@ -99,6 +99,7 @@ Implementar las ideas tecnicas buenas de `lb-phone` en nuestro telefono, sin cop
   - [ ] LiveKit + proximidad activa.
   - [ ] Degradacion/fallback sin cortar stream.
   - [x] Herramienta QA: comando `gcphone_liveauudio_status` para diagnostico rapido.
+  - [x] Herramienta QA: comando `gcphone_liveauudio_stop` para cortar proximidad en caliente.
 
 ## Regla de diseño (importante)
 - [ ] No copiar layout/estructura de LB.

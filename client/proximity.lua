@@ -374,6 +374,21 @@ local function GetLiveAudioStatus()
     }
 end
 
+local function StopLiveAudioSession()
+    if LiveAudioSession then
+        PushLiveAudioState({
+            liveId = LiveAudioSession.liveId,
+            listening = false,
+            targetOnline = false,
+            distance = -1,
+        })
+    end
+
+    LiveAudioSession = nil
+    LiveAudioLastState = nil
+    LiveAudioLastVolume = nil
+end
+
 local function ClampNumber(value, min, max)
     local n = tonumber(value)
     if not n then return min end
@@ -494,18 +509,7 @@ RegisterNUICallback('snapLiveAudioStart', function(data, cb)
 end)
 
 RegisterNUICallback('snapLiveAudioStop', function(_, cb)
-    if LiveAudioSession then
-        PushLiveAudioState({
-            liveId = LiveAudioSession.liveId,
-            listening = false,
-            targetOnline = false,
-            distance = -1,
-        })
-    end
-
-    LiveAudioSession = nil
-    LiveAudioLastState = nil
-    LiveAudioLastVolume = nil
+    StopLiveAudioSession()
     cb({ success = true })
 end)
 
@@ -531,6 +535,15 @@ RegisterCommand('gcphone_liveauudio_status', function()
             type = 'inform'
         })
     end
+end, false)
+
+RegisterCommand('gcphone_liveauudio_stop', function()
+    StopLiveAudioSession()
+    lib.notify({
+        title = 'Snap Live Audio',
+        description = 'Sesion de proximidad detenida',
+        type = 'inform'
+    })
 end, false)
 
 CreateThread(function()
