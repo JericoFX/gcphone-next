@@ -50,7 +50,7 @@ Implementar las ideas tecnicas buenas de `lb-phone` en nuestro telefono, sin cop
   - [x] Owner/participantes con prioridad de mezcla.
 - [ ] No persistir audio ni mensajes live (seguir efimero).
 - [x] Moderacion de owner aplicada tambien al audio (mute/kick de participantes en vivo).
-- [ ] Guardar compatibilidad con pma-voice/mumble cuando este disponible.
+- [x] Guardar compatibilidad con pma-voice/mumble cuando este disponible.
 - [x] Fallback seguro: si falla proximidad, live sigue funcionando por LiveKit normal.
 
 ## Lo que falta hacer manana (orden recomendado)
