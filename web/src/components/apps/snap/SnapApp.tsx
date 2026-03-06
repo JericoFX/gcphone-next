@@ -105,6 +105,36 @@ interface SnapLiveAudioStatusResponse {
   currentVolume?: number;
 }
 
+function cleanLiveText(value: unknown, maxLength: number): string {
+  const raw = typeof value === 'string' ? value : '';
+  const normalized = raw.replace(/[\u0000-\u001f\u007f]/g, '').trim();
+  if (!normalized) return '';
+  if (normalized.length > maxLength) {
+    return normalized.slice(0, maxLength);
+  }
+  return normalized;
+}
+
+function normalizeLiveMessage(input: unknown): SnapLiveSocketMessage | null {
+  if (!input || typeof input !== 'object') return null;
+
+  const source = input as Record<string, unknown>;
+  const id = cleanLiveText(source.id, 64);
+  const username = cleanLiveText(source.username, 32);
+  const content = cleanLiveText(source.content, 400);
+
+  if (!id || !username || !content) return null;
+
+  const normalized = {
+    ...(source as SnapLiveSocketMessage),
+    id,
+    username,
+    content,
+  } as SnapLiveSocketMessage;
+
+  return normalized;
+}
+
 const SNAP_MOCK_LIVE_ID = -999001;
 const SNAP_MOCK_USERS = ['mika', 'luna', 'santi', 'mery', 'rodrigo'];
 const SNAP_MOCK_LINES = [
@@ -586,13 +616,15 @@ export function SnapApp() {
       if (auth?.success && auth.host && auth.token) {
         connectSnapLiveSocket(auth.host, auth.token, {
           onMessage: (message) => {
-            setLiveMessages((prev) => [...prev.slice(-19), message]);
-            setLiveFloating((prev) => [...prev.slice(-3), message]);
+            const safeMessage = normalizeLiveMessage(message);
+            if (!safeMessage) return;
+            setLiveMessages((prev) => [...prev.slice(-19), safeMessage]);
+            setLiveFloating((prev) => [...prev.slice(-3), safeMessage]);
             const timer = window.setTimeout(() => {
-              setLiveFloating((prev) => prev.filter((entry) => entry.id !== message.id));
-              floatingTimers.delete(message.id);
+              setLiveFloating((prev) => prev.filter((entry) => entry.id !== safeMessage.id));
+              floatingTimers.delete(safeMessage.id);
             }, 4200);
-            floatingTimers.set(message.id, timer);
+            floatingTimers.set(safeMessage.id, timer);
           },
           onReaction: (reaction) => {
             setLiveReactions((prev) => [...prev.slice(-10), reaction]);
@@ -741,13 +773,15 @@ export function SnapApp() {
         isMention: false,
         createdAt: Date.now(),
       };
-      setLiveMessages((prev) => [...prev.slice(-19), message]);
-      setLiveFloating((prev) => [...prev.slice(-3), message]);
+      const safeMessage = normalizeLiveMessage(message);
+      if (!safeMessage) return;
+      setLiveMessages((prev) => [...prev.slice(-19), safeMessage]);
+      setLiveFloating((prev) => [...prev.slice(-3), safeMessage]);
       const timer = window.setTimeout(() => {
-        setLiveFloating((prev) => prev.filter((entry) => entry.id !== message.id));
-        floatingTimers.delete(message.id);
+        setLiveFloating((prev) => prev.filter((entry) => entry.id !== safeMessage.id));
+        floatingTimers.delete(safeMessage.id);
       }, 4200);
-      floatingTimers.set(message.id, timer);
+      floatingTimers.set(safeMessage.id, timer);
       setLiveMessageInput('');
       return;
     }
@@ -873,13 +907,15 @@ export function SnapApp() {
           isMention: entry.isMention,
           createdAt: entry.createdAt,
         };
-        setLiveMessages((prev) => [...prev.slice(-19), message]);
-        setLiveFloating((prev) => [...prev.slice(-3), message]);
+        const safeMessage = normalizeLiveMessage(message);
+        if (!safeMessage) return;
+        setLiveMessages((prev) => [...prev.slice(-19), safeMessage]);
+        setLiveFloating((prev) => [...prev.slice(-3), safeMessage]);
         const timer = window.setTimeout(() => {
-          setLiveFloating((prev) => prev.filter((msg) => msg.id !== message.id));
-          floatingTimers.delete(message.id);
+          setLiveFloating((prev) => prev.filter((msg) => msg.id !== safeMessage.id));
+          floatingTimers.delete(safeMessage.id);
         }, 4200);
-        floatingTimers.set(message.id, timer);
+        floatingTimers.set(safeMessage.id, timer);
       },
       onReaction: (entry) => {
         const payload: SnapLiveReaction = {
