@@ -219,6 +219,13 @@ function normalizeText(value: string, maxLength: number): string | null {
   return normalized;
 }
 
+function normalizeToken(value: string, maxLength: number, pattern: RegExp): string | null {
+  const normalized = normalizeText(value, maxLength);
+  if (!normalized) return null;
+  if (!pattern.test(normalized)) return null;
+  return normalized;
+}
+
 export function joinSnapLiveRoom(liveId: string) {
   const safeLiveId = normalizeLiveId(liveId);
   if (!safeLiveId) return;
@@ -233,6 +240,11 @@ export function leaveSnapLiveRoom(liveId: string) {
 
 export function sendSnapLiveMessage(liveId: string, content: string): Promise<SnapLiveAck> {
   return new Promise<SnapLiveAck>((resolve) => {
+    if (!liveSocket || !liveSocket.connected) {
+      resolve({ success: false, error: 'SOCKET_OFFLINE' });
+      return;
+    }
+
     const safeLiveId = normalizeLiveId(liveId);
     const safeContent = normalizeText(content, 400);
     if (!safeLiveId || !safeContent) {
@@ -248,6 +260,11 @@ export function sendSnapLiveMessage(liveId: string, content: string): Promise<Sn
 
 export function sendSnapLiveReaction(liveId: string, reaction: string): Promise<SnapLiveAck> {
   return new Promise<SnapLiveAck>((resolve) => {
+    if (!liveSocket || !liveSocket.connected) {
+      resolve({ success: false, error: 'SOCKET_OFFLINE' });
+      return;
+    }
+
     const safeLiveId = normalizeLiveId(liveId);
     const safeReaction = normalizeText(reaction, 24);
     if (!safeLiveId || !safeReaction) {
@@ -263,8 +280,13 @@ export function sendSnapLiveReaction(liveId: string, reaction: string): Promise<
 
 export function deleteSnapLiveMessage(liveId: string, messageId: string): Promise<SnapLiveAck> {
   return new Promise<SnapLiveAck>((resolve) => {
+    if (!liveSocket || !liveSocket.connected) {
+      resolve({ success: false, error: 'SOCKET_OFFLINE' });
+      return;
+    }
+
     const safeLiveId = normalizeLiveId(liveId);
-    const safeMessageId = normalizeText(messageId, 64);
+    const safeMessageId = normalizeToken(messageId, 64, /^[a-zA-Z0-9._:-]+$/);
     if (!safeLiveId || !safeMessageId) {
       resolve({ success: false, error: 'INVALID_PAYLOAD' });
       return;
@@ -278,8 +300,13 @@ export function deleteSnapLiveMessage(liveId: string, messageId: string): Promis
 
 export function muteSnapLiveUser(liveId: string, username: string): Promise<SnapLiveAck> {
   return new Promise<SnapLiveAck>((resolve) => {
+    if (!liveSocket || !liveSocket.connected) {
+      resolve({ success: false, error: 'SOCKET_OFFLINE' });
+      return;
+    }
+
     const safeLiveId = normalizeLiveId(liveId);
-    const safeUsername = normalizeText(username, 32);
+    const safeUsername = normalizeToken(username, 32, /^[a-zA-Z0-9._-]+$/);
     if (!safeLiveId || !safeUsername) {
       resolve({ success: false, error: 'INVALID_PAYLOAD' });
       return;
