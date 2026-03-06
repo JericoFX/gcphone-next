@@ -329,21 +329,41 @@ lib.callback.register('gcphone:snap:follow', function(source, data)
     if not account then return false end
     
     local existing = MySQL.scalar.await(
-        'SELECT 1 FROM phone_snap_following WHERE follower_id = ? AND following_id = ?',
+        'SELECT 1 FROM phone_chirp_following WHERE follower_id = ? AND following_id = ?',
         { account.id, targetAccountId }
     )
     
     if existing then
         MySQL.execute.await(
-            'DELETE FROM phone_snap_following WHERE follower_id = ? AND following_id = ?',
+            'DELETE FROM phone_chirp_following WHERE follower_id = ? AND following_id = ?',
             { account.id, targetAccountId }
+        )
+        
+        MySQL.update.await(
+            'UPDATE phone_snap_accounts SET following = GREATEST(0, following - 1) WHERE id = ?',
+            { account.id }
+        )
+        
+        MySQL.update.await(
+            'UPDATE phone_snap_accounts SET followers = GREATEST(0, followers - 1) WHERE id = ?',
+            { targetAccountId }
         )
         
         return { following = false }
     else
         MySQL.insert.await(
-            'INSERT INTO phone_snap_following (follower_id, following_id) VALUES (?, ?)',
+            'INSERT INTO phone_chirp_following (follower_id, following_id) VALUES (?, ?)',
             { account.id, targetAccountId }
+        )
+        
+        MySQL.update.await(
+            'UPDATE phone_snap_accounts SET following = following + 1 WHERE id = ?',
+            { account.id }
+        )
+        
+        MySQL.update.await(
+            'UPDATE phone_snap_accounts SET followers = followers + 1 WHERE id = ?',
+            { targetAccountId }
         )
         
         return { following = true }
@@ -351,7 +371,6 @@ lib.callback.register('gcphone:snap:follow', function(source, data)
 end)
 
 lib.callback.register('gcphone:snap:getProfile', function(source, data)
-    local identifier = GetIdentifier(source)
     local accountId = data.accountId
     
     local account = MySQL.single.await(
@@ -366,62 +385,8 @@ lib.callback.register('gcphone:snap:getProfile', function(source, data)
         { accountId }
     ) or {}
     
-    local isFollowing = false
-    if identifier then
-        local myAccount = GetAccount(identifier)
-        if myAccount and myAccount.id ~= accountId then
-            isFollowing = MySQL.scalar.await(
-                'SELECT 1 FROM phone_snap_following WHERE follower_id = ? AND following_id = ?',
-                { myAccount.id, accountId }
-            ) ~= nil
-        end
-    end
-    
     return {
         account = account,
-        posts = posts,
-        isFollowing = isFollowing
+        posts = posts
     }
-end)
-
-lib.callback.register('gcphone:snap:checkFollowing', function(source, targetAccountId)
-    local identifier = GetIdentifier(source)
-    if not identifier then return false end
-    
-    local account = GetAccount(identifier)
-    if not account then return false end
-    
-    local exists = MySQL.scalar.await(
-        'SELECT 1 FROM phone_snap_following WHERE follower_id = ? AND following_id = ?',
-        { account.id, targetAccountId }
-    )
-    
-    return exists ~= nil
-end)
-
-lib.callback.register('gcphone:snap:getFollowingFeed', function(source, data)
-    local identifier = GetIdentifier(source)
-    if not identifier then return {} end
-    
-    local account = GetAccount(identifier)
-    if not account then return {} end
-    
-    data = type(data) == 'table' and data or {}
-    local limit = tonumber(data.limit) or 30
-    local offset = tonumber(data.offset) or 0
-    if limit < 1 then limit = 1 end
-    if limit > 100 then limit = 100 end
-    if offset < 0 then offset = 0 end
-    
-    local posts = MySQL.query.await([[
-        SELECT p.*, a.username, a.display_name, a.avatar
-        FROM phone_snap_posts p
-        JOIN phone_snap_accounts a ON p.account_id = a.id
-        JOIN phone_snap_following f ON f.following_id = p.account_id
-        WHERE p.is_live = 0 AND f.follower_id = ?
-        ORDER BY p.created_at DESC
-        LIMIT ? OFFSET ?
-    ]], { account.id, limit, offset }) or {}
-    
-    return posts
 end)
