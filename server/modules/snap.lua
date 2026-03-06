@@ -108,6 +108,7 @@ local function GetSnapLiveAudioConfig()
         maxVolume = maxVolume,
         distanceCurve = distanceCurve,
         volumeSmoothing = volumeSmoothing,
+        useMumbleRangeClamp = config.UseMumbleRangeClamp == true,
         updateIntervalMs = math.floor(updateIntervalMs),
     }
 end
@@ -440,6 +441,7 @@ lib.callback.register('gcphone:snap:getLiveAudioSession', function(source, data)
         maxVolume = cfg.maxVolume,
         distanceCurve = cfg.distanceCurve,
         volumeSmoothing = cfg.volumeSmoothing,
+        useMumbleRangeClamp = cfg.useMumbleRangeClamp,
         updateIntervalMs = cfg.updateIntervalMs,
     }
 end)

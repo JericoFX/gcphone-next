@@ -377,6 +377,24 @@ local function ComputeLiveAudioVolume(distance, maxDistance, minVolume, maxVolum
     return ClampNumber(volume, 0.0, 1.0)
 end
 
+local function GetMumbleProximityRange()
+    if type(MumbleGetTalkerProximity) ~= 'function' then
+        return nil
+    end
+
+    local success, range = pcall(MumbleGetTalkerProximity)
+    if not success then
+        return nil
+    end
+
+    local value = tonumber(range)
+    if not value or value <= 0 then
+        return nil
+    end
+
+    return value
+end
+
 local function SmoothVolume(previous, target, factor)
     local f = ClampNumber(factor, 0.0, 1.0)
     if f <= 0.0 then
@@ -416,6 +434,7 @@ RegisterNUICallback('snapLiveAudioStart', function(data, cb)
             maxVolume = ClampNumber(payload.maxVolume, 0.0, 1.0),
             distanceCurve = ClampNumber(payload.distanceCurve, 0.5, 3.0),
             volumeSmoothing = ClampNumber(payload.volumeSmoothing, 0.0, 1.0),
+            useMumbleRangeClamp = payload.useMumbleRangeClamp == true,
             updateIntervalMs = math.floor(ClampNumber(payload.updateIntervalMs, 120, 1500)),
             activeListen = false,
             currentVolume = nil,
@@ -438,6 +457,7 @@ RegisterNUICallback('snapLiveAudioStart', function(data, cb)
                 maxVolume = LiveAudioSession.maxVolume,
                 distanceCurve = LiveAudioSession.distanceCurve,
                 volumeSmoothing = LiveAudioSession.volumeSmoothing,
+                useMumbleRangeClamp = LiveAudioSession.useMumbleRangeClamp,
                 updateIntervalMs = LiveAudioSession.updateIntervalMs,
             }
         })
@@ -482,16 +502,25 @@ CreateThread(function()
                         local fromCoords = GetEntityCoords(playerPed)
                         local toCoords = GetEntityCoords(targetPed)
                         distance = #(fromCoords - toCoords)
+
+                        local effectiveListenDistance = session.listenDistance
+                        if session.useMumbleRangeClamp then
+                            local mumbleRange = GetMumbleProximityRange()
+                            if mumbleRange then
+                                effectiveListenDistance = math.min(effectiveListenDistance, mumbleRange)
+                            end
+                        end
+
                         if session.activeListen then
-                            listening = distance <= (session.listenDistance + session.leaveBuffer)
+                            listening = distance <= (effectiveListenDistance + session.leaveBuffer)
                         else
-                            listening = distance <= session.listenDistance
+                            listening = distance <= effectiveListenDistance
                         end
 
                         session.activeListen = listening
 
                         if listening then
-                            desiredVolume = ComputeLiveAudioVolume(distance, session.listenDistance, session.minVolume, session.maxVolume, session.distanceCurve)
+                            desiredVolume = ComputeLiveAudioVolume(distance, effectiveListenDistance, session.minVolume, session.maxVolume, session.distanceCurve)
                         end
                     end
                 end

@@ -186,6 +186,7 @@ Config.Snap = {
         MaxVolume = 1.0,
         DistanceCurve = 1.35,
         VolumeSmoothing = 0.35,
+        UseMumbleRangeClamp = true,
         UpdateIntervalMs = 220,
     },
 }
