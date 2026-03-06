@@ -4,7 +4,7 @@
   border: none;
   border-radius: 999px;
   background: rgba(0, 122, 255, 0.1);
-  color: #007AFF;
+  color: #007aff;
   font-size: 20px;
   display: flex;
   align-items: center;
@@ -29,7 +29,7 @@
   transform: translateX(-50%);
   width: 280px;
   max-height: 300px;
-  background: #FFFFFF;
+  background: #ffffff;
   border-radius: 16px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
   border: 1px solid rgba(0, 0, 0, 0.08);
@@ -42,7 +42,7 @@
 .category {
   padding: 12px;
   border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-  max-height: 220px;
+  max-height: 212px;
   overflow-y: auto;
   overflow-x: hidden;
 
@@ -67,7 +67,7 @@
 .categoryTitle {
   font-size: 12px;
   font-weight: 600;
-  color: #8E8E93;
+  color: #8e8e93;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   margin-bottom: 8px;

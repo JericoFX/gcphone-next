@@ -110,6 +110,16 @@ export function ChirpApp() {
     void loadTweets();
   });
 
+  let lastSharedMedia = '';
+  createEffect(() => {
+    const params = router.params();
+    const sharedMedia = sanitizeMediaUrl(typeof params.composeMedia === 'string' ? params.composeMedia : '');
+    if (!sharedMedia || sharedMedia === lastSharedMedia) return;
+    lastSharedMedia = sharedMedia;
+    setComposerMedia(sharedMedia);
+    setShowComposer(true);
+  });
+
   createEffect(() => {
     const onKey = (e: CustomEvent<string>) => {
       if (e.detail === 'Backspace') {

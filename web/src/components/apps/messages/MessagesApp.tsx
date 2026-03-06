@@ -5,6 +5,7 @@ import { useContacts } from '../../../store/contacts';
 import { fetchNui } from '../../../utils/fetchNui';
 import { generateColorForString, timeAgo } from '../../../utils/misc';
 import { resolveMediaType, sanitizeMediaUrl, sanitizeText } from '../../../utils/sanitize';
+import { parseSharedContactMessage } from '../../../utils/contactShare';
 import { uiPrompt } from '../../../utils/uiDialog';
 import { uiAlert } from '../../../utils/uiAlert';
 import { ActionSheet } from '../../shared/ui/ActionSheet';
@@ -28,7 +29,7 @@ function extractCoords(text?: string): { x: number; y: number } | null {
 export function MessagesApp() {
   const router = useRouter();
   const [messagesState, messagesActions] = useMessages();
-  const [contactsState] = useContacts();
+  const [contactsState, contactsActions] = useContacts();
   const [selectedConversation, setSelectedConversation] = createSignal<string | null>(null);
   const [messageInput, setMessageInput] = createSignal('');
   const [attachmentUrl, setAttachmentUrl] = createSignal<string | null>(null);
@@ -96,8 +97,12 @@ export function MessagesApp() {
   createEffect(() => {
     const params = router.params();
     const number = typeof params.phoneNumber === 'string' ? params.phoneNumber : '';
+    const mediaUrl = sanitizeMediaUrl(typeof params.attachmentUrl === 'string' ? params.attachmentUrl : '');
     if (!number) return;
     setSelectedConversation(number);
+    if (mediaUrl) {
+      setAttachmentUrl(mediaUrl);
+    }
     messagesActions.markAsRead(number);
   });
 
@@ -205,6 +210,24 @@ export function MessagesApp() {
     return contact?.display || number;
   };
 
+  const isKnownContact = (number: string) => contactsState.contacts.some((contact) => contact.number === number);
+
+  const addContactFromMessage = async (display: string, number: string) => {
+    if (isKnownContact(number)) {
+      uiAlert('El contacto ya existe');
+      return;
+    }
+    const added = await contactsActions.add(display, number);
+    uiAlert(added ? 'Contacto agregado' : 'No se pudo agregar el contacto');
+  };
+
+  const getPreviewText = (message: any) => {
+    if (getMediaUrl(message)) return 'Adjunto multimedia';
+    const shared = parseSharedContactMessage(message?.message);
+    if (shared) return `Contacto: ${shared.display}`;
+    return sanitizeText(message?.message || '', 80) || 'Mensaje';
+  };
+
   const openNewChat = async () => {
     const input = await uiPrompt('Numero para iniciar chat', { title: 'Nuevo chat' });
     const number = sanitizeText(input, 20);
@@ -239,6 +262,8 @@ export function MessagesApp() {
         onClearAttachment={() => setAttachmentUrl(null)}
         onOpenViewer={setViewerUrl}
         getMediaUrl={getMediaUrl}
+        isKnownContact={isKnownContact}
+        onAddContact={addContactFromMessage}
         onBack={() => setSelectedConversation(null)}
         onDeleteConversation={() => void deleteConversation(selectedConversation()!)}
       />
@@ -268,7 +293,7 @@ export function MessagesApp() {
                           <Show when={convo.unread > 0}>
                             <span class={styles.unreadBadge}>{convo.unread}</span>
                           </Show>
-                          <span class={styles.message}>{getMediaUrl(convo.lastMessage) ? 'Adjunto multimedia' : convo.lastMessage.message}</span>
+                          <span class={styles.message}>{getPreviewText(convo.lastMessage)}</span>
                         </div>
                       </div>
                       <button class={styles.deleteConversationBtn} onClick={(e) => { e.stopPropagation(); void deleteConversation(convo.number); }}>
@@ -306,6 +331,8 @@ function ConversationView(props: {
   onClearAttachment: () => void;
   onOpenViewer: (url: string | null) => void;
   getMediaUrl: (msg: any) => string | undefined;
+  isKnownContact: (number: string) => boolean;
+  onAddContact: (display: string, number: string) => void;
   onBack: () => void;
   onDeleteConversation: () => void;
 }) {
@@ -342,12 +369,31 @@ function ConversationView(props: {
                 [styles.received]: msg.owner === 0
               }}
             >
-              <span class={styles.messageText}>{msg.message}</span>
-              <Show when={extractCoords(msg.message)}>
-                {(coords) => (
-                  <button class={styles.mapBtn} onClick={() => props.onOpenCoords(coords().x, coords().y)}>
-                    Abrir en mapa
-                  </button>
+              <Show when={parseSharedContactMessage(msg.message)} fallback={
+                <>
+                  <span class={styles.messageText}>{sanitizeText(msg.message || '', 800)}</span>
+                  <Show when={extractCoords(msg.message)}>
+                    {(coords) => (
+                      <button class={styles.mapBtn} onClick={() => props.onOpenCoords(coords().x, coords().y)}>
+                        Abrir en mapa
+                      </button>
+                    )}
+                  </Show>
+                </>
+              }>
+                {(shared) => (
+                  <div class={styles.contactCard}>
+                    <div class={styles.contactCardLabel}>Contacto compartido</div>
+                    <div class={styles.contactCardName}>{shared().display}</div>
+                    <div class={styles.contactCardNumber}>{shared().number}</div>
+                    <button
+                      class={styles.contactCardBtn}
+                      disabled={props.isKnownContact(shared().number)}
+                      onClick={() => props.onAddContact(shared().display, shared().number)}
+                    >
+                      {props.isKnownContact(shared().number) ? 'Ya agregado' : 'Agregar contacto'}
+                    </button>
+                  </div>
                 )}
               </Show>
               <Show when={props.getMediaUrl(msg)}>

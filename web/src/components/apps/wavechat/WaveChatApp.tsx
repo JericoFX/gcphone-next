@@ -6,6 +6,7 @@ import { fetchNui } from '../../../utils/fetchNui';
 import { useNuiCustomEvent } from '../../../utils/useNui';
 import { generateColorForString, timeAgo } from '../../../utils/misc';
 import { resolveMediaType, sanitizeMediaUrl, sanitizeText } from '../../../utils/sanitize';
+import { parseSharedContactMessage } from '../../../utils/contactShare';
 import { fetchSocketToken } from '../../../utils/realtimeAuth';
 import { uiPrompt } from '../../../utils/uiDialog';
 import { uiAlert } from '../../../utils/uiAlert';
@@ -55,7 +56,7 @@ function extractCoords(text?: string): { x: number; y: number } | null {
 export function WaveChatApp() {
   const router = useRouter();
   const [messagesState, messagesActions] = useMessages();
-  const [contactsState] = useContacts();
+  const [contactsState, contactsActions] = useContacts();
   const [selectedConversation, setSelectedConversation] = createSignal<string | null>(null);
   const [messageInput, setMessageInput] = createSignal('');
   const [attachmentUrl, setAttachmentUrl] = createSignal<string | null>(null);
@@ -174,6 +175,19 @@ export function WaveChatApp() {
     if (selectedIndex() > maxIndex) {
       setSelectedIndex(maxIndex);
     }
+  });
+
+  createEffect(() => {
+    const params = router.params();
+    const number = typeof params.phoneNumber === 'string' ? params.phoneNumber : '';
+    const mediaUrl = sanitizeMediaUrl(typeof params.attachmentUrl === 'string' ? params.attachmentUrl : '');
+    if (!number) return;
+    setSelectedConversation(number);
+    setActiveTab('chats');
+    if (mediaUrl) {
+      setAttachmentUrl(mediaUrl);
+    }
+    messagesActions.markAsRead(number);
   });
 
   const searchGifs = async () => {
@@ -403,6 +417,24 @@ export function WaveChatApp() {
     return contact?.display || number;
   };
 
+  const isKnownContact = (number: string) => contactsState.contacts.some((contact) => contact.number === number);
+
+  const addContactFromMessage = async (display: string, number: string) => {
+    if (isKnownContact(number)) {
+      uiAlert('El contacto ya existe');
+      return;
+    }
+    const added = await contactsActions.add(display, number);
+    uiAlert(added ? 'Contacto agregado' : 'No se pudo agregar el contacto');
+  };
+
+  const getPreviewText = (message: any) => {
+    if (getMediaUrl(message)) return 'Adjunto multimedia';
+    const shared = parseSharedContactMessage(message?.message);
+    if (shared) return `Contacto: ${shared.display}`;
+    return sanitizeText(message?.message || '', 80) || 'Mensaje';
+  };
+
   const sendLocationText = async () => {
     const number = selectedConversation();
     if (!number) return;
@@ -534,6 +566,8 @@ export function WaveChatApp() {
             onClearAttachment={() => setAttachmentUrl(null)}
             onOpenViewer={setViewerUrl}
             getMediaUrl={getMediaUrl}
+            isKnownContact={isKnownContact}
+            onAddContact={addContactFromMessage}
             onBack={() => setSelectedConversation(null)}
             onOpenCoords={(x, y) => router.navigate('maps', { x, y })}
             onDeleteConversation={() => void deleteConversation(selectedConversation()!)}
@@ -576,7 +610,7 @@ export function WaveChatApp() {
                         <span class={styles.unreadBadge}>{convo.unread}</span>
                       </Show>
                       <span class={styles.previewText}>
-                        {getMediaUrl(convo.lastMessage) ? 'Adjunto multimedia' : convo.lastMessage.message}
+                        {getPreviewText(convo.lastMessage)}
                       </span>
                     </div>
                   </div>
@@ -750,6 +784,8 @@ function ConversationView(props: {
   onClearAttachment: () => void;
   onOpenViewer: (url: string | null) => void;
   getMediaUrl: (msg: any) => string | undefined;
+  isKnownContact: (number: string) => boolean;
+  onAddContact: (display: string, number: string) => void;
   onBack: () => void;
   onOpenCoords: (x: number, y: number) => void;
   onDeleteConversation: () => void;
@@ -780,14 +816,33 @@ function ConversationView(props: {
         <For each={props.messages}>
           {(msg) => (
             <div class={styles.bubble} classList={{ [styles.sent]: msg.owner === 1, [styles.received]: msg.owner === 0 }}>
-              <Show when={sanitizeText(msg.message || '', 800)}>
-                <span class={styles.messageText}>{sanitizeText(msg.message || '', 800)}</span>
-              </Show>
-              <Show when={extractCoords(msg.message)}>
-                {(coords) => (
-                  <button class={styles.mapBtn} onClick={() => props.onOpenCoords(coords().x, coords().y)}>
-                    Abrir en mapa
-                  </button>
+              <Show when={parseSharedContactMessage(msg.message)} fallback={
+                <>
+                  <Show when={sanitizeText(msg.message || '', 800)}>
+                    <span class={styles.messageText}>{sanitizeText(msg.message || '', 800)}</span>
+                  </Show>
+                  <Show when={extractCoords(msg.message)}>
+                    {(coords) => (
+                      <button class={styles.mapBtn} onClick={() => props.onOpenCoords(coords().x, coords().y)}>
+                        Abrir en mapa
+                      </button>
+                    )}
+                  </Show>
+                </>
+              }>
+                {(shared) => (
+                  <div class={styles.contactCard}>
+                    <div class={styles.contactCardLabel}>Contacto compartido</div>
+                    <div class={styles.contactCardName}>{shared().display}</div>
+                    <div class={styles.contactCardNumber}>{shared().number}</div>
+                    <button
+                      class={styles.contactCardBtn}
+                      disabled={props.isKnownContact(shared().number)}
+                      onClick={() => props.onAddContact(shared().display, shared().number)}
+                    >
+                      {props.isKnownContact(shared().number) ? 'Ya agregado' : 'Agregar contacto'}
+                    </button>
+                  </div>
                 )}
               </Show>
               <Show when={props.getMediaUrl(msg)}>
