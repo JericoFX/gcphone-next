@@ -108,6 +108,13 @@ interface SnapLiveAudioStatusResponse {
   active?: boolean;
   activeListen?: boolean;
   currentVolume?: number;
+  localEnabled?: boolean;
+}
+
+interface SnapLiveAudioSetLocalResponse {
+  success?: boolean;
+  enabled?: boolean;
+  active?: boolean;
 }
 
 function cleanLiveText(value: unknown, maxLength: number): string {
@@ -208,6 +215,7 @@ export function SnapApp() {
   const [liveAudioNear, setLiveAudioNear] = createSignal(false);
   const [liveAudioTargetOnline, setLiveAudioTargetOnline] = createSignal(true);
   const [liveAudioDistanceMeters, setLiveAudioDistanceMeters] = createSignal(-1);
+  const [liveAudioLocalEnabled, setLiveAudioLocalEnabled] = createSignal(true);
 
   // Create Post
   const [showCreatePost, setShowCreatePost] = createSignal(false);
@@ -365,6 +373,7 @@ export function SnapApp() {
 
     const reason = String(payload?.reason || '');
     if (reason === 'local_toggle') {
+      setLiveAudioLocalEnabled(false);
       setStatusMessage('Audio de proximidad desactivado localmente');
       return;
     }
@@ -569,6 +578,11 @@ export function SnapApp() {
     setLiveAudioTargetOnline(true);
     setLiveAudioDistanceMeters(-1);
     setLiveKitRemoteAudioPriority(null);
+
+    const localAudioStatus = await fetchNui<SnapLiveAudioStatusResponse>('snapLiveAudioStatus', {}, { localEnabled: true });
+    const localEnabled = localAudioStatus?.localEnabled !== false;
+    setLiveAudioLocalEnabled(localEnabled);
+
     if (owner || liveId < 1) {
       setLiveKitRemoteAudioVolume(1);
       return;
@@ -578,6 +592,9 @@ export function SnapApp() {
     if (!payload?.success || !payload?.enabled) {
       setLiveKitRemoteAudioVolume(1);
       const reason = String(payload?.reason || '');
+      if (reason === 'local_disabled') {
+        setLiveAudioLocalEnabled(false);
+      }
       setStatusMessage(getLiveAudioDisabledMessage(reason));
 
       if (!owner && reason === 'rate_limited') {
@@ -596,8 +613,40 @@ export function SnapApp() {
       const heartbeatWindow = Math.max(1600, Math.min(12000, Math.floor(intervalMs * 6)));
       setLiveAudioWatchdogMs(heartbeatWindow);
     }
+    setLiveAudioLocalEnabled(true);
     setLiveAudioHeartbeatAt(Date.now());
     setLiveAudioProximityEnabled(true);
+  };
+
+  const toggleLiveAudioLocalEnabled = async () => {
+    const nextEnabled = !liveAudioLocalEnabled();
+    const response = await fetchNui<SnapLiveAudioSetLocalResponse>(
+      'snapLiveAudioSetLocalEnabled',
+      { enabled: nextEnabled },
+      { success: false, enabled: liveAudioLocalEnabled(), active: false },
+    );
+
+    const effectiveEnabled = response?.enabled === true;
+    setLiveAudioLocalEnabled(effectiveEnabled);
+
+    if (!effectiveEnabled) {
+      setLiveAudioProximityEnabled(false);
+      setLiveAudioHeartbeatAt(0);
+      setLiveAudioNear(false);
+      setLiveAudioTargetOnline(true);
+      setLiveAudioDistanceMeters(-1);
+      setLiveKitRemoteAudioVolume(1);
+      setStatusMessage('Audio de proximidad desactivado localmente');
+      return;
+    }
+
+    setStatusMessage('Audio de proximidad activado');
+    const live = activeLive();
+    if (!live || isLiveOwner()) {
+      return;
+    }
+
+    await startLiveAudioProximity(Number(live.id), false);
   };
 
   const syncLiveAudioFromClientStatus = async () => {
@@ -1420,6 +1469,16 @@ export function SnapApp() {
                     <small>{Math.round(liveAudioDistanceMeters())}m</small>
                   </Show>
                 </div>
+              </Show>
+              <Show when={!isLiveOwner()}>
+                <button
+                  class={styles.liveChatToggle}
+                  classList={{ [styles.liveAudioToggleOff]: !liveAudioLocalEnabled() }}
+                  onClick={() => void toggleLiveAudioLocalEnabled()}
+                  title={liveAudioLocalEnabled() ? 'Desactivar audio cercano' : 'Activar audio cercano'}
+                >
+                  🎧
+                </button>
               </Show>
               <button class={styles.liveChatToggle} onClick={() => setLiveChatOpen((prev) => !prev)}>💬</button>
             </div>

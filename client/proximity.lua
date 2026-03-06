@@ -538,6 +538,21 @@ RegisterNUICallback('snapLiveAudioStatus', function(_, cb)
     cb(GetLiveAudioStatus())
 end)
 
+RegisterNUICallback('snapLiveAudioSetLocalEnabled', function(data, cb)
+    local enabled = type(data) == 'table' and data.enabled == true
+    LiveAudioLocalEnabled = enabled
+
+    if not LiveAudioLocalEnabled then
+        StopLiveAudioSession('local_toggle')
+    end
+
+    cb({
+        success = true,
+        enabled = LiveAudioLocalEnabled,
+        active = LiveAudioSession ~= nil,
+    })
+end)
+
 RegisterCommand('gcphone_liveauudio_status', function()
     local status = GetLiveAudioStatus()
     local asJson = json.encode(status)
