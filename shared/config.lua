@@ -80,6 +80,16 @@ Config.Features = {
     Documents = true,
     Music = true,
     YellowPages = true,
+    Mail = true,
+}
+
+Config.Mail = {
+    Enabled = true,
+    Domain = 'noimotors.gg',
+    MinAliasLength = 3,
+    MaxAliasLength = 24,
+    MaxSubjectLength = 120,
+    MaxBodyLength = 4000,
 }
 
 Config.Security = {
