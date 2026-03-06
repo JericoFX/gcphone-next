@@ -204,17 +204,43 @@ export function isSnapLiveSocketConnected() {
   return Boolean(liveSocket && liveSocket.connected);
 }
 
+function normalizeLiveId(liveId: string): string | null {
+  const normalized = String(liveId ?? '').trim();
+  if (!/^\d+$/.test(normalized)) return null;
+  return normalized;
+}
+
+function normalizeText(value: string, maxLength: number): string | null {
+  const normalized = String(value ?? '').replace(/[\u0000-\u001f\u007f]/g, '').trim();
+  if (!normalized) return null;
+  if (normalized.length > maxLength) {
+    return normalized.slice(0, maxLength);
+  }
+  return normalized;
+}
+
 export function joinSnapLiveRoom(liveId: string) {
-  liveSocket?.emit('snaplive:joinRoom', { liveId });
+  const safeLiveId = normalizeLiveId(liveId);
+  if (!safeLiveId) return;
+  liveSocket?.emit('snaplive:joinRoom', { liveId: safeLiveId });
 }
 
 export function leaveSnapLiveRoom(liveId: string) {
-  liveSocket?.emit('snaplive:leaveRoom', { liveId });
+  const safeLiveId = normalizeLiveId(liveId);
+  if (!safeLiveId) return;
+  liveSocket?.emit('snaplive:leaveRoom', { liveId: safeLiveId });
 }
 
 export function sendSnapLiveMessage(liveId: string, content: string): Promise<SnapLiveAck> {
   return new Promise<SnapLiveAck>((resolve) => {
-    liveSocket?.emit('snaplive:send', { liveId, content }, (payload: SnapLiveAck) => {
+    const safeLiveId = normalizeLiveId(liveId);
+    const safeContent = normalizeText(content, 400);
+    if (!safeLiveId || !safeContent) {
+      resolve({ success: false, error: 'INVALID_PAYLOAD' });
+      return;
+    }
+
+    liveSocket?.emit('snaplive:send', { liveId: safeLiveId, content: safeContent }, (payload: SnapLiveAck) => {
       resolve(payload || { success: false });
     });
   });
@@ -222,7 +248,14 @@ export function sendSnapLiveMessage(liveId: string, content: string): Promise<Sn
 
 export function sendSnapLiveReaction(liveId: string, reaction: string): Promise<SnapLiveAck> {
   return new Promise<SnapLiveAck>((resolve) => {
-    liveSocket?.emit('snaplive:reaction', { liveId, reaction }, (payload: SnapLiveAck) => {
+    const safeLiveId = normalizeLiveId(liveId);
+    const safeReaction = normalizeText(reaction, 24);
+    if (!safeLiveId || !safeReaction) {
+      resolve({ success: false, error: 'INVALID_PAYLOAD' });
+      return;
+    }
+
+    liveSocket?.emit('snaplive:reaction', { liveId: safeLiveId, reaction: safeReaction }, (payload: SnapLiveAck) => {
       resolve(payload || { success: false });
     });
   });
@@ -230,7 +263,14 @@ export function sendSnapLiveReaction(liveId: string, reaction: string): Promise<
 
 export function deleteSnapLiveMessage(liveId: string, messageId: string): Promise<SnapLiveAck> {
   return new Promise<SnapLiveAck>((resolve) => {
-    liveSocket?.emit('snaplive:deleteMessage', { liveId, messageId }, (payload: SnapLiveAck) => {
+    const safeLiveId = normalizeLiveId(liveId);
+    const safeMessageId = normalizeText(messageId, 64);
+    if (!safeLiveId || !safeMessageId) {
+      resolve({ success: false, error: 'INVALID_PAYLOAD' });
+      return;
+    }
+
+    liveSocket?.emit('snaplive:deleteMessage', { liveId: safeLiveId, messageId: safeMessageId }, (payload: SnapLiveAck) => {
       resolve(payload || { success: false });
     });
   });
@@ -238,7 +278,14 @@ export function deleteSnapLiveMessage(liveId: string, messageId: string): Promis
 
 export function muteSnapLiveUser(liveId: string, username: string): Promise<SnapLiveAck> {
   return new Promise<SnapLiveAck>((resolve) => {
-    liveSocket?.emit('snaplive:muteUser', { liveId, username }, (payload: SnapLiveAck) => {
+    const safeLiveId = normalizeLiveId(liveId);
+    const safeUsername = normalizeText(username, 32);
+    if (!safeLiveId || !safeUsername) {
+      resolve({ success: false, error: 'INVALID_PAYLOAD' });
+      return;
+    }
+
+    liveSocket?.emit('snaplive:muteUser', { liveId: safeLiveId, username: safeUsername }, (payload: SnapLiveAck) => {
       resolve(payload || { success: false });
     });
   });
