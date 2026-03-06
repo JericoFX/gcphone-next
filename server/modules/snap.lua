@@ -84,6 +84,10 @@ local function GetSnapLiveAudioConfig()
         maxVolume = minVolume
     end
 
+    local distanceCurve = tonumber(config.DistanceCurve) or 1.35
+    if distanceCurve < 0.5 then distanceCurve = 0.5 end
+    if distanceCurve > 3.0 then distanceCurve = 3.0 end
+
     local leaveBuffer = tonumber(config.LeaveBufferMeters) or 2.0
     if leaveBuffer < 0.0 then leaveBuffer = 0.0 end
     if leaveBuffer > 15.0 then leaveBuffer = 15.0 end
@@ -102,6 +106,7 @@ local function GetSnapLiveAudioConfig()
         leaveBuffer = leaveBuffer,
         minVolume = minVolume,
         maxVolume = maxVolume,
+        distanceCurve = distanceCurve,
         volumeSmoothing = volumeSmoothing,
         updateIntervalMs = math.floor(updateIntervalMs),
     }
@@ -433,6 +438,7 @@ lib.callback.register('gcphone:snap:getLiveAudioSession', function(source, data)
         leaveBuffer = cfg.leaveBuffer,
         minVolume = cfg.minVolume,
         maxVolume = cfg.maxVolume,
+        distanceCurve = cfg.distanceCurve,
         volumeSmoothing = cfg.volumeSmoothing,
         updateIntervalMs = cfg.updateIntervalMs,
     }
