@@ -183,7 +183,23 @@ lib.callback.register('gcphone:startCall', function(source, data)
     
     local targetIdentifier = GetIdentifierByPhone(targetNumber)
     local isValid = targetIdentifier ~= nil and targetIdentifier ~= identifier
-    
+
+    if isValid then
+        local blocked = false
+        local okBlocked, blockedResult = pcall(function()
+            return exports[GetCurrentResourceName()]:IsBlockedEither(identifier, targetIdentifier, myNumber, targetNumber)
+        end)
+        if okBlocked and blockedResult == true then
+            blocked = true
+        end
+
+        if blocked then
+            return {
+                error = 'BLOCKED_CONTACT'
+            }
+        end
+    end
+
     local callId = LastCallId
     LastCallId = LastCallId + 1
     
