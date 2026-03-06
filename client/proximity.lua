@@ -367,10 +367,12 @@ local function PushLiveAudioVolume(payload)
     })
 end
 
-local function ComputeLiveAudioVolume(distance, maxDistance, minVolume, maxVolume)
+local function ComputeLiveAudioVolume(distance, maxDistance, minVolume, maxVolume, curve)
     local safeDistance = ClampNumber(maxDistance, 1.0, 80.0)
     local d = ClampNumber(distance, 0.0, safeDistance)
     local normalized = 1.0 - (d / safeDistance)
+    local exponent = ClampNumber(curve, 0.5, 3.0)
+    normalized = normalized ^ exponent
     local volume = minVolume + (maxVolume - minVolume) * normalized
     return ClampNumber(volume, 0.0, 1.0)
 end
@@ -412,6 +414,7 @@ RegisterNUICallback('snapLiveAudioStart', function(data, cb)
             leaveBuffer = ClampNumber(payload.leaveBuffer, 0.0, 15.0),
             minVolume = ClampNumber(payload.minVolume, 0.0, 1.0),
             maxVolume = ClampNumber(payload.maxVolume, 0.0, 1.0),
+            distanceCurve = ClampNumber(payload.distanceCurve, 0.5, 3.0),
             volumeSmoothing = ClampNumber(payload.volumeSmoothing, 0.0, 1.0),
             updateIntervalMs = math.floor(ClampNumber(payload.updateIntervalMs, 120, 1500)),
             activeListen = false,
@@ -433,6 +436,7 @@ RegisterNUICallback('snapLiveAudioStart', function(data, cb)
                 leaveBuffer = LiveAudioSession.leaveBuffer,
                 minVolume = LiveAudioSession.minVolume,
                 maxVolume = LiveAudioSession.maxVolume,
+                distanceCurve = LiveAudioSession.distanceCurve,
                 volumeSmoothing = LiveAudioSession.volumeSmoothing,
                 updateIntervalMs = LiveAudioSession.updateIntervalMs,
             }
@@ -487,7 +491,7 @@ CreateThread(function()
                         session.activeListen = listening
 
                         if listening then
-                            desiredVolume = ComputeLiveAudioVolume(distance, session.listenDistance, session.minVolume, session.maxVolume)
+                            desiredVolume = ComputeLiveAudioVolume(distance, session.listenDistance, session.minVolume, session.maxVolume, session.distanceCurve)
                         end
                     end
                 end

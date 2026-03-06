@@ -184,6 +184,7 @@ Config.Snap = {
         LeaveBufferMeters = 2.0,
         MinVolume = 0.08,
         MaxVolume = 1.0,
+        DistanceCurve = 1.35,
         VolumeSmoothing = 0.35,
         UpdateIntervalMs = 220,
     },
