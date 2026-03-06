@@ -135,6 +135,7 @@ CREATE TABLE IF NOT EXISTS `phone_chirp_accounts` (
     `avatar` VARCHAR(255) DEFAULT NULL,
     `bio` VARCHAR(160) DEFAULT NULL,
     `verified` TINYINT(1) DEFAULT 0,
+    `is_private` TINYINT(1) DEFAULT 0,
     `followers` INT DEFAULT 0,
     `following` INT DEFAULT 0,
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -225,6 +226,17 @@ CREATE TABLE IF NOT EXISTS `phone_snap_stories` (
     FOREIGN KEY (`account_id`) REFERENCES `phone_snap_accounts`(`id`) ON DELETE CASCADE,
     KEY `idx_account` (`account_id`),
     KEY `idx_expires` (`expires_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Snap - Following (separate from Chirp)
+CREATE TABLE IF NOT EXISTS `phone_snap_following` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `follower_id` INT NOT NULL,
+    `following_id` INT NOT NULL,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (`follower_id`) REFERENCES `phone_snap_accounts`(`id`) ON DELETE CASCADE,
+    FOREIGN KEY (`following_id`) REFERENCES `phone_snap_accounts`(`id`) ON DELETE CASCADE,
+    UNIQUE KEY `idx_snap_follow` (`follower_id`, `following_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Garage
@@ -393,17 +405,39 @@ CREATE TABLE IF NOT EXISTS `phone_alarms` (
 -- PROXIMITY / SHARING
 -- ============================================================
 
--- Friend requests (for Chirp/Snap)
+-- Friend requests (for Chirp/Snap) - Enhanced for full follow request workflow
 CREATE TABLE IF NOT EXISTS `phone_friend_requests` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,
-    `from_identifier` VARCHAR(50) NOT NULL,
-    `to_identifier` VARCHAR(50) NOT NULL,
-    `type` ENUM('chirp', 'snap') NOT NULL,
-    `status` ENUM('pending', 'accepted', 'rejected') DEFAULT 'pending',
+    `from_account_id` INT NOT NULL,
+    `to_account_id` INT NOT NULL,
+    `app_type` ENUM('chirp', 'snap') NOT NULL,
+    `status` ENUM('pending', 'accepted', 'rejected', 'cancelled') DEFAULT 'pending',
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    KEY `idx_from` (`from_identifier`),
-    KEY `idx_to` (`to_identifier`),
-    UNIQUE KEY `idx_request` (`from_identifier`, `to_identifier`, `type`)
+    `responded_at` TIMESTAMP NULL DEFAULT NULL,
+    FOREIGN KEY (`from_account_id`) REFERENCES `phone_snap_accounts`(`id`) ON DELETE CASCADE,
+    FOREIGN KEY (`to_account_id`) REFERENCES `phone_snap_accounts`(`id`) ON DELETE CASCADE,
+    UNIQUE KEY `idx_request` (`from_account_id`, `to_account_id`, `app_type`),
+    KEY `idx_to` (`to_account_id`, `status`),
+    KEY `idx_from` (`from_account_id`, `status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Social notifications (for follow requests, likes, comments - deduplicated)
+CREATE TABLE IF NOT EXISTS `phone_social_notifications` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `account_id` INT NOT NULL,
+    `from_account_id` INT NOT NULL,
+    `app_type` ENUM('chirp', 'snap') NOT NULL,
+    `notification_type` ENUM('follow_request', 'follow_accepted', 'like', 'comment', 'mention') NOT NULL,
+    `reference_id` INT DEFAULT NULL COMMENT 'tweet_id, post_id, etc.',
+    `reference_type` VARCHAR(20) DEFAULT NULL COMMENT 'tweet, post, story, etc.',
+    `content_preview` VARCHAR(100) DEFAULT NULL,
+    `is_read` TINYINT(1) DEFAULT 0,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (`account_id`) REFERENCES `phone_snap_accounts`(`id`) ON DELETE CASCADE,
+    FOREIGN KEY (`from_account_id`) REFERENCES `phone_snap_accounts`(`id`) ON DELETE CASCADE,
+    UNIQUE KEY `idx_notification_unique` (`account_id`, `from_account_id`, `app_type`, `notification_type`, `reference_id`),
+    KEY `idx_account_unread` (`account_id`, `is_read`, `created_at`),
+    KEY `idx_created` (`created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Shared locations
@@ -467,6 +501,8 @@ DROP TRIGGER IF EXISTS `trg_phone_chirp_likes_after_insert`;
 DROP TRIGGER IF EXISTS `trg_phone_chirp_likes_after_delete`;
 DROP TRIGGER IF EXISTS `trg_phone_chirp_following_after_insert`;
 DROP TRIGGER IF EXISTS `trg_phone_chirp_following_after_delete`;
+DROP TRIGGER IF EXISTS `trg_phone_snap_following_after_insert`;
+DROP TRIGGER IF EXISTS `trg_phone_snap_following_after_delete`;
 DROP TRIGGER IF EXISTS `trg_phone_snap_posts_after_insert`;
 DROP TRIGGER IF EXISTS `trg_phone_snap_posts_after_delete`;
 
@@ -513,6 +549,32 @@ BEGIN
 
     UPDATE `phone_chirp_accounts`
     SET `followers` = (SELECT COUNT(*) FROM `phone_chirp_following` WHERE `following_id` = OLD.`following_id`)
+    WHERE `id` = OLD.`following_id`;
+END$$
+
+CREATE TRIGGER `trg_phone_snap_following_after_insert`
+AFTER INSERT ON `phone_snap_following`
+FOR EACH ROW
+BEGIN
+    UPDATE `phone_snap_accounts`
+    SET `following` = (SELECT COUNT(*) FROM `phone_snap_following` WHERE `follower_id` = NEW.`follower_id`)
+    WHERE `id` = NEW.`follower_id`;
+
+    UPDATE `phone_snap_accounts`
+    SET `followers` = (SELECT COUNT(*) FROM `phone_snap_following` WHERE `following_id` = NEW.`following_id`)
+    WHERE `id` = NEW.`following_id`;
+END$$
+
+CREATE TRIGGER `trg_phone_snap_following_after_delete`
+AFTER DELETE ON `phone_snap_following`
+FOR EACH ROW
+BEGIN
+    UPDATE `phone_snap_accounts`
+    SET `following` = (SELECT COUNT(*) FROM `phone_snap_following` WHERE `follower_id` = OLD.`follower_id`)
+    WHERE `id` = OLD.`follower_id`;
+
+    UPDATE `phone_snap_accounts`
+    SET `followers` = (SELECT COUNT(*) FROM `phone_snap_following` WHERE `following_id` = OLD.`following_id`)
     WHERE `id` = OLD.`following_id`;
 END$$
 
