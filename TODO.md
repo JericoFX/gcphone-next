@@ -101,6 +101,7 @@ Implementar las ideas tecnicas buenas de `lb-phone` en nuestro telefono, sin cop
   - [x] Guia QA en `docs/qa/snap-live-audio-smoke.md`.
   - [x] Herramienta QA: comando `gcphone_liveauudio_status` para diagnostico rapido.
   - [x] Herramienta QA: comando `gcphone_liveauudio_stop` para cortar proximidad en caliente.
+  - [x] Herramienta QA: comando `gcphone_liveauudio_toggle` para pruebas LiveKit-only vs proximidad.
 
 ## Regla de diseño (importante)
 - [ ] No copiar layout/estructura de LB.

@@ -344,11 +344,14 @@ end)
 local LiveAudioSession = nil
 local LiveAudioLastState = nil
 local LiveAudioLastVolume = nil
+local LiveAudioLocalEnabled = true
+local PushLiveAudioState
 
 local function GetLiveAudioStatus()
     if not LiveAudioSession then
         return {
             active = false,
+            localEnabled = LiveAudioLocalEnabled,
             currentVolume = 0.0,
             lastVolume = LiveAudioLastVolume,
         }
@@ -357,6 +360,7 @@ local function GetLiveAudioStatus()
     local targetPlayer = GetPlayerFromServerId(LiveAudioSession.targetServerId or -1)
     return {
         active = true,
+        localEnabled = LiveAudioLocalEnabled,
         liveId = LiveAudioSession.liveId,
         targetServerId = LiveAudioSession.targetServerId,
         targetOnline = targetPlayer ~= -1,
@@ -397,7 +401,7 @@ local function ClampNumber(value, min, max)
     return n
 end
 
-local function PushLiveAudioState(state)
+PushLiveAudioState = function(state)
     SendNUIMessage({
         action = 'gcphone:snap:proximityState',
         data = state,
@@ -454,6 +458,11 @@ local function SmoothVolume(previous, target, factor)
 end
 
 RegisterNUICallback('snapLiveAudioStart', function(data, cb)
+    if not LiveAudioLocalEnabled then
+        cb({ success = true, enabled = false, reason = 'local_disabled' })
+        return
+    end
+
     local liveId = tonumber(type(data) == 'table' and data.liveId or nil)
     if not liveId or liveId < 1 then
         cb({ success = false, enabled = false, reason = 'invalid_live' })
@@ -531,10 +540,23 @@ RegisterCommand('gcphone_liveauudio_status', function()
     else
         lib.notify({
             title = 'Snap Live Audio',
-            description = 'Inactivo',
+            description = status.localEnabled and 'Inactivo' or 'Inactivo (deshabilitado local)',
             type = 'inform'
         })
     end
+end, false)
+
+RegisterCommand('gcphone_liveauudio_toggle', function()
+    LiveAudioLocalEnabled = not LiveAudioLocalEnabled
+    if not LiveAudioLocalEnabled then
+        StopLiveAudioSession()
+    end
+
+    lib.notify({
+        title = 'Snap Live Audio',
+        description = LiveAudioLocalEnabled and 'Proximidad local activada' or 'Proximidad local desactivada',
+        type = 'inform'
+    })
 end, false)
 
 RegisterCommand('gcphone_liveauudio_stop', function()

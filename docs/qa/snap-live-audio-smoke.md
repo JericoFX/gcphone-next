@@ -48,3 +48,4 @@ Resultado esperado:
 ## Atajos QA
 - `gcphone_liveauudio_status`: imprime estado actual en consola y notificacion.
 - `gcphone_liveauudio_stop`: corta la sesion de proximidad en caliente.
+- `gcphone_liveauudio_toggle`: activa/desactiva la capa de proximidad local sin reiniciar recurso.
