@@ -95,6 +95,11 @@ Config.Mail = {
     MaxAliasLength = 24,
     MaxSubjectLength = 120,
     MaxBodyLength = 4000,
+    Attachments = {
+        MaxCount = 5,
+        MaxTotalSize = 31457280,
+        AllowedTypes = { 'image', 'video', 'document', 'link' },
+    },
 }
 
 Config.Security = {
