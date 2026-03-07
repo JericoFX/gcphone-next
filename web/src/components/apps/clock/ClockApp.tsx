@@ -1,5 +1,7 @@
-import { For, Show, createEffect, createSignal, onCleanup } from 'solid-js';
+import { For, Show, createSignal, onCleanup, onMount } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
+import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
+import { AppScaffold } from '../../shared/layout';
 import { ScreenState } from '../../shared/ui/ScreenState';
 import styles from './ClockApp.module.scss';
 
@@ -27,13 +29,10 @@ export function ClockApp() {
   let timerHandle: number | undefined;
   let stopwatchHandle: number | undefined;
 
-  createEffect(() => {
-    const onKey = (e: CustomEvent<string>) => {
-      if (e.detail === 'Backspace') router.goBack();
-    };
-
-    window.addEventListener('phone:keyUp', onKey as EventListener);
-    onCleanup(() => window.removeEventListener('phone:keyUp', onKey as EventListener));
+  usePhoneKeyHandler({
+    Backspace: () => {
+      router.goBack();
+    },
   });
 
   onCleanup(() => {
@@ -41,7 +40,7 @@ export function ClockApp() {
     if (stopwatchHandle) clearInterval(stopwatchHandle);
   });
 
-  createEffect(() => {
+  onMount(() => {
     const handle = setTimeout(() => setLoading(false), 120);
     onCleanup(() => clearTimeout(handle));
   });
@@ -92,32 +91,24 @@ export function ClockApp() {
   };
 
   return (
-    <div class="ios-page">
-      <div class="ios-nav">
-        <button class="ios-icon-btn" onClick={() => router.goBack()}>
-          ‹
+    <AppScaffold title="Reloj" onBack={() => router.goBack()}>
+      <div class="ios-segment">
+        <button class="ios-segment-btn" classList={{ 'ios-segment-btn-active': tab() === 'alarm' }} onClick={() => setTab('alarm')}>
+          Alarmas
         </button>
-        <div class="ios-nav-title">Reloj</div>
+        <button class="ios-segment-btn" classList={{ 'ios-segment-btn-active': tab() === 'timer' }} onClick={() => setTab('timer')}>
+          Temporizador
+        </button>
+        <button
+          class="ios-segment-btn"
+          classList={{ 'ios-segment-btn-active': tab() === 'stopwatch' }}
+          onClick={() => setTab('stopwatch')}
+        >
+          Cronometro
+        </button>
       </div>
 
-      <div class="ios-content">
-        <div class="ios-segment">
-          <button class="ios-segment-btn" classList={{ 'ios-segment-btn-active': tab() === 'alarm' }} onClick={() => setTab('alarm')}>
-            Alarmas
-          </button>
-          <button class="ios-segment-btn" classList={{ 'ios-segment-btn-active': tab() === 'timer' }} onClick={() => setTab('timer')}>
-            Temporizador
-          </button>
-          <button
-            class="ios-segment-btn"
-            classList={{ 'ios-segment-btn-active': tab() === 'stopwatch' }}
-            onClick={() => setTab('stopwatch')}
-          >
-            Cronometro
-          </button>
-        </div>
-
-        <ScreenState loading={loading()} empty={false}>
+      <ScreenState loading={loading()} empty={false}>
         <Show when={tab() === 'alarm'}>
           <div class="ios-section-title">Mis alarmas</div>
           <div class="ios-list">
@@ -165,8 +156,7 @@ export function ClockApp() {
             </div>
           </div>
         </Show>
-        </ScreenState>
-      </div>
-    </div>
+      </ScreenState>
+    </AppScaffold>
   );
 }

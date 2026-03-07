@@ -2,6 +2,7 @@ import { createMemo, createSelector, createSignal, For, Show, createEffect, onCl
 import { useRouter } from '../../Phone/PhoneFrame';
 import { useMessages } from '../../../store/messages';
 import { useContacts } from '../../../store/contacts';
+import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { fetchNui } from '../../../utils/fetchNui';
 import { useNuiCustomEvent } from '../../../utils/useNui';
 import { generateColorForString, timeAgo } from '../../../utils/misc';
@@ -208,42 +209,33 @@ export function WaveChatApp() {
     }
   };
 
-  createEffect(() => {
-    const handleKeyUp = (e: CustomEvent<string>) => {
-      const key = e.detail;
-
+  usePhoneKeyHandler({
+    ArrowUp: () => {
+      if (selectedConversation()) return;
+      setSelectedIndex((prev) => Math.max(0, prev - 1));
+    },
+    ArrowDown: () => {
+      if (selectedConversation()) return;
+      const convos = conversations();
+      setSelectedIndex((prev) => Math.min(convos.length - 1, prev + 1));
+    },
+    Enter: () => {
+      if (selectedConversation()) return;
+      const convos = conversations();
+      if (selectedIndex() >= 0 && selectedIndex() < convos.length) {
+        setSelectedConversation(convos[selectedIndex()].number);
+      }
+    },
+    Backspace: () => {
       if (selectedConversation()) {
-        if (key === 'Backspace') {
-          setSelectedConversation(null);
-        }
+        setSelectedConversation(null);
         return;
       }
-
-      const convos = conversations();
-
-      switch (key) {
-        case 'ArrowUp':
-          setSelectedIndex((prev) => Math.max(0, prev - 1));
-          break;
-        case 'ArrowDown':
-          setSelectedIndex((prev) => Math.min(convos.length - 1, prev + 1));
-          break;
-        case 'Enter':
-          if (selectedIndex() >= 0 && selectedIndex() < convos.length) {
-            setSelectedConversation(convos[selectedIndex()].number);
-          }
-          break;
-        case 'Backspace':
-          router.goBack();
-          break;
-      }
-    };
-
-    window.addEventListener('phone:keyUp', handleKeyUp as EventListener);
-    onCleanup(() => window.removeEventListener('phone:keyUp', handleKeyUp as EventListener));
+      router.goBack();
+    },
   });
 
-  createEffect(() => {
+  onMount(() => {
     void loadCallHistory();
     void loadGroups();
   });

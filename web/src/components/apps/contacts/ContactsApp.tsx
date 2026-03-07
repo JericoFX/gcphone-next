@@ -7,7 +7,10 @@ import { sanitizePhone } from '../../../utils/sanitize';
 import { buildSharedContactMessage } from '../../../utils/contactShare';
 import { uiPrompt } from '../../../utils/uiDialog';
 import { generateColorForString, getBestFontColor } from '../../../utils/misc';
+import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
+import { AppScaffold } from '../../shared/layout';
 import { ActionSheet } from '../../shared/ui/ActionSheet';
+import { SearchInput } from '../../shared/ui/SearchInput';
 import { ScreenState } from '../../shared/ui/ScreenState';
 import { SkeletonList } from '../../shared/ui/SkeletonList';
 import styles from './ContactsApp.module.scss';
@@ -58,32 +61,23 @@ export function ContactsApp() {
     void loadRecents();
   });
   
-  createEffect(() => {
-    const handleKeyUp = (e: CustomEvent<string>) => {
-      const key = e.detail;
+  usePhoneKeyHandler({
+    ArrowUp: () => {
+      setSelectedIndex((prev) => Math.max(0, prev - 1));
+    },
+    ArrowDown: () => {
+      setSelectedIndex((prev) => Math.min(filteredContacts().length, prev + 1));
+    },
+    Enter: () => {
       const contacts = filteredContacts();
-      
-      switch (key) {
-        case 'ArrowUp':
-          setSelectedIndex(prev => Math.max(0, prev - 1));
-          break;
-        case 'ArrowDown':
-          setSelectedIndex(prev => Math.min(contacts.length, prev + 1));
-          break;
-        case 'Enter':
-          if (selectedIndex() >= 0 && selectedIndex() < contacts.length) {
-            const contact = contacts[selectedIndex()];
-            router.navigate('messages.view', { number: contact.number, display: contact.display });
-          }
-          break;
-        case 'Backspace':
-          router.goBack();
-          break;
+      if (selectedIndex() >= 0 && selectedIndex() < contacts.length) {
+        const contact = contacts[selectedIndex()];
+        router.navigate('messages.view', { number: contact.number, display: contact.display });
       }
-    };
-    
-    window.addEventListener('phone:keyUp', handleKeyUp as EventListener);
-    onCleanup(() => window.removeEventListener('phone:keyUp', handleKeyUp as EventListener));
+    },
+    Backspace: () => {
+      router.goBack();
+    },
   });
   
   const openAddForm = () => {
@@ -156,28 +150,14 @@ export function ContactsApp() {
   };
   
   return (
-    <div class="ios-page">
-      <div class="ios-nav">
-        <button class="ios-icon-btn" onClick={() => router.goBack()}>
-          ‹
-        </button>
-        <div class="ios-nav-title">Contactos</div>
-        <button class="ios-icon-btn" onClick={openAddForm}>
-          +
-        </button>
-      </div>
-      
-      <div class="ios-content">
-        <div class={styles.list}>
-        <div class={styles.searchWrap}>
-          <input
-            class="ios-input"
-            type="text"
-            placeholder="Buscar contacto"
-            value={search()}
-            onInput={(e) => setSearch(e.currentTarget.value)}
-          />
-        </div>
+    <AppScaffold title="Contactos" onBack={() => router.goBack()} action={{ icon: '+', onClick: openAddForm }}>
+      <div class={styles.list}>
+        <SearchInput
+          class={styles.searchWrap}
+          value={search()}
+          onInput={setSearch}
+          placeholder="Buscar contacto"
+        />
 
         <div class={styles.sectionMeta}>
           <span>{tab() === 'favoritos' ? 'Favoritos' : 'Contactos'}</span>
@@ -208,25 +188,33 @@ export function ContactsApp() {
           </div>
         </Show>
 
-        <Show when={loading()} fallback={<ScreenState loading={false} empty={filteredContacts().length === 0} emptyTitle="Sin contactos" emptyDescription="Crea un contacto nuevo para comenzar.">
-        <div 
-          class={styles.addItem}
-          classList={{ [styles.selected]: selectedIndex() === 0 }}
-          onClick={openAddForm}
-        >
-          <div class={styles.avatar} style={{ 'background-color': '#34c759' }}>
-            +
-          </div>
-          <span class={styles.name}>Nuevo contacto</span>
-        </div>
-        
-        <For each={filteredContacts()}>
-          {(contact, index) => (
-            <div
-              class={styles.contactItem}
-              classList={{ [styles.selected]: selectedIndex() === index() + 1 }}
-              onClick={() => handleSelect(contact)}
+        <Show
+          when={loading()}
+          fallback={
+            <ScreenState
+              loading={false}
+              empty={filteredContacts().length === 0}
+              emptyTitle="Sin contactos"
+              emptyDescription="Crea un contacto nuevo para comenzar."
             >
+              <div
+                class={styles.addItem}
+                classList={{ [styles.selected]: selectedIndex() === 0 }}
+                onClick={openAddForm}
+              >
+                <div class={styles.avatar} style={{ 'background-color': '#34c759' }}>
+                  +
+                </div>
+                <span class={styles.name}>Nuevo contacto</span>
+              </div>
+
+              <For each={filteredContacts()}>
+                {(contact, index) => (
+                  <div
+                    class={styles.contactItem}
+                    classList={{ [styles.selected]: selectedIndex() === index() + 1 }}
+                    onClick={() => handleSelect(contact)}
+                  >
                 <div 
                   class={styles.avatar}
                   style={{ 
@@ -260,15 +248,16 @@ export function ContactsApp() {
                   {contact.favorite ? '★' : '☆'}
                 </button>
               </div>
-            </div>
-          )}
-        </For>
-        </ScreenState>}>
+                  </div>
+                )}
+              </For>
+            </ScreenState>
+          }
+        >
           <SkeletonList rows={7} avatar />
         </Show>
       </div>
-      </div>
-      
+
       <Show when={showForm()}>
         <div class={styles.modal}>
           <div class={styles.modalContent}>
@@ -369,6 +358,6 @@ export function ContactsApp() {
           { label: 'Ingresar numero', tone: 'primary' as const, onClick: () => void shareToManualNumber() },
         ]}
       />
-    </div>
+    </AppScaffold>
   );
 }

@@ -1,7 +1,10 @@
-import { For, Show, createEffect, createMemo, createSignal, onCleanup } from 'solid-js';
+import { For, Show, createMemo, createSignal, onCleanup, onMount } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { APP_DEFINITIONS, type AppDefinition } from '../../../config/apps';
 import { usePhone } from '../../../store/phone';
+import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
+import { AppScaffold } from '../../shared/layout';
+import { SearchInput } from '../../shared/ui/SearchInput';
 import { ScreenState } from '../../shared/ui/ScreenState';
 import { appName, t } from '../../../i18n';
 import styles from './AppStoreApp.module.scss';
@@ -41,15 +44,13 @@ export function AppStoreApp() {
   const [installingId, setInstallingId] = createSignal<string | null>(null);
   const [progress, setProgress] = createSignal(0);
 
-  createEffect(() => {
-    const onKey = (e: CustomEvent<string>) => {
-      if (e.detail === 'Backspace') router.goBack();
-    };
-    window.addEventListener('phone:keyUp', onKey as EventListener);
-    onCleanup(() => window.removeEventListener('phone:keyUp', onKey as EventListener));
+  usePhoneKeyHandler({
+    Backspace: () => {
+      router.goBack();
+    },
   });
 
-  createEffect(() => {
+  onMount(() => {
     setLoading(true);
     const handle = setTimeout(() => {
       setLoading(false);
@@ -99,18 +100,13 @@ export function AppStoreApp() {
   };
 
   return (
-    <div class="ios-page">
-      <div class="ios-nav">
-        <button class="ios-icon-btn" onClick={() => router.goBack()}>
-          ‹
-        </button>
-        <div class="ios-nav-title">{appName('appstore', 'App Store', language())}</div>
-      </div>
-
-      <div class="ios-content">
-        <div class={styles.searchWrap}>
-          <input class="ios-input" type="text" placeholder={t('appstore.search_placeholder', language())} value={query()} onInput={(e) => setQuery(e.currentTarget.value)} />
-        </div>
+    <AppScaffold title={appName('appstore', 'App Store', language())} onBack={() => router.goBack()}>
+        <SearchInput
+          class={styles.searchWrap}
+          value={query()}
+          onInput={setQuery}
+          placeholder={t('appstore.search_placeholder', language())}
+        />
 
         <div class="ios-segment">
           <button class="ios-segment-btn" classList={{ 'ios-segment-btn-active': tab() === 'all' }} onClick={() => setTab('all')}>{t('appstore.tab.all', language())}</button>
@@ -119,13 +115,7 @@ export function AppStoreApp() {
           <button class="ios-segment-btn" classList={{ 'ios-segment-btn-active': tab() === 'core' }} onClick={() => setTab('core')}>{t('appstore.tab.core', language())}</button>
         </div>
 
-        <ScreenState
-          loading={loading()}
-          error={error()}
-          empty={filteredApps().length === 0}
-          emptyTitle={t('appstore.empty_title', language())}
-          emptyDescription={t('appstore.empty_description', language())}
-        >
+        <ScreenState loading={loading()} error={error()} empty={filteredApps().length === 0} emptyTitle={t('appstore.empty_title', language())} emptyDescription={t('appstore.empty_description', language())}>
           <div class="ios-section-title">{t('appstore.section.title', language())}</div>
           <div class="ios-list">
             <For each={filteredApps()}>
@@ -152,7 +142,6 @@ export function AppStoreApp() {
             </For>
           </div>
         </ScreenState>
-      </div>
-    </div>
+    </AppScaffold>
   );
 }
