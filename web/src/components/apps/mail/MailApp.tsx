@@ -18,8 +18,18 @@ interface MailMessage {
   recipient_alias?: string;
   subject?: string;
   body: string;
+  attachments?: MailAttachment[];
   is_read?: number;
   created_at: number;
+}
+
+interface MailAttachment {
+  type: 'image' | 'video' | 'document' | 'link';
+  url: string;
+  name?: string;
+  mime?: string;
+  size?: number;
+  sourceApp?: string;
 }
 
 interface MailStateResponse {
@@ -58,6 +68,10 @@ export function MailApp() {
   const [toInput, setToInput] = createSignal('');
   const [subjectInput, setSubjectInput] = createSignal('');
   const [bodyInput, setBodyInput] = createSignal('');
+  const [attachments, setAttachments] = createSignal<MailAttachment[]>([]);
+  const [attachmentType, setAttachmentType] = createSignal<MailAttachment['type']>('document');
+  const [attachmentUrl, setAttachmentUrl] = createSignal('');
+  const [attachmentName, setAttachmentName] = createSignal('');
 
   const selectedMessage = createMemo(() => {
     const id = selectedId();
@@ -155,6 +169,7 @@ export function MailApp() {
       to,
       subject,
       body,
+      attachments: attachments(),
     }, { success: false });
 
     setLoading(false);
@@ -166,8 +181,35 @@ export function MailApp() {
     setToInput('');
     setSubjectInput('');
     setBodyInput('');
+    setAttachments([]);
+    setAttachmentType('document');
+    setAttachmentUrl('');
+    setAttachmentName('');
     await loadState();
     setFolder('sent');
+  };
+
+  const addAttachment = () => {
+    const url = attachmentUrl().trim();
+    if (!url) {
+      setError('El adjunto requiere URL');
+      return;
+    }
+
+    setAttachments((prev) => ([
+      ...prev,
+      {
+        type: attachmentType(),
+        url,
+        name: attachmentName().trim() || undefined,
+      },
+    ]));
+    setAttachmentUrl('');
+    setAttachmentName('');
+  };
+
+  const removeAttachment = (index: number) => {
+    setAttachments((prev) => prev.filter((_, current) => current !== index));
   };
 
   const openMessage = async (message: MailMessage) => {
@@ -211,6 +253,37 @@ export function MailApp() {
               <input class={styles.input} value={toInput()} onInput={(e) => setToInput(e.currentTarget.value)} placeholder="destino@dominio.gg" />
               <input class={styles.input} value={subjectInput()} onInput={(e) => setSubjectInput(e.currentTarget.value)} placeholder="Asunto" />
               <textarea class={styles.textarea} value={bodyInput()} onInput={(e) => setBodyInput(e.currentTarget.value)} placeholder="Escribe tu mensaje..." />
+
+              <div class={styles.attachmentsBox}>
+                <h5>Adjuntos (opcional)</h5>
+                <div class={styles.attachRow}>
+                  <select class={styles.select} value={attachmentType()} onChange={(e) => setAttachmentType(e.currentTarget.value as MailAttachment['type'])}>
+                    <option value="image">Imagen</option>
+                    <option value="video">Video</option>
+                    <option value="document">Documento</option>
+                    <option value="link">Link</option>
+                  </select>
+                  <input class={styles.inputInline} value={attachmentUrl()} onInput={(e) => setAttachmentUrl(e.currentTarget.value)} placeholder="URL interna" />
+                </div>
+                <div class={styles.attachRow}>
+                  <input class={styles.inputInline} value={attachmentName()} onInput={(e) => setAttachmentName(e.currentTarget.value)} placeholder="Nombre (opcional)" />
+                  <button class={styles.attachButton} onClick={addAttachment}>Agregar</button>
+                </div>
+
+                <Show when={attachments().length > 0}>
+                  <div class={styles.attachList}>
+                    <For each={attachments()}>
+                      {(entry, index) => (
+                        <div class={styles.attachItem}>
+                          <span>{entry.type}: {entry.name || entry.url}</span>
+                          <button onClick={() => removeAttachment(index())}>Quitar</button>
+                        </div>
+                      )}
+                    </For>
+                  </div>
+                </Show>
+              </div>
+
               <button class={styles.button} onClick={() => void sendMail()} disabled={loading()}>Enviar</button>
             </div>
 
@@ -250,6 +323,19 @@ export function MailApp() {
                       : `Para: ${selectedMessage()?.recipient_email}`}
                   </p>
                   <pre class={styles.previewBody}>{selectedMessage()?.body}</pre>
+                  <Show when={(selectedMessage()?.attachments || []).length > 0}>
+                    <div class={styles.previewAttachments}>
+                      <h5>Adjuntos</h5>
+                      <For each={selectedMessage()?.attachments || []}>
+                        {(entry) => (
+                          <div class={styles.previewAttachmentItem}>
+                            <span>{entry.type}</span>
+                            <a href={entry.url} target="_blank" rel="noreferrer">{entry.name || entry.url}</a>
+                          </div>
+                        )}
+                      </For>
+                    </div>
+                  </Show>
                 </Show>
               </div>
             </div>

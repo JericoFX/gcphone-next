@@ -84,6 +84,72 @@
   cursor: not-allowed;
 }
 
+.attachmentsBox {
+  margin-top: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 10px;
+  padding: 8px;
+  background: rgba(0, 0, 0, 0.15);
+}
+
+.attachmentsBox h5 {
+  margin: 0 0 8px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.74);
+}
+
+.attachRow {
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.select,
+.inputInline {
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.25);
+  color: #fff;
+  padding: 8px;
+  font-size: 11px;
+}
+
+.attachButton {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  background: rgba(69, 104, 241, 0.3);
+  color: #fff;
+  padding: 8px;
+  font-size: 11px;
+}
+
+.attachList {
+  display: grid;
+  gap: 6px;
+}
+
+.attachItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+  padding: 6px 8px;
+  font-size: 11px;
+}
+
+.attachItem button {
+  border: 0;
+  border-radius: 6px;
+  background: rgba(181, 36, 36, 0.28);
+  color: #fff;
+  font-size: 10px;
+  padding: 4px 6px;
+}
+
 .folderTabs {
   display: flex;
   gap: 6px;
@@ -170,6 +236,37 @@
   font-family: inherit;
   font-size: 12px;
   color: rgba(255, 255, 255, 0.94);
+}
+
+.previewAttachments {
+  margin-top: 12px;
+  border-top: 1px dashed rgba(255, 255, 255, 0.12);
+  padding-top: 10px;
+}
+
+.previewAttachments h5 {
+  margin: 0 0 8px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.previewAttachmentItem {
+  display: grid;
+  grid-template-columns: 52px 1fr;
+  gap: 8px;
+  font-size: 11px;
+  margin-bottom: 6px;
+}
+
+.previewAttachmentItem span {
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.58);
+}
+
+.previewAttachmentItem a {
+  color: #a8c4ff;
+  text-decoration: none;
+  word-break: break-all;
 }
 
 .empty {
