@@ -1,10 +1,12 @@
-import { createSignal, For, Show, createEffect, onCleanup, createMemo } from 'solid-js';
+import { createSignal, For, Show, createMemo, onMount } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { usePhoneActions } from '../../../store/phone';
 import { useContacts } from '../../../store/contacts';
+import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { fetchNui } from '../../../utils/fetchNui';
 import { sanitizeMediaUrl, sanitizePhone } from '../../../utils/sanitize';
 import { uiPrompt } from '../../../utils/uiDialog';
+import { SearchInput } from '../../shared/ui/SearchInput';
 import { ActionSheet } from '../../shared/ui/ActionSheet';
 import { ScreenState } from '../../shared/ui/ScreenState';
 import { SkeletonList } from '../../shared/ui/SkeletonList';
@@ -69,51 +71,40 @@ export function GalleryApp() {
     setLoading(false);
   };
   
-  createEffect(() => {
-    loadPhotos();
+  onMount(() => {
+    void loadPhotos();
   });
-  
-  createEffect(() => {
-    const handleKeyUp = (e: CustomEvent<string>) => {
-      const key = e.detail;
-      
+
+  usePhoneKeyHandler({
+    ArrowLeft: () => {
+      if (!selectedPhoto()) return;
+      viewOffset(-1);
+    },
+    ArrowRight: () => {
+      if (!selectedPhoto()) return;
+      viewOffset(1);
+    },
+    ArrowUp: () => {
+      if (selectedPhoto()) return;
+      setSelectedIndex((prev) => Math.max(0, prev - 3));
+    },
+    ArrowDown: () => {
+      if (selectedPhoto()) return;
+      setSelectedIndex((prev) => Math.min(visiblePhotos().length - 1, prev + 3));
+    },
+    Enter: () => {
+      if (selectedPhoto()) return;
+      if (selectedIndex() >= 0) {
+        openPhotoAt(selectedIndex());
+      }
+    },
+    Backspace: () => {
       if (selectedPhoto()) {
-        if (key === 'Backspace') {
-          setSelectedPhoto(null);
-          return;
-        }
-
-        if (key === 'ArrowLeft') {
-          viewOffset(-1);
-          return;
-        }
-
-        if (key === 'ArrowRight') {
-          viewOffset(1);
-        }
+        setSelectedPhoto(null);
         return;
       }
-      
-      switch (key) {
-        case 'ArrowUp':
-          setSelectedIndex(prev => Math.max(0, prev - 3));
-          break;
-        case 'ArrowDown':
-          setSelectedIndex(prev => Math.min(visiblePhotos().length - 1, prev + 3));
-          break;
-        case 'Enter':
-          if (selectedIndex() >= 0) {
-            openPhotoAt(selectedIndex());
-          }
-          break;
-        case 'Backspace':
-          router.goBack();
-          break;
-      }
-    };
-    
-    window.addEventListener('phone:keyUp', handleKeyUp as EventListener);
-    onCleanup(() => window.removeEventListener('phone:keyUp', handleKeyUp as EventListener));
+      router.goBack();
+    },
   });
   
   const takePhoto = async () => {
@@ -188,12 +179,12 @@ export function GalleryApp() {
       
       <div class="ios-content">
       <div class={styles.toolbar}>
-        <input
-          class={styles.searchInput}
-          type="text"
-          placeholder="Buscar en galeria"
+        <SearchInput
+          class={styles.searchWrap}
+          inputClass={styles.searchInput}
           value={query()}
-          onInput={(event) => setQuery(event.currentTarget.value)}
+          onInput={setQuery}
+          placeholder="Buscar en galeria"
         />
         <div class={styles.counterPill}>{visiblePhotos().length}</div>
       </div>

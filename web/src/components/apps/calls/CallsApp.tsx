@@ -3,13 +3,16 @@ import { useRouter } from '../../Phone/PhoneFrame';
 import { fetchNui } from '../../../utils/fetchNui';
 import { useNuiEvent } from '../../../utils/useNui';
 import { generateColorForString, timeAgo } from '../../../utils/misc';
+import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { ScreenState } from '../../shared/ui/ScreenState';
 import { SkeletonList } from '../../shared/ui/SkeletonList';
 import { ActionSheet } from '../../shared/ui/ActionSheet';
+import { AppFAB, AppScaffold, AppTabs } from '../../shared/layout';
 import { useNotifications } from '../../../store/notifications';
 import { fetchLiveKitToken } from '../../../utils/realtimeAuth';
 import { connectLiveKit, disconnectLiveKit, setLiveKitCameraEnabled, setLiveKitMicrophoneEnabled, getCallRemainingTime } from '../../../utils/livekit';
 import type { Call } from '../../../types';
+import type { TabItem } from '../../shared/layout';
 import styles from './CallsApp.module.scss';
 
 type TabType = 'favorites' | 'recents' | 'contacts' | 'keypad';
@@ -154,26 +157,14 @@ export function CallsApp() {
     loadHistory();
   });
   
-  createEffect(() => {
-    const handleKeyUp = (e: CustomEvent<string>) => {
-      const key = e.detail;
-      
+  usePhoneKeyHandler({
+    Backspace: () => {
       if (inCall()) {
-        if (key === 'Backspace') {
-          endCall();
-        }
+        void endCall();
         return;
       }
-      
-      switch (key) {
-        case 'Backspace':
-          router.goBack();
-          break;
-      }
-    };
-    
-    window.addEventListener('phone:keyUp', handleKeyUp as EventListener);
-    onCleanup(() => window.removeEventListener('phone:keyUp', handleKeyUp as EventListener));
+      router.goBack();
+    },
   });
   
   const startCall = async (number: string) => {
@@ -359,18 +350,24 @@ export function CallsApp() {
   };
   
   const keypadKeys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#'];
+
+  const tabs: TabItem[] = [
+    { id: 'favorites', label: 'Favoritos', icon: './img/icons_ios/star-fill.svg' },
+    { id: 'recents', label: 'Recientes', icon: './img/icons_ios/clock.svg' },
+    { id: 'contacts', label: 'Contactos', icon: './img/icons_ios/person.svg' },
+    { id: 'keypad', label: 'Teclado', icon: './img/icons_ios/grid.svg' },
+  ];
   
   return (
-    <div class="ios-page">
-      <div class="ios-nav">
-        <button class="ios-icon-btn" onClick={() => router.goBack()}>
-          ‹
-        </button>
-        <div class="ios-nav-title">Llamadas</div>
-      </div>
-      
-      <Show when={inCall()} fallback={
-        <>
+    <Show
+      when={inCall()}
+      fallback={
+        <AppScaffold
+          title="Llamadas"
+          onBack={() => router.goBack()}
+          footer={<AppTabs tabs={tabs} active={activeTab()} onChange={(id) => setActiveTab(id as TabType)} />}
+          footerFixed
+        >
           <div class={styles.content}>
             <Show when={activeTab() === 'keypad'}>
               <div class={styles.keypadView}>
@@ -474,43 +471,8 @@ export function CallsApp() {
               </Show>
             </Show>
           </div>
-          
-          <div class={styles.tabs}>
-            <button 
-              class={styles.tab}
-              classList={{ [styles.active]: activeTab() === 'favorites' }}
-              onClick={() => setActiveTab('favorites')}
-            >
-              <span class={styles.icon}><img src="./img/icons_ios/star-fill.svg" alt="Favoritos" /></span>
-              <span class={styles.label}>Favoritos</span>
-            </button>
-            <button 
-              class={styles.tab}
-              classList={{ [styles.active]: activeTab() === 'recents' }}
-              onClick={() => setActiveTab('recents')}
-            >
-              <span class={styles.icon}><img src="./img/icons_ios/clock.svg" alt="Recientes" /></span>
-              <span class={styles.label}>Recientes</span>
-            </button>
-            <button 
-              class={styles.tab}
-              classList={{ [styles.active]: activeTab() === 'contacts' }}
-              onClick={() => setActiveTab('contacts')}
-            >
-              <span class={styles.icon}><img src="./img/icons_ios/person.svg" alt="Contactos" /></span>
-              <span class={styles.label}>Contactos</span>
-            </button>
-            <button 
-              class={styles.tab}
-              classList={{ [styles.active]: activeTab() === 'keypad' }}
-              onClick={() => setActiveTab('keypad')}
-            >
-              <span class={styles.icon}><img src="./img/icons_ios/grid.svg" alt="Teclado" /></span>
-              <span class={styles.label}>Teclado</span>
-            </button>
-          </div>
 
-          <button class={styles.fab} onClick={() => setShowQuickActions(true)}>+</button>
+          <AppFAB class={styles.fab} icon="+" onClick={() => setShowQuickActions(true)} />
 
           <ActionSheet
             open={showQuickActions()}
@@ -522,8 +484,9 @@ export function CallsApp() {
               { label: 'Contactos', onClick: () => { setActiveTab('contacts'); } },
             ]}
           />
-        </>
-      }>
+        </AppScaffold>
+      }
+    >
         <ActiveCallView 
           callInfo={callInfo()}
           videoMode={videoMode()}
@@ -535,8 +498,7 @@ export function CallsApp() {
           onRejectWithMessage={rejectWithMessage}
           onEnd={endCall}
         />
-      </Show>
-    </div>
+    </Show>
   );
 }
 

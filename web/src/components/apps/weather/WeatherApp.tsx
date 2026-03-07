@@ -1,5 +1,7 @@
-import { For, createEffect, createSignal, onCleanup } from 'solid-js';
+import { For, createSignal, onCleanup, onMount } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
+import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
+import { AppScaffold } from '../../shared/layout';
 import { ScreenState } from '../../shared/ui/ScreenState';
 import styles from './WeatherApp.module.scss';
 
@@ -22,29 +24,19 @@ export function WeatherApp() {
     { day: 'Jue', condition: 'Soleado', temp: '25°C' },
   ]);
 
-  createEffect(() => {
-    const onKey = (e: CustomEvent<string>) => {
-      if (e.detail === 'Backspace') router.goBack();
-    };
-    window.addEventListener('phone:keyUp', onKey as EventListener);
-    onCleanup(() => window.removeEventListener('phone:keyUp', onKey as EventListener));
+  usePhoneKeyHandler({
+    Backspace: () => {
+      router.goBack();
+    },
   });
 
-  createEffect(() => {
+  onMount(() => {
     const handle = setTimeout(() => setLoading(false), 120);
     onCleanup(() => clearTimeout(handle));
   });
 
   return (
-    <div class="ios-page">
-      <div class="ios-nav">
-        <button class="ios-icon-btn" onClick={() => router.goBack()}>
-          ‹
-        </button>
-        <div class="ios-nav-title">Clima</div>
-      </div>
-
-      <div class="ios-content">
+    <AppScaffold title="Clima" onBack={() => router.goBack()}>
         <ScreenState loading={loading()} empty={forecast().length === 0} emptyTitle="Sin clima" emptyDescription="No hay datos meteorologicos disponibles.">
         <div class={styles.hero}>
           <div class={styles.city}>{city()}</div>
@@ -65,7 +57,6 @@ export function WeatherApp() {
           </For>
         </div>
         </ScreenState>
-      </div>
-    </div>
+    </AppScaffold>
   );
 }

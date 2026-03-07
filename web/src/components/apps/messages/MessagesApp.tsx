@@ -1,7 +1,8 @@
-import { createMemo, createSelector, createSignal, For, Show, createEffect, onCleanup, onMount } from 'solid-js';
+import { createMemo, createSelector, createSignal, For, Show, createEffect, onMount } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { useMessages } from '../../../store/messages';
 import { useContacts } from '../../../store/contacts';
+import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { fetchNui } from '../../../utils/fetchNui';
 import { generateColorForString, timeAgo } from '../../../utils/misc';
 import { resolveMediaType, sanitizeMediaUrl, sanitizeText } from '../../../utils/sanitize';
@@ -106,39 +107,30 @@ export function MessagesApp() {
     messagesActions.markAsRead(number);
   });
 
-  createEffect(() => {
-    const handleKeyUp = (e: CustomEvent<string>) => {
-      const key = e.detail;
-      
+  usePhoneKeyHandler({
+    ArrowUp: () => {
+      if (selectedConversation()) return;
+      setSelectedIndex((prev) => Math.max(0, prev - 1));
+    },
+    ArrowDown: () => {
+      if (selectedConversation()) return;
+      const convos = filteredConversations();
+      setSelectedIndex((prev) => Math.min(convos.length - 1, prev + 1));
+    },
+    Enter: () => {
+      if (selectedConversation()) return;
+      const convos = filteredConversations();
+      if (selectedIndex() >= 0 && selectedIndex() < convos.length) {
+        setSelectedConversation(convos[selectedIndex()].number);
+      }
+    },
+    Backspace: () => {
       if (selectedConversation()) {
-        if (key === 'Backspace') {
-          setSelectedConversation(null);
-        }
+        setSelectedConversation(null);
         return;
       }
-      
-       const convos = filteredConversations();
-      
-      switch (key) {
-        case 'ArrowUp':
-          setSelectedIndex(prev => Math.max(0, prev - 1));
-          break;
-        case 'ArrowDown':
-          setSelectedIndex(prev => Math.min(convos.length - 1, prev + 1));
-          break;
-        case 'Enter':
-          if (selectedIndex() >= 0 && selectedIndex() < convos.length) {
-            setSelectedConversation(convos[selectedIndex()].number);
-          }
-          break;
-        case 'Backspace':
-          router.goBack();
-          break;
-      }
-    };
-    
-    window.addEventListener('phone:keyUp', handleKeyUp as EventListener);
-    onCleanup(() => window.removeEventListener('phone:keyUp', handleKeyUp as EventListener));
+      router.goBack();
+    },
   });
   
   const openConversation = (number: string) => {

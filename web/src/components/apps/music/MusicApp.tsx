@@ -1,8 +1,10 @@
-import { For, Show, createEffect, createMemo, createSignal, onCleanup } from 'solid-js';
+import { For, Show, createEffect, createMemo, createSignal, onCleanup, onMount } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { usePhone } from '../../../store/phone';
+import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { t } from '../../../i18n';
 import { fetchNui } from '../../../utils/fetchNui';
+import { AppScaffold } from '../../shared/layout';
 import styles from './MusicApp.module.scss';
 
 interface SearchItem {
@@ -97,27 +99,27 @@ export function MusicApp() {
     }
   };
 
-  createEffect(() => {
-    const onKey = (e: CustomEvent<string>) => {
-      if (e.detail === 'Backspace') router.goBack();
-    };
+  usePhoneKeyHandler({
+    Backspace: () => {
+      router.goBack();
+    },
+  });
 
+  createEffect(() => {
     const onMessage = (event: MessageEvent<{ action?: string; data?: MusicStatePayload }>) => {
       if (event?.data?.action !== 'musicStateUpdated') return;
       applyServerState(event.data.data);
       setBusyAction(false);
     };
 
-    window.addEventListener('phone:keyUp', onKey as EventListener);
     window.addEventListener('message', onMessage as EventListener);
 
     onCleanup(() => {
-      window.removeEventListener('phone:keyUp', onKey as EventListener);
       window.removeEventListener('message', onMessage as EventListener);
     });
   });
 
-  createEffect(() => {
+  onMount(() => {
     void (async () => {
       const response = await fetchNui<{ enabled?: boolean }>('musicCanSearchCatalog', {}, { enabled: false });
       const enabled = response?.enabled === true;
@@ -250,15 +252,7 @@ export function MusicApp() {
   };
 
   return (
-    <div class="ios-page">
-      <div class={`ios-nav ${styles.nav}`}>
-        <button class="ios-icon-btn" onClick={() => router.goBack()}>
-          ‹
-        </button>
-        <div class="ios-nav-title">{t('music.title', language())}</div>
-      </div>
-
-      <div class={`ios-content ${styles.content}`}>
+    <AppScaffold title={t('music.title', language())} onBack={() => router.goBack()} bodyClass={styles.content}>
         <section class={styles.hero}>
           <div class={styles.heroBackdrop} />
           <div class={styles.heroText}>
@@ -383,7 +377,6 @@ export function MusicApp() {
             />
           </div>
         </section>
-      </div>
-    </div>
+    </AppScaffold>
   );
 }

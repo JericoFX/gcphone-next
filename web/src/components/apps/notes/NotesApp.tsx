@@ -1,5 +1,7 @@
 import { For, Show, createEffect, createSignal, onCleanup } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
+import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
+import { AppScaffold } from '../../shared/layout';
 import { ScreenState } from '../../shared/ui/ScreenState';
 import styles from './NotesApp.module.scss';
 
@@ -22,16 +24,14 @@ export function NotesApp() {
   const [color, setColor] = createSignal('#fff9d8');
   const [loading, setLoading] = createSignal(true);
 
-  createEffect(() => {
-    const onKey = (e: CustomEvent<string>) => {
-      if (e.detail === 'Backspace') {
-        if (active()) setActive(null);
-        else router.goBack();
+  usePhoneKeyHandler({
+    Backspace: () => {
+      if (active()) {
+        setActive(null);
+        return;
       }
-    };
-
-    window.addEventListener('phone:keyUp', onKey as EventListener);
-    onCleanup(() => window.removeEventListener('phone:keyUp', onKey as EventListener));
+      router.goBack();
+    },
   });
 
   createEffect(() => {
@@ -75,19 +75,12 @@ export function NotesApp() {
   };
 
   return (
-    <div class="ios-page">
-      <div class="ios-nav">
-        <button class="ios-icon-btn" onClick={() => (active() ? setActive(null) : router.goBack())}>
-          ‹
-        </button>
-        <div class="ios-nav-title">Notas</div>
-        <button class="ios-icon-btn" onClick={startCreate}>
-          +
-        </button>
-      </div>
-
-      <div class="ios-content">
-        <ScreenState loading={loading()} empty={!active() && notes().length === 0} emptyTitle="Sin notas" emptyDescription="Crea tu primera nota con el boton +.">
+    <AppScaffold
+      title="Notas"
+      onBack={() => (active() ? setActive(null) : router.goBack())}
+      action={{ icon: '+', onClick: startCreate }}
+    >
+      <ScreenState loading={loading()} empty={!active() && notes().length === 0} emptyTitle="Sin notas" emptyDescription="Crea tu primera nota con el boton +.">
         <Show when={!active()} fallback={
           <div class={`ios-card ${styles.editor}`}>
             <input class="ios-input" type="text" placeholder="Titulo" value={title()} onInput={(e) => setTitle(e.currentTarget.value)} />
@@ -114,8 +107,7 @@ export function NotesApp() {
             </For>
           </div>
         </Show>
-        </ScreenState>
-      </div>
-    </div>
+      </ScreenState>
+    </AppScaffold>
   );
 }
