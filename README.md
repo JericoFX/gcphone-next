@@ -85,6 +85,46 @@ This is the latest stabilization pass applied to this fork.
 
 ---
 
+## Self-host WebRTC (LiveKit OSS)
+
+This fork already includes a LiveKit token bridge and browser client integration.
+
+If you want to host your own WebRTC backend, use:
+
+- `tools/livekit/setup-livekit.bat` (interactive setup)
+- `tools/livekit/start-livekit.bat` (start stack)
+- `tools/livekit/stop-livekit.bat` (stop stack)
+
+The setup script generates:
+
+- `tools/livekit/.env`
+- `tools/livekit/livekit.yaml`
+
+It also prints the exact convars you must set in your FiveM server config:
+
+setr livekit_host "ws://YOUR_SERVER_IP:7880"
+setr livekit_api_key "YOUR_KEY"
+setr livekit_api_secret "YOUR_SECRET"
+setr livekit_room_prefix "gcphone"
+setr livekit_max_call_duration "300"
+
+### Default networking notes
+
+- `ws://127.0.0.1:7880` is local-only.
+- For public production access, use a reachable host/IP and open required ports.
+- The provided compose stack exposes:
+  - TCP `7880` (signal/ws)
+  - TCP `7881` (RTC TCP fallback)
+  - UDP `50000-50100` (RTC media)
+
+### Important
+
+- STUN-only setups can fail in strict NAT/firewall environments.
+- For stronger production compatibility, configure TURN/TLS.
+- See `tools/livekit/README.md` for quickstart and operations.
+
+---
+
 ## Attribution
 
 This repository contains a derivative work of:
