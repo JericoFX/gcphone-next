@@ -127,6 +127,157 @@ local function GetMailBox(accountId)
     )
 end
 
+local function ParseAttachmentList(raw)
+    if type(raw) == 'table' then
+        return raw
+    end
+
+    if type(raw) ~= 'string' or raw == '' then
+        return {}
+    end
+
+    local ok, decoded = pcall(json.decode, raw)
+    if not ok or type(decoded) ~= 'table' then
+        return {}
+    end
+
+    return decoded
+end
+
+local function SafeAttachments(value)
+    if value == nil then
+        return '[]', 0
+    end
+
+    local items = ParseAttachmentList(value)
+    local cfg = Config.Mail and Config.Mail.Attachments or {}
+    local maxCount = math.floor(tonumber(cfg.MaxCount) or 5)
+    if maxCount < 0 then maxCount = 0 end
+    if maxCount > 15 then maxCount = 15 end
+
+    local maxTotalSize = math.floor(tonumber(cfg.MaxTotalSize) or 31457280)
+    if maxTotalSize < 0 then maxTotalSize = 0 end
+
+    local allowed = {}
+    if type(cfg.AllowedTypes) == 'table' then
+        for _, kind in ipairs(cfg.AllowedTypes) do
+            if type(kind) == 'string' and kind ~= '' then
+                allowed[kind:lower()] = true
+            end
+        end
+    end
+
+    local cleaned = {}
+    local totalSize = 0
+    for _, entry in ipairs(items) do
+        if #cleaned >= maxCount then
+            return nil, 'ATTACHMENT_LIMIT_REACHED'
+        end
+
+        if type(entry) ~= 'table' then
+            return nil, 'INVALID_ATTACHMENTS'
+        end
+
+        local kind = SafeText(tostring(entry.type or ''), 20)
+        local url = SafeText(tostring(entry.url or ''), 1000)
+        if not kind or not url then
+            return nil, 'INVALID_ATTACHMENTS'
+        end
+
+        kind = kind:lower()
+        if next(allowed) ~= nil and not allowed[kind] then
+            return nil, 'ATTACHMENT_TYPE_NOT_ALLOWED'
+        end
+
+        if not url:match('^https?://') and not url:match('^/%w') then
+            return nil, 'INVALID_ATTACHMENT_URL'
+        end
+
+        local size = math.floor(tonumber(entry.size) or 0)
+        if size < 0 then size = 0 end
+        if size > 0 then
+            totalSize = totalSize + size
+            if totalSize > maxTotalSize then
+                return nil, 'ATTACHMENT_TOO_LARGE'
+            end
+        end
+
+        cleaned[#cleaned + 1] = {
+            type = kind,
+            url = url,
+            name = SafeText(tostring(entry.name or ''), 120),
+            mime = SafeText(tostring(entry.mime or ''), 80),
+            size = size,
+            sourceApp = SafeText(tostring(entry.sourceApp or ''), 32),
+        }
+    end
+
+    return json.encode(cleaned), #cleaned
+end
+
+local function InflateAttachments(rows)
+    for _, row in ipairs(rows) do
+        row.attachments = ParseAttachmentList(row.attachments)
+    end
+    return rows
+end
+
+local function GetRecipientByEmail(email)
+    return MySQL.single.await(
+        'SELECT id, email, identifier FROM phone_mail_accounts WHERE email = ? LIMIT 1',
+        { email }
+    )
+end
+
+local function SendMailFromAccount(account, payload)
+    local recipientEmail = SafeEmail(type(payload) == 'table' and payload.to or nil)
+    local subject = SafeText(type(payload) == 'table' and payload.subject or nil, (Config.Mail and Config.Mail.MaxSubjectLength) or 120)
+    local body = SafeText(type(payload) == 'table' and payload.body or nil, (Config.Mail and Config.Mail.MaxBodyLength) or 4000)
+
+    if not recipientEmail or not body then
+        return { success = false, error = 'INVALID_DATA' }
+    end
+
+    local attachmentsJson, attachmentCountOrError = SafeAttachments(type(payload) == 'table' and payload.attachments or nil)
+    if not attachmentsJson then
+        return { success = false, error = attachmentCountOrError or 'INVALID_ATTACHMENTS' }
+    end
+
+    local attachmentCount = tonumber(attachmentCountOrError) or 0
+    local recipient = GetRecipientByEmail(recipientEmail)
+
+    local mailId = MySQL.insert.await(
+        [[
+            INSERT INTO phone_mail_messages (sender_account_id, recipient_email, recipient_account_id, subject, body, attachments, is_read)
+            VALUES (?, ?, ?, ?, ?, ?, 0)
+        ]],
+        { account.id, recipientEmail, recipient and recipient.id or nil, subject, body, attachmentsJson }
+    )
+
+    if not mailId then
+        return { success = false, error = 'SEND_FAILED' }
+    end
+
+    if recipient and recipient.identifier then
+        pcall(function()
+            exports[GetCurrentResourceName()]:AddPersistentNotification(recipient.identifier, {
+                appId = 'mail',
+                title = 'Nuevo mail',
+                content = attachmentCount > 0
+                    and string.format('%s te envio un correo (%d adjunto%s)', account.email or 'Alguien', attachmentCount, attachmentCount == 1 and '' or 's')
+                    or string.format('%s te envio un correo', account.email or 'Alguien'),
+                meta = {
+                    mailId = mailId,
+                    sender = account.email,
+                    attachments = attachmentCount,
+                }
+            })
+        end)
+    end
+
+    return { success = true, id = mailId }
+end
+
 lib.callback.register('gcphone:mail:getState', function(source, data)
     if Config.Mail and Config.Mail.Enabled == false then
         return { success = false, error = 'MAIL_DISABLED' }
@@ -158,8 +309,8 @@ lib.callback.register('gcphone:mail:getState', function(source, data)
     local offset = math.floor(tonumber(type(data) == 'table' and data.offset or 0) or 0)
     if offset < 0 then offset = 0 end
 
-    local inbox = BuildInbox(account.id, limit, offset)
-    local sent = BuildSent(account.id, limit, offset)
+    local inbox = InflateAttachments(BuildInbox(account.id, limit, offset))
+    local sent = InflateAttachments(BuildSent(account.id, limit, offset))
     local box = GetMailBox(account.id) or {}
 
     return {
@@ -240,53 +391,7 @@ lib.callback.register('gcphone:mail:send', function(source, data)
         return { success = false, error = 'ACCOUNT_REQUIRED' }
     end
 
-    local recipientEmail = SafeEmail(type(data) == 'table' and data.to or nil)
-    local subject = SafeText(type(data) == 'table' and data.subject or nil, (Config.Mail and Config.Mail.MaxSubjectLength) or 120)
-    local body = SafeText(type(data) == 'table' and data.body or nil, (Config.Mail and Config.Mail.MaxBodyLength) or 4000)
-
-    if not recipientEmail or not body then
-        return { success = false, error = 'INVALID_DATA' }
-    end
-
-    local recipient = MySQL.single.await(
-        'SELECT id, email FROM phone_mail_accounts WHERE email = ? LIMIT 1',
-        { recipientEmail }
-    )
-
-    local mailId = MySQL.insert.await(
-        [[
-            INSERT INTO phone_mail_messages (sender_account_id, recipient_email, recipient_account_id, subject, body, attachments, is_read)
-            VALUES (?, ?, ?, ?, ?, NULL, 0)
-        ]],
-        { account.id, recipientEmail, recipient and recipient.id or nil, subject, body }
-    )
-
-    if not mailId then
-        return { success = false, error = 'SEND_FAILED' }
-    end
-
-    if recipient and recipient.id then
-        local recipientIdentifier = MySQL.scalar.await(
-            'SELECT identifier FROM phone_mail_accounts WHERE id = ? LIMIT 1',
-            { recipient.id }
-        )
-
-        if recipientIdentifier then
-            pcall(function()
-                exports[GetCurrentResourceName()]:AddPersistentNotification(recipientIdentifier, {
-                    appId = 'mail',
-                    title = 'Nuevo mail',
-                    content = string.format('%s te envio un correo', account.email or 'Alguien'),
-                    meta = {
-                        mailId = mailId,
-                        sender = account.email,
-                    }
-                })
-            end)
-        end
-    end
-
-    return { success = true, id = mailId }
+    return SendMailFromAccount(account, data)
 end)
 
 lib.callback.register('gcphone:mail:markRead', function(source, data)
@@ -350,9 +455,28 @@ lib.callback.register('gcphone:mail:getMessages', function(source, data)
     if offset < 0 then offset = 0 end
 
     local rows = folder == 'sent' and BuildSent(account.id, limit, offset) or BuildInbox(account.id, limit, offset)
+    rows = InflateAttachments(rows)
     return {
         success = true,
         folder = folder,
         messages = rows,
     }
+end)
+
+exports('SendInGameMail', function(fromIdentifier, payload)
+    if Config.Mail and Config.Mail.Enabled == false then
+        return { success = false, error = 'MAIL_DISABLED' }
+    end
+
+    local identifier = SafeText(fromIdentifier, 50)
+    if not identifier then
+        return { success = false, error = 'INVALID_IDENTIFIER' }
+    end
+
+    local account = GetPrimaryAccount(identifier)
+    if not account then
+        return { success = false, error = 'ACCOUNT_REQUIRED' }
+    end
+
+    return SendMailFromAccount(account, payload)
 end)
