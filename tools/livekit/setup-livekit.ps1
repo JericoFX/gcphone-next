@@ -148,7 +148,7 @@ if ($enableTurnTls) {
   $turnKeyFile = Read-Text -Prompt 'Ruta key_file dentro del contenedor' -Default '/etc/livekit/certs/turn.key'
 }
 
-$livekitHost = "$signalScheme://$publicHost`:$signalPort"
+$livekitHost = ('{0}://{1}:{2}' -f $signalScheme, $publicHost, $signalPort)
 
 $apiKeyYaml = Escape-YamlSingle -Value $apiKey
 $apiSecretYaml = Escape-YamlSingle -Value $apiSecret
@@ -213,21 +213,25 @@ $startBat = @(
   '',
   'if not exist "%SCRIPT_DIR%\.env" (',
   '  echo [gcphone-livekit] Missing .env. Run setup-livekit.bat first.',
+  '  pause',
   '  exit /b 1',
   ')',
   'if not exist "%SCRIPT_DIR%\livekit.yaml" (',
   '  echo [gcphone-livekit] Missing livekit.yaml. Run setup-livekit.bat first.',
+  '  pause',
   '  exit /b 1',
   ')',
   '',
   'docker compose --env-file "%SCRIPT_DIR%\.env" -f "%SCRIPT_DIR%\docker-compose.yml" up -d',
   'if errorlevel 1 (',
   '  echo [gcphone-livekit] Docker compose failed.',
+  '  pause',
   '  exit /b 1',
   ')',
   '',
   'echo [gcphone-livekit] LiveKit stack running.',
   'docker compose --env-file "%SCRIPT_DIR%\.env" -f "%SCRIPT_DIR%\docker-compose.yml" ps',
+  'pause',
   'exit /b 0'
 )
 Set-Content -Path $startScriptPath -Value ($startBat -join "`r`n") -Encoding Ascii
@@ -240,10 +244,12 @@ $stopBat = @(
   'docker compose --env-file "%SCRIPT_DIR%\.env" -f "%SCRIPT_DIR%\docker-compose.yml" down',
   'if errorlevel 1 (',
   '  echo [gcphone-livekit] Docker compose down failed.',
+  '  pause',
   '  exit /b 1',
   ')',
   '',
   'echo [gcphone-livekit] LiveKit stack stopped.',
+  'pause',
   'exit /b 0'
 )
 Set-Content -Path $stopScriptPath -Value ($stopBat -join "`r`n") -Encoding Ascii
@@ -256,10 +262,10 @@ Write-Host "- $startScriptPath"
 Write-Host "- $stopScriptPath"
 Write-Host ''
 Write-Host 'Convars para FiveM (copiar en server.cfg):' -ForegroundColor Green
-Write-Host "setr livekit_host \"$livekitHost\""
-Write-Host "setr livekit_api_key \"$apiKey\""
-Write-Host "setr livekit_api_secret \"$apiSecret\""
-Write-Host "setr livekit_room_prefix \"$roomPrefix\""
-Write-Host "setr livekit_max_call_duration \"$maxCallDuration\""
+Write-Host "setr livekit_host `"$livekitHost`""
+Write-Host "setr livekit_api_key `"$apiKey`""
+Write-Host "setr livekit_api_secret `"$apiSecret`""
+Write-Host "setr livekit_room_prefix `"$roomPrefix`""
+Write-Host "setr livekit_max_call_duration `"$maxCallDuration`""
 Write-Host ''
 Write-Host 'Listo. Ejecuta start-livekit.bat para levantar LiveKit + Redis.' -ForegroundColor Cyan
