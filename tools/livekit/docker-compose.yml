@@ -1,0 +1,22 @@
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: gcphone-livekit-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - ./data/redis:/data
+
+  livekit:
+    image: livekit/livekit-server:latest
+    container_name: gcphone-livekit
+    restart: unless-stopped
+    depends_on:
+      - redis
+    command: --config /etc/livekit/livekit.yaml
+    volumes:
+      - ./livekit.yaml:/etc/livekit/livekit.yaml:ro
+    ports:
+      - "${LIVEKIT_WS_PORT:-7880}:7880/tcp"
+      - "${LIVEKIT_RTC_TCP_PORT:-7881}:7881/tcp"
+      - "${LIVEKIT_RTC_PORT_RANGE_START:-50000}-${LIVEKIT_RTC_PORT_RANGE_END:-50100}:${LIVEKIT_RTC_PORT_RANGE_START:-50000}-${LIVEKIT_RTC_PORT_RANGE_END:-50100}/udp"
