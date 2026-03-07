@@ -122,6 +122,9 @@ setr livekit_max_call_duration "300"
 - STUN-only setups can fail in strict NAT/firewall environments.
 - For stronger production compatibility, configure TURN/TLS.
 - See `tools/livekit/README.md` for quickstart and operations.
+- Keep `livekit_api_key` and `livekit_api_secret` server-side only (`server.cfg`/convars).
+- Do not hardcode LiveKit credentials in web/client files.
+- Download setup scripts only from this repository's GitHub.
 
 ---
 
