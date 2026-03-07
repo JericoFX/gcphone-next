@@ -1,9 +1,10 @@
-import { For, Show, createEffect, createMemo, createSignal, onCleanup } from 'solid-js';
+import { For, Show, createEffect, createMemo, createSignal, onCleanup, onMount } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { fetchNui } from '../../../utils/fetchNui';
 import { timeAgo } from '../../../utils/misc';
 import { resolveMediaType, sanitizeMediaUrl, sanitizeText } from '../../../utils/sanitize';
 import { useNuiEvent } from '../../../utils/useNui';
+import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { fetchLiveKitToken, fetchSocketToken } from '../../../utils/realtimeAuth';
 import { connectLiveKit, disconnectLiveKit, setLiveKitCameraEnabled, setLiveKitMicrophoneEnabled, setLiveKitRemoteAudioPriority, setLiveKitRemoteAudioVolume } from '../../../utils/livekit';
 import { startMockLiveFeed } from '../../../utils/liveMock';
@@ -22,13 +23,15 @@ import {
 import { AppScaffold } from '../../shared/layout';
 import { useAppCache } from '../../../hooks';
 import { MediaLightbox } from '../../shared/ui/MediaLightbox';
-import { Modal, ModalActions, ModalButton, FormField } from '../../shared/ui/Modal';
+import { FormField, FormTextarea, Modal, ModalActions, ModalButton } from '../../shared/ui/Modal';
 import { ActionSheet } from '../../shared/ui/ActionSheet';
 import { EmojiPickerButton } from '../../shared/ui/EmojiPicker';
+import { VirtualList } from '../../shared/ui/VirtualList';
 import styles from './SnapApp.module.scss';
 
 interface SnapPost {
   id: number;
+  account_id?: number;
   username?: string;
   display_name?: string;
   avatar?: string;
@@ -72,6 +75,22 @@ interface SnapFollowRequest {
   created_at?: string;
 }
 
+interface SnapDiscoverPost {
+  id: number;
+  account_id: number;
+  username?: string;
+  display_name?: string;
+  avatar?: string;
+  media_url?: string;
+  media_type?: 'image' | 'video';
+  caption?: string;
+  likes?: number;
+  created_at?: string;
+  is_private?: boolean;
+  is_following?: boolean;
+  requested_by_me?: boolean;
+}
+
 interface LiveStartResponse {
   success?: boolean;
   payload?: { postId?: number };
@@ -110,6 +129,14 @@ interface SnapLiveAudioStatusResponse {
   currentVolume?: number;
 }
 
+interface SnapAccount {
+  username?: string;
+  display_name?: string;
+  avatar?: string;
+  bio?: string;
+  is_private?: boolean | number;
+}
+
 function cleanLiveText(value: unknown, maxLength: number): string {
   const raw = typeof value === 'string' ? value : '';
   const normalized = raw.replace(/[\u0000-\u001f\u007f]/g, '').trim();
@@ -125,19 +152,26 @@ function normalizeLiveMessage(input: unknown): SnapLiveSocketMessage | null {
 
   const source = input as Record<string, unknown>;
   const id = cleanLiveText(source.id, 64);
+  const liveId = cleanLiveText(source.liveId, 64);
   const username = cleanLiveText(source.username, 32);
   const content = cleanLiveText(source.content, 400);
 
-  if (!id || !username || !content) return null;
+  if (!id || !liveId || !username || !content) return null;
 
-  const normalized = {
-    ...(source as SnapLiveSocketMessage),
+  const createdAtValue = Number(source.createdAt);
+  const createdAt = Number.isFinite(createdAtValue) && createdAtValue > 0
+    ? Math.floor(createdAtValue)
+    : Date.now();
+
+  return {
     id,
+    liveId,
     username,
     content,
-  } as SnapLiveSocketMessage;
-
-  return normalized;
+    isMention: source.isMention === true,
+    createdAt,
+    avatar: cleanLiveText(source.avatar, 255) || undefined,
+  };
 }
 
 function getLiveAudioDisabledMessage(reason: string): string {
@@ -163,12 +197,13 @@ const SNAP_MOCK_LINES = [
 export function SnapApp() {
   const router = useRouter();
   const cache = useAppCache('snap');
+  const DISCOVER_PAGE_SIZE = 30;
 
   // Data
   const [posts, setPosts] = createSignal<SnapPost[]>([]);
   const [stories, setStories] = createSignal<SnapStory[]>([]);
   const [liveStreams, setLiveStreams] = createSignal<SnapLive[]>([]);
-  const [myAccount, setMyAccount] = createSignal<any>(null);
+  const [myAccount, setMyAccount] = createSignal<SnapAccount | null>(null);
   const [pendingRequests, setPendingRequests] = createSignal<SnapFollowRequest[]>([]);
   const [sentRequests, setSentRequests] = createSignal<SnapFollowRequest[]>([]);
 
@@ -181,9 +216,15 @@ export function SnapApp() {
   const [showActionSheet, setShowActionSheet] = createSignal(false);
   const [statusMessage, setStatusMessage] = createSignal('');
   const [deletePostId, setDeletePostId] = createSignal<number | null>(null);
-  const [showProfileModal, setShowProfileModal] = createSignal(false);
   const [showRequestsModal, setShowRequestsModal] = createSignal(false);
+  const [activeTab, setActiveTab] = createSignal<'discover' | 'feed' | 'profile'>('feed');
   const [requestsLoading, setRequestsLoading] = createSignal(false);
+  const [discoverLoading, setDiscoverLoading] = createSignal(false);
+  const [discoverLoadingMore, setDiscoverLoadingMore] = createSignal(false);
+  const [discoverRows, setDiscoverRows] = createSignal<SnapDiscoverPost[]>([]);
+  const [discoverOffset, setDiscoverOffset] = createSignal(0);
+  const [discoverHasMore, setDiscoverHasMore] = createSignal(true);
+  const [discoverQuery, setDiscoverQuery] = createSignal('');
 
   const [profileDisplayName, setProfileDisplayName] = createSignal('');
   const [profileAvatar, setProfileAvatar] = createSignal('');
@@ -235,7 +276,7 @@ export function SnapApp() {
     setLoading(true);
     
     // Load account
-    const account = await fetchNui('snapGetAccount', {});
+    const account = await fetchNui<SnapAccount>('snapGetAccount', {}, {});
     setMyAccount(account);
     setProfileDisplayName(account?.display_name || '');
     setProfileAvatar(account?.avatar || '');
@@ -261,6 +302,8 @@ export function SnapApp() {
     const outgoing = await fetchNui<SnapFollowRequest[]>('snapGetSentFollowRequests', {}, []);
     setPendingRequests(incoming || []);
     setSentRequests(outgoing || []);
+
+    await loadDiscoverFeed(true);
     
     setLoading(false);
   };
@@ -274,8 +317,95 @@ export function SnapApp() {
     setRequestsLoading(false);
   };
 
-  createEffect(() => {
+  const loadDiscoverFeed = async (reset: boolean) => {
+    const query = sanitizeText(discoverQuery(), 60);
+    const nextOffset = reset ? 0 : discoverOffset();
+
+    if (reset) {
+      setDiscoverLoading(true);
+    } else {
+      setDiscoverLoadingMore(true);
+    }
+
+    const rows = await fetchNui<SnapDiscoverPost[]>(
+      'snapGetDiscoverFeed',
+      {
+        search: query,
+        limit: DISCOVER_PAGE_SIZE,
+        offset: nextOffset,
+      },
+      [],
+    );
+
+    const list = rows || [];
+    if (reset) {
+      setDiscoverRows(list);
+      setDiscoverOffset(list.length);
+    } else {
+      setDiscoverRows((prev) => [...prev, ...list]);
+      setDiscoverOffset(nextOffset + list.length);
+    }
+    setDiscoverHasMore(list.length === DISCOVER_PAGE_SIZE);
+    setDiscoverLoading(false);
+    setDiscoverLoadingMore(false);
+  };
+
+  const followAccountFromDiscover = async (entry: SnapDiscoverPost) => {
+    const targetId = Number(entry.account_id || 0);
+    if (!targetId) return;
+
+    const result = await fetchNui<{
+      following?: boolean;
+      requested?: boolean;
+      cancelled?: boolean;
+      error?: string;
+    }>(
+      'snapFollow',
+      { targetAccountId: targetId },
+      { error: 'NO_RESPONSE' },
+    );
+
+    if (result?.error) {
+      if (result.error === 'ALREADY_FOLLOWING') {
+        setStatusMessage('Ya sigues a esta cuenta');
+      } else if (result.error === 'ACCOUNT_NOT_FOUND') {
+        setStatusMessage('Cuenta no encontrada');
+      } else {
+        setStatusMessage('No se pudo actualizar el seguimiento');
+      }
+      return;
+    }
+
+    if (result?.following) {
+      setStatusMessage('Ahora sigues esta cuenta');
+    } else if (result?.requested) {
+      setStatusMessage('Solicitud de seguimiento enviada');
+    } else if (result?.cancelled) {
+      setStatusMessage('Solicitud de seguimiento cancelada');
+    }
+
+    await Promise.all([loadDiscoverFeed(true), refreshFollowRequests()]);
+  };
+
+  const loadMoreDiscover = async () => {
+    if (discoverLoadingMore() || discoverLoading() || !discoverHasMore()) return;
+    await loadDiscoverFeed(false);
+  };
+
+  onMount(() => {
     void loadData();
+  });
+
+  createEffect(() => {
+    const tab = activeTab();
+    discoverQuery();
+    if (tab !== 'discover') return;
+
+    const timer = window.setTimeout(() => {
+      void loadDiscoverFeed(true);
+    }, 260);
+
+    onCleanup(() => window.clearTimeout(timer));
   });
 
   const handleStoryVideoTimeUpdate = (event: Event) => {
@@ -382,6 +512,18 @@ export function SnapApp() {
     setShowCreatePost(true);
   });
 
+  let lastAvatarMedia = '';
+  createEffect(() => {
+    const params = router.params();
+    const sharedAvatar = sanitizeMediaUrl(typeof params.avatarMedia === 'string' ? params.avatarMedia : '');
+    const openProfile = params.openProfile === '1';
+    if (!openProfile || !sharedAvatar || sharedAvatar === lastAvatarMedia) return;
+    lastAvatarMedia = sharedAvatar;
+    setProfileAvatar(sharedAvatar);
+    setActiveTab('profile');
+    setStatusMessage('Avatar listo para guardar');
+  });
+
   onCleanup(() => {
     for (const timer of floatingTimers.values()) {
       window.clearTimeout(timer);
@@ -440,26 +582,22 @@ export function SnapApp() {
     });
   });
 
-  createEffect(() => {
-    const onKey = (e: CustomEvent<string>) => {
-      if (e.detail === 'Backspace') {
-        if (liveChatOpen()) {
-          setLiveChatOpen(false);
-          return;
-        }
-        if (activeLive()) {
-          void closeLiveViewer();
-          return;
-        }
-        if (activeStoryIndex() !== null) {
-          setActiveStoryIndex(null);
-          return;
-        }
-        router.goBack();
+  usePhoneKeyHandler({
+    Backspace: () => {
+      if (liveChatOpen()) {
+        setLiveChatOpen(false);
+        return;
       }
-    };
-    window.addEventListener('phone:keyUp', onKey as EventListener);
-    onCleanup(() => window.removeEventListener('phone:keyUp', onKey as EventListener));
+      if (activeLive()) {
+        void closeLiveViewer();
+        return;
+      }
+      if (activeStoryIndex() !== null) {
+        setActiveStoryIndex(null);
+        return;
+      }
+      router.goBack();
+    },
   });
 
   const toggleLike = async (e: Event, postId: number) => {
@@ -494,7 +632,7 @@ export function SnapApp() {
 
     if (res?.success) {
       setStatusMessage('Perfil actualizado');
-      setShowProfileModal(false);
+      setActiveTab('profile');
       await loadData();
       return;
     }
@@ -1078,50 +1216,35 @@ export function SnapApp() {
     }
   };
 
+  const attachAvatarFromGallery = async () => {
+    const gallery = await fetchNui<any[]>('getGallery', undefined, []);
+    const first = gallery?.find((entry) => {
+      const url = sanitizeMediaUrl(String(entry?.url || ''));
+      return !!url && resolveMediaType(url) === 'image';
+    });
+
+    if (first?.url) {
+      const clean = sanitizeMediaUrl(first.url);
+      if (clean) {
+        setProfileAvatar(clean);
+        setStatusMessage('Avatar cargado desde galeria');
+      }
+    }
+  };
+
   const openCamera = () => {
-    router.navigate('camera', { target: 'snap' });
+    const target = postMode() === 'story' ? 'snap-story' : 'snap-post';
+    router.navigate('camera', { target });
     setShowActionSheet(false);
+  };
+
+  const openAvatarCamera = () => {
+    router.navigate('camera', { target: 'snap-avatar' });
   };
 
   return (
     <AppScaffold title="Snap" subtitle="Comparte momentos" onBack={() => router.goBack()} bodyClass={styles.body}>
       <div class={styles.snapApp}>
-        {/* Stories Bar */}
-        <div class={styles.storiesSection}>
-          <div class={styles.storiesList}>
-            {/* My Story */}
-            <button class={styles.storyItem} onClick={() => setShowActionSheet(true)}>
-              <div class={styles.storyAvatar} classList={{ [styles.hasStory]: false }}>
-                <span>+</span>
-              </div>
-              <span class={styles.storyName}>Tu historia</span>
-            </button>
-            
-            {/* Other Stories */}
-            <For each={stories()}>
-              {(story, index) => (
-                <button class={styles.storyItem} onClick={() => openStory(index())}>
-                  <div class={styles.storyAvatar} classList={{ [styles.hasStory]: true }}>
-                    {story.avatar ? (
-                      <img src={story.avatar} alt="" />
-                    ) : (
-                      <span>{(story.display_name || story.username || 'U').charAt(0).toUpperCase()}</span>
-                    )}
-                  </div>
-                  <span class={styles.storyName}>{story.display_name || story.username || 'Usuario'}</span>
-                </button>
-              )}
-            </For>
-          </div>
-        </div>
-
-        {/* Live Streams */}
-        <Show when={statusMessage()}>
-          <div style={{ padding: '8px 12px', 'margin-bottom': '8px', 'background-color': 'rgba(255, 159, 10, 0.14)', color: '#7a4a00', 'font-size': '12px', 'border-radius': '10px' }}>
-            {statusMessage()}
-          </div>
-        </Show>
-
         <div class={styles.socialPanel}>
           <div class={styles.socialMeta}>
             <strong>{myAccount()?.display_name || myAccount()?.username || 'Perfil'}</strong>
@@ -1130,118 +1253,318 @@ export function SnapApp() {
             </span>
           </div>
           <div class={styles.socialActions}>
-            <button class={styles.socialActionBtn} onClick={() => setShowProfileModal(true)}>
-              Perfil
-            </button>
+            <div class={styles.tabContainer}>
+              <button
+                class={styles.tabButton}
+                classList={{ [styles.activeTabBtn]: activeTab() === 'discover' }}
+                onClick={() => setActiveTab('discover')}
+              >
+                <span class={styles.tabIcon}>🔍</span>
+                Descubrir
+              </button>
+              <button
+                class={styles.tabButton}
+                classList={{ [styles.activeTabBtn]: activeTab() === 'feed' }}
+                onClick={() => setActiveTab('feed')}
+              >
+                <span class={styles.tabIcon}>🏠</span>
+                Feed
+              </button>
+              <button
+                class={styles.tabButton}
+                classList={{ [styles.activeTabBtn]: activeTab() === 'profile' }}
+                onClick={() => setActiveTab('profile')}
+              >
+                <span class={styles.tabIcon}>👤</span>
+                Perfil
+              </button>
+            </div>
             <button
-              class={styles.socialActionBtn}
+              class={styles.notifyBtn}
               onClick={() => {
                 setShowRequestsModal(true);
                 void refreshFollowRequests();
               }}
+              aria-label="Solicitudes"
             >
-              Solicitudes
+              <span>🔔</span>
+              <Show when={pendingRequests().length > 0}>
+                <span class={styles.notifyBadge}>{pendingRequests().length}</span>
+              </Show>
             </button>
           </div>
         </div>
 
-        <Show when={liveStreams().length > 0}>
-          <div class={styles.liveSection}>
-            <h4 class={styles.sectionTitle}>En vivo</h4>
-            <div class={styles.liveList}>
-              <For each={liveStreams()}>
-                {(live) => (
-                  <button class={styles.liveItem} onClick={() => void openLiveViewer(live)}>
-                    <div class={styles.liveAvatar}>
-                      {live.avatar ? (
-                        <img src={live.avatar} alt="" />
-                      ) : (
-                        <span>{(live.display_name || live.username || 'U').charAt(0).toUpperCase()}</span>
-                      )}
-                      <span class={styles.liveBadge}>LIVE</span>
-                    </div>
-                    <span class={styles.liveName}>{live.display_name || live.username}</span>
-                    <span class={styles.liveViewers}>{live.live_viewers || 0} viendo</span>
-                  </button>
-                )}
-              </For>
-            </div>
+        <Show when={statusMessage()}>
+          <div style={{ padding: '8px 12px', 'margin-bottom': '8px', 'background-color': 'rgba(255, 159, 10, 0.14)', color: '#7a4a00', 'font-size': '12px', 'border-radius': '10px' }}>
+            {statusMessage()}
           </div>
         </Show>
 
-        {/* Posts Grid */}
-        <div class={styles.postsSection}>
-          <h4 class={styles.sectionTitle}>Publicaciones</h4>
-          <div class={styles.postsGrid}>
-            <For each={posts()}>
-              {(post) => (
-                <div class={styles.postCard} onClick={() => post.media_url && setViewerUrl(post.media_url)}>
-                  <div class={styles.postMedia}>
-                    {resolveMediaType(post.media_url) === 'video' ? (
-                      <video src={post.media_url} preload="metadata" />
-                    ) : (
-                      <img src={post.media_url || './img/background/back001.jpg'} alt="" />
-                    )}
-                    {resolveMediaType(post.media_url) === 'video' && (
-                      <div class={styles.videoIndicator}>▶</div>
-                    )}
+        <Show when={activeTab() === 'feed'}>
+          <>
+            <div class={styles.storiesSection}>
+              <div class={styles.storiesList}>
+                <button class={styles.storyItem} onClick={() => setShowActionSheet(true)}>
+                  <div class={styles.storyAvatar} classList={{ [styles.hasStory]: false }}>
+                    <span>+</span>
                   </div>
-                  
-                  <div class={styles.postOverlay}>
-                    <div class={styles.postHeader}>
-                      <span class={styles.postAuthor}>{post.display_name || post.username}</span>
-                    </div>
-                    
-                    <div class={styles.postActions}>
-                      <button 
-                        class={styles.actionBtn}
-                        classList={{ [styles.liked]: post.liked }}
-                        onClick={(e) => toggleLike(e, post.id)}
-                      >
-                        <span>{post.liked ? '♥' : '♡'}</span>
-                        <span class={styles.count}>{post.likes || 0}</span>
+                  <span class={styles.storyName}>Tu historia</span>
+                </button>
+
+                <For each={stories()}>
+                  {(story, index) => (
+                    <button class={styles.storyItem} onClick={() => openStory(index())}>
+                      <div class={styles.storyAvatar} classList={{ [styles.hasStory]: true }}>
+                        {story.avatar ? (
+                          <img src={story.avatar} alt="" />
+                        ) : (
+                          <span>{(story.display_name || story.username || 'U').charAt(0).toUpperCase()}</span>
+                        )}
+                      </div>
+                      <span class={styles.storyName}>{story.display_name || story.username || 'Usuario'}</span>
+                    </button>
+                  )}
+                </For>
+              </div>
+            </div>
+
+            <Show when={liveStreams().length > 0}>
+              <div class={styles.liveSection}>
+                <h4 class={styles.sectionTitle}>En vivo</h4>
+                <div class={styles.liveList}>
+                  <For each={liveStreams()}>
+                    {(live) => (
+                      <button class={styles.liveItem} onClick={() => void openLiveViewer(live)}>
+                        <div class={styles.liveAvatar}>
+                          {live.avatar ? (
+                            <img src={live.avatar} alt="" />
+                          ) : (
+                            <span>{(live.display_name || live.username || 'U').charAt(0).toUpperCase()}</span>
+                          )}
+                          <span class={styles.liveBadge}>LIVE</span>
+                        </div>
+                        <span class={styles.liveName}>{live.display_name || live.username}</span>
+                        <span class={styles.liveViewers}>{live.live_viewers || 0} viendo</span>
                       </button>
-                      
-                      <Show when={post.is_own}>
-                        <button class={styles.actionBtn} onClick={(e) => deletePost(e, post.id)}>
-                          <span>🗑</span>
-                        </button>
-                      </Show>
-                    </div>
-                    
-                    <Show when={post.caption}>
-                      <p class={styles.postCaption}>{post.caption}</p>
-                    </Show>
-                  </div>
+                    )}
+                  </For>
                 </div>
-              )}
-            </For>
-          </div>
-          
-          <Show when={!loading() && posts().length === 0}>
-            <div class={styles.emptyState}>
-              <p>No hay publicaciones</p>
-              <p class={styles.emptyHint}>¡Sé el primero en compartir!</p>
+              </div>
+            </Show>
+
+            <div class={styles.postsSection}>
+              <h4 class={styles.sectionTitle}>Publicaciones</h4>
+              <div class={styles.postsGrid}>
+                <For each={posts()}>
+                  {(post) => (
+                    <div class={styles.postCard} onClick={() => post.media_url && setViewerUrl(post.media_url)}>
+                      <div class={styles.postMedia}>
+                        {resolveMediaType(post.media_url) === 'video' ? (
+                          <video src={post.media_url} preload="metadata" />
+                        ) : (
+                          <img src={post.media_url || './img/background/back001.jpg'} alt="" />
+                        )}
+                        {resolveMediaType(post.media_url) === 'video' && (
+                          <div class={styles.videoIndicator}>▶</div>
+                        )}
+                      </div>
+
+                      <div class={styles.postOverlay}>
+                        <div class={styles.postHeader}>
+                          <span class={styles.postAuthor}>{post.display_name || post.username}</span>
+                        </div>
+
+                        <div class={styles.postActions}>
+                          <button
+                            class={styles.actionBtn}
+                            classList={{ [styles.liked]: post.liked }}
+                            onClick={(e) => toggleLike(e, post.id)}
+                          >
+                            <span>{post.liked ? '♥' : '♡'}</span>
+                            <span class={styles.count}>{post.likes || 0}</span>
+                          </button>
+
+                          <Show when={post.is_own}>
+                            <button class={styles.actionBtn} onClick={(e) => deletePost(e, post.id)}>
+                              <span>🗑</span>
+                            </button>
+                          </Show>
+                        </div>
+
+                        <Show when={post.caption}>
+                          <p class={styles.postCaption}>{post.caption}</p>
+                        </Show>
+                      </div>
+                    </div>
+                  )}
+                </For>
+              </div>
+
+              <Show when={!loading() && posts().length === 0}>
+                <div class={styles.emptyState}>
+                  <p>No hay publicaciones</p>
+                  <p class={styles.emptyHint}>¡Sé el primero en compartir!</p>
+                </div>
+              </Show>
             </div>
-          </Show>
-        </div>
+          </>
+        </Show>
+
+        <Show when={activeTab() === 'discover'}>
+          <div class={styles.discoverSection}>
+            <h4 class={styles.sectionTitle}>Descubrir</h4>
+            <input
+              class={styles.discoverSearch}
+              value={discoverQuery()}
+              onInput={(e) => setDiscoverQuery(sanitizeText(e.currentTarget.value, 60))}
+              placeholder="Buscar por @usuario, nombre o caption"
+            />
+
+            <Show when={!discoverLoading()} fallback={<p class={styles.discoverHint}>Cargando descubrimiento...</p>}>
+              <Show when={discoverRows().length > 0} fallback={<p class={styles.discoverHint}>No hay publicaciones para mostrar.</p>}>
+                <VirtualList
+                  items={discoverRows}
+                  itemHeight={170}
+                  overscan={4}
+                  class={styles.discoverVirtual}
+                  contentClass={styles.discoverVirtualContent}
+                >
+                  {(post) => {
+                    const canFollow = Number(post.account_id || 0) > 0;
+                    const isFollowing = Number(post.is_following || 0) === 1;
+                    const requestedByMe = Number(post.requested_by_me || 0) === 1;
+                    return (
+                      <div class={styles.discoverPostRow}>
+                        <button
+                          class={styles.discoverMedia}
+                          onClick={() => post.media_url && setViewerUrl(post.media_url)}
+                        >
+                          {resolveMediaType(post.media_url) === 'video' ? (
+                            <video src={post.media_url} preload="metadata" muted />
+                          ) : (
+                            <img src={post.media_url || './img/background/back001.jpg'} alt="" />
+                          )}
+                        </button>
+
+                        <div class={styles.discoverMeta}>
+                          <strong>{post.display_name || post.username || 'Usuario'}</strong>
+                          <span>@{post.username || 'usuario'}</span>
+                          <Show when={post.caption}>
+                            <p>{post.caption}</p>
+                          </Show>
+                        </div>
+
+                        <Show when={canFollow}>
+                          <button
+                            class={styles.discoverFollowBtn}
+                            classList={{ [styles.acceptBtn]: !isFollowing }}
+                            disabled={isFollowing}
+                            onClick={() => void followAccountFromDiscover(post)}
+                          >
+                            {isFollowing
+                              ? 'Siguiendo'
+                              : requestedByMe
+                                ? 'Cancelar'
+                                : Number(post.is_private || 0) === 1
+                                  ? 'Solicitar'
+                                  : 'Seguir'}
+                          </button>
+                        </Show>
+                      </div>
+                    );
+                  }}
+                </VirtualList>
+
+                <Show when={discoverHasMore()}>
+                  <button
+                    class={styles.socialActionBtn}
+                    disabled={discoverLoadingMore()}
+                    onClick={() => void loadMoreDiscover()}
+                  >
+                    {discoverLoadingMore() ? 'Cargando...' : 'Cargar mas'}
+                  </button>
+                </Show>
+              </Show>
+            </Show>
+          </div>
+        </Show>
+
+        <Show when={activeTab() === 'profile'}>
+          <div class={styles.profileTab}>
+            <h4 class={styles.sectionTitle}>Perfil</h4>
+
+            <div class={styles.profileHeaderRow}>
+              <div class={styles.profileAvatarPreview}>
+                <Show when={profileAvatar()} fallback={<span>{(profileDisplayName() || myAccount()?.username || 'U').charAt(0).toUpperCase()}</span>}>
+                  <img src={profileAvatar()} alt="Avatar" />
+                </Show>
+              </div>
+
+              <div class={styles.profileAvatarActions}>
+                <button class={styles.socialActionBtn} onClick={openAvatarCamera}>Camara</button>
+                <button class={styles.socialActionBtn} onClick={() => void attachAvatarFromGallery()}>Galeria</button>
+              </div>
+            </div>
+
+            <FormField
+              label="Nombre visible"
+              value={profileDisplayName()}
+              onChange={(value) => setProfileDisplayName(sanitizeText(value, 50))}
+              placeholder="Tu nombre"
+            />
+
+            <FormField
+              label="Avatar (URL opcional)"
+              type="url"
+              value={profileAvatar()}
+              onChange={(value) => setProfileAvatar(sanitizeText(value, 255))}
+              placeholder="https://..."
+            />
+
+            <FormTextarea
+              label="Bio"
+              rows={3}
+              value={profileBio()}
+              onChange={(value) => setProfileBio(sanitizeText(value, 160))}
+              placeholder="Conta algo sobre vos"
+            />
+
+            <label class={styles.privacyRow}>
+              <input
+                type="checkbox"
+                checked={profilePrivate()}
+                onChange={(e) => setProfilePrivate(e.currentTarget.checked)}
+              />
+              <span>Cuenta privada</span>
+            </label>
+
+            <div class={styles.profileSaveRow}>
+              <button class={styles.acceptBtn} onClick={() => void saveProfile()}>
+                Guardar perfil
+              </button>
+            </div>
+          </div>
+        </Show>
       </div>
 
-      {/* FAB */}
-      <div class={styles.fabContainer}>
-        <Show when={fabTooltipVisible()}>
-          <div class={styles.fabTooltip}>Crear</div>
-        </Show>
-        <button 
-          class={styles.fab}
-          onClick={() => setShowActionSheet(true)}
-          onPointerDown={showFabTooltip}
-          onPointerUp={hideFabTooltip}
-          onPointerLeave={hideFabTooltip}
-        >
-          +
-        </button>
-      </div>
+      {/* FAB - Hidden on Profile tab */}
+      <Show when={activeTab() !== 'profile'}>
+        <div class={styles.fabContainer}>
+          <Show when={fabTooltipVisible()}>
+            <div class={styles.fabTooltip}>Crear</div>
+          </Show>
+          <button 
+            class={styles.fab}
+            onClick={() => setShowActionSheet(true)}
+            onPointerDown={showFabTooltip}
+            onPointerUp={hideFabTooltip}
+            onPointerLeave={hideFabTooltip}
+          >
+            +
+          </button>
+        </div>
+      </Show>
 
       {/* Action Sheet */}
       <ActionSheet
@@ -1498,48 +1821,6 @@ export function SnapApp() {
           </Show>
         </div>
       </Show>
-
-      <Modal
-        open={showProfileModal()}
-        title="Editar perfil"
-        onClose={() => setShowProfileModal(false)}
-        size="sm"
-      >
-        <FormField label="Nombre visible">
-          <input
-            value={profileDisplayName()}
-            onInput={(e) => setProfileDisplayName(sanitizeText(e.currentTarget.value, 50))}
-            placeholder="Tu nombre"
-          />
-        </FormField>
-        <FormField label="Avatar (URL)">
-          <input
-            value={profileAvatar()}
-            onInput={(e) => setProfileAvatar(sanitizeText(e.currentTarget.value, 255))}
-            placeholder="https://..."
-          />
-        </FormField>
-        <FormField label="Bio">
-          <textarea
-            value={profileBio()}
-            onInput={(e) => setProfileBio(sanitizeText(e.currentTarget.value, 160))}
-            rows={3}
-            placeholder="Conta algo sobre vos"
-          />
-        </FormField>
-        <label class={styles.privacyRow}>
-          <input
-            type="checkbox"
-            checked={profilePrivate()}
-            onChange={(e) => setProfilePrivate(e.currentTarget.checked)}
-          />
-          <span>Cuenta privada</span>
-        </label>
-        <ModalActions>
-          <ModalButton label="Cancelar" onClick={() => setShowProfileModal(false)} />
-          <ModalButton label="Guardar" tone="primary" onClick={() => void saveProfile()} />
-        </ModalActions>
-      </Modal>
 
       <Modal
         open={showRequestsModal()}
