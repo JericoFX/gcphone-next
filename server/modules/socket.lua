@@ -55,7 +55,7 @@ local function GetUserGroupIds(identifier)
     if not rows then return {} end
     local ids = {}
     for _, row in ipairs(rows) do
-        table.insert(ids, tostring(row.group_id))
+        ids[#ids + 1] = tostring(row.group_id)
     end
     return ids
 end

@@ -227,7 +227,7 @@ lib.callback.register('gcphone:chirp:getTweets', function(source, data)
         
         tweets = myTweets
         for _, tweet in ipairs(likedTweets) do
-            table.insert(tweets, tweet)
+            tweets[#tweets + 1] = tweet
         end
         
         -- Sort by created_at
