@@ -303,14 +303,28 @@ export function NewsApp() {
   };
 
   const createSnapAccount = async (payload: SocialOnboardingPayload) => {
+    const avatar = sanitizeMediaUrl(payload.avatar) || '';
+    const bio = sanitizeText(payload.bio, 180);
+
     const response = await fetchNui<{ success?: boolean; error?: string }>('snapCreateAccount', {
       username: payload.username,
       displayName: payload.displayName,
-      avatar: '',
+      avatar,
     }, { success: false });
 
     if (!response?.success) {
       return { ok: false, error: response?.error || 'No se pudo crear la cuenta de Snap.' };
+    }
+
+    const updated = await fetchNui<{ success?: boolean }>('snapUpdateAccount', {
+      displayName: payload.displayName,
+      avatar,
+      bio,
+      isPrivate: payload.isPrivate,
+    }, { success: false });
+
+    if (!updated?.success) {
+      return { ok: false, error: 'Cuenta creada, pero no se pudieron guardar todos los datos del perfil.' };
     }
 
     setShowOnboarding(false);
@@ -457,6 +471,9 @@ export function NewsApp() {
           appName="Snap/Noticias"
           usernameHint={myAccount()?.username || ''}
           displayNameHint={myAccount()?.display_name || ''}
+          avatarHint={myAccount()?.avatar || ''}
+          bioHint={myAccount()?.bio || ''}
+          isPrivateHint={myAccount()?.is_private === 1 || myAccount()?.is_private === true}
           onCreate={createSnapAccount}
           onClose={() => setShowOnboarding(false)}
         />

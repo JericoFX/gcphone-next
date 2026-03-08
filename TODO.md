@@ -57,22 +57,22 @@ Implementar las ideas tecnicas buenas de `lb-phone` en nuestro telefono, sin cop
 
 ## F - Snap UI (requests + estados follow)
 - [ ] Panel de solicitudes en Snap con listas `Recibidas` y `Enviadas`.
-- [ ] Botones `Aceptar/Rechazar/Cancelar` conectados a callbacks nuevos.
-- [ ] Editor de perfil Snap conectado a `snapUpdateAccount`.
+- [x] Botones `Aceptar/Rechazar/Cancelar` conectados a callbacks nuevos.
+- [x] Editor de perfil Snap conectado a `snapUpdateAccount`.
 - [ ] Mostrar estado de relacion en vistas de perfil (cuando toque).
-- [ ] Ajustar estilos para que quede propio de gcphone-next (no look LB).
+- [x] Ajustar estilos para que quede propio de gcphone-next (no look LB).
 
 ## G - Chirp UI (requests + estados follow)
-- [ ] Strip social bajo tabs en Chirp (pendientes/enviadas + accesos rapidos).
-- [ ] Modal de solicitudes y modal de perfil conectados a callbacks nuevos.
-- [ ] Soporte `is_private` en editor Chirp (toggle + persistencia).
-- [ ] Refrescar feed/estado luego de aceptar/rechazar/cancelar.
+- [x] Strip social bajo tabs en Chirp (pendientes/enviadas + accesos rapidos).
+- [x] Modal de solicitudes y modal de perfil conectados a callbacks nuevos.
+- [x] Soporte `is_private` en editor Chirp (toggle + persistencia).
+- [x] Refrescar feed/estado luego de aceptar/rechazar/cancelar.
 
 ## H - Onboarding social unificado
-- [ ] Crear componente shared para onboarding social primer uso.
-- [ ] Campos minimos: username, display_name, avatar, bio, is_private.
-- [ ] Reutilizar en Snap, Chirp, Clips, News.
-- [ ] Gate de primer uso para no mostrarlo cada vez.
+- [x] Crear componente shared para onboarding social primer uso.
+- [x] Campos minimos: username, display_name, avatar, bio, is_private.
+- [x] Reutilizar en Snap, Chirp, Clips, News.
+- [x] Gate de primer uso para no mostrarlo cada vez.
 
 ## I - Pulido final + QA
 - [ ] Tests smoke manuales:
@@ -109,9 +109,9 @@ Implementar las ideas tecnicas buenas de `lb-phone` en nuestro telefono, sin cop
 - [ ] Textos, orden visual y componentes con identidad propia.
 
 ## Plan de commits manana (1 feature = 1 commit)
-- [ ] Commit F: Snap UI requests + profile editor.
-- [ ] Commit G: Chirp UI requests + profile editor + private toggle.
-- [ ] Commit H: onboarding social shared + wiring apps.
+- [x] Commit F: Snap UI requests + profile editor.
+- [x] Commit G: Chirp UI requests + profile editor + private toggle.
+- [x] Commit H: onboarding social shared + wiring apps.
 - [ ] Commit I: QA fixes + regression pass.
 - [ ] Commit J: audio live/proximidad (feature flag + fallback + QA).
 

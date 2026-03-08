@@ -445,16 +445,30 @@ export function ChirpApp() {
   };
 
   const createChirpAccount = async (payload: SocialOnboardingPayload) => {
+    const avatar = sanitizeMediaUrl(payload.avatar) || '';
+    const bio = sanitizeText(payload.bio, 180);
+
     const response = await fetchNui<{ success?: boolean; error?: string; account?: ChirpAccount }>('chirpCreateAccount', {
       username: payload.username,
       displayName: payload.displayName,
-      avatar: '',
-      bio: '',
-      isPrivate: false,
+      avatar,
+      bio,
+      isPrivate: payload.isPrivate,
     }, { success: false });
 
     if (!response?.success) {
       return { ok: false, error: response?.error || 'No se pudo crear la cuenta de Chirp.' };
+    }
+
+    const updated = await fetchNui<boolean>('chirpUpdateAccount', {
+      displayName: payload.displayName,
+      avatar,
+      bio,
+      isPrivate: payload.isPrivate,
+    }, false);
+
+    if (!updated) {
+      return { ok: false, error: 'Cuenta creada, pero no se pudieron guardar todos los datos del perfil.' };
     }
 
     setShowOnboarding(false);
@@ -855,6 +869,9 @@ export function ChirpApp() {
         appName="Chirp"
         usernameHint={myAccount()?.username || ''}
         displayNameHint={myAccount()?.display_name || ''}
+        avatarHint={myAccount()?.avatar || ''}
+        bioHint={myAccount()?.bio || ''}
+        isPrivateHint={myAccount()?.is_private === 1 || myAccount()?.is_private === true}
         onCreate={createChirpAccount}
         onClose={() => setShowOnboarding(false)}
       />

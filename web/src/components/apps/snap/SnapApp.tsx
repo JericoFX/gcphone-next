@@ -648,14 +648,28 @@ export function SnapApp() {
   };
 
   const createSnapAccount = async (payload: SocialOnboardingPayload) => {
+    const avatar = sanitizeMediaUrl(payload.avatar) || '';
+    const bio = sanitizeText(payload.bio, 180);
+
     const response = await fetchNui<{ success?: boolean; error?: string; account?: SnapAccount }>('snapCreateAccount', {
       username: payload.username,
       displayName: payload.displayName,
-      avatar: '',
+      avatar,
     }, { success: false });
 
     if (!response?.success) {
       return { ok: false, error: response?.error || 'No se pudo crear la cuenta de Snap.' };
+    }
+
+    const updated = await fetchNui<{ success?: boolean }>('snapUpdateAccount', {
+      displayName: payload.displayName,
+      avatar,
+      bio,
+      isPrivate: payload.isPrivate,
+    }, { success: false });
+
+    if (!updated?.success) {
+      return { ok: false, error: 'Cuenta creada, pero no se pudieron guardar todos los datos del perfil.' };
     }
 
     setShowOnboarding(false);
@@ -1850,6 +1864,9 @@ export function SnapApp() {
         appName="Snap"
         usernameHint={myAccount()?.username || ''}
         displayNameHint={profileDisplayName() || myAccount()?.display_name || ''}
+        avatarHint={profileAvatar() || myAccount()?.avatar || ''}
+        bioHint={profileBio() || myAccount()?.bio || ''}
+        isPrivateHint={profilePrivate() || myAccount()?.is_private === 1 || myAccount()?.is_private === true}
         onCreate={createSnapAccount}
         onClose={() => setShowOnboarding(false)}
       />

@@ -11,6 +11,15 @@
   font-size: 12px;
 }
 
+.privateToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  color: #374151;
+  font-size: 13px;
+}
+
 .error {
   margin: 10px 0 0;
   border: 1px solid #fecaca;
