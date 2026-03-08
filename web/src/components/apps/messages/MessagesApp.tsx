@@ -14,7 +14,7 @@ import { MediaLightbox } from '../../shared/ui/MediaLightbox';
 import { SkeletonList } from '../../shared/ui/SkeletonList';
 import { VirtualList } from '../../shared/ui/VirtualList';
 import { EmojiPickerButton } from '../../shared/ui/EmojiPicker';
-import { AppScaffold } from '../../shared/layout';
+import { AppFAB, AppScaffold } from '../../shared/layout';
 import styles from './MessagesApp.module.scss';
 
 function extractCoords(text?: string): { x: number; y: number } | null {
@@ -299,7 +299,7 @@ export function MessagesApp() {
               <SkeletonList rows={6} avatar />
             </Show>
           </div>
-          <button class={styles.fab} onClick={openNewChat}>+</button>
+          <AppFAB class={styles.fab} icon="+" onClick={openNewChat} />
         </div>
       </AppScaffold>
       <MediaLightbox url={viewerUrl()} onClose={() => setViewerUrl(null)} />

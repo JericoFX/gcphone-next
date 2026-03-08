@@ -20,7 +20,7 @@ import {
   type SnapLiveReaction,
   type SnapLiveSocketMessage,
 } from '../../../utils/socket';
-import { AppScaffold } from '../../shared/layout';
+import { AppFAB, AppScaffold } from '../../shared/layout';
 import { useAppCache } from '../../../hooks';
 import { MediaLightbox } from '../../shared/ui/MediaLightbox';
 import { FormField, FormTextarea, Modal, ModalActions, ModalButton } from '../../shared/ui/Modal';
@@ -1595,20 +1595,16 @@ export function SnapApp() {
 
       {/* FAB - Hidden on Profile tab */}
       <Show when={activeTab() !== 'profile'}>
-        <div class={styles.fabContainer}>
-          <Show when={fabTooltipVisible()}>
-            <div class={styles.fabTooltip}>Crear</div>
-          </Show>
-          <button 
-            class={styles.fab}
-            onClick={() => setShowActionSheet(true)}
-            onPointerDown={showFabTooltip}
-            onPointerUp={hideFabTooltip}
-            onPointerLeave={hideFabTooltip}
-          >
-            +
-          </button>
-        </div>
+        <AppFAB
+          class={styles.fab}
+          icon="+"
+          onClick={() => setShowActionSheet(true)}
+          tooltip="Crear"
+          tooltipVisible={fabTooltipVisible()}
+          onPointerDown={showFabTooltip}
+          onPointerUp={hideFabTooltip}
+          onPointerLeave={hideFabTooltip}
+        />
       </Show>
 
       {/* Action Sheet */}
