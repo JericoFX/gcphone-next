@@ -68,6 +68,14 @@ interface SnapLive {
   live_viewers?: number;
 }
 
+type TrackKind = 'audio' | 'video';
+
+interface MediaTrackEntry {
+  sid: string;
+  kind: TrackKind;
+  element: HTMLMediaElement;
+}
+
 interface SnapFollowRequest {
   id: number;
   account_id: number;
@@ -248,6 +256,8 @@ export function SnapApp() {
   const [viewerMuted, setViewerMuted] = createSignal(false);
   const [liveStreaming, setLiveStreaming] = createSignal(false);
   const [liveConnected, setLiveConnected] = createSignal(false);
+  const [liveVideoReady, setLiveVideoReady] = createSignal(false);
+  const [liveLocalIdentity, setLiveLocalIdentity] = createSignal('');
   const [liveAudioProximityEnabled, setLiveAudioProximityEnabled] = createSignal(false);
   const [liveAudioHeartbeatAt, setLiveAudioHeartbeatAt] = createSignal(0);
   const [liveAudioWatchdogMs, setLiveAudioWatchdogMs] = createSignal(2400);
@@ -264,9 +274,125 @@ export function SnapApp() {
 
   let storyTick: number | undefined;
   let floatingTimers = new Map<string, number>();
+  let liveParticipantTracks = new Map<string, MediaTrackEntry[]>();
+  let liveVideoHost: HTMLDivElement | undefined;
   let stopSnapMockFeed: (() => void) | undefined;
   let liveAudioWatchdogTimer: number | undefined;
   let liveAudioRetryTimer: number | undefined;
+
+  const getPreferredLiveIdentity = () => {
+    const entries = Array.from(liveParticipantTracks.entries());
+    if (entries.length === 0) return null;
+
+    const localIdentity = liveLocalIdentity();
+    const remoteVideo = entries.find(([identity, tracks]) => identity !== localIdentity && tracks.some((track) => track.kind === 'video'));
+    if (remoteVideo) return remoteVideo[0];
+
+    const localVideo = entries.find(([identity, tracks]) => identity === localIdentity && tracks.some((track) => track.kind === 'video'));
+    if (localVideo) return localVideo[0];
+
+    const remoteAudio = entries.find(([identity]) => identity !== localIdentity);
+    if (remoteAudio) return remoteAudio[0];
+
+    return entries[0][0];
+  };
+
+  const renderLiveVideoStage = () => {
+    const host = liveVideoHost;
+    if (!host) return;
+
+    while (host.firstChild) {
+      host.removeChild(host.firstChild);
+    }
+
+    host.classList.remove(styles.liveVideoHostReady);
+    setLiveVideoReady(false);
+
+    const preferredIdentity = getPreferredLiveIdentity();
+    if (!preferredIdentity) return;
+
+    const localIdentity = liveLocalIdentity();
+    const preferredTracks = liveParticipantTracks.get(preferredIdentity) || [];
+    const videoTrack = preferredTracks.find((track) => track.kind === 'video');
+
+    if (videoTrack) {
+      videoTrack.element.className = styles.liveVideoElement;
+      videoTrack.element.muted = preferredIdentity === localIdentity;
+      host.appendChild(videoTrack.element);
+      host.classList.add(styles.liveVideoHostReady);
+      setLiveVideoReady(true);
+    }
+
+    for (const [identity, tracks] of liveParticipantTracks.entries()) {
+      for (const track of tracks) {
+        if (track.kind !== 'audio') continue;
+        track.element.className = styles.liveAudioElement;
+        track.element.muted = identity === localIdentity;
+        host.appendChild(track.element);
+      }
+    }
+  };
+
+  const addLiveTrack = (identity: string, track: MediaTrackEntry) => {
+    const current = liveParticipantTracks.get(identity) || [];
+    const filtered = current.filter((entry) => entry.sid !== track.sid);
+    for (const entry of current) {
+      if (entry.sid === track.sid) {
+        entry.element.remove();
+      }
+    }
+    liveParticipantTracks.set(identity, [...filtered, track]);
+    renderLiveVideoStage();
+  };
+
+  const removeLiveTrack = (identity: string, trackSid?: string) => {
+    if (!liveParticipantTracks.has(identity)) return;
+
+    if (!trackSid) {
+      for (const track of liveParticipantTracks.get(identity) || []) {
+        track.element.remove();
+      }
+      liveParticipantTracks.delete(identity);
+      renderLiveVideoStage();
+      return;
+    }
+
+    const next = (liveParticipantTracks.get(identity) || []).filter((track) => {
+      if (track.sid !== trackSid) return true;
+      track.element.remove();
+      return false;
+    });
+
+    if (next.length > 0) {
+      liveParticipantTracks.set(identity, next);
+    } else {
+      liveParticipantTracks.delete(identity);
+    }
+    renderLiveVideoStage();
+  };
+
+  const clearLiveVideoStage = () => {
+    for (const tracks of liveParticipantTracks.values()) {
+      for (const track of tracks) {
+        track.element.remove();
+      }
+    }
+    liveParticipantTracks = new Map<string, MediaTrackEntry[]>();
+    setLiveLocalIdentity('');
+    setLiveVideoReady(false);
+
+    if (liveVideoHost) {
+      while (liveVideoHost.firstChild) {
+        liveVideoHost.removeChild(liveVideoHost.firstChild);
+      }
+      liveVideoHost.classList.remove(styles.liveVideoHostReady);
+    }
+  };
+
+  const setLiveVideoStageHost = (element: HTMLDivElement | undefined) => {
+    liveVideoHost = element;
+    renderLiveVideoStage();
+  };
 
   // FAB Tooltip
   let fabTimeout: number;
@@ -821,6 +947,7 @@ export function SnapApp() {
     const owner = !!(myAccount()?.username && live.username && myAccount()?.username === live.username);
     await fetchNui('phoneSetVisualMode', { mode: 'live' }, true);
     setStatusMessage('');
+    clearLiveVideoStage();
     setActiveLive(live);
     setLiveChatOpen(false);
     setLiveMessages([]);
@@ -847,7 +974,24 @@ export function SnapApp() {
     }
 
     try {
-      await connectLiveKit(tokenPayload.url, tokenPayload.token, tokenPayload.maxDuration || 1800);
+      setLiveLocalIdentity(tokenPayload.identity || '');
+      await connectLiveKit(tokenPayload.url, tokenPayload.token, tokenPayload.maxDuration || 1800, {
+        onParticipantDisconnected: (identity) => {
+          removeLiveTrack(identity);
+        },
+        onTrackSubscribed: ({ participantIdentity, trackSid, kind, element }) => {
+          addLiveTrack(participantIdentity, { sid: trackSid, kind, element });
+        },
+        onTrackUnsubscribed: ({ participantIdentity, trackSid }) => {
+          removeLiveTrack(participantIdentity, trackSid);
+        },
+        onLocalTrackPublished: ({ participantIdentity, trackSid, kind, element }) => {
+          addLiveTrack(participantIdentity, { sid: trackSid, kind, element });
+        },
+        onLocalTrackUnpublished: ({ participantIdentity, trackSid }) => {
+          removeLiveTrack(participantIdentity, trackSid);
+        },
+      });
       if (owner) {
         await setLiveKitCameraEnabled(true);
         await setLiveKitMicrophoneEnabled(true);
@@ -961,6 +1105,7 @@ export function SnapApp() {
     disconnectSnapLiveSocket();
     await stopLiveAudioProximity();
     disconnectLiveKit();
+    clearLiveVideoStage();
     setActiveLive(null);
     setLiveStreaming(false);
     setLiveConnected(false);
@@ -1806,7 +1951,16 @@ export function SnapApp() {
           </div>
 
           <div class={styles.liveVideoCanvas}>
-            <div class={styles.livePlaceholder}>LiveKit video stream</div>
+            <div
+              ref={setLiveVideoStageHost}
+              class={styles.liveVideoHost}
+              classList={{ [styles.liveVideoHostReady]: liveVideoReady() }}
+            />
+            <Show when={!liveVideoReady()}>
+              <div class={styles.livePlaceholder}>
+                {isMockLive() ? 'Vista previa mock del live' : (liveConnected() ? 'Esperando video del live...' : 'Conectando video...')}
+              </div>
+            </Show>
           </div>
 
           <div class={styles.liveFloatingLayer}>

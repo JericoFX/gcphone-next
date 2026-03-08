@@ -635,7 +635,34 @@
   background: linear-gradient(180deg, #101010 0%, #090909 100%);
 }
 
+.liveVideoHost {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.liveVideoHostReady {
+  background: #000000;
+}
+
+.liveVideoElement {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.liveAudioElement {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
 .livePlaceholder {
+  position: relative;
+  z-index: 1;
   padding: 10px 14px;
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.08);
