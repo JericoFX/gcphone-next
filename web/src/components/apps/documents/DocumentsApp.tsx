@@ -1,4 +1,4 @@
-import { For, Show, createEffect, createMemo, createSignal, onCleanup } from 'solid-js';
+import { For, Show, createEffect, createMemo, createSignal, onMount } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { fetchNui } from '../../../utils/fetchNui';
 import { timeAgo } from '../../../utils/misc';
@@ -7,6 +7,7 @@ import { uiAlert } from '../../../utils/uiAlert';
 import { useNuiEvent } from '../../../utils/useNui';
 import { AppScaffold } from '../../shared/layout';
 import { useAppCache } from '../../../hooks';
+import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { Modal, ModalActions, ModalButton } from '../../shared/ui/Modal';
 import styles from './DocumentsApp.module.scss';
 
@@ -109,7 +110,7 @@ export function DocumentsApp() {
     });
   });
 
-  createEffect(() => {
+  onMount(() => {
     void loadData();
   });
 
@@ -140,22 +141,18 @@ export function DocumentsApp() {
     }
   });
 
-  createEffect(() => {
-    const onKey = (e: CustomEvent<string>) => {
-      if (e.detail === 'Backspace') {
-        if (showComposer()) {
-          setShowComposer(false);
-          return;
-        }
-        if (selectedDoc()) {
-          setSelectedDoc(null);
-          return;
-        }
-        router.goBack();
+  usePhoneKeyHandler({
+    Backspace: () => {
+      if (showComposer()) {
+        setShowComposer(false);
+        return;
       }
-    };
-    window.addEventListener('phone:keyUp', onKey as EventListener);
-    onCleanup(() => window.removeEventListener('phone:keyUp', onKey as EventListener));
+      if (selectedDoc()) {
+        setSelectedDoc(null);
+        return;
+      }
+      router.goBack();
+    },
   });
 
   const getDocTypeInfo = (typeId: string): DocType => {

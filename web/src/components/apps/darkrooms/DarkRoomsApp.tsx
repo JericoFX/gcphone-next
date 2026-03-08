@@ -1,9 +1,10 @@
-import { For, Show, createEffect, createSignal, onCleanup, onMount } from 'solid-js';
+import { For, Show, createEffect, createMemo, createSignal, onMount } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { fetchNui } from '../../../utils/fetchNui';
 import { uiAlert } from '../../../utils/uiAlert';
 import { AppScaffold } from '../../shared/layout';
 import { useAppCache } from '../../../hooks';
+import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { MediaLightbox } from '../../shared/ui/MediaLightbox';
 import { VirtualList } from '../../shared/ui/VirtualList';
 import { Modal, ModalActions, ModalButton, FormField } from '../../shared/ui/Modal';
@@ -76,7 +77,6 @@ export function DarkRoomsApp() {
   
   // Data
   const [rooms, setRooms] = createSignal<Room[]>([]);
-  const [filteredRooms, setFilteredRooms] = createSignal<Room[]>([]);
   const [selectedRoom, setSelectedRoom] = createSignal<Room | null>(null);
   const [posts, setPosts] = createSignal<Post[]>([]);
   const [selectedPost, setSelectedPost] = createSignal<Post | null>(null);
@@ -131,25 +131,6 @@ export function DarkRoomsApp() {
     if (fabTimeout) clearTimeout(fabTimeout);
   };
 
-  // Filter rooms based on search
-  createEffect(() => {
-    const query = searchQuery().toLowerCase().trim();
-    const allRooms = rooms();
-    
-    if (!query) {
-      setFilteredRooms(sortRooms(allRooms));
-      return;
-    }
-
-    const filtered = allRooms.filter(room => 
-      room.name.toLowerCase().includes(query) ||
-      room.slug.toLowerCase().includes(query) ||
-      (room.description && room.description.toLowerCase().includes(query))
-    );
-    
-    setFilteredRooms(sortRooms(filtered));
-  });
-
   // Sort rooms
   const sortRooms = (roomList: Room[]) => {
     const mode = sortMode();
@@ -164,6 +145,23 @@ export function DarkRoomsApp() {
     
     return sorted;
   };
+
+  const filteredRooms = createMemo(() => {
+    const query = searchQuery().toLowerCase().trim();
+    const allRooms = rooms();
+
+    if (!query) {
+      return sortRooms(allRooms);
+    }
+
+    const filtered = allRooms.filter((room) =>
+      room.name.toLowerCase().includes(query)
+      || room.slug.toLowerCase().includes(query)
+      || (room.description && room.description.toLowerCase().includes(query)),
+    );
+
+    return sortRooms(filtered);
+  });
 
   // Auto-generate slug from name
   createEffect(() => {
@@ -183,7 +181,6 @@ export function DarkRoomsApp() {
     const normalized = Array.isArray(next) ? next : [];
     if (!cached) cache.set('rooms', normalized, 15000);
     setRooms(normalized);
-    setFilteredRooms(sortRooms(normalized));
   };
 
   const requestJoinRoom = async (room: Room, password = '') => {
@@ -352,10 +349,8 @@ export function DarkRoomsApp() {
     await openPost(post);
   };
 
-  createEffect(() => {
-    const onKey = (e: CustomEvent<string>) => {
-      if (e.detail !== 'Backspace') return;
-      
+  usePhoneKeyHandler({
+    Backspace: () => {
       if (currentView() === 'post') {
         backToRoom();
         return;
@@ -365,10 +360,7 @@ export function DarkRoomsApp() {
         return;
       }
       router.goBack();
-    };
-
-    window.addEventListener('phone:keyUp', onKey as EventListener);
-    onCleanup(() => window.removeEventListener('phone:keyUp', onKey as EventListener));
+    },
   });
 
   onMount(() => {
@@ -550,77 +542,80 @@ export function DarkRoomsApp() {
           <span class={styles.postDetailTitle}>Post</span>
         </div>
 
-        <div class={styles.postDetailContent}>
-          <div class={styles.postDetailVotes}>
-            <button 
-              class={styles.voteButton}
-              classList={{ [styles.votedUp]: post.my_vote === 1 }}
-              onClick={() => void votePost(post.id, 1)}
-            >
-              ▲
-            </button>
-            <span class={styles.voteCountLarge}>{post.score}</span>
-            <button 
-              class={styles.voteButton}
-              classList={{ [styles.votedDown]: post.my_vote === -1 }}
-              onClick={() => void votePost(post.id, -1)}
-            >
-              ▼
-            </button>
-          </div>
-          
-          <div class={styles.postDetailBody}>
-            <h2 class={styles.postDetailHeading}>{post.title}</h2>
-            <div class={styles.postDetailMeta}>
-              <span>Publicado por {post.author_name}</span>
+        <div class={styles.postThreadScroll}>
+          <div class={styles.postDetailContent}>
+            <div class={styles.postDetailVotes}>
+              <button 
+                class={styles.voteButton}
+                classList={{ [styles.votedUp]: post.my_vote === 1 }}
+                onClick={() => void votePost(post.id, 1)}
+              >
+                ▲
+              </button>
+              <span class={styles.voteCountLarge}>{post.score}</span>
+              <button 
+                class={styles.voteButton}
+                classList={{ [styles.votedDown]: post.my_vote === -1 }}
+                onClick={() => void votePost(post.id, -1)}
+              >
+                ▼
+              </button>
             </div>
-            <p class={styles.postDetailText}>{post.content}</p>
-            <MediaBlock url={post.media_url} onOpen={setViewerUrl} />
+
+            <div class={styles.postDetailBody}>
+              <h2 class={styles.postDetailHeading}>{post.title}</h2>
+              <div class={styles.postDetailMeta}>
+                <span>Publicado por {post.author_name}</span>
+              </div>
+              <p class={styles.postDetailText}>{post.content}</p>
+              <MediaBlock url={post.media_url} onOpen={setViewerUrl} />
+            </div>
+          </div>
+
+          <div class={styles.commentsSection}>
+            <div class={styles.commentsSeparator} />
+            <h4 class={styles.commentsTitle}>{comments().length} comentarios</h4>
+
+            <div class={styles.commentsList}>
+              <For each={comments()}>
+                {(comment) => (
+                  <div class={styles.commentItem}>
+                    <div class={styles.commentHeader}>
+                      <strong>{comment.author_name}</strong>
+                    </div>
+                    <p class={styles.commentText}>{comment.content}</p>
+                    <MediaBlock url={comment.media_url} compact onOpen={setViewerUrl} />
+                  </div>
+                )}
+              </For>
+            </div>
           </div>
         </div>
 
-        <div class={styles.commentsSection}>
-          <h4 class={styles.commentsTitle}>{comments().length} comentarios</h4>
-          
-          <div class={styles.commentsList}>
-            <For each={comments()}>
-              {(comment) => (
-                <div class={styles.commentItem}>
-                  <div class={styles.commentHeader}>
-                    <strong>{comment.author_name}</strong>
-                  </div>
-                  <p class={styles.commentText}>{comment.content}</p>
-                  <MediaBlock url={comment.media_url} compact onOpen={setViewerUrl} />
-                </div>
-              )}
-            </For>
-          </div>
-
-          <div class={styles.commentComposer}>
-            <textarea
-              class={styles.commentInput}
-              placeholder="Escribe un comentario..."
-              value={commentText()}
-              onInput={(e) => setCommentText(e.currentTarget.value)}
-              rows={3}
-            />
-            <div class={styles.commentActions}>
-              <label class={styles.anonymousToggle}>
-                <input 
-                  type="checkbox" 
-                  checked={commentAnonymous()}
-                  onChange={(e) => setCommentAnonymous(e.currentTarget.checked)}
-                />
-                <span>Anonimo</span>
-              </label>
-              <button 
-                class={styles.sendButton}
-                onClick={() => void createComment()}
-                disabled={!commentText().trim()}
-              >
-                Comentar
-              </button>
-            </div>
+        <div class={styles.commentComposer}>
+          <textarea
+            class={styles.commentInput}
+            placeholder="Escribe un comentario..."
+            value={commentText()}
+            onInput={(e) => setCommentText(e.currentTarget.value)}
+            rows={3}
+          />
+          <div class={styles.commentActions}>
+            <label class={styles.anonymousToggle}>
+              <input 
+                type="checkbox" 
+                checked={commentAnonymous()}
+                onChange={(e) => setCommentAnonymous(e.currentTarget.checked)}
+              />
+              <span>Anonimo</span>
+            </label>
+            <button 
+              class={styles.sendButton}
+              onClick={() => void createComment()}
+              disabled={!commentText().trim()}
+            >
+              Comentar
+            </button>
           </div>
         </div>
       </div>

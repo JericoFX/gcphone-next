@@ -4,10 +4,11 @@ import { fetchNui } from '../../../utils/fetchNui';
 import { getStoredLanguage, t } from '../../../i18n';
 import { uiPrompt } from '../../../utils/uiDialog';
 import { resolveMediaType, sanitizeMediaUrl, sanitizeText } from '../../../utils/sanitize';
+import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import styles from './CameraApp.module.scss';
 
 type CameraEffect = 'normal' | 'noir' | 'vivid' | 'warm';
-type CameraTarget = 'snap-post' | 'snap-story' | 'chirp' | 'clips' | '';
+type CameraTarget = 'snap-post' | 'snap-story' | 'snap-avatar' | 'chirp' | 'clips' | '';
 
 const EFFECTS: Array<{ id: CameraEffect; label: string }> = [
   { id: 'normal', label: 'Normal' },
@@ -19,6 +20,7 @@ const EFFECTS: Array<{ id: CameraEffect; label: string }> = [
 function targetLabel(target: CameraTarget) {
   if (target === 'snap-post') return 'Snap post';
   if (target === 'snap-story') return 'Snap story';
+  if (target === 'snap-avatar') return 'Snap avatar';
   if (target === 'chirp') return 'Chirp';
   if (target === 'clips') return 'Clips';
   return 'Sin destino';
@@ -42,7 +44,13 @@ export function CameraApp() {
   createEffect(() => {
     const params = router.params();
     const nextTarget = sanitizeText(String(params.target || ''), 24);
-    if (nextTarget === 'snap-post' || nextTarget === 'snap-story' || nextTarget === 'chirp' || nextTarget === 'clips') {
+    if (
+      nextTarget === 'snap-post' ||
+      nextTarget === 'snap-story' ||
+      nextTarget === 'snap-avatar' ||
+      nextTarget === 'chirp' ||
+      nextTarget === 'clips'
+    ) {
       setTarget(nextTarget as CameraTarget);
     } else {
       setTarget('');
@@ -55,12 +63,10 @@ export function CameraApp() {
     router.goBack();
   };
 
-  createEffect(() => {
-    const onKey = (e: CustomEvent<string>) => {
-      if (e.detail === 'Backspace') void closeCamera();
-    };
-    window.addEventListener('phone:keyUp', onKey as EventListener);
-    onCleanup(() => window.removeEventListener('phone:keyUp', onKey as EventListener));
+  usePhoneKeyHandler({
+    Backspace: () => {
+      void closeCamera();
+    },
   });
 
   onMount(async () => {
@@ -137,6 +143,8 @@ export function CameraApp() {
         mediaType: resolveMediaType(mediaUrl) === 'video' ? 'video' : 'image',
       });
       router.navigate('snap');
+    } else if (target() === 'snap-avatar') {
+      router.navigate('snap', { avatarMedia: mediaUrl, openProfile: '1' });
     } else if (target() === 'chirp') {
       await fetchNui('chirpPublishTweet', {
         content: sanitizeText(caption(), 280) || 'Nueva captura',

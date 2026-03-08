@@ -1,9 +1,10 @@
-import { createEffect, createMemo, createSignal, For, onCleanup, Show } from 'solid-js';
+import { createMemo, createSignal, For, Show, onMount } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { fetchNui } from '../../../utils/fetchNui';
 import { sanitizeMediaUrl, sanitizeText } from '../../../utils/sanitize';
 import { uiPrompt } from '../../../utils/uiDialog';
 import { uiAlert } from '../../../utils/uiAlert';
+import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { ActionSheet } from '../../shared/ui/ActionSheet';
 import { MediaLightbox } from '../../shared/ui/MediaLightbox';
 import styles from './MarketApp.module.scss';
@@ -40,16 +41,16 @@ export function MarketApp() {
     setMyListings(mine || []);
   };
 
-  createEffect(() => {
+  onMount(() => {
     void load();
   });
 
-  createEffect(() => {
-    const onKey = (e: CustomEvent<string>) => {
-      if (e.detail === 'Backspace' && !showCreate()) router.goBack();
-    };
-    window.addEventListener('phone:keyUp', onKey as EventListener);
-    onCleanup(() => window.removeEventListener('phone:keyUp', onKey as EventListener));
+  usePhoneKeyHandler({
+    Backspace: () => {
+      if (!showCreate()) {
+        router.goBack();
+      }
+    },
   });
 
   const createListing = async () => {

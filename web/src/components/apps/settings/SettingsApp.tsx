@@ -4,6 +4,7 @@ import { usePhone } from '../../../store/phone';
 import { useNotifications } from '../../../store/notifications';
 import { fetchNui } from '../../../utils/fetchNui';
 import { APP_DEFINITIONS } from '../../../config/apps';
+import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { appName, t } from '../../../i18n';
 import styles from './SettingsApp.module.scss';
 
@@ -78,12 +79,10 @@ export function SettingsApp() {
   const [liveLocationStatus, setLiveLocationStatus] = createSignal('');
   const language = () => phoneState.settings.language || 'es';
 
-  createEffect(() => {
-    const onKey = (e: CustomEvent<string>) => {
-      if (e.detail === 'Backspace') router.goBack();
-    };
-    window.addEventListener('phone:keyUp', onKey as EventListener);
-    onCleanup(() => window.removeEventListener('phone:keyUp', onKey as EventListener));
+  usePhoneKeyHandler({
+    Backspace: () => {
+      router.goBack();
+    },
   });
 
   onMount(async () => {

@@ -1,4 +1,4 @@
-import { Show, type ParentComponent, type ParentProps } from 'solid-js';
+import { Show, mergeProps, splitProps, type ParentComponent, type ParentProps } from 'solid-js';
 import { getStoredLanguage, tl } from '../../../i18n';
 import styles from './Modal.module.scss';
 
@@ -11,24 +11,31 @@ export interface ModalProps extends ParentProps {
 }
 
 export const Modal: ParentComponent<ModalProps> = (props) => {
+  const merged = mergeProps({
+    size: 'md' as const,
+    class: undefined as string | undefined,
+  }, props);
+
+  const [local] = splitProps(merged, ['open', 'title', 'onClose', 'size', 'class', 'children']);
+
   return (
-    <Show when={props.open}>
-      <div class={styles.overlay} onClick={props.onClose}>
+    <Show when={local.open}>
+      <div class={styles.overlay} onClick={local.onClose}>
         <div
           classList={{
             [styles.modal]: true,
-            [styles.sm]: props.size === 'sm',
-            [styles.lg]: props.size === 'lg',
-            [props.class || '']: !!props.class,
+            [styles.sm]: local.size === 'sm',
+            [styles.lg]: local.size === 'lg',
+            [local.class || '']: !!local.class,
           }}
           onClick={(e) => e.stopPropagation()}
         >
-          <Show when={props.title}>
+          <Show when={local.title}>
             <div class={styles.header}>
-              <h2 class={styles.title}>{tl(props.title || '', getStoredLanguage())}</h2>
+              <h2 class={styles.title}>{tl(local.title || '', getStoredLanguage())}</h2>
             </div>
           </Show>
-          <div class={styles.content}>{props.children}</div>
+          <div class={styles.content}>{local.children}</div>
         </div>
       </div>
     </Show>
@@ -79,16 +86,25 @@ export interface FormFieldProps {
 }
 
 export function FormField(props: FormFieldProps) {
+  const merged = mergeProps({
+    type: 'text' as const,
+    placeholder: undefined as string | undefined,
+    class: undefined as string | undefined,
+    disabled: false,
+  }, props);
+
+  const [local] = splitProps(merged, ['label', 'value', 'onChange', 'type', 'placeholder', 'class', 'disabled']);
+
   return (
-    <div classList={{ [styles.field]: true, [props.class || '']: !!props.class }}>
-      <label class={styles.label}>{tl(props.label, getStoredLanguage())}</label>
+    <div classList={{ [styles.field]: true, [local.class || '']: !!local.class }}>
+      <label class={styles.label}>{tl(local.label, getStoredLanguage())}</label>
       <input
         class="ios-input"
-        type={props.type || 'text'}
-        value={props.value}
-        onInput={(e) => props.onChange(e.currentTarget.value)}
-        placeholder={props.placeholder ? tl(props.placeholder, getStoredLanguage()) : undefined}
-        disabled={props.disabled}
+        type={local.type}
+        value={local.value}
+        onInput={(e) => local.onChange(e.currentTarget.value)}
+        placeholder={local.placeholder ? tl(local.placeholder, getStoredLanguage()) : undefined}
+        disabled={local.disabled}
       />
     </div>
   );
@@ -105,16 +121,25 @@ export interface FormTextareaProps {
 }
 
 export function FormTextarea(props: FormTextareaProps) {
+  const merged = mergeProps({
+    placeholder: undefined as string | undefined,
+    rows: 3,
+    class: undefined as string | undefined,
+    disabled: false,
+  }, props);
+
+  const [local] = splitProps(merged, ['label', 'value', 'onChange', 'placeholder', 'rows', 'class', 'disabled']);
+
   return (
-    <div classList={{ [styles.field]: true, [props.class || '']: !!props.class }}>
-      <label class={styles.label}>{tl(props.label, getStoredLanguage())}</label>
+    <div classList={{ [styles.field]: true, [local.class || '']: !!local.class }}>
+      <label class={styles.label}>{tl(local.label, getStoredLanguage())}</label>
       <textarea
         class="ios-textarea"
-        value={props.value}
-        onInput={(e) => props.onChange(e.currentTarget.value)}
-        placeholder={props.placeholder ? tl(props.placeholder, getStoredLanguage()) : undefined}
-        rows={props.rows || 3}
-        disabled={props.disabled}
+        value={local.value}
+        onInput={(e) => local.onChange(e.currentTarget.value)}
+        placeholder={local.placeholder ? tl(local.placeholder, getStoredLanguage()) : undefined}
+        rows={local.rows}
+        disabled={local.disabled}
       />
     </div>
   );

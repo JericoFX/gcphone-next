@@ -1,10 +1,11 @@
-import { For, Show, createEffect, createSignal, onCleanup, onMount } from 'solid-js';
+import { For, Show, createEffect, createMemo, createSignal, onMount } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { fetchNui } from '../../../utils/fetchNui';
 import { timeAgo } from '../../../utils/misc';
 import { resolveMediaType, sanitizeMediaUrl, sanitizeText } from '../../../utils/sanitize';
 import { AppScaffold } from '../../shared/layout';
 import { useAppCache } from '../../../hooks';
+import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { MediaLightbox } from '../../shared/ui/MediaLightbox';
 import { Modal, ModalActions, ModalButton, FormField } from '../../shared/ui/Modal';
 import { EmojiPickerButton } from '../../shared/ui/EmojiPicker';
@@ -18,10 +19,13 @@ interface ChirpTweet {
   content: string;
   media_url?: string;
   likes?: number;
+  likes_count?: number;
   liked?: boolean;
   rechirps?: number;
+  rechirps_count?: number;
   rechirped?: boolean;
   replies?: number;
+  comments_count?: number;
   created_at?: string;
   verified?: boolean;
   is_own?: boolean;
@@ -74,7 +78,7 @@ export function ChirpApp() {
   const [showComposer, setShowComposer] = createSignal(false);
   const [composerText, setComposerText] = createSignal('');
   const [composerMedia, setComposerMedia] = createSignal('');
-  const [charCount, setCharCount] = createSignal(0);
+  const charCount = createMemo(() => composerText().length);
 
   // Comments
   const [showComments, setShowComments] = createSignal(false);
@@ -108,10 +112,35 @@ export function ChirpApp() {
     if (fabTimeout) clearTimeout(fabTimeout);
   };
 
-  // Character counter
-  createEffect(() => {
-    setCharCount(composerText().length);
-  });
+  const toBool = (value: unknown) => value === true || value === 1 || value === '1';
+
+  const toCount = (value: unknown) => {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) return 0;
+    return Math.max(0, Math.floor(parsed));
+  };
+
+  const normalizeTweet = (tweet: ChirpTweet): ChirpTweet => {
+    const likes = toCount(tweet.likes ?? tweet.likes_count);
+    const rechirps = toCount(tweet.rechirps ?? tweet.rechirps_count);
+    const replies = toCount(tweet.replies ?? tweet.comments_count);
+    return {
+      ...tweet,
+      likes,
+      liked: toBool(tweet.liked),
+      rechirps,
+      rechirped: toBool(tweet.rechirped),
+      replies,
+    };
+  };
+
+  const normalizeTweets = (list: ChirpTweet[]) =>
+    list.map((tweet) => normalizeTweet(tweet));
+
+  const applyTweetUpdate = (tweetId: number, updater: (tweet: ChirpTweet) => ChirpTweet) => {
+    setTweets((prev) => prev.map((tweet) => (tweet.id === tweetId ? updater(tweet) : tweet)));
+    setSelectedTweet((prev) => (prev && prev.id === tweetId ? updater(prev) : prev));
+  };
 
   const loadTweets = async () => {
     setLoading(true);
@@ -123,9 +152,10 @@ export function ChirpApp() {
       limit: 50, 
       offset: 0 
     }, []);
-    
-    if (!cached) cache.set(cacheKey, list || [], 30000);
-    setTweets(list || []);
+
+    const normalized = normalizeTweets(list || []);
+    if (!cached) cache.set(cacheKey, normalized, 30000);
+    setTweets(normalized);
     setLoading(false);
   };
 
@@ -163,24 +193,20 @@ export function ChirpApp() {
     setShowComposer(true);
   });
 
-  createEffect(() => {
-    const onKey = (e: CustomEvent<string>) => {
-      if (e.detail === 'Backspace') {
-        if (viewMode() === 'detail') {
-          setViewMode('list');
-          setSelectedTweet(null);
-          setComments([]);
-          return;
-        }
-        router.goBack();
+  usePhoneKeyHandler({
+    Backspace: () => {
+      if (viewMode() === 'detail') {
+        setViewMode('list');
+        setSelectedTweet(null);
+        setComments([]);
+        return;
       }
-    };
-    window.addEventListener('phone:keyUp', onKey as EventListener);
-    onCleanup(() => window.removeEventListener('phone:keyUp', onKey as EventListener));
+      router.goBack();
+    },
   });
 
   const openTweetDetail = async (tweet: ChirpTweet) => {
-    setSelectedTweet(tweet);
+    setSelectedTweet(normalizeTweet(tweet));
     setViewMode('detail');
     
     const cacheKey = `comments:${tweet.id}`;
@@ -195,18 +221,16 @@ export function ChirpApp() {
     e.stopPropagation();
     const result = await fetchNui<{ liked?: boolean }>('chirpToggleLike', { tweetId });
     if (result?.liked !== undefined) {
-      setTweets(prev => prev.map(t => 
-        t.id === tweetId 
-          ? { ...t, liked: result.liked, likes: (t.likes || 0) + (result.liked ? 1 : -1) }
-          : t
-      ));
-      if (selectedTweet()?.id === tweetId) {
-        setSelectedTweet(prev => prev ? { 
-          ...prev, 
-          liked: result.liked, 
-          likes: (prev.likes || 0) + (result.liked ? 1 : -1) 
-        } : null);
-      }
+      applyTweetUpdate(tweetId, (tweet) => {
+        const nextLiked = result.liked === true;
+        const prevLiked = tweet.liked === true;
+        const delta = prevLiked === nextLiked ? 0 : nextLiked ? 1 : -1;
+        return {
+          ...tweet,
+          liked: nextLiked,
+          likes: Math.max(0, (tweet.likes || 0) + delta),
+        };
+      });
     }
   };
 
@@ -214,18 +238,16 @@ export function ChirpApp() {
     e.stopPropagation();
     const result = await fetchNui<{ rechirped?: boolean }>('chirpToggleRechirp', { tweetId });
     if (result?.rechirped !== undefined) {
-      setTweets(prev => prev.map(t => 
-        t.id === tweetId 
-          ? { ...t, rechirped: result.rechirped, rechirps: (t.rechirps || 0) + (result.rechirped ? 1 : -1) }
-          : t
-      ));
-      if (selectedTweet()?.id === tweetId) {
-        setSelectedTweet(prev => prev ? { 
-          ...prev, 
-          rechirped: result.rechirped, 
-          rechirps: (prev.rechirps || 0) + (result.rechirped ? 1 : -1) 
-        } : null);
-      }
+      applyTweetUpdate(tweetId, (tweet) => {
+        const nextRechirped = result.rechirped === true;
+        const prevRechirped = tweet.rechirped === true;
+        const delta = prevRechirped === nextRechirped ? 0 : nextRechirped ? 1 : -1;
+        return {
+          ...tweet,
+          rechirped: nextRechirped,
+          rechirps: Math.max(0, (tweet.rechirps || 0) + delta),
+        };
+      });
     }
   };
 
@@ -342,6 +364,46 @@ export function ChirpApp() {
     router.navigate('camera', { target: 'chirp' });
   };
 
+  const TweetActions = (props: {
+    tweet: ChirpTweet;
+    onComment: (e: Event) => void;
+    onDelete?: (e: Event, tweetId: number) => void;
+  }) => {
+    const tweet = props.tweet;
+    return (
+      <div class={styles.tweetActions}>
+        <button
+          class={styles.actionBtn}
+          classList={{ [styles.active]: tweet.liked }}
+          onClick={(e) => void toggleLike(e, tweet.id)}
+        >
+          <span class={styles.icon}>{tweet.liked ? '♥' : '♡'}</span>
+          <span class={styles.count}>{tweet.likes || 0}</span>
+        </button>
+
+        <button
+          class={styles.actionBtn}
+          classList={{ [styles.active]: tweet.rechirped }}
+          onClick={(e) => void toggleRechirp(e, tweet.id)}
+        >
+          <span class={styles.icon}>↻</span>
+          <span class={styles.count}>{tweet.rechirps || 0}</span>
+        </button>
+
+        <button class={styles.actionBtn} onClick={props.onComment}>
+          <span class={styles.icon}>💬</span>
+          <span class={styles.count}>{tweet.replies || 0}</span>
+        </button>
+
+        <Show when={tweet.is_own && props.onDelete}>
+          <button class={styles.actionBtn} onClick={(e) => props.onDelete?.(e, tweet.id)}>
+            <span class={styles.icon}>🗑</span>
+          </button>
+        </Show>
+      </div>
+    );
+  };
+
   // Render Tweet Card
   const TweetCard = (props: { tweet: ChirpTweet }) => {
     const tweet = props.tweet;
@@ -387,36 +449,14 @@ export function ChirpApp() {
           )}
         </Show>
         
-        <div class={styles.tweetActions}>
-          <button 
-            class={styles.actionBtn}
-            classList={{ [styles.active]: tweet.liked }}
-            onClick={(e) => toggleLike(e, tweet.id)}
-          >
-            <span class={styles.icon}>{tweet.liked ? '♥' : '♡'}</span>
-            <span class={styles.count}>{tweet.likes || 0}</span>
-          </button>
-          
-          <button 
-            class={styles.actionBtn}
-            classList={{ [styles.active]: tweet.rechirped }}
-            onClick={(e) => toggleRechirp(e, tweet.id)}
-          >
-            <span class={styles.icon}>↻</span>
-            <span class={styles.count}>{tweet.rechirps || 0}</span>
-          </button>
-          
-          <button class={styles.actionBtn} onClick={(e) => { e.stopPropagation(); openTweetDetail(tweet); }}>
-            <span class={styles.icon}>💬</span>
-            <span class={styles.count}>{tweet.replies || 0}</span>
-          </button>
-          
-          <Show when={tweet.is_own}>
-            <button class={styles.actionBtn} onClick={(e) => deleteTweet(e, tweet.id)}>
-              <span class={styles.icon}>🗑</span>
-            </button>
-          </Show>
-        </div>
+        <TweetActions
+          tweet={tweet}
+          onComment={(e) => {
+            e.stopPropagation();
+            void openTweetDetail(tweet);
+          }}
+          onDelete={deleteTweet}
+        />
       </article>
     );
   };
@@ -543,34 +583,11 @@ export function ChirpApp() {
             </div>
             
             <div class={styles.detailActions}>
-              <button 
-                class={styles.actionBtn}
-                classList={{ [styles.active]: tweet.liked }}
-                onClick={(e) => toggleLike(e, tweet.id)}
-              >
-                <span class={styles.icon}>{tweet.liked ? '♥' : '♡'}</span>
-                <span class={styles.count}>{tweet.likes || 0}</span>
-              </button>
-              
-              <button 
-                class={styles.actionBtn}
-                classList={{ [styles.active]: tweet.rechirped }}
-                onClick={(e) => toggleRechirp(e, tweet.id)}
-              >
-                <span class={styles.icon}>↻</span>
-                <span class={styles.count}>{tweet.rechirps || 0}</span>
-              </button>
-              
-              <button class={styles.actionBtn}>
-                <span class={styles.icon}>💬</span>
-                <span class={styles.count}>{tweet.replies || 0}</span>
-              </button>
-              
-              <Show when={tweet.is_own}>
-                <button class={styles.actionBtn} onClick={(e) => deleteTweet(e, tweet.id)}>
-                  <span class={styles.icon}>🗑</span>
-                </button>
-              </Show>
+              <TweetActions
+                tweet={tweet}
+                onComment={(e) => e.stopPropagation()}
+                onDelete={deleteTweet}
+              />
             </div>
           </div>
 

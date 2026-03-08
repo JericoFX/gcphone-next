@@ -6,6 +6,7 @@ import { resolveMediaType, sanitizeMediaUrl, sanitizeText } from '../../../utils
 import { uiPrompt } from '../../../utils/uiDialog';
 import { uiAlert } from '../../../utils/uiAlert';
 import { startMockLiveFeed } from '../../../utils/liveMock';
+import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { ActionSheet } from '../../shared/ui/ActionSheet';
 import { MediaLightbox } from '../../shared/ui/MediaLightbox';
 import { AppScaffold } from '../../shared/layout';
@@ -77,12 +78,12 @@ export function NewsApp() {
     void load();
   });
 
-  createEffect(() => {
-    const onKey = (e: CustomEvent<string>) => {
-      if (e.detail === 'Backspace' && !showCompose()) router.goBack();
-    };
-    window.addEventListener('phone:keyUp', onKey as EventListener);
-    onCleanup(() => window.removeEventListener('phone:keyUp', onKey as EventListener));
+  usePhoneKeyHandler({
+    Backspace: () => {
+      if (!showCompose()) {
+        router.goBack();
+      }
+    },
   });
 
   createEffect(() => {

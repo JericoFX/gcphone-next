@@ -1,10 +1,11 @@
-import { For, Show, createEffect, createSignal, onCleanup } from 'solid-js';
+import { For, Show, createSignal, onMount } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { fetchNui } from '../../../utils/fetchNui';
 import { timeAgo } from '../../../utils/misc';
 import { uiAlert } from '../../../utils/uiAlert';
 import { AppScaffold } from '../../shared/layout';
 import { useAppCache } from '../../../hooks';
+import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { Modal, ModalActions, ModalButton } from '../../shared/ui/Modal';
 import styles from './GarageApp.module.scss';
 
@@ -66,33 +67,27 @@ export function GarageApp() {
     setLoading(false);
   };
 
-  createEffect(() => {
+  onMount(() => {
     void loadVehicles();
   });
 
-  createEffect(() => {
-    const onKey = (e: CustomEvent<string>) => {
-      if (e.detail === 'Backspace') {
-        if (showShareModal()) {
-          setShowShareModal(false);
-          return;
-        }
-        if (showLocationModal()) {
-          setShowLocationModal(false);
-          return;
-        }
-        if (selectedVehicle()) {
-          setSelectedVehicle(null);
-          setLocationHistory([]);
-          return;
-        }
-        router.goBack();
+  usePhoneKeyHandler({
+    Backspace: () => {
+      if (showShareModal()) {
+        setShowShareModal(false);
+        return;
       }
-    };
-    window.addEventListener('phone:keyUp', onKey as EventListener);
-    onCleanup(() =>
-      window.removeEventListener('phone:keyUp', onKey as EventListener),
-    );
+      if (showLocationModal()) {
+        setShowLocationModal(false);
+        return;
+      }
+      if (selectedVehicle()) {
+        setSelectedVehicle(null);
+        setLocationHistory([]);
+        return;
+      }
+      router.goBack();
+    },
   });
 
   const filteredVehicles = () => {
