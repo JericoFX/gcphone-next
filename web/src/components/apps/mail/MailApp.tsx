@@ -298,7 +298,7 @@ export function MailApp() {
   });
 
   return (
-    <AppScaffold title='Mail' onBack={() => router.goBack()}>
+    <AppScaffold title='Mail' subtitle='Correo y adjuntos' onBack={() => router.goBack()} bodyPadding='none'>
       <div class={styles.root}>
         <Show when={!!error()}>
           <div class={styles.error}>{error()}</div>
