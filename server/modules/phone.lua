@@ -39,6 +39,13 @@ local function SafeTheme(value)
     return nil
 end
 
+local function SafeAudioProfile(value)
+    if value == 'normal' or value == 'street' or value == 'vehicle' or value == 'silent' then
+        return value
+    end
+    return nil
+end
+
 local AllowedApps = {
     contacts = true,
     messages = true,
@@ -128,14 +135,46 @@ local function SafeUsername(value)
     return username
 end
 
+local function MailDomain()
+    local domain = SafeString(Config.Mail and Config.Mail.Domain or nil, 64)
+    if not domain then return 'noimotors.gg' end
+    return domain:lower()
+end
+
+local function SafeMailAlias(value)
+    local alias = SafeString(value, (Config.Mail and Config.Mail.MaxAliasLength) or 24)
+    if not alias then return nil end
+
+    alias = alias:lower()
+    if not alias:match('^[a-z0-9._-]+$') then return nil end
+    if alias:match('^[._-]') or alias:match('[._-]$') then return nil end
+    if alias:find('..', 1, true) then return nil end
+
+    local minLen = math.max(3, tonumber(Config.Mail and Config.Mail.MinAliasLength) or 3)
+    if #alias < minLen then return nil end
+
+    return alias
+end
+
 local function UsernameExists(tableName, username, identifier)
     if not username then return true end
     local sql = string.format('SELECT 1 FROM `%s` WHERE username = ? AND identifier != ? LIMIT 1', tableName)
     return MySQL.scalar.await(sql, { username, identifier or '' }) ~= nil
 end
 
+local function MailEmailExists(alias, identifier)
+    if not alias then return true end
+    local email = alias .. '@' .. MailDomain()
+    return MySQL.scalar.await(
+        'SELECT 1 FROM phone_mail_accounts WHERE email = ? AND identifier != ? LIMIT 1',
+        { email, identifier or '' }
+    ) ~= nil
+end
+
 local function ResolveSetupState(identifier)
     if not identifier then return { requiresSetup = true } end
+
+    local featureFlags = GetFeatureFlags()
 
     local phone = MySQL.single.await(
         'SELECT is_setup, clips_username FROM phone_numbers WHERE identifier = ? LIMIT 1',
@@ -150,19 +189,26 @@ local function ResolveSetupState(identifier)
         'SELECT username FROM phone_chirp_accounts WHERE identifier = ? LIMIT 1',
         { identifier }
     )
+    local mail = featureFlags.mail and MySQL.scalar.await(
+        'SELECT email FROM phone_mail_accounts WHERE identifier = ? AND is_primary = 1 LIMIT 1',
+        { identifier }
+    ) or nil
 
     local hasSnap = type(snap) == 'string' and snap ~= ''
     local hasChirp = type(chirp) == 'string' and chirp ~= ''
     local hasClips = phone and type(phone.clips_username) == 'string' and phone.clips_username ~= ''
+    local hasMail = not featureFlags.mail or (type(mail) == 'string' and mail ~= '')
 
     local explicitlySetup = phone and tonumber(phone.is_setup) == 1
-    local complete = explicitlySetup and hasSnap and hasChirp and hasClips
+    local complete = explicitlySetup and hasSnap and hasChirp and hasClips and hasMail
 
     return {
         requiresSetup = not complete,
         hasSnap = hasSnap,
         hasChirp = hasChirp,
         hasClips = hasClips,
+        hasMail = hasMail,
+        mailDomain = featureFlags.mail and MailDomain() or nil,
     }
 end
 
@@ -177,18 +223,17 @@ local function BuildEnabledApps(flags)
     if not flags.darkrooms then enabled.darkrooms = nil end
     if not flags.clips then enabled.clips = nil end
     if not flags.wallet then enabled.wallet = nil end
+    if not flags.mail then enabled.mail = nil end
     if not flags.documents then enabled.documents = nil end
     if not flags.music then enabled.music = nil end
     if not flags.yellowpages then enabled.yellowpages = nil end
-    if not flags.mail then enabled.mail = nil end
-
     return enabled
 end
 
 local function EnabledList(enabledApps)
     local out = {}
     for appId, active in pairs(enabledApps) do
-        if active then table.insert(out, appId) end
+        if active then out[#out + 1] = appId end
     end
     table.sort(out)
     return out
@@ -210,7 +255,8 @@ local function NormalizeLayout(layout, enabledApps)
         if type(values) ~= 'table' then return end
         for _, appId in ipairs(values) do
             if type(appId) == 'string' and enabledApps[appId] and not used[appId] then
-                table.insert(result[listName], appId)
+                local list = result[listName]
+                list[#list + 1] = appId
                 used[appId] = true
             end
         end
@@ -221,14 +267,14 @@ local function NormalizeLayout(layout, enabledApps)
 
     for _, appId in ipairs(DefaultLayout.home) do
         if enabledApps[appId] and not used[appId] then
-            table.insert(result.home, appId)
+            result.home[#result.home + 1] = appId
             used[appId] = true
         end
     end
 
     for _, appId in ipairs(DefaultLayout.menu) do
         if enabledApps[appId] and not used[appId] then
-            table.insert(result.menu, appId)
+            result.menu[#result.menu + 1] = appId
             used[appId] = true
         end
     end
@@ -264,7 +310,7 @@ local function GetOrCreatePhone(source)
     local imei = GenerateIMEI()
     
     MySQL.insert.await(
-        'INSERT INTO phone_numbers (identifier, phone_number, imei, wallpaper, ringtone, volume, lock_code, pin_hash, is_setup, coque, theme, language, audio_profile, clips_username) VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, NULL)',
+        'INSERT INTO phone_numbers (identifier, phone_number, imei, wallpaper, ringtone, volume, lock_code, pin_hash, is_setup, theme, language, audio_profile, clips_username) VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, NULL)',
         { 
             identifier, 
             phoneNumber, 
@@ -274,7 +320,6 @@ local function GetOrCreatePhone(source)
             Config.Phone.DefaultSettings.volume,
             Config.Phone.DefaultSettings.lockCode,
             (Config.Phone and Config.Phone.Setup and Config.Phone.Setup.RequireOnFirstUse ~= false) and 0 or 1,
-            Config.Phone.DefaultSettings.coque,
             Config.Phone.DefaultSettings.theme,
             Config.Phone.DefaultSettings.language or 'es',
             Config.Phone.DefaultSettings.audioProfile or 'normal'
@@ -309,7 +354,6 @@ lib.callback.register('gcphone:getPhoneData', function(source)
         ringtone = phone.ringtone,
         volume = phone.volume,
         lockCode = '',
-        coque = phone.coque,
         theme = phone.theme or 'light',
         language = phone.language or 'es',
         audioProfile = phone.audio_profile or 'normal',
@@ -345,11 +389,17 @@ lib.callback.register('gcphone:phone:completeSetup', function(source, data)
         return { success = false, error = 'INVALID_PAYLOAD' }
     end
 
+    local featureFlags = GetFeatureFlags()
     local pin = SafePin(data.pin)
     local snapUsername = SafeUsername(data.snapUsername)
     local chirpUsername = SafeUsername(data.chirpUsername)
     local clipsUsername = SafeUsername(data.clipsUsername)
-    if not pin or not snapUsername or not chirpUsername or not clipsUsername then
+    local mailAlias = featureFlags.mail and SafeMailAlias(data.mailAlias) or nil
+    local language = SafeLanguage(data.language) or (Config.Phone and Config.Phone.DefaultSettings and Config.Phone.DefaultSettings.language) or 'es'
+    local theme = SafeTheme(data.theme) or (Config.Phone and Config.Phone.DefaultSettings and Config.Phone.DefaultSettings.theme) or 'light'
+    local audioProfile = SafeAudioProfile(data.audioProfile) or (Config.Phone and Config.Phone.DefaultSettings and Config.Phone.DefaultSettings.audioProfile) or 'normal'
+
+    if not pin or not snapUsername or not chirpUsername or not clipsUsername or (featureFlags.mail and not mailAlias) then
         return { success = false, error = 'INVALID_SETUP_DATA' }
     end
 
@@ -362,8 +412,13 @@ lib.callback.register('gcphone:phone:completeSetup', function(source, data)
     if UsernameExists('phone_clips_accounts', clipsUsername, identifier) then
         return { success = false, error = 'CLIPS_USERNAME_TAKEN' }
     end
+    if featureFlags.mail and MailEmailExists(mailAlias, identifier) then
+        return { success = false, error = 'EMAIL_IN_USE' }
+    end
 
     local name = GetName(source) or 'User'
+    local mailDomain = MailDomain()
+    local mailEmail = mailAlias and (mailAlias .. '@' .. mailDomain) or nil
 
     local ok, err = pcall(function()
         MySQL.insert.await(
@@ -391,9 +446,26 @@ lib.callback.register('gcphone:phone:completeSetup', function(source, data)
             { identifier, clipsUsername, name }
         )
 
+        if featureFlags.mail and mailAlias and mailEmail then
+            MySQL.insert.await(
+                [[
+                    INSERT INTO phone_mail_accounts (identifier, alias, domain, email, password_hash, is_primary, last_login_at)
+                    VALUES (?, ?, ?, ?, SHA2(?, 256), 1, NOW())
+                    ON DUPLICATE KEY UPDATE
+                        alias = VALUES(alias),
+                        domain = VALUES(domain),
+                        email = VALUES(email),
+                        password_hash = VALUES(password_hash),
+                        is_primary = 1,
+                        last_login_at = NOW()
+                ]],
+                { identifier, mailAlias, mailDomain, mailEmail, pin }
+            )
+        end
+
         MySQL.update.await(
-            'UPDATE phone_numbers SET lock_code = ?, pin_hash = SHA2(?, 256), is_setup = 1, clips_username = ? WHERE identifier = ?',
-            { pin, pin, clipsUsername, identifier }
+            'UPDATE phone_numbers SET lock_code = ?, pin_hash = SHA2(?, 256), is_setup = 1, clips_username = ?, theme = ?, language = ?, audio_profile = ? WHERE identifier = ?',
+            { pin, pin, clipsUsername, theme, language, audioProfile, identifier }
         )
     end)
 
@@ -495,20 +567,6 @@ lib.callback.register('gcphone:setLockCode', function(source, data)
     MySQL.update.await(
         'UPDATE phone_numbers SET lock_code = ?, pin_hash = SHA2(?, 256) WHERE identifier = ?',
         { code, code, identifier }
-    )
-    
-    return true
-end)
-
-lib.callback.register('gcphone:setCoque', function(source, data)
-    local identifier = GetIdentifier(source)
-    if not identifier then return false end
-    local coque = SafeString(type(data) == 'table' and data.coque or nil, 64)
-    if not coque then return false end
-    
-    MySQL.update.await(
-        'UPDATE phone_numbers SET coque = ? WHERE identifier = ?',
-        { coque, identifier }
     )
     
     return true
@@ -629,7 +687,6 @@ RegisterNetEvent('QBCore:Server:PlayerLoaded', function(Player)
             ringtone = phone.ringtone,
             volume = phone.volume,
             lockCode = '',
-            coque = phone.coque,
             theme = phone.theme or 'light',
             language = phone.language or 'es',
             audioProfile = phone.audio_profile or 'normal',

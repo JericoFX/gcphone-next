@@ -45,7 +45,6 @@ export interface PhoneSettings {
   ringtone: string;
   volume: number;
   lockCode: string;
-  coque: string;
   theme: 'auto' | 'light' | 'dark';
   language?: 'es' | 'en' | 'pt' | 'fr';
   audioProfile?: 'normal' | 'street' | 'vehicle' | 'silent';
@@ -57,6 +56,7 @@ export interface PhoneFeatureFlags {
   darkrooms: boolean;
   clips: boolean;
   wallet: boolean;
+  mail: boolean;
   documents: boolean;
   music: boolean;
   yellowpages: boolean;
@@ -67,6 +67,19 @@ export interface PhoneSetupState {
   hasSnap?: boolean;
   hasChirp?: boolean;
   hasClips?: boolean;
+  hasMail?: boolean;
+  mailDomain?: string;
+}
+
+export interface PhoneSetupPayload {
+  pin: string;
+  snapUsername: string;
+  chirpUsername: string;
+  clipsUsername: string;
+  mailAlias?: string;
+  language?: 'es' | 'en' | 'pt' | 'fr';
+  theme?: 'auto' | 'light' | 'dark';
+  audioProfile?: 'normal' | 'street' | 'vehicle' | 'silent';
 }
 
 export interface PhoneState {

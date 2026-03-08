@@ -1,4 +1,4 @@
-import { createEffect, createMemo, createSignal, For, onCleanup, onMount, Show } from 'solid-js';
+import { For, Show, createEffect, createMemo, createSignal, onCleanup, onMount } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { fetchNui } from '../../../utils/fetchNui';
 import { timeAgo } from '../../../utils/misc';
@@ -7,6 +7,7 @@ import { uiPrompt } from '../../../utils/uiDialog';
 import { uiAlert } from '../../../utils/uiAlert';
 import { startMockLiveFeed } from '../../../utils/liveMock';
 import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
+import { useNuiCustomEvent } from '../../../utils/useNui';
 import { LiveFlashlightControl } from '../../shared/ui/LiveFlashlightControl';
 import { MediaLightbox } from '../../shared/ui/MediaLightbox';
 import { MediaActionButtons } from '../../shared/ui/MediaActionButtons';
@@ -21,8 +22,14 @@ interface NewsArticle {
   title: string;
   content: string;
   author_name?: string;
+  author_avatar?: string;
+  author_verified?: boolean | number;
   created_at?: string;
   category?: string;
+  media_url?: string;
+  mediaUrl?: string;
+  is_live?: boolean | number;
+  live_viewers?: number;
 }
 
 interface NewsScaleform {
@@ -47,18 +54,43 @@ interface SharedSnapAccount {
   is_private?: boolean | number;
 }
 
+interface LiveReaction {
+  id: number;
+  emoji: string;
+}
+
 const NEWS_MOCK_USERS = ['Cronista', 'Mika', 'Luna', 'Santi', 'Mery'];
 const NEWS_MOCK_LINES = [
-  'Cobertura impecable 👏',
+  'Cobertura impecable',
   'Gracias por informar en vivo',
-  'Se escucha claro ✅',
+  'Se escucha claro',
   'Actualicen sobre trafico por favor',
   'Muy buen trabajo equipo',
 ];
+const LIVE_REACTIONS = ['🔥', '👏', '🛰', '🚨'];
+
+function articleMediaUrl(article?: NewsArticle | null) {
+  if (!article) return '';
+  return sanitizeMediaUrl(article.media_url || article.mediaUrl || '') || '';
+}
+
+function isLiveArticle(article?: NewsArticle | null) {
+  return article?.is_live === true || article?.is_live === 1;
+}
+
+function articleAuthor(article?: NewsArticle | null) {
+  return sanitizeText(article?.author_name || '', 80) || 'Redaccion';
+}
+
+function buildClockTime() {
+  const now = new Date();
+  return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+}
 
 export function NewsApp() {
   const router = useRouter();
   const [articles, setArticles] = createSignal<NewsArticle[]>([]);
+  const [liveArticles, setLiveArticles] = createSignal<NewsArticle[]>([]);
   const [categories, setCategories] = createSignal<string[]>(['general']);
   const [selectedCategory, setSelectedCategory] = createSignal('all');
   const [showCompose, setShowCompose] = createSignal(false);
@@ -67,6 +99,10 @@ export function NewsApp() {
   const [mediaUrl, setMediaUrl] = createSignal('');
   const [category, setCategory] = createSignal('general');
   const [liveArticleId, setLiveArticleId] = createSignal<number | null>(null);
+  const [activeLive, setActiveLive] = createSignal<NewsArticle | null>(null);
+  const [liveChatOpen, setLiveChatOpen] = createSignal(false);
+  const [liveChatInput, setLiveChatInput] = createSignal('');
+  const [liveReactions, setLiveReactions] = createSignal<LiveReaction[]>([]);
   const [viewerUrl, setViewerUrl] = createSignal<string | null>(null);
   const [myAccount, setMyAccount] = createSignal<SharedSnapAccount | null>(null);
   const [showOnboarding, setShowOnboarding] = createSignal(false);
@@ -77,21 +113,95 @@ export function NewsApp() {
   const [scaleHeadline, setScaleHeadline] = createSignal('ULTIMO MOMENTO');
   const [scaleSubtitle, setScaleSubtitle] = createSignal('Cobertura en vivo');
   const [scaleTicker, setScaleTicker] = createSignal('Desarrollo en curso...');
+  const [statusMessage, setStatusMessage] = createSignal('');
   const liveFlashlight = useLiveFlashlight();
 
   let stopNewsMock: (() => void) | undefined;
 
+  const refreshScaleform = async (articleId: number) => {
+    const sf = await fetchNui<NewsScaleform | null>('newsGetScaleform', { articleId }, null);
+    if (!sf) return;
+    setScalePreset((sf.preset || 'breaking') as NewsScaleform['preset']);
+    setScaleHeadline(sanitizeText(sf.headline || '', 80) || 'ULTIMO MOMENTO');
+    setScaleSubtitle(sanitizeText(sf.subtitle || '', 120) || 'Cobertura en vivo');
+    setScaleTicker(sanitizeText(sf.ticker || '', 180) || 'Desarrollo en curso...');
+  };
+
+  const syncActiveLive = (nextArticles: NewsArticle[], nextLiveArticles: NewsArticle[]) => {
+    const current = activeLive();
+    if (!current) return;
+    const match = [...nextLiveArticles, ...nextArticles].find((entry) => Number(entry.id) === Number(current.id));
+    if (match) {
+      setActiveLive(match);
+      return;
+    }
+    if (!mockLiveEnabled() && liveArticleId() !== current.id) {
+      setActiveLive(null);
+      setLiveChatOpen(false);
+    }
+  };
+
   const load = async () => {
-    const data = await fetchNui<NewsArticle[]>('newsGetArticles', { category: selectedCategory(), limit: 50, offset: 0 }, []);
-    setArticles(data || []);
-    const cats = await fetchNui<string[]>('newsGetCategories', {}, ['general']);
-    setCategories(cats || ['general']);
+    const [articleRows, categoryRows, liveRows] = await Promise.all([
+      fetchNui<NewsArticle[]>('newsGetArticles', { category: selectedCategory(), limit: 50, offset: 0 }, []),
+      fetchNui<string[]>('newsGetCategories', {}, ['general']),
+      fetchNui<NewsArticle[]>('newsGetLiveNews', {}, []),
+    ]);
+
+    const nextArticles = articleRows || [];
+    const nextCategories = categoryRows || ['general'];
+    const nextLiveArticles = (liveRows || []).filter((entry) => isLiveArticle(entry));
+
+    setArticles(nextArticles);
+    setCategories(nextCategories);
+    setLiveArticles(nextLiveArticles);
+    syncActiveLive(nextArticles, nextLiveArticles);
   };
 
   const loadAccount = async () => {
     const account = await fetchNui<SharedSnapAccount | null>('snapGetAccount', {}, null);
     setMyAccount(account);
     setShowOnboarding(!account?.username);
+  };
+
+  const pushMockMessage = (user: string, text: string) => {
+    const next: MockLiveMessage = {
+      id: Date.now() + Math.floor(Math.random() * 1000),
+      user,
+      text,
+      at: buildClockTime(),
+    };
+    setMockLiveMessages((prev) => [...prev.slice(-19), next]);
+  };
+
+  const closeLiveViewer = () => {
+    setActiveLive(null);
+    setLiveChatOpen(false);
+    setLiveChatInput('');
+    setLiveReactions([]);
+  };
+
+  const openLiveViewer = async (article: NewsArticle) => {
+    setActiveLive(article);
+    setLiveChatOpen(false);
+    if (isLiveArticle(article) && article.id > 0 && !mockLiveEnabled()) {
+      await refreshScaleform(article.id);
+    }
+  };
+
+  const sendViewerMessage = () => {
+    const text = sanitizeText(liveChatInput(), 180);
+    if (!text) return;
+    pushMockMessage(myAccount()?.display_name || myAccount()?.username || 'Tu', text);
+    setLiveChatInput('');
+  };
+
+  const burstReaction = (emoji: string) => {
+    const id = Date.now() + Math.floor(Math.random() * 1000);
+    setLiveReactions((prev) => [...prev.slice(-5), { id, emoji }]);
+    window.setTimeout(() => {
+      setLiveReactions((prev) => prev.filter((entry) => entry.id !== id));
+    }, 1600);
   };
 
   createEffect(() => {
@@ -104,23 +214,49 @@ export function NewsApp() {
 
   usePhoneKeyHandler({
     Backspace: () => {
-      if (!showCompose()) {
-        router.goBack();
+      if (viewerUrl()) {
+        setViewerUrl(null);
+        return;
       }
+      if (showCompose()) {
+        setShowCompose(false);
+        return;
+      }
+      if (liveChatOpen()) {
+        setLiveChatOpen(false);
+        return;
+      }
+      if (activeLive()) {
+        closeLiveViewer();
+        return;
+      }
+      router.goBack();
     },
   });
 
-  createEffect(() => {
-    const id = liveArticleId();
-    if (!id) return;
-    (async () => {
-      const sf = await fetchNui<NewsScaleform | null>('newsGetScaleform', { articleId: id }, null);
-      if (!sf) return;
-      setScalePreset((sf.preset || 'breaking') as NewsScaleform['preset']);
-      setScaleHeadline(sanitizeText(sf.headline || '', 80) || 'ULTIMO MOMENTO');
-      setScaleSubtitle(sanitizeText(sf.subtitle || '', 120) || 'Cobertura en vivo');
-      setScaleTicker(sanitizeText(sf.ticker || '', 180) || 'Desarrollo en curso...');
-    })();
+  useNuiCustomEvent('gcphone:news:newArticle', () => {
+    void load();
+  });
+
+  useNuiCustomEvent<NewsArticle>('gcphone:news:liveStarted', (article) => {
+    if (article?.id && liveArticleId() === article.id) {
+      setActiveLive(article);
+    }
+    void load();
+  });
+
+  useNuiCustomEvent<number>('gcphone:news:liveEnded', (articleId) => {
+    const nextId = Number(articleId || 0);
+    if (nextId && liveArticleId() === nextId) setLiveArticleId(null);
+    if (nextId && activeLive()?.id === nextId) closeLiveViewer();
+    void load();
+  });
+
+  useNuiCustomEvent<{ articleId?: number }>('gcphone:news:scaleformUpdated', (payload) => {
+    const nextId = Number(payload?.articleId || activeLive()?.id || 0);
+    if (nextId > 0) {
+      void refreshScaleform(nextId);
+    }
   });
 
   createEffect(() => {
@@ -158,46 +294,40 @@ export function NewsApp() {
     const nextCategory = sanitizeText(category(), 30) || 'general';
     const nextMedia = sanitizeMediaUrl(mediaUrl());
     if (!nextTitle || !nextContent) return;
+
     const result = await fetchNui<{ success?: boolean }>('newsPublishArticle', {
       title: nextTitle,
       content: nextContent,
       category: nextCategory,
       mediaType: resolveMediaType(nextMedia) === 'video' ? 'video' : 'image',
-      mediaUrl: nextMedia || undefined
+      mediaUrl: nextMedia || undefined,
     });
 
-    if (result?.success) {
-      setShowCompose(false);
-      setTitle('');
-      setContent('');
-      setMediaUrl('');
-      setCategory('general');
-      await load();
-    }
+    if (!result?.success) return;
+
+    setShowCompose(false);
+    setTitle('');
+    setContent('');
+    setMediaUrl('');
+    setCategory('general');
+    setStatusMessage('Noticia publicada');
+    await load();
   };
 
   const attachFromGallery = async () => {
-    const gallery = await fetchNui<any[]>('getGallery', undefined, []);
-    if (gallery && gallery.length > 0) {
-      const nextUrl = sanitizeMediaUrl(gallery[0].url);
-      if (nextUrl) setMediaUrl(nextUrl);
-    }
+    const gallery = await fetchNui<Array<{ url?: string }>>('getGallery', undefined, []);
+    const nextUrl = sanitizeMediaUrl(gallery?.[0]?.url || '');
+    if (nextUrl) setMediaUrl(nextUrl);
   };
 
   const attachFromCamera = async () => {
-    const shot = await fetchNui<{ url?: string }>('takePhoto', {} as any, { url: '' } as any);
-    if (shot?.url) {
-      const nextUrl = sanitizeMediaUrl(shot.url);
-      if (nextUrl) {
-        setMediaUrl(nextUrl);
-        return;
-      }
+    const shot = await fetchNui<{ url?: string }>('takePhoto', {}, { url: '' });
+    const nextUrl = sanitizeMediaUrl(shot?.url || '');
+    if (nextUrl) {
+      setMediaUrl(nextUrl);
+      return;
     }
-    const gallery = await fetchNui<any[]>('getGallery', undefined, []);
-    if (gallery && gallery.length > 0) {
-      const nextUrl = sanitizeMediaUrl(gallery[0].url);
-      if (nextUrl) setMediaUrl(nextUrl);
-    }
+    await attachFromGallery();
   };
 
   const attachByUrl = async () => {
@@ -222,19 +352,25 @@ export function NewsApp() {
   const toggleLive = async () => {
     if (liveArticleId()) {
       const result = await fetchNui<{ success?: boolean }>('newsEndLive', { articleId: liveArticleId() });
-      if (result?.success) {
-        await fetchNui('phoneSetVisualMode', { mode: 'text' }, true);
-        liveFlashlight.setPanelOpen(false);
-        await liveFlashlight.turnOff();
-        setLiveArticleId(null);
-      }
+      if (!result?.success) return;
+      await fetchNui('phoneSetVisualMode', { mode: 'text' }, true);
+      liveFlashlight.setPanelOpen(false);
+      await liveFlashlight.turnOff();
+      setLiveArticleId(null);
+      setStatusMessage('Live finalizado');
+      closeLiveViewer();
+      await load();
       return;
     }
 
+    const nextTitle = sanitizeText(title(), 200) || 'Transmision en vivo';
+    const nextContent = sanitizeText(content(), 3000) || 'Cobertura en vivo';
+    const nextCategory = sanitizeText(category(), 30) || 'general';
+
     const result = await fetchNui<{ success?: boolean; articleId?: number }>('newsStartLive', {
-      title: title().trim() || 'Transmision en vivo',
-      content: content().trim() || 'Cobertura en vivo',
-      category: sanitizeText(category(), 30) || 'general',
+      title: nextTitle,
+      content: nextContent,
+      category: nextCategory,
       scaleform: {
         preset: scalePreset(),
         headline: sanitizeText(scaleHeadline(), 80),
@@ -243,11 +379,25 @@ export function NewsApp() {
       },
     });
 
-    if (result?.success && result.articleId) {
-      await fetchNui('phoneSetVisualMode', { mode: 'live' }, true);
-      setLiveArticleId(result.articleId);
-      await load();
-    }
+    if (!result?.success || !result.articleId) return;
+
+    await fetchNui('phoneSetVisualMode', { mode: 'live' }, true);
+    setLiveArticleId(result.articleId);
+    setStatusMessage('Live iniciado');
+    const nextLive: NewsArticle = {
+      id: result.articleId,
+      title: nextTitle,
+      content: nextContent,
+      category: nextCategory,
+      author_name: myAccount()?.display_name || myAccount()?.username || 'Redaccion',
+      author_avatar: myAccount()?.avatar,
+      created_at: new Date().toISOString(),
+      is_live: true,
+      live_viewers: 0,
+    };
+    setActiveLive(nextLive);
+    await refreshScaleform(result.articleId);
+    await load();
   };
 
   const applyScaleform = async () => {
@@ -262,7 +412,7 @@ export function NewsApp() {
       },
     });
     if (result?.success) {
-      uiAlert('Scaleform actualizado');
+      setStatusMessage('Grafica del live actualizada');
     }
   };
 
@@ -274,6 +424,7 @@ export function NewsApp() {
       liveFlashlight.setPanelOpen(false);
       void liveFlashlight.turnOff();
       setMockLiveMessages([]);
+      if (activeLive()?.id === -1) closeLiveViewer();
       return;
     }
 
@@ -286,6 +437,17 @@ export function NewsApp() {
         at: 'ahora',
       },
     ]);
+    setActiveLive({
+      id: -1,
+      title: sanitizeText(title(), 200) || 'Mock live de noticias',
+      content: sanitizeText(content(), 3000) || 'Vista previa local del directo',
+      category: sanitizeText(category(), 30) || 'general',
+      author_name: myAccount()?.display_name || myAccount()?.username || 'Redaccion',
+      author_avatar: myAccount()?.avatar,
+      created_at: new Date().toISOString(),
+      is_live: true,
+      live_viewers: 12,
+    });
   };
 
   const editProfile = async () => {
@@ -295,12 +457,14 @@ export function NewsApp() {
       return;
     }
     if (!account) return;
+
     const nextNameInput = await uiPrompt('Nombre visible para Snap/Clips/Noticias', {
       title: 'Perfil',
       defaultValue: account.display_name || '',
       placeholder: 'Tu nombre',
     });
     if (nextNameInput === null) return;
+
     const nextName = sanitizeText(nextNameInput, 50);
     if (!nextName) return;
 
@@ -346,7 +510,14 @@ export function NewsApp() {
     return { ok: true };
   };
 
-  const categoryOptions = createMemo(() => ['all', ...categories().filter((entry) => entry !== 'all')]);
+  const featuredLives = createMemo(() => {
+    const current = activeLive();
+    const next = [...liveArticles()];
+    if (current && isLiveArticle(current) && !next.some((entry) => Number(entry.id) === Number(current.id))) {
+      next.unshift(current);
+    }
+    return next;
+  });
 
   const visibleArticles = createMemo(() => {
     const q = sanitizeText(query(), 80).toLowerCase();
@@ -360,107 +531,113 @@ export function NewsApp() {
     });
   });
 
+  const canEditActiveLive = createMemo(() => {
+    const current = activeLive();
+    if (!current) return false;
+    return mockLiveEnabled() || (liveArticleId() !== null && current.id === liveArticleId());
+  });
+
+  const activeLiveStatus = createMemo(() => {
+    if (mockLiveEnabled()) return 'MOCK LIVE';
+    if (activeLive() && activeLive()!.id === liveArticleId()) return 'TU SENAL';
+    return 'EN VIVO';
+  });
+
+  const activeLiveViewerCount = createMemo(() => {
+    if (mockLiveEnabled()) return Math.max(12, mockLiveMessages().length + 9);
+    const current = activeLive();
+    return Math.max(Number(current?.live_viewers || 0), canEditActiveLive() ? 1 : 0);
+  });
+
+  const floatingMessages = createMemo(() => mockLiveMessages().slice(-3));
+  const activeLiveMedia = createMemo(() => articleMediaUrl(activeLive()));
+
   return (
     <AppScaffold title="Noticias" subtitle="Noticias de la ciudad" onBack={() => router.goBack()}>
       <div class={styles.newsApp}>
+        <Show when={statusMessage()}>
+          <div class={styles.statusBanner}>{statusMessage()}</div>
+        </Show>
+
+        <div class={styles.searchRow}>
+          <input
+            class={styles.searchInput}
+            placeholder="Buscar titulares, autores o coberturas"
+            value={query()}
+            onInput={(event) => setQuery(event.currentTarget.value)}
+          />
+        </div>
+
         <div class={styles.tools}>
-          <select class={styles.categorySelect} value={selectedCategory()} onChange={(e) => { setSelectedCategory(e.currentTarget.value); void load(); }}>
+          <select class={styles.categorySelect} value={selectedCategory()} onChange={(event) => setSelectedCategory(event.currentTarget.value)}>
             <option value="all">Todas</option>
-            <For each={categories()}>{(c) => <option value={c}>{c}</option>}</For>
+            <For each={categories()}>{(entry) => <option value={entry}>{entry}</option>}</For>
           </select>
           <div class={styles.liveActions}>
-            <button class={styles.liveBtn} onClick={toggleLive}>{liveArticleId() ? 'Terminar live' : 'Iniciar live'}</button>
+            <button class={styles.liveBtn} onClick={() => void toggleLive()}>{liveArticleId() ? 'Terminar live' : 'Iniciar live'}</button>
             <button class={styles.mockBtn} onClick={toggleMockLive}>{mockLiveEnabled() ? 'Mock off' : 'Mock live'}</button>
-            <LiveFlashlightControl
-              visible={liveFlashlight.supported() && (liveArticleId() !== null || mockLiveEnabled())}
-              enabled={liveFlashlight.enabled()}
-              panelOpen={liveFlashlight.panelOpen()}
-              kelvin={liveFlashlight.kelvin()}
-              lumens={liveFlashlight.lumens()}
-              kelvinRange={liveFlashlight.kelvinRange()}
-              lumensRange={liveFlashlight.lumensRange()}
-              buttonLabel={<span>Linterna</span>}
-              theme="light"
-              variant="pill"
-              onPointerDown={liveFlashlight.beginPress}
-              onPointerUp={liveFlashlight.endPress}
-              onPointerLeave={liveFlashlight.cancelPress}
-              onPointerCancel={liveFlashlight.cancelPress}
-              onKelvinInput={(value) => {
-                liveFlashlight.setKelvin(value);
-                void liveFlashlight.saveSettings({ kelvin: value });
-              }}
-              onLumensInput={(value) => {
-                liveFlashlight.setLumens(value);
-                void liveFlashlight.saveSettings({ lumens: value });
-              }}
-              onPreset={(kelvin, lumens) => {
-                void liveFlashlight.applyPreset(kelvin, lumens);
-              }}
-            />
             <button class={styles.profileBtn} onClick={() => void editProfile()}>Perfil</button>
           </div>
         </div>
 
-        <Show when={mockLiveEnabled()}>
-          <div class={styles.mockLivePanel}>
-            <div class={styles.mockLiveHeader}>Mock chat live (max 20)</div>
-            <div class={styles.mockLiveStage}>
-              <div class={styles.mockLiveBadge}>LIVE</div>
-              <div class={styles.mockLiveStageText}>
-                <strong>{sanitizeText(scaleHeadline(), 80) || 'Vista previa de video'}</strong>
-                <span>{sanitizeText(scaleSubtitle(), 120) || 'Area reservada para stream en vivo'}</span>
-              </div>
-              <div class={styles.mockLiveViewerCount}>12 viendo</div>
-              <div class={styles.mockLiveTicker}>{sanitizeText(scaleTicker(), 180)}</div>
+        <Show when={featuredLives().length > 0}>
+          <section class={styles.liveRail}>
+            <div class={styles.liveRailHeader}>
+              <strong>En vivo</strong>
+              <span>Abre la cobertura activa como en Snap y vuelve al feed cuando quieras.</span>
             </div>
-
-            <div class={styles.scaleformControls}>
-              <select value={scalePreset()} onChange={(e) => setScalePreset(e.currentTarget.value as NewsScaleform['preset'])}>
-                <option value="breaking">Breaking</option>
-                <option value="ticker">Ticker</option>
-                <option value="flash">Flash</option>
-              </select>
-              <input value={scaleHeadline()} onInput={(e) => setScaleHeadline(sanitizeText(e.currentTarget.value, 80))} placeholder="Headline" />
-              <input value={scaleSubtitle()} onInput={(e) => setScaleSubtitle(sanitizeText(e.currentTarget.value, 120))} placeholder="Subtitle" />
-              <input value={scaleTicker()} onInput={(e) => setScaleTicker(sanitizeText(e.currentTarget.value, 180))} placeholder="Ticker" />
-              <button onClick={() => void applyScaleform()} disabled={!liveArticleId()}>Aplicar al live</button>
-            </div>
-
-            <div class={styles.mockLiveList}>
-              <For each={mockLiveMessages()}>
-                {(entry) => (
-                  <div class={styles.mockLiveItem}>
-                    <strong>{entry.user}</strong>
-                    <span>{entry.text}</span>
-                    <small>{entry.at}</small>
-                  </div>
+            <div class={styles.liveRailList}>
+              <For each={featuredLives()}>
+                {(article) => (
+                  <button class={styles.liveRailCard} onClick={() => void openLiveViewer(article)}>
+                    <div class={styles.liveRailThumb}>
+                      <Show when={articleMediaUrl(article)} fallback={<div class={styles.liveRailFallback}>LIVE</div>}>
+                        <img src={articleMediaUrl(article)} alt={article.title} />
+                      </Show>
+                      <span class={styles.liveRailBadge}>{Number(article.live_viewers || 0) || (article.id === -1 ? 12 : 1)} viendo</span>
+                    </div>
+                    <div class={styles.liveRailBody}>
+                      <strong>{sanitizeText(article.title || '', 90) || 'Cobertura en vivo'}</strong>
+                      <span>{articleAuthor(article)}</span>
+                    </div>
+                  </button>
                 )}
               </For>
             </div>
-          </div>
+          </section>
         </Show>
 
         <div class={styles.feed}>
-          <For each={articles()}>
+          <For each={visibleArticles()}>
             {(article) => (
-              <article class={styles.card} onClick={() => viewArticle(article.id)}>
+              <article class={styles.card} onClick={() => void (isLiveArticle(article) ? openLiveViewer(article) : viewArticle(article.id))}>
                 <div class={styles.meta}>
-                  <span>{article.author_name || 'Redaccion'}</span>
+                  <span>{articleAuthor(article)}</span>
                   <span>{article.created_at ? timeAgo(article.created_at) : 'ahora'}</span>
                 </div>
                 <strong>{article.title}</strong>
-                <Show when={(article as any).media_url || (article as any).mediaUrl}>
-                  <Show when={resolveMediaType((article as any).media_url || (article as any).mediaUrl) === 'image'}>
-                    <img class={styles.articleMedia} src={(article as any).media_url || (article as any).mediaUrl} alt="media" onClick={(e) => { e.stopPropagation(); setViewerUrl((article as any).media_url || (article as any).mediaUrl); }} />
+                <Show when={isLiveArticle(article)}>
+                  <div class={styles.cardLiveBadge}>LIVE · {Number(article.live_viewers || 0)} viendo</div>
+                </Show>
+                <Show when={articleMediaUrl(article)}>
+                  <Show when={resolveMediaType(articleMediaUrl(article)) === 'image'}>
+                    <img
+                      class={styles.articleMedia}
+                      src={articleMediaUrl(article)}
+                      alt="media"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setViewerUrl(articleMediaUrl(article));
+                      }}
+                    />
                   </Show>
-                  <Show when={resolveMediaType((article as any).media_url || (article as any).mediaUrl) === 'video'}>
-                    <video class={styles.articleMedia} src={(article as any).media_url || (article as any).mediaUrl} controls playsinline preload="metadata" />
+                  <Show when={resolveMediaType(articleMediaUrl(article)) === 'video'}>
+                    <video class={styles.articleMedia} src={articleMediaUrl(article)} controls playsinline preload="metadata" />
                   </Show>
                 </Show>
                 <p>{article.content}</p>
                 <small>{article.category || 'general'}</small>
-                <button class={styles.deleteBtn} onClick={(e) => { e.stopPropagation(); void deleteArticle(article.id); }}>Eliminar</button>
+                <button class={styles.deleteBtn} onClick={(event) => { event.stopPropagation(); void deleteArticle(article.id); }}>Eliminar</button>
               </article>
             )}
           </For>
@@ -470,8 +647,8 @@ export function NewsApp() {
           <div class={styles.modal}>
             <div class={styles.modalContent}>
               <h2>Publicar noticia</h2>
-              <input type="text" placeholder="Titulo" value={title()} onInput={(e) => setTitle(e.currentTarget.value)} />
-              <textarea placeholder="Contenido" value={content()} onInput={(e) => setContent(e.currentTarget.value)} />
+              <input type="text" placeholder="Titulo" value={title()} onInput={(event) => setTitle(event.currentTarget.value)} />
+              <textarea placeholder="Contenido" value={content()} onInput={(event) => setContent(event.currentTarget.value)} />
               <div class={styles.composeAttachments}>
                 <MediaActionButtons
                   actions={[
@@ -483,15 +660,142 @@ export function NewsApp() {
                   variant="compact"
                   class={styles.composeMediaButtons}
                 />
-                <input type="text" placeholder="URL media (opcional)" value={mediaUrl()} onInput={(e) => setMediaUrl(sanitizeMediaUrl(e.currentTarget.value))} />
+                <input type="text" placeholder="URL media (opcional)" value={mediaUrl()} onInput={(event) => setMediaUrl(sanitizeMediaUrl(event.currentTarget.value))} />
               </div>
-              <MediaAttachmentPreview url={mediaUrl()} mediaClass={styles.articleMedia} onOpen={() => setViewerUrl(mediaUrl())} />
-              <input type="text" placeholder="Categoria" value={category()} onInput={(e) => setCategory(sanitizeText(e.currentTarget.value, 30))} />
+              <MediaAttachmentPreview url={mediaUrl()} mediaClass={styles.composePreviewMedia} onOpen={() => setViewerUrl(mediaUrl())} />
+              <input type="text" placeholder="Categoria" value={category()} onInput={(event) => setCategory(sanitizeText(event.currentTarget.value, 30))} />
               <div class={styles.actions}>
                 <button onClick={() => setShowCompose(false)}>Cancelar</button>
-                <button class={styles.primary} onClick={publish}>Publicar</button>
+                <button class={styles.primary} onClick={() => void publish()}>Publicar</button>
               </div>
             </div>
+          </div>
+        </Show>
+
+        <Show when={activeLive()}>
+          <div class={styles.liveViewer}>
+            <div class={styles.liveTopBar}>
+              <button class={styles.liveUtilityButton} onClick={closeLiveViewer}>✕</button>
+              <div class={styles.liveOwnerInfo}>
+                <strong>{articleAuthor(activeLive())}</strong>
+                <span>{activeLiveStatus()}</span>
+              </div>
+              <div class={styles.liveTopBarRight}>
+                <span class={styles.liveViewerCount}>{activeLiveViewerCount()} viendo</span>
+                <LiveFlashlightControl
+                  visible={liveFlashlight.supported() && canEditActiveLive()}
+                  enabled={liveFlashlight.enabled()}
+                  panelOpen={liveFlashlight.panelOpen()}
+                  kelvin={liveFlashlight.kelvin()}
+                  lumens={liveFlashlight.lumens()}
+                  kelvinRange={liveFlashlight.kelvinRange()}
+                  lumensRange={liveFlashlight.lumensRange()}
+                  theme="dark"
+                  variant="circle"
+                  buttonLabel={<span>💡</span>}
+                  onPointerDown={liveFlashlight.beginPress}
+                  onPointerUp={liveFlashlight.endPress}
+                  onPointerLeave={liveFlashlight.cancelPress}
+                  onPointerCancel={liveFlashlight.cancelPress}
+                  onKelvinInput={(value) => {
+                    liveFlashlight.setKelvin(value);
+                    void liveFlashlight.saveSettings({ kelvin: value });
+                  }}
+                  onLumensInput={(value) => {
+                    liveFlashlight.setLumens(value);
+                    void liveFlashlight.saveSettings({ lumens: value });
+                  }}
+                  onPreset={(kelvin, lumens) => {
+                    void liveFlashlight.applyPreset(kelvin, lumens);
+                  }}
+                />
+                <button class={styles.liveUtilityButton} onClick={() => setLiveChatOpen((value) => !value)}>💬</button>
+              </div>
+            </div>
+
+            <div class={styles.liveStage}>
+              <Show when={activeLiveMedia()} fallback={<div class={styles.liveStageFallback}>Sin video conectado todavia</div>}>
+                <Show when={resolveMediaType(activeLiveMedia()) === 'image'} fallback={<video class={styles.liveStageMedia} src={activeLiveMedia()} autoplay muted loop playsinline />}>
+                  <img class={styles.liveStageMedia} src={activeLiveMedia()} alt={activeLive()?.title || 'Live'} />
+                </Show>
+              </Show>
+
+              <div class={styles.liveStageOverlay}>
+                <div class={styles.liveBadge}>{activeLiveStatus()}</div>
+                <div class={styles.liveStageText}>
+                  <strong>{sanitizeText(scaleHeadline(), 80) || sanitizeText(activeLive()?.title || '', 80) || 'ULTIMO MOMENTO'}</strong>
+                  <span>{sanitizeText(scaleSubtitle(), 120) || sanitizeText(activeLive()?.content || '', 120) || 'Cobertura en vivo'}</span>
+                  <p>{sanitizeText(activeLive()?.content || '', 180)}</p>
+                </div>
+                <div class={styles.liveTicker}>{sanitizeText(scaleTicker(), 180) || 'Desarrollo en curso...'}</div>
+              </div>
+
+              <div class={styles.liveFloatingLayer}>
+                <For each={floatingMessages()}>
+                  {(entry) => (
+                    <div class={styles.liveFloatingMessage}>
+                      <strong>{entry.user}</strong>
+                      <p>{entry.text}</p>
+                    </div>
+                  )}
+                </For>
+                <For each={liveReactions()}>
+                  {(entry) => <div class={styles.liveReactionBubble}>{entry.emoji}</div>}
+                </For>
+              </div>
+
+              <div class={styles.liveReactionRow}>
+                <For each={LIVE_REACTIONS}>
+                  {(emoji) => <button onClick={() => burstReaction(emoji)}>{emoji}</button>}
+                </For>
+              </div>
+            </div>
+
+            <Show when={liveChatOpen()}>
+              <aside class={styles.liveChatPanel}>
+                <div class={styles.liveChatHeader}>
+                  <strong>Chat y control</strong>
+                  <span>{sanitizeText(activeLive()?.title || '', 80) || 'Cobertura en vivo'}</span>
+                </div>
+
+                <Show when={canEditActiveLive()}>
+                  <div class={styles.liveScaleformPanel}>
+                    <select value={scalePreset()} onChange={(event) => setScalePreset(event.currentTarget.value as NewsScaleform['preset'])}>
+                      <option value="breaking">Breaking</option>
+                      <option value="ticker">Ticker</option>
+                      <option value="flash">Flash</option>
+                    </select>
+                    <input value={scaleHeadline()} onInput={(event) => setScaleHeadline(sanitizeText(event.currentTarget.value, 80))} placeholder="Headline" />
+                    <input value={scaleSubtitle()} onInput={(event) => setScaleSubtitle(sanitizeText(event.currentTarget.value, 120))} placeholder="Subtitle" />
+                    <input value={scaleTicker()} onInput={(event) => setScaleTicker(sanitizeText(event.currentTarget.value, 180))} placeholder="Ticker" />
+                    <button onClick={() => void applyScaleform()} disabled={!liveArticleId()}>Aplicar al live</button>
+                  </div>
+                </Show>
+
+                <div class={styles.liveChatList}>
+                  <For each={mockLiveMessages()}>
+                    {(entry) => (
+                      <div class={styles.liveChatItem}>
+                        <div class={styles.liveChatBody}>
+                          <strong>{entry.user}</strong>
+                          <p>{entry.text}</p>
+                        </div>
+                        <small>{entry.at}</small>
+                      </div>
+                    )}
+                  </For>
+                </div>
+
+                <div class={styles.liveChatInputRow}>
+                  <input
+                    value={liveChatInput()}
+                    onInput={(event) => setLiveChatInput(event.currentTarget.value)}
+                    placeholder="Escribe un comentario para el directo"
+                  />
+                  <button onClick={sendViewerMessage}>Enviar</button>
+                </div>
+              </aside>
+            </Show>
           </div>
         </Show>
 

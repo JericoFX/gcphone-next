@@ -3,62 +3,257 @@
   display: grid;
   place-items: center;
   padding: 18px;
-  background: radial-gradient(circle at top, rgba(58, 86, 189, 0.35), transparent 58%);
+  background:
+    radial-gradient(circle at top, rgba(93, 127, 244, 0.28), transparent 42%),
+    radial-gradient(circle at bottom left, rgba(31, 160, 178, 0.14), transparent 34%),
+    linear-gradient(180deg, rgba(6, 11, 24, 0.98), rgba(8, 16, 34, 0.98));
 }
 
 .card {
   width: 100%;
-  background: rgba(9, 13, 29, 0.86);
+  max-width: 392px;
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+  border-radius: 24px;
   border: 1px solid rgba(255, 255, 255, 0.1);
+  background:
+    linear-gradient(180deg, rgba(16, 24, 46, 0.94), rgba(9, 15, 30, 0.96)),
+    rgba(9, 13, 29, 0.86);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.42);
+}
+
+.hero {
+  display: grid;
+  gap: 8px;
+}
+
+.eyebrow {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(150, 190, 255, 0.82);
+}
+
+.hero h2 {
+  margin: 0;
+  font-size: 24px;
+  line-height: 1.05;
+  color: #f7f9ff;
+}
+
+.lead,
+.sectionHeader p,
+.hint,
+.field small,
+.optionCard span,
+.preferenceHeader span {
+  margin: 0;
+  color: rgba(219, 229, 255, 0.68);
+}
+
+.lead {
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.progress {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.progressStep {
+  display: grid;
+  gap: 6px;
+  justify-items: start;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 16px;
-  padding: 16px;
+  background: rgba(255, 255, 255, 0.03);
+  color: rgba(240, 245, 255, 0.68);
+  font-size: 11px;
+}
+
+.progressStepActive,
+.progressStepDone {
+  color: #f7f9ff;
+  border-color: rgba(116, 158, 255, 0.48);
+}
+
+.progressStepActive {
+  background: linear-gradient(180deg, rgba(81, 122, 255, 0.22), rgba(255, 255, 255, 0.04));
+}
+
+.progressStepDone {
+  background: rgba(73, 118, 233, 0.14);
+}
+
+.progressIndex {
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.section,
+.preferenceStack,
+.preferenceGroup,
+.formGrid,
+.identityGrid,
+.footer {
+  display: grid;
+  gap: 12px;
+}
+
+.sectionHeader {
+  display: grid;
+  gap: 4px;
+}
+
+.sectionHeader h3,
+.preferenceHeader strong {
+  margin: 0;
+  color: #f8fbff;
+}
+
+.sectionHeader h3 {
+  font-size: 17px;
+}
+
+.sectionHeader p,
+.preferenceHeader span,
+.field small,
+.hint,
+.optionCard span {
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.optionGrid,
+.identityGrid {
   display: grid;
   gap: 10px;
 }
 
-.card h2 {
-  margin: 0;
-  font-size: 18px;
+.optionGrid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.card p {
-  margin: 0;
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.7);
-}
-
-.card label {
+.optionCard {
   display: grid;
-  gap: 5px;
+  gap: 4px;
+  padding: 13px;
+  text-align: left;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  background: rgba(255, 255, 255, 0.04);
+  color: #f5f8ff;
+}
+
+.optionCard strong {
+  font-size: 13px;
+}
+
+.optionCardActive {
+  border-color: rgba(132, 173, 255, 0.62);
+  background: linear-gradient(180deg, rgba(84, 126, 255, 0.24), rgba(16, 22, 40, 0.74));
+  box-shadow: inset 0 0 0 1px rgba(161, 196, 255, 0.16);
+}
+
+.field {
+  display: grid;
+  gap: 6px;
   font-size: 12px;
+  color: rgba(241, 246, 255, 0.9);
 }
 
-.card input {
+.field span {
+  font-weight: 600;
+}
+
+.field input {
   width: 100%;
-  padding: 10px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(0, 0, 0, 0.22);
+  min-width: 0;
+  padding: 12px 13px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(3, 8, 18, 0.42);
   color: #fff;
 }
 
-.card button {
-  border: 0;
-  border-radius: 11px;
-  padding: 10px;
-  color: #fff;
-  font-weight: 700;
-  background: linear-gradient(120deg, #2f4ed0, #1f80d7);
+.field input::placeholder {
+  color: rgba(214, 223, 248, 0.34);
 }
 
-.card button:disabled {
-  opacity: 0.6;
+.inputWrap {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.domainBadge {
+  padding: 11px 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: rgba(221, 230, 255, 0.76);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.preferenceHeader {
+  display: grid;
+  gap: 3px;
 }
 
 .error {
-  color: #ffc6c6;
+  margin: 0;
+  padding: 11px 13px;
+  border-radius: 14px;
+  background: rgba(255, 108, 108, 0.12);
+  border: 1px solid rgba(255, 141, 141, 0.24);
+  color: #ffd1d1;
+  font-size: 12px;
 }
 
 .hint {
-  opacity: 0.7;
+  font-size: 12px;
+}
+
+.buttonRow {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.secondaryButton,
+.primaryButton {
+  border: 0;
+  border-radius: 15px;
+  padding: 12px 14px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.secondaryButton {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.primaryButton {
+  background: linear-gradient(135deg, #5b80ff, #1d9bc1);
+  box-shadow: 0 16px 32px rgba(34, 111, 210, 0.32);
+}
+
+.secondaryButton:disabled,
+.primaryButton:disabled,
+.progressStep:disabled {
+  opacity: 0.55;
 }

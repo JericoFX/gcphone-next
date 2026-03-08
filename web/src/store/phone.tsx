@@ -9,7 +9,7 @@ import {
 import { createStore } from 'solid-js/store';
 import { fetchNui } from '../utils/fetchNui';
 import { useNuiCustomEvent } from '../utils/useNui';
-import type { AppLayout, PhoneFeatureFlags, PhoneSettings, PhoneState, PhoneSetupState } from '../types';
+import type { AppLayout, PhoneFeatureFlags, PhoneSettings, PhoneSetupPayload, PhoneState, PhoneSetupState } from '../types';
 import { APP_IDS, DEFAULT_HOME_APPS, DEFAULT_MENU_APPS } from '../config/apps';
 import { isEnvBrowser } from '../utils/misc';
 
@@ -22,7 +22,7 @@ interface PhoneContextValue {
     unlock: (code: string) => Promise<boolean>;
     lock: () => void;
     refreshSetupState: () => Promise<void>;
-    completeSetup: (payload: { pin: string; snapUsername: string; chirpUsername: string; clipsUsername: string }) => Promise<{ success: boolean; error?: string }>;
+    completeSetup: (payload: PhoneSetupPayload) => Promise<{ success: boolean; error?: string }>;
     setWallpaper: (url: string) => void;
     setRingtone: (ringtone: string) => void;
     setVolume: (volume: number) => void;
@@ -30,7 +30,6 @@ interface PhoneContextValue {
     setLanguage: (language: 'es' | 'en' | 'pt' | 'fr') => void;
     setAudioProfile: (audioProfile: 'normal' | 'street' | 'vehicle' | 'silent') => void;
     setLockCode: (code: string) => void;
-    setCoque: (coque: string) => void;
     loadAppLayout: () => Promise<void>;
     saveAppLayout: () => Promise<void>;
     reorderApp: (target: 'home' | 'menu', appId: string, targetIndex: number) => void;
@@ -48,7 +47,6 @@ const defaultSettings: PhoneSettings = {
   ringtone: 'ring.ogg',
   volume: 0.5,
   lockCode: '0000',
-  coque: 'sin_funda.png',
   theme: 'light',
   language: 'es',
   audioProfile: 'normal'
@@ -60,6 +58,7 @@ const defaultFeatureFlags: PhoneFeatureFlags = {
   darkrooms: true,
   clips: true,
   wallet: true,
+  mail: true,
   documents: true,
   music: true,
   yellowpages: true,
@@ -70,6 +69,8 @@ const defaultSetupState: PhoneSetupState = {
   hasSnap: true,
   hasChirp: true,
   hasClips: true,
+  hasMail: true,
+  mailDomain: '',
 };
 
 const defaultLayout: AppLayout = {
@@ -83,7 +84,25 @@ type PhonePayload = PhoneSettings & {
   featureFlags?: Partial<PhoneFeatureFlags>;
   requiresSetup?: boolean;
   setup?: PhoneSetupState;
+  useLockScreen?: boolean;
 };
+
+const PINNED_HOME_APPS = ['contacts', 'messages', 'mail'] as const;
+const REQUIRED_ENABLED_APPS = ['contacts', 'messages', 'mail'] as const;
+
+function ensureRequiredEnabledApps(enabledApps: string[]): string[] {
+  const active = new Set<string>();
+
+  for (const appId of enabledApps) {
+    if (APP_IDS.includes(appId)) active.add(appId);
+  }
+
+  for (const appId of REQUIRED_ENABLED_APPS) {
+    active.add(appId);
+  }
+
+  return APP_IDS.filter((appId) => active.has(appId));
+}
 
 function normalizeLayout(layout?: Partial<AppLayout> | null, enabledApps: string[] = APP_IDS): AppLayout {
   const available = new Set(enabledApps);
@@ -115,9 +134,14 @@ function normalizeLayout(layout?: Partial<AppLayout> | null, enabledApps: string
     }
   }
 
+  const pinnedHome = PINNED_HOME_APPS.filter((id) => available.has(id));
+  const pinnedSet = new Set<string>(pinnedHome);
+  const orderedHome = [...pinnedHome, ...uniqueHome.filter((id) => !pinnedSet.has(id))];
+  const filteredMenu = uniqueMenu.filter((id) => !pinnedSet.has(id));
+
   return {
-    home: uniqueHome,
-    menu: uniqueMenu
+    home: orderedHome,
+    menu: filteredMenu
   };
 }
 
@@ -128,6 +152,7 @@ function normalizeFeatureFlags(input?: Partial<PhoneFeatureFlags> | null): Phone
     darkrooms: input?.darkrooms !== false,
     clips: input?.clips !== false,
     wallet: input?.wallet !== false,
+    mail: input?.mail !== false,
     documents: input?.documents !== false,
     music: input?.music !== false,
     yellowpages: input?.yellowpages !== false,
@@ -146,6 +171,7 @@ function enabledAppsFromFlags(flags: PhoneFeatureFlags): string[] {
     darkrooms: ['darkrooms'],
     clips: ['clips'],
     wallet: ['wallet'],
+    mail: ['mail'],
     documents: ['documents'],
     music: ['music'],
     yellowpages: ['yellowpages'],
@@ -221,6 +247,12 @@ export const PhoneProvider: ParentComponent = (props) => {
       );
 
       if (response?.success) {
+        if (payload.theme) setState('settings', 'theme', payload.theme);
+        if (payload.language) {
+          setState('settings', 'language', payload.language);
+          window.localStorage.setItem('gcphone:language', payload.language);
+        }
+        if (payload.audioProfile) setState('settings', 'audioProfile', payload.audioProfile);
         setState('requiresSetup', response.requiresSetup === true);
         setState('setup', {
           ...defaultSetupState,
@@ -263,10 +295,6 @@ export const PhoneProvider: ParentComponent = (props) => {
       setState('settings', 'lockCode', code);
       fetchNui('setLockCode', { code });
     },
-    setCoque: (coque: string) => {
-      setState('settings', 'coque', coque);
-      fetchNui('setCoque', { coque });
-    },
     loadAppLayout: async () => {
       const layout = await fetchNui<AppLayout | null>('getAppLayout', {});
       setLayout(layout, state.enabledApps);
@@ -308,9 +336,9 @@ export const PhoneProvider: ParentComponent = (props) => {
   
   useNuiCustomEvent<PhonePayload>('phone:init', (data) => {
     const flags = normalizeFeatureFlags(data?.featureFlags);
-    const enabledApps = Array.isArray(data?.enabledApps) && data.enabledApps.length > 0
+    const enabledApps = ensureRequiredEnabledApps(Array.isArray(data?.enabledApps) && data.enabledApps.length > 0
       ? data.enabledApps.filter((id): id is string => typeof id === 'string' && APP_IDS.includes(id))
-      : enabledAppsFromFlags(flags);
+      : enabledAppsFromFlags(flags));
 
     batch(() => {
       setState('initialized', true);
@@ -322,7 +350,6 @@ export const PhoneProvider: ParentComponent = (props) => {
           ringtone: data.ringtone || defaultSettings.ringtone,
           volume: data.volume ?? defaultSettings.volume,
           lockCode: '',
-          coque: data.coque || defaultSettings.coque,
           theme: data.theme || defaultSettings.theme,
           language: normalizeLanguage(data.language || window.localStorage.getItem('gcphone:language')),
           audioProfile: data.audioProfile || defaultSettings.audioProfile,
@@ -342,12 +369,13 @@ export const PhoneProvider: ParentComponent = (props) => {
 
   useNuiCustomEvent<PhonePayload>('phone:show', (data) => {
     const flags = normalizeFeatureFlags(data?.featureFlags || state.featureFlags);
-    const enabledApps = Array.isArray(data?.enabledApps) && data.enabledApps.length > 0
+    const enabledApps = ensureRequiredEnabledApps(Array.isArray(data?.enabledApps) && data.enabledApps.length > 0
       ? data.enabledApps.filter((id): id is string => typeof id === 'string' && APP_IDS.includes(id))
-      : state.enabledApps;
+      : state.enabledApps);
 
     batch(() => {
       const needsSetup = data?.requiresSetup === true;
+      const useLockScreen = data?.useLockScreen ?? state.locked;
       const shouldLock = useLockScreen && !isEnvBrowser() && !needsSetup;
       setState('visible', true);
       setState('locked', shouldLock);
@@ -357,14 +385,13 @@ export const PhoneProvider: ParentComponent = (props) => {
       if (data) {
         setState('settings', {
           phoneNumber: data.phoneNumber || state.settings.phoneNumber,
-           wallpaper: data.wallpaper || state.settings.wallpaper,
-           ringtone: data.ringtone || state.settings.ringtone,
-            volume: data.volume ?? state.settings.volume,
-             lockCode: '',
-            coque: data.coque || state.settings.coque,
-            theme: data.theme || state.settings.theme,
-            language: normalizeLanguage(data.language || state.settings.language || window.localStorage.getItem('gcphone:language')),
-            audioProfile: data.audioProfile || state.settings.audioProfile,
+            wallpaper: data.wallpaper || state.settings.wallpaper,
+            ringtone: data.ringtone || state.settings.ringtone,
+             volume: data.volume ?? state.settings.volume,
+              lockCode: '',
+             theme: data.theme || state.settings.theme,
+             language: normalizeLanguage(data.language || state.settings.language || window.localStorage.getItem('gcphone:language')),
+             audioProfile: data.audioProfile || state.settings.audioProfile,
           });
         setLayout(data.appLayout || state.appLayout, enabledApps);
         setState('requiresSetup', data?.requiresSetup === true);
