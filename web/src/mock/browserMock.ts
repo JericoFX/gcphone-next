@@ -2,13 +2,40 @@ import type { Call, Contact, Message } from '../types';
 
 type AnyRecord = Record<string, unknown>;
 
+interface MailAttachment {
+  type: 'image' | 'video' | 'document' | 'link';
+  url: string;
+  name?: string;
+  mime?: string;
+  size?: number;
+  sourceApp?: string;
+}
+
+interface MockMailAccount {
+  id: number;
+  alias: string;
+  email: string;
+}
+
+interface MockMailMessage {
+  id: number;
+  sender_email?: string;
+  sender_alias?: string;
+  recipient_email: string;
+  recipient_alias?: string;
+  subject?: string;
+  body: string;
+  attachments?: MailAttachment[];
+  is_read?: number;
+  created_at: number;
+}
+
 interface BrowserMockState {
   phoneNumber: string;
   wallpaper: string;
   ringtone: string;
   volume: number;
   lockCode: string;
-  coque: string;
   theme: 'auto' | 'light' | 'dark';
   language: 'es' | 'en' | 'pt' | 'fr';
   audioProfile: 'normal' | 'street' | 'vehicle' | 'silent';
@@ -19,7 +46,14 @@ interface BrowserMockState {
   balance: number;
   transactions: Array<{ id: number; description: string; amount: number; time: string }>;
   appLayout: { home: string[]; menu: string[] };
+  mailDomain: string;
+  mailAccount: MockMailAccount | null;
+  mailInbox: MockMailMessage[];
+  mailSent: MockMailMessage[];
   airplaneMode: boolean;
+  flashlightEnabled: boolean;
+  flashlightKelvin: number;
+  flashlightLumens: number;
 }
 
 type GalleryEntry = BrowserMockState['gallery'][number];
@@ -32,6 +66,25 @@ interface MockRealtimeConfig {
   livekitUrl: string;
   livekitToken: string;
   livekitIdentity: string;
+  livekitApiKey: string;
+  livekitApiSecret: string;
+}
+
+interface MockRealtimePreview {
+  socket: {
+    success: boolean;
+    host: string;
+    token: string;
+  };
+  livekit: {
+    success: boolean;
+    url: string;
+    token: string;
+    roomName: string;
+    identity: string;
+    apiKey: string;
+    hasApiSecret: boolean;
+  };
 }
 
 const MOCK_REALTIME_KEYS = {
@@ -40,7 +93,16 @@ const MOCK_REALTIME_KEYS = {
   livekitUrl: 'gcphone:mock:livekitUrl',
   livekitToken: 'gcphone:mock:livekitToken',
   livekitIdentity: 'gcphone:mock:livekitIdentity',
+  livekitApiKey: 'gcphone:mock:livekitApiKey',
 } as const;
+
+const DEFAULT_MOCK_SOCKET_HOST = 'ws://127.0.0.1:3001';
+const DEFAULT_MOCK_LIVEKIT_URL = 'ws://127.0.0.1:7880';
+const REALTIME_PANEL_ID = 'gcphone-mock-realtime-panel';
+const textEncoder = new TextEncoder();
+
+let realtimePanelCleanup: (() => void) | null = null;
+let volatileLivekitApiSecret = '';
 
 const sanitizeConfigValue = (value: unknown, maxLength = 512) => {
   if (typeof value !== 'string') return '';
@@ -53,6 +115,8 @@ const readRealtimeConfig = (): MockRealtimeConfig => ({
   livekitUrl: sanitizeConfigValue(window.localStorage.getItem(MOCK_REALTIME_KEYS.livekitUrl), 200),
   livekitToken: sanitizeConfigValue(window.localStorage.getItem(MOCK_REALTIME_KEYS.livekitToken), 2000),
   livekitIdentity: sanitizeConfigValue(window.localStorage.getItem(MOCK_REALTIME_KEYS.livekitIdentity), 120),
+  livekitApiKey: sanitizeConfigValue(window.localStorage.getItem(MOCK_REALTIME_KEYS.livekitApiKey), 120),
+  livekitApiSecret: volatileLivekitApiSecret,
 });
 
 const writeRealtimeConfig = (config: Partial<MockRealtimeConfig>) => {
@@ -61,12 +125,18 @@ const writeRealtimeConfig = (config: Partial<MockRealtimeConfig>) => {
   const nextLivekitUrl = sanitizeConfigValue(config.livekitUrl, 200);
   const nextLivekitToken = sanitizeConfigValue(config.livekitToken, 2000);
   const nextLivekitIdentity = sanitizeConfigValue(config.livekitIdentity, 120);
+  const nextLivekitApiKey = sanitizeConfigValue(config.livekitApiKey, 120);
+  const nextLivekitApiSecret = sanitizeConfigValue(config.livekitApiSecret, 512);
 
   if (nextSocketHost) window.localStorage.setItem(MOCK_REALTIME_KEYS.socketHost, nextSocketHost);
   if (nextSocketToken) window.localStorage.setItem(MOCK_REALTIME_KEYS.socketToken, nextSocketToken);
   if (nextLivekitUrl) window.localStorage.setItem(MOCK_REALTIME_KEYS.livekitUrl, nextLivekitUrl);
   if (nextLivekitToken) window.localStorage.setItem(MOCK_REALTIME_KEYS.livekitToken, nextLivekitToken);
   if (nextLivekitIdentity) window.localStorage.setItem(MOCK_REALTIME_KEYS.livekitIdentity, nextLivekitIdentity);
+  if (nextLivekitApiKey) window.localStorage.setItem(MOCK_REALTIME_KEYS.livekitApiKey, nextLivekitApiKey);
+  if (Object.prototype.hasOwnProperty.call(config, 'livekitApiSecret')) {
+    volatileLivekitApiSecret = nextLivekitApiSecret;
+  }
 };
 
 const clearRealtimeConfig = () => {
@@ -75,6 +145,427 @@ const clearRealtimeConfig = () => {
   window.localStorage.removeItem(MOCK_REALTIME_KEYS.livekitUrl);
   window.localStorage.removeItem(MOCK_REALTIME_KEYS.livekitToken);
   window.localStorage.removeItem(MOCK_REALTIME_KEYS.livekitIdentity);
+  window.localStorage.removeItem(MOCK_REALTIME_KEYS.livekitApiKey);
+  volatileLivekitApiSecret = '';
+};
+
+const randomToken = (prefix: string, length: number) => {
+  const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let out = `${prefix}-`;
+  for (let i = 0; i < length; i += 1) {
+    out += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return out;
+};
+
+const sanitizeWsEndpoint = (value: unknown, fallback: string) => {
+  const text = sanitizeConfigValue(value, 240);
+  if (!text) return fallback;
+  if (text.startsWith('ws://') || text.startsWith('wss://')) {
+    return text;
+  }
+  return `ws://${text}`;
+};
+
+const saveRealtimeConfig = (config: Partial<MockRealtimeConfig>) => {
+  clearRealtimeConfig();
+  writeRealtimeConfig(config);
+  return readRealtimeConfig();
+};
+
+const makeRealtimeConfig = (config: Partial<MockRealtimeConfig> = {}) => {
+  const socketHost = sanitizeWsEndpoint(config.socketHost, DEFAULT_MOCK_SOCKET_HOST);
+  const livekitUrl = sanitizeWsEndpoint(config.livekitUrl, DEFAULT_MOCK_LIVEKIT_URL);
+  const socketToken = sanitizeConfigValue(config.socketToken, 1000) || randomToken('mock-socket', 24);
+  const livekitToken = sanitizeConfigValue(config.livekitToken, 2000) || randomToken('mock-livekit', 36);
+  const livekitIdentity = sanitizeConfigValue(config.livekitIdentity, 120) || `mock:${state.phoneNumber}`;
+  const livekitApiKey = sanitizeConfigValue(config.livekitApiKey, 120);
+  const livekitApiSecret = sanitizeConfigValue(config.livekitApiSecret, 512);
+
+  return {
+    socketHost,
+    socketToken,
+    livekitUrl,
+    livekitToken,
+    livekitIdentity,
+    livekitApiKey,
+    livekitApiSecret,
+  } satisfies MockRealtimeConfig;
+};
+
+const updateRealtimeConfig = (config: Partial<MockRealtimeConfig>) => {
+  return saveRealtimeConfig({
+    ...readRealtimeConfig(),
+    ...config,
+  });
+};
+
+const stripWrappedQuotes = (value: string) => {
+  const text = value.trim();
+  if ((text.startsWith('"') && text.endsWith('"')) || (text.startsWith("'") && text.endsWith("'"))) {
+    return text.slice(1, -1).trim();
+  }
+  return text;
+};
+
+const parseRealtimeInstallerText = (input: string): Partial<MockRealtimeConfig> => {
+  const result: Partial<MockRealtimeConfig> = {};
+  const lines = input.split(/\r?\n/);
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith('#') || line.startsWith('//')) continue;
+
+    const setrMatch = line.match(/^setr\s+([a-zA-Z0-9_]+)\s+(.+)$/i);
+    if (setrMatch) {
+      const key = setrMatch[1].toLowerCase();
+      const value = stripWrappedQuotes(setrMatch[2]);
+      if (key === 'livekit_host') result.livekitUrl = value;
+      else if (key === 'livekit_api_key') result.livekitApiKey = value;
+      else if (key === 'livekit_api_secret') result.livekitApiSecret = value;
+      else if (key === 'gcphone_socket_host') result.socketHost = value;
+      continue;
+    }
+
+    const envMatch = line.match(/^([a-zA-Z0-9_]+)\s*=\s*(.+)$/);
+    if (!envMatch) continue;
+
+    const key = envMatch[1].toUpperCase();
+    const value = stripWrappedQuotes(envMatch[2]);
+    if (key === 'LIVEKIT_HOST') result.livekitUrl = value;
+    else if (key === 'LIVEKIT_API_KEY') result.livekitApiKey = value;
+    else if (key === 'LIVEKIT_API_SECRET') result.livekitApiSecret = value;
+    else if (key === 'GCPHONE_SOCKET_HOST') result.socketHost = value;
+  }
+
+  return result;
+};
+
+const buildRealtimeSetrText = () => {
+  const realtime = readRealtimeConfig();
+  const livekitHost = sanitizeWsEndpoint(realtime.livekitUrl, DEFAULT_MOCK_LIVEKIT_URL);
+  const lines = [
+    `setr livekit_host "${livekitHost}"`,
+    `setr livekit_api_key "${realtime.livekitApiKey || 'gcphone'}"`,
+    `setr livekit_api_secret "${realtime.livekitApiSecret || 'change-me-secret'}"`,
+    'setr livekit_room_prefix "gcphone"',
+    'setr livekit_max_call_duration "300"',
+  ];
+
+  if (realtime.socketHost) {
+    lines.push(`setr gcphone_socket_host "${sanitizeWsEndpoint(realtime.socketHost, DEFAULT_MOCK_SOCKET_HOST)}"`);
+  }
+
+  return lines.join('\n');
+};
+
+const copyText = async (text: string) => {
+  try {
+    if (navigator?.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch {
+    // fallback below
+  }
+
+  const fallback = document.createElement('textarea');
+  fallback.value = text;
+  fallback.style.position = 'fixed';
+  fallback.style.opacity = '0';
+  document.body.appendChild(fallback);
+  fallback.focus();
+  fallback.select();
+  const ok = document.execCommand('copy');
+  fallback.remove();
+  return ok;
+};
+
+const bytesToBase64Url = (bytes: Uint8Array) => {
+  let binary = '';
+  for (let i = 0; i < bytes.length; i += 1) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+};
+
+const stringToBase64Url = (value: string) => bytesToBase64Url(textEncoder.encode(value));
+
+const buildLivekitJwt = async (
+  apiKey: string,
+  apiSecret: string,
+  roomName: string,
+  identity: string,
+  publish: boolean,
+  maxDurationSeconds: number,
+) => {
+  const now = Math.floor(Date.now() / 1000);
+  const ttl = Math.max(30, Math.min(86400, Math.floor(maxDurationSeconds || 300)));
+
+  const header = {
+    alg: 'HS256',
+    typ: 'JWT',
+  };
+
+  const payload = {
+    iss: apiKey,
+    sub: identity,
+    iat: now,
+    nbf: now,
+    exp: now + ttl,
+    video: {
+      roomJoin: true,
+      room: roomName,
+      canPublish: publish,
+      canSubscribe: true,
+      canPublishData: true,
+    },
+  };
+
+  const encodedHeader = stringToBase64Url(JSON.stringify(header));
+  const encodedPayload = stringToBase64Url(JSON.stringify(payload));
+  const unsignedToken = `${encodedHeader}.${encodedPayload}`;
+
+  const signingKey = await crypto.subtle.importKey(
+    'raw',
+    textEncoder.encode(apiSecret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign'],
+  );
+
+  const signatureBuffer = await crypto.subtle.sign('HMAC', signingKey, textEncoder.encode(unsignedToken));
+  const signature = bytesToBase64Url(new Uint8Array(signatureBuffer));
+
+  return `${unsignedToken}.${signature}`;
+};
+
+const buildSocketTokenResult = () => {
+  const realtime = readRealtimeConfig();
+  return {
+    success: true,
+    host: realtime.socketHost || DEFAULT_MOCK_SOCKET_HOST,
+    token: realtime.socketToken || 'mock-socket-token',
+  };
+};
+
+const buildLivekitTokenPreview = (roomName: string) => {
+  const realtime = readRealtimeConfig();
+  return {
+    success: true,
+    url: realtime.livekitUrl || DEFAULT_MOCK_LIVEKIT_URL,
+    token: realtime.livekitToken || 'mock-livekit-token',
+    roomName,
+    identity: realtime.livekitIdentity || `mock:${state.phoneNumber}`,
+    apiKey: realtime.livekitApiKey,
+    hasApiSecret: Boolean(realtime.livekitApiSecret),
+  };
+};
+
+const buildLivekitTokenResult = async (roomName: string, publish: boolean, maxDurationSeconds: number) => {
+  const realtime = readRealtimeConfig();
+  const url = realtime.livekitUrl || DEFAULT_MOCK_LIVEKIT_URL;
+  const identity = realtime.livekitIdentity || `mock:${state.phoneNumber}`;
+  const hasManualToken = Boolean(realtime.livekitToken && realtime.livekitToken !== 'mock-livekit-token');
+  let token = realtime.livekitToken || 'mock-livekit-token';
+
+  if (!hasManualToken && realtime.livekitApiKey && realtime.livekitApiSecret && crypto?.subtle) {
+    try {
+      token = await buildLivekitJwt(
+        realtime.livekitApiKey,
+        realtime.livekitApiSecret,
+        roomName,
+        identity,
+        publish,
+        maxDurationSeconds,
+      );
+      updateRealtimeConfig({ livekitToken: token, livekitIdentity: identity });
+    } catch (error) {
+      console.warn('[gcphone mock] failed generating LiveKit JWT in browser mock', error);
+    }
+  }
+
+  return {
+    success: true,
+    url,
+    token,
+    roomName,
+    identity,
+    apiKey: realtime.livekitApiKey,
+    hasApiSecret: Boolean(realtime.livekitApiSecret),
+  };
+};
+
+const buildRealtimePreview = (roomName = `call-${Date.now()}`): MockRealtimePreview => ({
+  socket: buildSocketTokenResult(),
+  livekit: buildLivekitTokenPreview(roomName),
+});
+
+const closeRealtimePanel = () => {
+  if (realtimePanelCleanup) {
+    realtimePanelCleanup();
+    realtimePanelCleanup = null;
+    return;
+  }
+
+  const stale = document.getElementById(REALTIME_PANEL_ID);
+  if (stale) stale.remove();
+};
+
+const openRealtimePanel = () => {
+  closeRealtimePanel();
+
+  const root = document.createElement('div');
+  root.id = REALTIME_PANEL_ID;
+  root.style.position = 'fixed';
+  root.style.right = '12px';
+  root.style.bottom = '12px';
+  root.style.width = '360px';
+  root.style.maxHeight = '70vh';
+  root.style.overflow = 'auto';
+  root.style.padding = '12px';
+  root.style.background = 'rgba(14,18,24,0.92)';
+  root.style.backdropFilter = 'blur(8px)';
+  root.style.border = '1px solid rgba(255,255,255,0.14)';
+  root.style.borderRadius = '12px';
+  root.style.zIndex = '999999';
+  root.style.color = '#e5edf8';
+  root.style.fontFamily = 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';
+  root.style.fontSize = '12px';
+  root.style.lineHeight = '1.4';
+
+  root.innerHTML = [
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">',
+    '<strong>gcphone Mock Realtime Lab</strong>',
+    '<button data-action="close" style="border:0;background:#1f2937;color:#e5edf8;border-radius:6px;padding:3px 7px;cursor:pointer;">x</button>',
+    '</div>',
+    '<label style="display:block;margin-bottom:6px;">Socket host</label>',
+    '<input data-field="socketHost" style="width:100%;margin-bottom:8px;padding:6px;border-radius:8px;border:1px solid #334155;background:#0b1220;color:#dbeafe;" />',
+    '<label style="display:block;margin-bottom:6px;">LiveKit URL</label>',
+    '<input data-field="livekitUrl" style="width:100%;margin-bottom:8px;padding:6px;border-radius:8px;border:1px solid #334155;background:#0b1220;color:#dbeafe;" />',
+    '<label style="display:block;margin-bottom:6px;">LiveKit API key (setup output)</label>',
+    '<input data-field="livekitApiKey" style="width:100%;margin-bottom:8px;padding:6px;border-radius:8px;border:1px solid #334155;background:#0b1220;color:#dbeafe;" />',
+    '<label style="display:block;margin-bottom:6px;">LiveKit API secret (setup output)</label>',
+    '<input data-field="livekitApiSecret" type="password" style="width:100%;margin-bottom:8px;padding:6px;border-radius:8px;border:1px solid #334155;background:#0b1220;color:#dbeafe;" />',
+    '<div style="margin:-4px 0 8px;color:#93c5fd;">Solo mock browser: el secret queda en memoria temporal (no localStorage).</div>',
+    '<label style="display:block;margin-bottom:6px;">LiveKit token (optional)</label>',
+    '<input data-field="livekitToken" style="width:100%;margin-bottom:8px;padding:6px;border-radius:8px;border:1px solid #334155;background:#0b1220;color:#dbeafe;" />',
+    '<label style="display:block;margin-bottom:6px;">Identity</label>',
+    '<input data-field="livekitIdentity" style="width:100%;margin-bottom:8px;padding:6px;border-radius:8px;border:1px solid #334155;background:#0b1220;color:#dbeafe;" />',
+    '<label style="display:block;margin-bottom:6px;">Paste setup lines (.env or setr)</label>',
+    '<textarea data-field="installerText" rows="4" style="width:100%;margin-bottom:10px;padding:6px;border-radius:8px;border:1px solid #334155;background:#0b1220;color:#dbeafe;resize:vertical;"></textarea>',
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px;">',
+    '<button data-action="generate" style="border:0;background:#0ea5e9;color:#001018;border-radius:8px;padding:6px;cursor:pointer;">Generate mock</button>',
+    '<button data-action="local" style="border:0;background:#22c55e;color:#052e16;border-radius:8px;padding:6px;cursor:pointer;">Use localhost</button>',
+    '<button data-action="import" style="border:0;background:#14b8a6;color:#021410;border-radius:8px;padding:6px;cursor:pointer;">Import setup</button>',
+    '<button data-action="save" style="border:0;background:#f59e0b;color:#1f1300;border-radius:8px;padding:6px;cursor:pointer;">Save fields</button>',
+    '<button data-action="copysetr" style="border:0;background:#6366f1;color:#eef2ff;border-radius:8px;padding:6px;cursor:pointer;">Copy setr</button>',
+    '<button data-action="clear" style="border:0;background:#ef4444;color:#250303;border-radius:8px;padding:6px;cursor:pointer;">Clear all</button>',
+    '</div>',
+    '<label style="display:block;margin-bottom:6px;">Preview token payloads</label>',
+    '<pre data-field="preview" style="white-space:pre-wrap;background:#020617;border:1px solid #1e293b;border-radius:8px;padding:8px;max-height:220px;overflow:auto;"></pre>',
+  ].join('');
+
+  const socketHostInput = root.querySelector('[data-field="socketHost"]') as HTMLInputElement | null;
+  const livekitUrlInput = root.querySelector('[data-field="livekitUrl"]') as HTMLInputElement | null;
+  const livekitApiKeyInput = root.querySelector('[data-field="livekitApiKey"]') as HTMLInputElement | null;
+  const livekitApiSecretInput = root.querySelector('[data-field="livekitApiSecret"]') as HTMLInputElement | null;
+  const livekitTokenInput = root.querySelector('[data-field="livekitToken"]') as HTMLInputElement | null;
+  const identityInput = root.querySelector('[data-field="livekitIdentity"]') as HTMLInputElement | null;
+  const installerTextInput = root.querySelector('[data-field="installerText"]') as HTMLTextAreaElement | null;
+  const previewNode = root.querySelector('[data-field="preview"]') as HTMLElement | null;
+
+  if (!socketHostInput || !livekitUrlInput || !livekitApiKeyInput || !livekitApiSecretInput || !livekitTokenInput || !identityInput || !installerTextInput || !previewNode) {
+    return;
+  }
+
+  const refill = () => {
+    const realtime = readRealtimeConfig();
+    socketHostInput.value = realtime.socketHost || DEFAULT_MOCK_SOCKET_HOST;
+    livekitUrlInput.value = realtime.livekitUrl || DEFAULT_MOCK_LIVEKIT_URL;
+    livekitApiKeyInput.value = realtime.livekitApiKey || '';
+    livekitApiSecretInput.value = realtime.livekitApiSecret || '';
+    livekitTokenInput.value = realtime.livekitToken || '';
+    identityInput.value = realtime.livekitIdentity || `mock:${state.phoneNumber}`;
+    previewNode.textContent = JSON.stringify(buildRealtimePreview('call-mock-lab'), null, 2);
+  };
+
+  const onClick = (event: Event) => {
+    const target = event.target as HTMLElement | null;
+    const action = target?.getAttribute('data-action');
+    if (!action) return;
+
+    if (action === 'close') {
+      closeRealtimePanel();
+      return;
+    }
+
+    if (action === 'clear') {
+      clearRealtimeConfig();
+      refill();
+      return;
+    }
+
+    if (action === 'local') {
+      saveRealtimeConfig(makeRealtimeConfig({
+        socketHost: DEFAULT_MOCK_SOCKET_HOST,
+        livekitUrl: DEFAULT_MOCK_LIVEKIT_URL,
+        livekitApiKey: '',
+        livekitApiSecret: '',
+        livekitIdentity: `mock:${state.phoneNumber}`,
+      }));
+      refill();
+      return;
+    }
+
+    if (action === 'import') {
+      const parsed = parseRealtimeInstallerText(installerTextInput.value || '');
+      if (Object.keys(parsed).length > 0) {
+        updateRealtimeConfig(parsed);
+      }
+      refill();
+      return;
+    }
+
+    if (action === 'generate') {
+      saveRealtimeConfig(makeRealtimeConfig({
+        socketHost: socketHostInput.value,
+        livekitUrl: livekitUrlInput.value,
+        livekitApiKey: livekitApiKeyInput.value,
+        livekitApiSecret: livekitApiSecretInput.value,
+        livekitToken: livekitTokenInput.value,
+        livekitIdentity: identityInput.value,
+      }));
+      refill();
+      return;
+    }
+
+    if (action === 'copysetr') {
+      void copyText(buildRealtimeSetrText());
+      return;
+    }
+
+    if (action === 'save') {
+      updateRealtimeConfig({
+        socketHost: sanitizeWsEndpoint(socketHostInput.value, DEFAULT_MOCK_SOCKET_HOST),
+        livekitUrl: sanitizeWsEndpoint(livekitUrlInput.value, DEFAULT_MOCK_LIVEKIT_URL),
+        livekitApiKey: sanitizeConfigValue(livekitApiKeyInput.value, 120),
+        livekitApiSecret: sanitizeConfigValue(livekitApiSecretInput.value, 512),
+        livekitToken: sanitizeConfigValue(livekitTokenInput.value, 2000),
+        livekitIdentity: sanitizeConfigValue(identityInput.value, 120),
+      });
+      refill();
+    }
+  };
+
+  root.addEventListener('click', onClick);
+  document.body.appendChild(root);
+  refill();
+
+  realtimePanelCleanup = () => {
+    root.removeEventListener('click', onClick);
+    root.remove();
+  };
 };
 
 const state: BrowserMockState = {
@@ -83,7 +574,6 @@ const state: BrowserMockState = {
   ringtone: 'ring.ogg',
   volume: 0.5,
   lockCode: '1234',
-  coque: 'sin_funda.png',
   theme: 'light',
   language: 'es',
   audioProfile: 'normal',
@@ -125,10 +615,47 @@ const state: BrowserMockState = {
     { id: 2, description: 'Transferencia enviada', amount: -1200, time: nowIso() },
   ],
   appLayout: {
-    home: ['contacts', 'messages', 'calls', 'settings', 'gallery', 'camera', 'bank', 'wallet', 'documents', 'wavechat', 'music', 'chirp', 'snap', 'clips', 'darkrooms', 'yellowpages', 'market', 'news', 'garage', 'notes', 'maps'],
+    home: ['contacts', 'messages', 'mail', 'calls', 'settings', 'gallery', 'camera', 'bank', 'wallet', 'documents', 'wavechat', 'music', 'chirp', 'snap', 'clips', 'darkrooms', 'yellowpages', 'market', 'news', 'garage', 'notes', 'maps'],
     menu: ['appstore']
   },
+  mailDomain: 'jericofx.gg',
+  mailAccount: {
+    id: 1,
+    alias: 'mockuser',
+    email: 'mockuser@jericofx.gg',
+  },
+  mailInbox: [
+    {
+      id: 1,
+      sender_email: 'admin@jericofx.gg',
+      sender_alias: 'Admin',
+      recipient_email: 'mockuser@jericofx.gg',
+      recipient_alias: 'mockuser',
+      subject: 'Bienvenido a Mail',
+      body: 'Tu cuenta de prueba ya esta activa en el mock.',
+      attachments: [],
+      is_read: 0,
+      created_at: Date.now() - 1000 * 60 * 20,
+    },
+  ],
+  mailSent: [
+    {
+      id: 2,
+      sender_email: 'mockuser@jericofx.gg',
+      sender_alias: 'mockuser',
+      recipient_email: 'support@jericofx.gg',
+      recipient_alias: 'support',
+      subject: 'Prueba de envio',
+      body: 'Este correo fue enviado desde el mock.',
+      attachments: [],
+      is_read: 1,
+      created_at: Date.now() - 1000 * 60 * 10,
+    },
+  ],
   airplaneMode: false,
+  flashlightEnabled: false,
+  flashlightKelvin: 5200,
+  flashlightLumens: 1200,
 };
 
 const emitMessage = (action: string, data?: unknown) => {
@@ -145,7 +672,6 @@ const phonePayload = () => ({
   ringtone: state.ringtone,
   volume: state.volume,
   lockCode: state.lockCode,
-  coque: state.coque,
   theme: state.theme,
   language: state.language,
   audioProfile: state.audioProfile,
@@ -167,6 +693,7 @@ let nextContactId = 4;
 let nextMessageId = 2;
 let nextPhotoId = 3;
 let nextCallId = 2;
+let nextMailMessageId = 3;
 let nextWalletRequestId = 1;
 let started = false;
 let mockLiveLocationActive = false;
@@ -185,6 +712,376 @@ const mockWalletRequests: Array<{
   createdAt: string;
 }> = [];
 const mockBlockedNumbers: Array<{ id: number; target_phone: string; reason?: string; created_at: string }> = [];
+const mockSnapDiscoverAccounts = [
+  {
+    account_id: 101,
+    username: 'ana.snap',
+    display_name: 'Ana Rivera',
+    avatar: './img/background/back002.jpg',
+    bio: 'Fotografia y viajes',
+    verified: 0,
+    is_private: 0,
+    followers: 120,
+  },
+  {
+    account_id: 102,
+    username: 'leo.private',
+    display_name: 'Leo Morales',
+    avatar: './img/background/back003.jpg',
+    bio: 'Cuenta privada',
+    verified: 0,
+    is_private: 1,
+    followers: 64,
+  },
+  {
+    account_id: 103,
+    username: 'official.city',
+    display_name: 'City Official',
+    avatar: './img/background/back004.jpg',
+    bio: 'Noticias de la ciudad',
+    verified: 1,
+    is_private: 0,
+    followers: 420,
+  },
+  {
+    account_id: 104,
+    username: 'nora.frames',
+    display_name: 'Nora Frames',
+    avatar: './img/background/playa.jpg',
+    bio: 'Retratos y backstage',
+    verified: 0,
+    is_private: 0,
+    followers: 210,
+  },
+  {
+    account_id: 105,
+    username: 'byte.cafe',
+    display_name: 'Byte Cafe',
+    avatar: './img/background/neon.jpg',
+    bio: 'Cafe y codigo',
+    verified: 1,
+    is_private: 0,
+    followers: 910,
+  },
+];
+
+const mockSnapDiscoverPosts = [
+  {
+    id: 2001,
+    account_id: 101,
+    username: 'ana.snap',
+    display_name: 'Ana Rivera',
+    avatar: './img/background/back002.jpg',
+    media_url: './img/background/playa.jpg',
+    media_type: 'image',
+    caption: 'Ruta costera en moto',
+    likes: 41,
+    is_private: 0,
+    created_at: nowIso(),
+  },
+  {
+    id: 2002,
+    account_id: 102,
+    username: 'leo.private',
+    display_name: 'Leo Morales',
+    avatar: './img/background/back003.jpg',
+    media_url: './img/background/tokio.jpg',
+    media_type: 'image',
+    caption: 'Solo para close friends',
+    likes: 19,
+    is_private: 1,
+    created_at: nowIso(),
+  },
+  {
+    id: 2003,
+    account_id: 103,
+    username: 'official.city',
+    display_name: 'City Official',
+    avatar: './img/background/back004.jpg',
+    media_url: './img/background/neon.jpg',
+    media_type: 'image',
+    caption: 'Cobertura del evento central',
+    likes: 77,
+    is_private: 0,
+    created_at: nowIso(),
+  },
+  {
+    id: 2004,
+    account_id: 104,
+    username: 'nora.frames',
+    display_name: 'Nora Frames',
+    avatar: './img/background/playa.jpg',
+    media_url: './img/background/back005.jpg',
+    media_type: 'image',
+    caption: 'Sesion editorial nocturna',
+    likes: 55,
+    is_private: 0,
+    created_at: nowIso(),
+  },
+  {
+    id: 2005,
+    account_id: 105,
+    username: 'byte.cafe',
+    display_name: 'Byte Cafe',
+    avatar: './img/background/neon.jpg',
+    media_url: './img/background/back001.jpg',
+    media_type: 'image',
+    caption: 'Nueva carta de temporada',
+    likes: 103,
+    is_private: 0,
+    created_at: nowIso(),
+  },
+];
+
+const mockSnapFollowing = new Set<number>();
+const mockSnapSentRequests = new Set<number>();
+const mockSnapPendingRequests: Array<{
+  id: number;
+  account_id: number;
+  username: string;
+  display_name: string;
+  avatar?: string;
+  is_private: number;
+  created_at: string;
+}> = [
+  {
+    id: 9001,
+    account_id: 110,
+    username: 'sara.live',
+    display_name: 'Sara Live',
+    avatar: './img/background/back005.jpg',
+    is_private: 1,
+    created_at: nowIso(),
+  },
+];
+
+const mockYellowCategories = [
+  { id: 'all', name: 'Todas', icon: 'all' },
+  { id: 'autos', name: 'Autos', icon: 'car' },
+  { id: 'properties', name: 'Propiedades', icon: 'home' },
+  { id: 'electronics', name: 'Electronica', icon: 'phone' },
+  { id: 'services', name: 'Servicios', icon: 'briefcase' },
+  { id: 'jobs', name: 'Trabajo', icon: 'users' },
+  { id: 'items', name: 'Objetos', icon: 'package' },
+  { id: 'other', name: 'Otros', icon: 'more' },
+];
+
+const mockYellowListings: Array<{
+  id: number;
+  title: string;
+  description: string;
+  price: number;
+  category: string;
+  photos: string[];
+  views: number;
+  created_at: string;
+  seller_identifier: string;
+  seller_name: string;
+  seller_avatar?: string;
+  seller_phone?: string;
+}> = [
+  {
+    id: 201,
+    title: 'Sultan RS impecable',
+    description: 'Unico dueno, servicios al dia, listo para transferir.',
+    price: 38500,
+    category: 'autos',
+    photos: ['./img/background/back002.jpg'],
+    views: 128,
+    created_at: nowIso(),
+    seller_identifier: 'mock:ana',
+    seller_name: 'Ana Rivera',
+    seller_avatar: './img/background/back002.jpg',
+    seller_phone: '555-1010',
+  },
+  {
+    id: 202,
+    title: 'Departamento centrico 2 ambientes',
+    description: 'Excelente ubicacion, incluye cochera y balcon amplio.',
+    price: 250000,
+    category: 'properties',
+    photos: ['./img/background/back003.jpg'],
+    views: 86,
+    created_at: nowIso(),
+    seller_identifier: 'mock:leo',
+    seller_name: 'Leo Morales',
+    seller_avatar: './img/background/back003.jpg',
+    seller_phone: '555-2020',
+  },
+  {
+    id: 203,
+    title: 'Servicio de fotografia para eventos',
+    description: 'Cobertura completa con entrega en 24h.',
+    price: 2800,
+    category: 'services',
+    photos: ['./img/background/neon.jpg'],
+    views: 49,
+    created_at: nowIso(),
+    seller_identifier: 'mock:city',
+    seller_name: 'City Studio',
+    seller_avatar: './img/background/back004.jpg',
+    seller_phone: '555-3030',
+  },
+  {
+    id: 204,
+    title: 'Laptop gamer RTX',
+    description: '16GB RAM, SSD 1TB, estado excelente.',
+    price: 14500,
+    category: 'electronics',
+    photos: ['./img/background/tokio.jpg'],
+    views: 72,
+    created_at: nowIso(),
+    seller_identifier: 'mock:self',
+    seller_name: 'Mock User',
+    seller_avatar: './img/background/back001.jpg',
+    seller_phone: state.phoneNumber,
+  },
+];
+
+let nextYellowListingId = 205;
+
+type MockChirpTab = 'forYou' | 'following' | 'myActivity';
+
+const mockChirpTweetsByTab: Record<MockChirpTab, Array<Record<string, unknown>>> = {
+  forYou: [
+    {
+      id: 1,
+      username: 'maria',
+      display_name: 'Maria',
+      content: 'Bienvenidos a Chirp!',
+      likes: 3,
+      liked: false,
+      rechirps: 1,
+      rechirped: false,
+      replies: 2,
+      created_at: nowIso(),
+    },
+    {
+      id: 2,
+      username: 'juan',
+      display_name: 'Juan',
+      content: 'Servidor activo y funcionando.',
+      likes: 7,
+      liked: true,
+      rechirps: 0,
+      rechirped: false,
+      replies: 1,
+      created_at: nowIso(),
+    },
+  ],
+  following: [
+    {
+      id: 11,
+      username: 'ana.follow',
+      display_name: 'Ana Follow',
+      content: 'Nuevo evento hoy en Vespucci.',
+      likes: 14,
+      liked: false,
+      rechirps: 3,
+      rechirped: false,
+      replies: 5,
+      created_at: nowIso(),
+    },
+    {
+      id: 12,
+      username: 'leo.follow',
+      display_name: 'Leo Follow',
+      content: 'Abri stream en Snap, pasen a saludar.',
+      likes: 6,
+      liked: true,
+      rechirps: 2,
+      rechirped: true,
+      replies: 0,
+      created_at: nowIso(),
+    },
+  ],
+  myActivity: [
+    {
+      id: 21,
+      username: 'mockuser',
+      display_name: 'Mock User',
+      content: 'Publicando desde mi actividad en Chirp.',
+      likes: 3,
+      liked: false,
+      rechirps: 0,
+      rechirped: false,
+      replies: 0,
+      is_own: true,
+      created_at: nowIso(),
+    },
+    {
+      id: 22,
+      username: 'maria',
+      display_name: 'Maria',
+      content: 'Este lo likeaste recien.',
+      likes: 18,
+      liked: true,
+      rechirps: 1,
+      rechirped: false,
+      replies: 3,
+      created_at: nowIso(),
+    },
+  ],
+};
+
+const mockChirpCommentsByTweet: Record<number, Array<Record<string, unknown>>> = {
+  1: [
+    {
+      id: 1001,
+      tweet_id: 1,
+      username: 'leo',
+      display_name: 'Leo',
+      content: 'Buenisimo!',
+      created_at: nowIso(),
+    },
+  ],
+};
+
+let nextChirpCommentId = 1100;
+
+const chirpCloneTweets = (tab: MockChirpTab) =>
+  mockChirpTweetsByTab[tab].map((tweet) => ({ ...tweet }));
+
+const findMockChirpTweet = (tweetId: number) => {
+  const tabs = Object.keys(mockChirpTweetsByTab) as MockChirpTab[];
+  for (const tab of tabs) {
+    const row = mockChirpTweetsByTab[tab].find((tweet) => Number(tweet.id) === tweetId);
+    if (row) return row;
+  }
+  return null;
+};
+
+const unreadMailCount = () =>
+  state.mailInbox.reduce((count, entry) => count + (Number(entry.is_read) === 0 ? 1 : 0), 0);
+
+const sanitizeMailAttachments = (value: unknown): MailAttachment[] => {
+  if (!Array.isArray(value)) return [];
+
+  const allowed = new Set(['image', 'video', 'document', 'link']);
+  const attachments: MailAttachment[] = [];
+
+  for (const raw of value) {
+    if (typeof raw !== 'object' || raw === null) continue;
+
+    const entry = raw as Record<string, unknown>;
+    const type = String(entry.type || '').trim().toLowerCase();
+    const url = String(entry.url || '').trim();
+    if (!allowed.has(type) || !url) continue;
+
+    attachments.push({
+      type: type as MailAttachment['type'],
+      url,
+      name: typeof entry.name === 'string' && entry.name.trim() ? entry.name.trim() : undefined,
+      mime: typeof entry.mime === 'string' && entry.mime.trim() ? entry.mime.trim() : undefined,
+      size: Number.isFinite(Number(entry.size)) ? Number(entry.size) : undefined,
+      sourceApp: typeof entry.sourceApp === 'string' && entry.sourceApp.trim() ? entry.sourceApp.trim() : undefined,
+    });
+
+    if (attachments.length >= 10) break;
+  }
+
+  return attachments;
+};
 
 export function setupBrowserMock() {
   if (started) return;
@@ -233,29 +1130,49 @@ export function setupBrowserMock() {
     },
     getRealtime: () => readRealtimeConfig(),
     setRealtime: (config: Partial<MockRealtimeConfig>) => {
-      writeRealtimeConfig(config);
-      return readRealtimeConfig();
+      return updateRealtimeConfig(config);
     },
     clearRealtime: () => {
       clearRealtimeConfig();
       return readRealtimeConfig();
     },
+    generateRealtime: (config: Partial<MockRealtimeConfig> = {}) => {
+      return saveRealtimeConfig(makeRealtimeConfig(config));
+    },
+    importRealtimeFromText: (text: string) => {
+      const parsed = parseRealtimeInstallerText(String(text || ''));
+      if (Object.keys(parsed).length === 0) {
+        return { ok: false, parsed, current: readRealtimeConfig() };
+      }
+      const current = updateRealtimeConfig(parsed);
+      return { ok: true, parsed, current };
+    },
+    exportRealtimeAsSetr: () => buildRealtimeSetrText(),
+    copyRealtimeAsSetr: async () => copyText(buildRealtimeSetrText()),
+    previewRealtime: (roomName = `call-${Date.now()}`) => buildRealtimePreview(String(roomName)),
     useLocalRealtime: (socketToken = 'mock-socket-token', livekitToken = 'mock-livekit-token') => {
-      writeRealtimeConfig({
-        socketHost: 'ws://127.0.0.1:3001',
+      return saveRealtimeConfig({
+        socketHost: DEFAULT_MOCK_SOCKET_HOST,
         socketToken,
-        livekitUrl: 'ws://127.0.0.1:7880',
+        livekitUrl: DEFAULT_MOCK_LIVEKIT_URL,
         livekitToken,
         livekitIdentity: `mock:${state.phoneNumber}`,
       });
-      return readRealtimeConfig();
+    },
+    openRealtimePanel: () => {
+      openRealtimePanel();
+      return true;
+    },
+    closeRealtimePanel: () => {
+      closeRealtimePanel();
+      return true;
     },
   };
 
-  console.info('[gcphone mock] Realtime config available at window.gcphoneMock.setRealtime/getRealtime/clearRealtime');
+  console.info('[gcphone mock] Realtime helpers: setRealtime/getRealtime/clearRealtime/generateRealtime/importRealtimeFromText/exportRealtimeAsSetr/copyRealtimeAsSetr/previewRealtime/openRealtimePanel');
 }
 
-export function handleBrowserNui<T = unknown>(eventName: string, data?: unknown): T | undefined {
+export async function handleBrowserNui<T = unknown>(eventName: string, data?: unknown): Promise<T | undefined> {
   const payload = (data ?? {}) as AnyRecord;
 
   if (eventName === 'nuiReady') {
@@ -382,6 +1299,173 @@ export function handleBrowserNui<T = unknown>(eventName: string, data?: unknown)
     return { success: true } as T;
   }
 
+  if (eventName === 'mailGetState') {
+    const limit = Math.max(1, Math.min(100, Number(payload.limit || 25) || 25));
+    const offset = Math.max(0, Number(payload.offset || 0) || 0);
+
+    const inbox = [...state.mailInbox]
+      .sort((a, b) => Number(b.created_at) - Number(a.created_at))
+      .slice(offset, offset + limit);
+    const sent = [...state.mailSent]
+      .sort((a, b) => Number(b.created_at) - Number(a.created_at))
+      .slice(offset, offset + limit);
+
+    if (!state.mailAccount) {
+      return {
+        success: true,
+        hasAccount: false,
+        account: null,
+        inbox: [],
+        sent: [],
+        unread: 0,
+        total: 0,
+        domain: state.mailDomain,
+      } as T;
+    }
+
+    return {
+      success: true,
+      hasAccount: true,
+      account: { ...state.mailAccount },
+      inbox,
+      sent,
+      unread: unreadMailCount(),
+      total: state.mailInbox.length + state.mailSent.length,
+      domain: state.mailDomain,
+    } as T;
+  }
+
+  if (eventName === 'mailCreateAccount') {
+    if (state.mailAccount) {
+      return { success: false, error: 'ACCOUNT_EXISTS' } as T;
+    }
+
+    const alias = String(payload.alias || '').trim().toLowerCase();
+    const password = String(payload.password || '').trim();
+    if (!/^[a-z0-9._-]{3,24}$/.test(alias) || password.length < 4) {
+      return { success: false, error: 'INVALID_DATA' } as T;
+    }
+
+    const email = `${alias}@${state.mailDomain}`;
+    state.mailAccount = {
+      id: 1,
+      alias,
+      email,
+    };
+
+    state.mailInbox.unshift({
+      id: nextMailMessageId++,
+      sender_email: `admin@${state.mailDomain}`,
+      sender_alias: 'Admin',
+      recipient_email: email,
+      recipient_alias: alias,
+      subject: 'Cuenta creada',
+      body: 'Tu cuenta de mail fue creada con exito en el mock.',
+      attachments: [],
+      is_read: 0,
+      created_at: Date.now(),
+    });
+
+    return {
+      success: true,
+      hasAccount: true,
+      account: { ...state.mailAccount },
+      domain: state.mailDomain,
+    } as T;
+  }
+
+  if (eventName === 'mailSend') {
+    if (!state.mailAccount) {
+      return { success: false, error: 'ACCOUNT_REQUIRED' } as T;
+    }
+
+    const to = String(payload.to || '').trim().toLowerCase();
+    const subject = String(payload.subject || '').trim();
+    const body = String(payload.body || '').trim();
+    if (!to || !body) {
+      return { success: false, error: 'INVALID_DATA' } as T;
+    }
+
+    const attachments = sanitizeMailAttachments(payload.attachments);
+    const sentId = nextMailMessageId++;
+
+    state.mailSent.unshift({
+      id: sentId,
+      sender_email: state.mailAccount.email,
+      sender_alias: state.mailAccount.alias,
+      recipient_email: to,
+      recipient_alias: to.split('@')[0] || undefined,
+      subject: subject || undefined,
+      body,
+      attachments,
+      is_read: 1,
+      created_at: Date.now(),
+    });
+
+    return { success: true, id: sentId } as T;
+  }
+
+  if (eventName === 'mailMarkRead') {
+    if (!state.mailAccount) {
+      return { success: false, error: 'ACCOUNT_REQUIRED' } as T;
+    }
+
+    const messageId = Number(payload.messageId || 0);
+    if (!messageId || messageId < 1) {
+      return { success: false, error: 'INVALID_MESSAGE' } as T;
+    }
+
+    let found = false;
+    state.mailInbox = state.mailInbox.map((entry) => {
+      if (Number(entry.id) !== messageId) return entry;
+      found = true;
+      if (Number(entry.is_read) === 1) return entry;
+      return { ...entry, is_read: 1 };
+    });
+
+    return { success: found } as T;
+  }
+
+  if (eventName === 'mailGetMessages') {
+    if (!state.mailAccount) {
+      return { success: false, error: 'ACCOUNT_REQUIRED' } as T;
+    }
+
+    const folder = String(payload.folder || 'inbox') === 'sent' ? 'sent' : 'inbox';
+    const limit = Math.max(1, Math.min(100, Number(payload.limit || 25) || 25));
+    const offset = Math.max(0, Number(payload.offset || 0) || 0);
+    const rows = folder === 'sent' ? state.mailSent : state.mailInbox;
+
+    return {
+      success: true,
+      folder,
+      messages: [...rows]
+        .sort((a, b) => Number(b.created_at) - Number(a.created_at))
+        .slice(offset, offset + limit),
+    } as T;
+  }
+
+  if (eventName === 'mailDelete') {
+    if (!state.mailAccount) {
+      return { success: false, error: 'ACCOUNT_REQUIRED' } as T;
+    }
+
+    const messageId = Number(payload.messageId || 0);
+    const folder = String(payload.folder || 'inbox') === 'sent' ? 'sent' : 'inbox';
+
+    if (!messageId || messageId < 1) {
+      return { success: false, error: 'INVALID_MESSAGE' } as T;
+    }
+
+    if (folder === 'inbox') {
+      state.mailInbox = state.mailInbox.filter((m) => Number(m.id) !== messageId);
+    } else {
+      state.mailSent = state.mailSent.filter((m) => Number(m.id) !== messageId);
+    }
+
+    return { success: true } as T;
+  }
+
   if (eventName === 'setWallpaper') {
     state.wallpaper = String(payload.url || state.wallpaper);
     emitMessage('showPhone', phonePayload());
@@ -403,14 +1487,50 @@ export function handleBrowserNui<T = unknown>(eventName: string, data?: unknown)
     return true as T;
   }
 
-  if (eventName === 'setCoque') {
-    state.coque = String(payload.coque || state.coque);
-    return true as T;
-  }
-
   if (eventName === 'setAirplaneMode') {
     state.airplaneMode = Boolean(payload.enabled);
     return true as T;
+  }
+
+  if (eventName === 'phoneSetVisualMode' || eventName === 'setListeningPeerId') {
+    return true as T;
+  }
+
+  if (eventName === 'cameraGetCapabilities') {
+    return {
+      flashlight: true,
+      advancedCamera: true,
+      video: false,
+    } as T;
+  }
+
+  if (eventName === 'cameraToggleFlashlight') {
+    state.flashlightEnabled = Boolean(payload.enabled);
+    return { success: true, enabled: state.flashlightEnabled } as T;
+  }
+
+  if (eventName === 'cameraGetFlashlightSettings') {
+    return {
+      enabled: state.flashlightEnabled,
+      kelvin: state.flashlightKelvin,
+      lumens: state.flashlightLumens,
+      minKelvin: 2600,
+      maxKelvin: 9000,
+      minLumens: 350,
+      maxLumens: 2200,
+    } as T;
+  }
+
+  if (eventName === 'cameraSetFlashlightSettings') {
+    const nextKelvin = Number(payload.kelvin ?? state.flashlightKelvin);
+    const nextLumens = Number(payload.lumens ?? state.flashlightLumens);
+    state.flashlightKelvin = Math.max(2600, Math.min(9000, Number.isFinite(nextKelvin) ? nextKelvin : state.flashlightKelvin));
+    state.flashlightLumens = Math.max(350, Math.min(2200, Number.isFinite(nextLumens) ? nextLumens : state.flashlightLumens));
+    return {
+      success: true,
+      kelvin: state.flashlightKelvin,
+      lumens: state.flashlightLumens,
+    } as T;
   }
 
   if (eventName === 'setTheme') {
@@ -455,24 +1575,14 @@ export function handleBrowserNui<T = unknown>(eventName: string, data?: unknown)
   }
 
   if (eventName === 'livekitGetToken') {
-    const realtime = readRealtimeConfig();
     const roomName = String(payload.roomName || `call-${Date.now()}`);
-    return {
-      success: true,
-      url: realtime.livekitUrl || 'ws://127.0.0.1:7880',
-      token: realtime.livekitToken || 'mock-livekit-token',
-      roomName,
-      identity: realtime.livekitIdentity || `mock:${state.phoneNumber}`,
-    } as T;
+    const publish = payload.publish !== false;
+    const maxDuration = Math.max(30, Number(payload.maxDuration || 300) || 300);
+    return await buildLivekitTokenResult(roomName, publish, maxDuration) as T;
   }
 
   if (eventName === 'socketGetToken') {
-    const realtime = readRealtimeConfig();
-    return {
-      success: true,
-      host: realtime.socketHost || 'ws://127.0.0.1:3001',
-      token: realtime.socketToken || 'mock-socket-token',
-    } as T;
+    return buildSocketTokenResult() as T;
   }
 
   if (eventName === 'endCall') {
@@ -584,22 +1694,223 @@ export function handleBrowserNui<T = unknown>(eventName: string, data?: unknown)
   }
 
   if (eventName === 'chirpGetTweets') {
-    return [
-      { id: 1, username: 'maria', display_name: 'Maria', content: 'Bienvenidos a Chirp!', likes: 3, liked: false, created_at: nowIso() },
-      { id: 2, username: 'juan', display_name: 'Juan', content: 'Servidor activo y funcionando.', likes: 7, liked: true, created_at: nowIso() }
-    ] as T;
+    const rawTab = String(payload.tab || 'forYou');
+    const tab: MockChirpTab = rawTab === 'following' || rawTab === 'myActivity' ? rawTab : 'forYou';
+    return chirpCloneTweets(tab) as T;
   }
 
   if (eventName === 'chirpPublishTweet') {
-    return { success: true } as T;
+    const content = String(payload.content || '').trim();
+    if (!content) {
+      return { success: false, error: 'EMPTY_TWEET' } as T;
+    }
+
+    const nextId = Math.max(
+      ...((Object.values(mockChirpTweetsByTab)
+        .flat()
+        .map((tweet) => Number(tweet.id) || 0))
+      ),
+      0,
+    ) + 1;
+
+    const row: Record<string, unknown> = {
+      id: nextId,
+      username: 'mockuser',
+      display_name: 'Mock User',
+      content,
+      media_url: typeof payload.mediaUrl === 'string' ? payload.mediaUrl : undefined,
+      likes: 0,
+      liked: false,
+      rechirps: 0,
+      rechirped: false,
+      replies: 0,
+      is_own: true,
+      created_at: nowIso(),
+    };
+
+    mockChirpTweetsByTab.myActivity.unshift({ ...row });
+    mockChirpTweetsByTab.forYou.unshift({ ...row });
+    return { success: true, tweet: row } as T;
   }
 
   if (eventName === 'chirpToggleLike') {
-    return { liked: true } as T;
+    const tweetId = Number(payload.tweetId || 0);
+    const tweet = findMockChirpTweet(tweetId);
+    if (!tweet) return { liked: false, error: 'TWEET_NOT_FOUND' } as T;
+
+    const wasLiked = tweet.liked === true;
+    const nextLiked = !wasLiked;
+    const likes = Number(tweet.likes || 0) + (nextLiked ? 1 : -1);
+    tweet.liked = nextLiked;
+    tweet.likes = likes < 0 ? 0 : likes;
+    return { liked: nextLiked } as T;
+  }
+
+  if (eventName === 'chirpToggleRechirp') {
+    const tweetId = Number(payload.tweetId || 0);
+    const tweet = findMockChirpTweet(tweetId);
+    if (!tweet) return { rechirped: false, error: 'TWEET_NOT_FOUND' } as T;
+
+    const wasRechirped = tweet.rechirped === true;
+    const nextRechirped = !wasRechirped;
+    const rechirps = Number(tweet.rechirps || 0) + (nextRechirped ? 1 : -1);
+    tweet.rechirped = nextRechirped;
+    tweet.rechirps = rechirps < 0 ? 0 : rechirps;
+    return { rechirped: nextRechirped } as T;
+  }
+
+  if (eventName === 'chirpGetComments') {
+    const tweetId = Number(payload.tweetId || 0);
+    return [...(mockChirpCommentsByTweet[tweetId] || [])] as T;
+  }
+
+  if (eventName === 'chirpAddComment') {
+    const tweetId = Number(payload.tweetId || 0);
+    const content = String(payload.content || '').trim();
+    if (!tweetId || !content) {
+      return { success: false, error: 'INVALID_COMMENT' } as T;
+    }
+
+    const tweet = findMockChirpTweet(tweetId);
+    if (!tweet) {
+      return { success: false, error: 'TWEET_NOT_FOUND' } as T;
+    }
+
+    const row: Record<string, unknown> = {
+      id: nextChirpCommentId++,
+      tweet_id: tweetId,
+      username: 'mockuser',
+      display_name: 'Mock User',
+      content,
+      created_at: nowIso(),
+    };
+    if (!mockChirpCommentsByTweet[tweetId]) {
+      mockChirpCommentsByTweet[tweetId] = [];
+    }
+    mockChirpCommentsByTweet[tweetId].push(row);
+    tweet.replies = Number(tweet.replies || 0) + 1;
+    return { success: true, comment: row } as T;
+  }
+
+  if (eventName === 'chirpDeleteTweet') {
+    const tweetId = Number(payload.tweetId || 0);
+    const tabs = Object.keys(mockChirpTweetsByTab) as MockChirpTab[];
+    for (const tab of tabs) {
+      mockChirpTweetsByTab[tab] = mockChirpTweetsByTab[tab].filter((tweet) => Number(tweet.id) !== tweetId);
+    }
+    delete mockChirpCommentsByTweet[tweetId];
+    return { success: true } as T;
   }
 
   if (eventName === 'snapGetAccount') {
     return { id: 1, username: 'snapper', display_name: 'Snap User' } as T;
+  }
+
+  if (eventName === 'snapGetDiscoverAccounts') {
+    return mockSnapDiscoverAccounts.map((entry) => ({
+      ...entry,
+      is_following: mockSnapFollowing.has(entry.account_id) ? 1 : 0,
+      requested_by_me: mockSnapSentRequests.has(entry.account_id) ? 1 : 0,
+    })) as T;
+  }
+
+  if (eventName === 'snapGetDiscoverFeed') {
+    const search = String(payload.search || '').trim().toLowerCase();
+    const limit = Math.max(1, Math.min(100, Number(payload.limit || 30) || 30));
+    const offset = Math.max(0, Number(payload.offset || 0) || 0);
+
+    const rows = mockSnapDiscoverPosts
+      .filter((row) => {
+        if (!search) return true;
+        const account = mockSnapDiscoverAccounts.find((entry) => entry.account_id === row.account_id);
+        const haystack = [
+          row.username,
+          row.display_name,
+          row.caption,
+          account?.bio,
+        ]
+          .map((value) => String(value || '').toLowerCase())
+          .join(' ');
+        return haystack.includes(search);
+      })
+      .slice(offset, offset + limit)
+      .map((row) => ({
+        ...row,
+        is_following: mockSnapFollowing.has(row.account_id) ? 1 : 0,
+        requested_by_me: mockSnapSentRequests.has(row.account_id) ? 1 : 0,
+      }));
+
+    return rows as T;
+  }
+
+  if (eventName === 'snapFollow') {
+    const targetAccountId = Number(payload.targetAccountId || 0);
+    const target = mockSnapDiscoverAccounts.find((entry) => entry.account_id === targetAccountId);
+    if (!target) {
+      return { error: 'ACCOUNT_NOT_FOUND' } as T;
+    }
+
+    if (mockSnapFollowing.has(targetAccountId)) {
+      return { error: 'ALREADY_FOLLOWING' } as T;
+    }
+
+    if (Number(target.is_private) === 1) {
+      if (mockSnapSentRequests.has(targetAccountId)) {
+        mockSnapSentRequests.delete(targetAccountId);
+        return { success: true, cancelled: true } as T;
+      }
+
+      mockSnapSentRequests.add(targetAccountId);
+      return { success: true, requested: true } as T;
+    }
+
+    mockSnapFollowing.add(targetAccountId);
+    return { success: true, following: true } as T;
+  }
+
+  if (eventName === 'snapGetPendingFollowRequests') {
+    return [...mockSnapPendingRequests] as T;
+  }
+
+  if (eventName === 'snapGetSentFollowRequests') {
+    const rows = [...mockSnapSentRequests]
+      .map((accountId) => {
+        const target = mockSnapDiscoverAccounts.find((entry) => entry.account_id === accountId);
+        if (!target) return null;
+        return {
+          id: accountId,
+          account_id: target.account_id,
+          username: target.username,
+          display_name: target.display_name,
+          avatar: target.avatar,
+          is_private: target.is_private,
+          created_at: nowIso(),
+        };
+      })
+      .filter((row): row is NonNullable<typeof row> => row !== null);
+    return rows as T;
+  }
+
+  if (eventName === 'snapRespondFollowRequest') {
+    const requestId = Number(payload.requestId || 0);
+    const action = String(payload.action || 'reject');
+    const index = mockSnapPendingRequests.findIndex((entry) => entry.id === requestId);
+    if (index < 0) return { success: false, error: 'REQUEST_NOT_FOUND' } as T;
+
+    const row = mockSnapPendingRequests[index];
+    mockSnapPendingRequests.splice(index, 1);
+    if (action === 'accept') {
+      mockSnapFollowing.add(Number(row.account_id));
+      return { success: true, accepted: true } as T;
+    }
+
+    return { success: true, rejected: true } as T;
+  }
+
+  if (eventName === 'snapCancelFollowRequest') {
+    const requestId = Number(payload.requestId || 0);
+    mockSnapSentRequests.delete(requestId);
+    return { success: true, cancelled: true } as T;
   }
 
   if (eventName === 'snapGetFeed') {
@@ -614,6 +1925,140 @@ export function handleBrowserNui<T = unknown>(eventName: string, data?: unknown)
   }
 
   if (eventName === 'snapToggleLike') {
+    return { success: true } as T;
+  }
+
+  if (eventName === 'yellowpagesGetCategories') {
+    return [...mockYellowCategories] as T;
+  }
+
+  if (eventName === 'yellowpagesGetListings') {
+    const limit = Math.max(1, Math.min(50, Number(payload.limit || 20) || 20));
+    const offset = Math.max(0, Number(payload.offset || 0) || 0);
+    const category = String(payload.category || 'all').trim().toLowerCase();
+    const search = String(payload.search || '').trim().toLowerCase();
+
+    const filtered = mockYellowListings.filter((row) => {
+      if (category && category !== 'all' && row.category !== category) return false;
+      if (!search) return true;
+      const haystack = `${row.title} ${row.description} ${row.seller_name}`.toLowerCase();
+      return haystack.includes(search);
+    });
+
+    return filtered
+      .slice(offset, offset + limit)
+      .map((row) => ({
+        id: row.id,
+        title: row.title,
+        description: row.description,
+        price: row.price,
+        category: row.category,
+        photos: [...row.photos],
+        views: row.views,
+        created_at: row.created_at,
+        is_own: row.seller_identifier === 'mock:self' ? 1 : 0,
+      })) as T;
+  }
+
+  if (eventName === 'yellowpagesGetMyListings') {
+    return mockYellowListings
+      .filter((row) => row.seller_identifier === 'mock:self')
+      .map((row) => ({
+        id: row.id,
+        title: row.title,
+        description: row.description,
+        price: row.price,
+        category: row.category,
+        photos: [...row.photos],
+        views: row.views,
+        created_at: row.created_at,
+        is_own: 1,
+      })) as T;
+  }
+
+  if (eventName === 'yellowpagesGetSellerInfo') {
+    const listingIdRaw = typeof payload === 'number' ? payload : payload.listingId;
+    const listingId = Number(listingIdRaw || 0);
+    const listing = mockYellowListings.find((row) => row.id === listingId);
+    if (!listing) {
+      return null as T;
+    }
+
+    return {
+      identifier: listing.seller_identifier,
+      phone_number: listing.seller_phone || '555-0000',
+      seller_name: listing.seller_name,
+      seller_avatar: listing.seller_avatar,
+      location_shared: false,
+      location_x: null,
+      location_y: null,
+      location_z: null,
+    } as T;
+  }
+
+  if (eventName === 'yellowpagesRecordContact') {
+    return { success: true } as T;
+  }
+
+  if (eventName === 'yellowpagesCreateListing') {
+    const title = String(payload.title || '').trim();
+    const description = String(payload.description || '').trim();
+    const price = Math.max(0, Number(payload.price || 0) || 0);
+    const category = String(payload.category || 'other').trim().toLowerCase();
+    const validCategory = mockYellowCategories.some((row) => row.id === category)
+      ? category
+      : 'other';
+    const photos = Array.isArray(payload.photos)
+      ? payload.photos.filter((url): url is string => typeof url === 'string' && url.trim().length > 0).slice(0, 5)
+      : [];
+
+    if (title.length < 3 || description.length < 5) {
+      return { success: false, error: 'INVALID_LISTING' } as T;
+    }
+
+    const listing = {
+      id: nextYellowListingId++,
+      title,
+      description,
+      price,
+      category: validCategory,
+      photos,
+      views: 0,
+      created_at: nowIso(),
+      seller_identifier: 'mock:self',
+      seller_name: 'Mock User',
+      seller_avatar: './img/background/back001.jpg',
+      seller_phone: state.phoneNumber,
+    };
+
+    mockYellowListings.unshift(listing);
+    return {
+      success: true,
+      listing: {
+        id: listing.id,
+        title: listing.title,
+        description: listing.description,
+        price: listing.price,
+        category: listing.category,
+        photos: [...listing.photos],
+        views: listing.views,
+        created_at: listing.created_at,
+        is_own: 1,
+      },
+    } as T;
+  }
+
+  if (eventName === 'yellowpagesDeleteListing') {
+    const listingIdRaw = typeof payload === 'number' ? payload : payload.listingId;
+    const listingId = Number(listingIdRaw || 0);
+    const index = mockYellowListings.findIndex(
+      (row) => row.id === listingId && row.seller_identifier === 'mock:self',
+    );
+    if (index < 0) {
+      return { success: false, error: 'LISTING_NOT_FOUND' } as T;
+    }
+
+    mockYellowListings.splice(index, 1);
     return { success: true } as T;
   }
 
@@ -644,8 +2089,33 @@ export function handleBrowserNui<T = unknown>(eventName: string, data?: unknown)
 
   if (eventName === 'newsGetArticles') {
     return [
-      { id: 1, author_name: 'Daily LS', title: 'Ultima hora', content: 'Evento en la ciudad', category: 'general', created_at: nowIso() },
-      { id: 2, author_name: 'Canal 6', title: 'Transito', content: 'Demoras en autopista', category: 'trafico', created_at: nowIso() }
+      {
+        id: 1,
+        author_name: 'Daily LS',
+        title: 'Ultima hora',
+        content: 'Evento masivo en Legion Square con operativo especial.',
+        category: 'general',
+        media_url: './img/background/neon.jpg',
+        created_at: nowIso(),
+      },
+      {
+        id: 2,
+        author_name: 'Canal 6',
+        title: 'Transito',
+        content: 'Demoras en autopista por obras, usar rutas alternativas.',
+        category: 'trafico',
+        media_url: './img/background/tokio.jpg',
+        created_at: nowIso(),
+      },
+      {
+        id: 3,
+        author_name: 'Noticias Vespucci',
+        title: 'Cultura',
+        content: 'Festival de arte urbano durante todo el fin de semana.',
+        category: 'general',
+        media_url: './img/background/back004.jpg',
+        created_at: nowIso(),
+      },
     ] as T;
   }
 
@@ -700,10 +2170,6 @@ export function handleBrowserNui<T = unknown>(eventName: string, data?: unknown)
   }
 
   if (eventName === 'snapEndLive') {
-    return { success: true } as T;
-  }
-
-  if (eventName === 'chirpDeleteTweet') {
     return { success: true } as T;
   }
 

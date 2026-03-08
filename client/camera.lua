@@ -1,7 +1,4 @@
--- Creado/Modificado por JericoFX
-
 local takePhoto = false
-local frontCam = false
 
 local cameraSession = {
     active = false,
@@ -10,6 +7,9 @@ local cameraSession = {
     blur = 0.0,
     flash = true,
     selfie = false,
+    frozen = false,
+    landscape = false,
+    quickZoomIndex = 2,
 }
 
 local CameraEffects = {
@@ -19,36 +19,32 @@ local CameraEffects = {
     warm = 'V_CIA_Facility'
 }
 
+local function ClampNumber(value, minValue, maxValue)
+    local num = tonumber(value) or minValue
+    if num < minValue then num = minValue end
+    if num > maxValue then num = maxValue end
+    return num + 0.0
+end
+
 local function ClampFov(value)
-    local fov = tonumber(value) or 52.0
-    if fov < 25.0 then fov = 25.0 end
-    if fov > 90.0 then fov = 90.0 end
-    return fov + 0.0
+    return ClampNumber(value, Config.Camera.Fov.Min, Config.Camera.Fov.Max)
 end
 
-local function ClampPercent(value)
-    local v = tonumber(value) or 0
-    if v < 0 then v = 0 end
-    if v > 100 then v = 100 end
-    return v + 0.0
+local function ClampBlur(value)
+    return ClampNumber(value, 0.0, 100.0)
 end
 
-local function TryApplyCamFov(fov)
-    local cam = GetRenderingCam()
-    if cam and cam ~= 0 and cam ~= -1 then
-        SetCamFov(cam, fov)
-    end
-end
-
-local function GetFaceCoords(ped)
-    local head = GetPedBoneCoords(ped, 31086, 0.0, 0.0, 0.0)
-    return vector3(head.x, head.y, head.z)
+local function NormalizeQuickZoomIndex(value)
+    local quickZooms = Config.Camera.QuickZooms or { Config.Camera.Fov.Default }
+    local index = math.floor(tonumber(value) or 1)
+    if index < 1 then index = 1 end
+    if index > #quickZooms then index = #quickZooms end
+    return index
 end
 
 local function DrawFaceLight(ped, strength)
-    local c = GetFaceCoords(ped)
-    local s = strength or 2.0
-    DrawLightWithRange(c.x, c.y, c.z + 0.08, 240, 248, 255, 0.7, s)
+    local head = GetPedBoneCoords(ped, 31086, 0.0, 0.0, 0.0)
+    DrawLightWithRange(head.x, head.y, head.z + 0.08, 240, 248, 255, 0.7, strength or 2.0)
 end
 
 local function TriggerFlashPulse(ped)
@@ -56,81 +52,101 @@ local function TriggerFlashPulse(ped)
         local untilTs = GetGameTimer() + 120
         while GetGameTimer() < untilTs do
             Wait(0)
-            local c = GetFaceCoords(ped)
-            DrawLightWithRange(c.x, c.y, c.z + 0.1, 255, 255, 255, 1.35, 4.2)
+            local head = GetPedBoneCoords(ped, 31086, 0.0, 0.0, 0.0)
+            DrawLightWithRange(head.x, head.y, head.z + 0.1, 255, 255, 255, 1.35, 4.2)
         end
     end)
 end
 
-local function ApplyCameraSettings()
+local function ApplyCameraVisuals()
     local effectName = CameraEffects[cameraSession.effect] or CameraEffects.normal
     if effectName ~= '' then
+        -- Verified: Cfx Native Reference SetTimecycleModifier is client-side and applies post-process look filters.
         SetTimecycleModifier(effectName)
     else
         ClearTimecycleModifier()
     end
 
     SetTimecycleModifierStrength(cameraSession.blur / 140.0)
-    frontCam = cameraSession.selfie
-    CellCamActivateSelfieMode(frontCam)
-    TryApplyCamFov(cameraSession.fov)
+    UpdateAdvancedPhoneCamera({
+        fov = cameraSession.fov,
+        selfie = cameraSession.selfie,
+        frozen = cameraSession.frozen,
+        landscape = cameraSession.landscape,
+    })
+
+    if type(SetPhoneVisualMode) == 'function' then
+        SetPhoneVisualMode('camera', {
+            landscape = cameraSession.landscape,
+            selfie = cameraSession.selfie,
+        })
+    end
+end
+
+local function NormalizeCameraData(data)
+    cameraSession.effect = type(data) == 'table' and tostring(data.effect or 'normal') or 'normal'
+    if CameraEffects[cameraSession.effect] == nil then
+        cameraSession.effect = 'normal'
+    end
+
+    cameraSession.fov = ClampFov(type(data) == 'table' and data.fov or Config.Camera.Fov.Default)
+    cameraSession.blur = ClampBlur(type(data) == 'table' and data.blur or 0)
+    cameraSession.flash = not (type(data) == 'table' and data.flash == false)
+    cameraSession.selfie = type(data) == 'table' and data.selfie == true or false
+    cameraSession.frozen = type(data) == 'table' and data.frozen == true or false
+    cameraSession.landscape = type(data) == 'table' and data.landscape == true or false
+    cameraSession.quickZoomIndex = NormalizeQuickZoomIndex(type(data) == 'table' and data.quickZoomIndex or cameraSession.quickZoomIndex)
 end
 
 local function StartCameraSession(data)
+    NormalizeCameraData(data)
     local ped = cache.ped
 
-    cameraSession.effect = type(data) == 'table' and tostring(data.effect or 'normal') or 'normal'
-    if CameraEffects[cameraSession.effect] == nil then cameraSession.effect = 'normal' end
-    cameraSession.fov = ClampFov(type(data) == 'table' and data.fov or 52.0)
-    cameraSession.blur = ClampPercent(type(data) == 'table' and data.blur or 0)
-    cameraSession.flash = not (type(data) == 'table' and data.flash == false)
-    cameraSession.selfie = type(data) == 'table' and data.selfie == true or false
-
     if cameraSession.active then
-        ApplyCameraSettings()
-        return
+        ApplyCameraVisuals()
+        return true
     end
 
-    CreateMobilePhone(1)
-    CellCamActivate(true, true)
     cameraSession.active = true
+    PhoneState.cameraActive = true
     SetPedCurrentWeaponVisible(ped, false, true, true, true)
-
-    if hasFocus then
-        SetNuiFocus(false, false)
-        hasFocus = false
-    end
-
-    ApplyCameraSettings()
+    StartAdvancedPhoneCamera({
+        fov = cameraSession.fov,
+        selfie = cameraSession.selfie,
+        frozen = cameraSession.frozen,
+        landscape = cameraSession.landscape,
+    })
+    ApplyCameraVisuals()
 
     CreateThread(function()
         while cameraSession.active do
             Wait(0)
 
-            if IsControlJustPressed(1, 27) then
-                cameraSession.selfie = not cameraSession.selfie
-                ApplyCameraSettings()
-            elseif IsControlJustPressed(1, 177) then
+            if IsControlJustPressed(0, 177) then
                 cameraSession.active = false
                 SendNUIMessage({ action = 'cameraSessionClosed' })
+            elseif IsControlJustPressed(0, 27) then
+                cameraSession.selfie = not cameraSession.selfie
+                ApplyCameraVisuals()
             end
 
-            DrawFaceLight(ped, frontCam and 2.2 or 1.6)
-
-            HideHudComponentThisFrame(7)
-            HideHudComponentThisFrame(8)
-            HideHudComponentThisFrame(9)
-            HideHudComponentThisFrame(6)
-            HideHudComponentThisFrame(19)
-            HideHudAndRadarThisFrame()
+            if cameraSession.flash then
+                DrawFaceLight(ped, cameraSession.selfie and 2.2 or 1.6)
+            end
         end
 
-        DestroyMobilePhone()
-        CellCamActivate(false, false)
+        StopAdvancedPhoneCamera()
+        PhoneState.cameraActive = false
         ClearTimecycleModifier()
+        SetTimecycleModifierStrength(0.0)
         SetPedCurrentWeaponVisible(ped, true, true, true, true)
-        PlayPhoneAnimation('text')
+        if type(SetPhoneFlashlightEnabled) == 'function' then
+            SetPhoneFlashlightEnabled(false)
+        end
+        PhonePlayText()
     end)
+
+    return true
 end
 
 local function StopCameraSession()
@@ -180,45 +196,19 @@ local function CaptureCurrentFrame(data, cb)
     end)
 end
 
-function PlayPhoneAnimation(anim)
-    local ped = cache.ped
-
-    if anim == 'in' then
-        RequestAnimDict('cellphone@')
-        while not HasAnimDictLoaded('cellphone@') do Wait(10) end
-        TaskPlayAnim(ped, 'cellphone@', 'cellphone_text_in', 8.0, -8.0, -1, 50, 0, false, false, false)
-    elseif anim == 'out' then
-        ClearPedTasks(ped)
-    elseif anim == 'call' then
-        RequestAnimDict('cellphone@')
-        while not HasAnimDictLoaded('cellphone@') do Wait(10) end
-        TaskPlayAnim(ped, 'cellphone@', 'cellphone_call_to_text', 8.0, -8.0, -1, 50, 0, false, false, false)
-    elseif anim == 'text' then
-        RequestAnimDict('cellphone@')
-        while not HasAnimDictLoaded('cellphone@') do Wait(10) end
-        TaskPlayAnim(ped, 'cellphone@', 'cellphone_text_in', 8.0, -8.0, -1, 50, 0, false, false, false)
-    end
-end
-
-function PhonePlayIn()
-    PlayPhoneAnimation('in')
-end
-
-function PhonePlayOut()
-    PlayPhoneAnimation('out')
-end
-
-function PhonePlayCall()
-    PlayPhoneAnimation('call')
-end
-
-function PhonePlayText()
-    PlayPhoneAnimation('text')
-end
+RegisterNUICallback('cameraGetCapabilities', function(_, cb)
+    cb({
+        flashlight = Config.Flashlight.Enabled == true,
+        advancedCamera = Config.Camera.Enabled == true,
+        video = false,
+        freeze = Config.Camera.Freeze.Enabled == true,
+        landscape = true,
+        quickZooms = Config.Camera.QuickZooms or { Config.Camera.Fov.Default },
+    })
+end)
 
 RegisterNUICallback('startCameraSession', function(data, cb)
-    StartCameraSession(data)
-    cb(true)
+    cb(StartCameraSession(data))
 end)
 
 RegisterNUICallback('updateCameraSession', function(data, cb)
@@ -227,20 +217,8 @@ RegisterNUICallback('updateCameraSession', function(data, cb)
         return
     end
 
-    if type(data) == 'table' then
-        if data.effect ~= nil then
-            local effect = tostring(data.effect)
-            if CameraEffects[effect] then
-                cameraSession.effect = effect
-            end
-        end
-        if data.fov ~= nil then cameraSession.fov = ClampFov(data.fov) end
-        if data.blur ~= nil then cameraSession.blur = ClampPercent(data.blur) end
-        if data.flash ~= nil then cameraSession.flash = data.flash ~= false end
-        if data.selfie ~= nil then cameraSession.selfie = data.selfie == true end
-    end
-
-    ApplyCameraSettings()
+    NormalizeCameraData(data)
+    ApplyCameraVisuals()
     cb(true)
 end)
 
@@ -250,6 +228,39 @@ end)
 
 RegisterNUICallback('captureCameraVideoSession', function(_, cb)
     cb({ url = nil, error = 'video_not_supported' })
+end)
+
+RegisterNUICallback('cameraSetFreeze', function(data, cb)
+    if not cameraSession.active then
+        cb({ success = false, frozen = false })
+        return
+    end
+
+    cameraSession.frozen = SetAdvancedPhoneCameraFreeze(type(data) == 'table' and data.enabled == true)
+    cb({ success = true, frozen = cameraSession.frozen })
+end)
+
+RegisterNUICallback('cameraSetLandscape', function(data, cb)
+    if not cameraSession.active then
+        cb({ success = false, landscape = false })
+        return
+    end
+
+    cameraSession.landscape = SetAdvancedPhoneCameraLandscape(type(data) == 'table' and data.enabled == true)
+    ApplyCameraVisuals()
+    cb({ success = true, landscape = cameraSession.landscape })
+end)
+
+RegisterNUICallback('cameraSetQuickZoom', function(data, cb)
+    if not cameraSession.active then
+        cb({ success = false, fov = cameraSession.fov, quickZoomIndex = cameraSession.quickZoomIndex })
+        return
+    end
+
+    local fov, quickZoomIndex = SetAdvancedPhoneCameraQuickZoom(type(data) == 'table' and data.index or cameraSession.quickZoomIndex)
+    cameraSession.fov = ClampFov(fov)
+    cameraSession.quickZoomIndex = quickZoomIndex
+    cb({ success = true, fov = cameraSession.fov, quickZoomIndex = cameraSession.quickZoomIndex })
 end)
 
 RegisterNUICallback('stopCameraSession', function(_, cb)
@@ -264,26 +275,28 @@ RegisterNUICallback('takePhoto', function(data, cb)
     end
 
     local effect = type(data) == 'table' and data.effect or 'normal'
-    local fov = ClampFov(type(data) == 'table' and data.fov or 52.0)
-    local blur = ClampPercent(type(data) == 'table' and data.blur or 0)
+    local fov = ClampFov(type(data) == 'table' and data.fov or Config.Camera.Fov.Default)
+    local blur = ClampBlur(type(data) == 'table' and data.blur or 0)
     local flashEnabled = type(data) == 'table' and data.flash ~= false
     local selfieMode = type(data) == 'table' and data.selfie == true
+    local frozen = type(data) == 'table' and data.frozen == true
+    local landscape = type(data) == 'table' and data.landscape == true
 
-    StartCameraSession({ effect = effect, fov = fov, blur = blur, flash = flashEnabled, selfie = selfieMode })
+    StartCameraSession({ effect = effect, fov = fov, blur = blur, flash = flashEnabled, selfie = selfieMode, frozen = frozen, landscape = landscape })
     takePhoto = true
 
     CreateThread(function()
         while takePhoto and cameraSession.active do
             Wait(0)
 
-            if IsControlJustPressed(1, 177) then
+            if IsControlJustPressed(0, 177) then
                 takePhoto = false
                 StopCameraSession()
                 cb({ url = nil })
                 return
             end
 
-            if IsControlJustPressed(1, 176) then
+            if IsControlJustPressed(0, 176) then
                 takePhoto = false
                 CaptureCurrentFrame(data, function(result)
                     StopCameraSession()
@@ -309,8 +322,11 @@ RegisterNUICallback('faketakePhoto', function(_, cb)
     TriggerEvent('camera:open')
 end)
 
-exports('PlayPhoneAnimation', PlayPhoneAnimation)
-exports('PhonePlayIn', PhonePlayIn)
-exports('PhonePlayOut', PhonePlayOut)
-exports('PhonePlayCall', PhonePlayCall)
-exports('PhonePlayText', PhonePlayText)
+AddEventHandler('onResourceStop', function(resourceName)
+    if resourceName ~= GetCurrentResourceName() then return end
+    StopCameraSession()
+    StopAdvancedPhoneCamera()
+    PhoneState.cameraActive = false
+    ClearTimecycleModifier()
+    SetTimecycleModifierStrength(0.0)
+end)

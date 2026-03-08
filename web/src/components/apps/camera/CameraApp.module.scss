@@ -1,22 +1,40 @@
+// App container
 .app {
+  position: relative;
+  width: 100%;
   height: 100%;
+  background: #000;
+  overflow: hidden;
   display: flex;
-  flex-direction: column;
-  background: #000000;
 }
 
+// Preview area (center)
 .preview {
   position: relative;
   flex: 1;
-  overflow: hidden;
+  height: 100%;
+  background: #000;
 }
 
+.previewLandscapeShell {
+  .feedLayer {
+    transform: rotate(90deg) scale(1.25);
+  }
+}
+
+// Feed layer (camera view)
 .feedLayer {
   position: absolute;
-  inset: 0;
-  background: #000000;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-size: cover;
+  background-position: center;
+  transition: filter 0.3s ease;
 }
 
+// Effect previews
 .previewNoir {
   filter: grayscale(1) contrast(1.08);
 }
@@ -33,205 +51,387 @@
   transform: scaleX(-1);
 }
 
-.topBar {
+// Vertical sliders on sides
+.leftSlider,
+.rightSlider {
   position: absolute;
-  top: 12px;
-  left: 12px;
-  right: 12px;
-  z-index: 3;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 44px;
+  height: 200px;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.topCenter {
-  display: grid;
-  justify-items: center;
-  gap: 6px;
-}
-
-.brandPill,
-.targetPill {
-  min-height: 28px;
-  padding: 0 12px;
-  border-radius: 999px;
-  display: inline-flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
-  font-weight: 600;
-  color: #FFFFFF;
-  background: rgba(120, 120, 128, 0.24);
-}
-
-.brandPill {
-  color: #000000;
-  background: #FFD60A;
-}
-
-.topActions {
-  display: flex;
-  align-items: center;
   gap: 8px;
+  z-index: 50;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+  padding: 8px 4px;
 }
 
-.iconBtn {
-  width: 36px;
-  height: 36px;
-  border: none;
-  border-radius: 999px;
-  background: rgba(120, 120, 128, 0.24);
-  color: #FFFFFF;
-  font-size: 18px;
-  cursor: pointer;
-  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, opacity 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  &:hover {
-    background: rgba(120, 120, 128, 0.4);
-  }
+.leftSlider {
+  left: 8px;
 }
 
-.iconBtnActive {
-  background: #FFD60A;
-  color: #000000;
+.rightSlider {
+  right: 8px;
 }
 
-.filterRail {
-  position: absolute;
-  left: 12px;
-  right: 12px;
-  bottom: 220px;
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
-  z-index: 4;
-}
-
-.filterChip {
-  min-height: 32px;
-  border: none;
-  border-radius: 10px;
-  background: rgba(120, 120, 128, 0.24);
-  color: #FFFFFF;
-  font-size: 12px;
+.sliderLabel {
+  font-size: 10px;
   font-weight: 600;
-  cursor: pointer;
-  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, opacity 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
-
-  &:hover {
-    background: rgba(120, 120, 128, 0.4);
-  }
+  color: rgba(255, 255, 255, 0.7);
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
 }
 
-.filterChipActive {
-  background: #007AFF;
-  color: #FFFFFF;
-}
-
-.controlsCard {
-  position: absolute;
-  left: 12px;
-  right: 12px;
-  bottom: 84px;
-  z-index: 3;
-  border-radius: 16px;
-  padding: 12px;
-  display: grid;
-  gap: 12px;
-  background: rgba(28, 28, 30, 0.72);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-}
-
-.effectBadge {
-  min-height: 26px;
-  border-radius: 999px;
-  padding: 0 10px;
-  justify-self: start;
-  display: inline-flex;
-  align-items: center;
+.sliderValue {
   font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.02em;
-  color: #FFFFFF;
-  background: rgba(120, 120, 128, 0.4);
+  color: #FFD60A;
 }
 
-.sliderRow {
-  display: grid;
-  grid-template-columns: 44px 1fr 44px;
-  align-items: center;
-  gap: 10px;
-
-  span,
-  strong {
-    font-size: 12px;
-    font-weight: 600;
-    color: #FFFFFF;
-  }
-
-  strong {
-    text-align: right;
-  }
-}
-
-.sliderRow input[type="range"] {
-  width: 100%;
-  height: 4px;
+// Vertical range input styling
+.verticalSlider {
   -webkit-appearance: none;
   appearance: none;
-  background: rgba(120, 120, 128, 0.4);
-  border-radius: 2px;
+  width: 160px;
+  height: 4px;
+  background: transparent;
   cursor: pointer;
+  transform: rotate(-90deg);
+  transform-origin: center;
+
+  &::-webkit-slider-runnable-track {
+    width: 100%;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
+  }
 
   &::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
     width: 20px;
     height: 20px;
-    background: #FFFFFF;
     border-radius: 50%;
-    cursor: pointer;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+    background: #FFD60A;
+    border: 2px solid #fff;
+    margin-top: -8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+    transition: transform 0.1s ease;
+  }
+
+  &::-webkit-slider-thumb:hover {
+    transform: scale(1.1);
+  }
+
+  &::-webkit-slider-thumb:active {
+    transform: scale(0.95);
+  }
+
+  // Firefox
+  &::-moz-range-track {
+    width: 100%;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
+  }
+
+  &::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #FFD60A;
+    border: 2px solid #fff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+    transition: transform 0.1s ease;
+  }
+
+  &::-moz-range-thumb:hover {
+    transform: scale(1.1);
+  }
+
+  &::-moz-range-thumb:active {
+    transform: scale(0.95);
+  }
+
+  // Different colors for each slider
+  .leftSlider &::-webkit-slider-thumb {
+    background: #FFD60A;
+  }
+
+  .rightSlider &::-webkit-slider-thumb {
+    background: #64D2FF;
+  }
+
+  .leftSlider &::-moz-range-thumb {
+    background: #FFD60A;
+  }
+
+  .rightSlider &::-moz-range-thumb {
+    background: #64D2FF;
   }
 }
 
-.captionInput {
-  min-height: 36px;
-  border: 1px solid rgba(120, 120, 128, 0.3);
-  border-radius: 10px;
-  padding: 0 12px;
-  background: rgba(0, 0, 0, 0.3);
-  color: #FFFFFF;
-  font-size: 13px;
-
-  &::placeholder {
-    color: rgba(255, 255, 255, 0.5);
-  }
-}
-
-.shutterWrap {
+// Recording indicator
+.recordingIndicator {
   position: absolute;
+  top: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 59, 48, 0.9);
+  padding: 4px 10px;
+  border-radius: 12px;
+  z-index: 20;
+}
+
+.recordingDot {
+  width: 8px;
+  height: 8px;
+  background: #fff;
+  border-radius: 50%;
+  animation: pulse 1s ease-in-out infinite;
+}
+
+.recordingText {
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+// Top bar
+.topBar {
+  position: absolute;
+  top: 0;
   left: 0;
   right: 0;
-  bottom: 12px;
-  z-index: 4;
+  z-index: 50;
+  padding: 8px 12px;
   display: flex;
-  justify-content: center;
+  align-items: center;
+  justify-content: space-between;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.5) 0%, transparent 100%);
+  pointer-events: none;
+
+  & > * {
+    pointer-events: auto;
+  }
 }
 
-.shutterBtn {
-  width: 68px;
-  height: 68px;
-  border: 3px solid #FFFFFF;
+.topLeft,
+.topRight {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.topCenter {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.brandLabel {
+  font-size: 13px;
+  font-weight: 600;
+  color: #FFD60A;
+  letter-spacing: 0.5px;
+}
+
+.modeLabel {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.iconBtn {
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
-  padding: 4px;
+  border: none;
+  background: rgba(60, 60, 67, 0.6);
+  backdrop-filter: blur(10px);
+  color: #fff;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover {
+    background: rgba(60, 60, 67, 0.8);
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
+}
+
+.iconBtnActive {
+  background: #FFD60A;
+  color: #000;
+}
+
+// Filter chips row
+.filterRow {
+  position: absolute;
+  top: 52px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 30;
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 16px;
+  pointer-events: none;
+
+  & > * {
+    pointer-events: auto;
+  }
+}
+
+.quickZoomRow {
+  position: absolute;
+  top: 96px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 30;
+  display: flex;
+  gap: 8px;
+}
+
+.quickZoomBtn {
+  min-width: 46px;
+  height: 28px;
+  border: none;
+  border-radius: 999px;
+  background: rgba(28, 28, 30, 0.72);
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.quickZoomBtnActive {
+  background: #ffffff;
+  color: #111111;
+}
+
+.filterChip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(28, 28, 30, 0.7);
+  backdrop-filter: blur(10px);
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: rgba(60, 60, 67, 0.8);
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
+}
+
+.filterChipActive {
+  background: #FFD60A;
+  border-color: #FFD60A;
+
+  .filterChipLabel {
+    color: #000;
+  }
+}
+
+.filterChipDot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.filterChipLabel {
+  font-size: 12px;
+  font-weight: 500;
+  color: #fff;
+}
+
+// Filter colors
+.filterNormal {
+  background: linear-gradient(135deg, #E0E0E0, #9E9E9E);
+}
+
+.filterNoir {
+  background: linear-gradient(135deg, #333, #000);
+}
+
+.filterVivid {
+  background: linear-gradient(135deg, #FF6B6B, #4ECDC4);
+}
+
+.filterWarm {
+  background: linear-gradient(135deg, #FFD93D, #FF6B35);
+}
+
+// Clips row
+.clipsRow {
+  position: absolute;
+  bottom: 100px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  padding: 0 16px;
+  z-index: 20;
+}
+
+// Bottom controls with shutter
+.bottomControls {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 100px;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.8) 0%, transparent 100%);
+  pointer-events: none;
+
+  & > * {
+    pointer-events: auto;
+  }
+}
+
+// Shutter button
+.shutterBtn {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  border: 4px solid #fff;
   background: transparent;
   cursor: pointer;
-  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, opacity 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
 
   &:hover {
     transform: scale(1.05);
@@ -240,79 +440,82 @@
   &:active {
     transform: scale(0.95);
   }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
 }
 
 .shutterInner {
-  width: 100%;
-  height: 100%;
+  width: 52px;
+  height: 52px;
   border-radius: 50%;
-  background: #FFFFFF;
-  display: block;
-  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, opacity 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+  background: #fff;
+  transition: all 0.2s ease;
 }
 
 .shutterBtn:active .shutterInner {
   transform: scale(0.9);
 }
 
+// Error display
 .error {
-  margin: 8px 12px 0;
-  border: 1px solid rgba(255, 59, 48, 0.4);
-  border-radius: 10px;
-  background: rgba(255, 59, 48, 0.15);
-  color: #FF453A;
-  padding: 10px 12px;
+  position: absolute;
+  bottom: 120px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(255, 59, 48, 0.9);
+  color: #fff;
+  padding: 8px 16px;
+  border-radius: 8px;
   font-size: 13px;
-  font-weight: 600;
+  z-index: 100;
+  backdrop-filter: blur(10px);
 }
 
+// Last capture preview
 .lastRow {
-  margin: 8px 12px 12px;
-  border: 1px solid rgba(120, 120, 128, 0.3);
+  position: absolute;
+  bottom: 240px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.8);
+  padding: 12px;
   border-radius: 12px;
-  background: rgba(28, 28, 30, 0.8);
-  padding: 10px;
-  display: grid;
-  gap: 10px;
+  z-index: 100;
+  backdrop-filter: blur(10px);
 
   img {
-    width: 100%;
-    max-height: 120px;
-    border-radius: 10px;
+    width: 80px;
+    height: 80px;
     object-fit: cover;
-    display: block;
+    border-radius: 8px;
+    border: 2px solid #FFD60A;
   }
 }
 
 .lastActions {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.lastActions button {
-  border: none;
-  border-radius: 10px;
-  padding: 10px;
-  background: rgba(120, 120, 128, 0.24);
-  color: #FFFFFF;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, opacity 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
-
-  &:hover {
-    background: rgba(120, 120, 128, 0.4);
-  }
-}
-
-.clipsRow {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 80px;
-  z-index: 4;
   display: flex;
-  justify-content: center;
-  gap: 10px;
+  gap: 8px;
+
+  button {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 6px;
+    background: #FFD60A;
+    color: #000;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &:hover {
+      background: #FFC800;
+    }
+  }
 }

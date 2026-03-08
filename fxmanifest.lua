@@ -25,10 +25,14 @@ shared_scripts {
 
 client_scripts {
     'client/main.lua',
+    'client/phone_animation.lua',
     'client/phone.lua',
     'client/nui_bridge.lua',
+    'client/flashlight.lua',
+    'client/camera_walk.lua',
     'client/camera.lua',
     'client/calls.lua',
+    'client/nearby_voice.lua',
     'client/proximity.lua',
     'client/location_tracking.lua',
     'client/phone_drop.lua',
@@ -50,6 +54,8 @@ server_scripts {
     'server/modules/messages.lua',
     'server/modules/mail.lua',
     'server/modules/calls.lua',
+    'server/modules/flashlight.lua',
+    'server/modules/nearby_voice.lua',
     'server/modules/gallery.lua',
     'server/modules/bank.lua',
     'server/modules/wallet.lua',

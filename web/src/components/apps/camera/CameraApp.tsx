@@ -5,25 +5,32 @@ import { getStoredLanguage, t } from '../../../i18n';
 import { uiPrompt } from '../../../utils/uiDialog';
 import { resolveMediaType, sanitizeMediaUrl, sanitizeText } from '../../../utils/sanitize';
 import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
+import { useNuiEvent } from '../../../utils/useNui';
 import styles from './CameraApp.module.scss';
 
 type CameraEffect = 'normal' | 'noir' | 'vivid' | 'warm';
 type CameraTarget = 'snap-post' | 'snap-story' | 'snap-avatar' | 'chirp' | 'clips' | '';
 
-const EFFECTS: Array<{ id: CameraEffect; label: string }> = [
-  { id: 'normal', label: 'Normal' },
-  { id: 'noir', label: 'Noir' },
-  { id: 'vivid', label: 'Vivid' },
-  { id: 'warm', label: 'Warm' },
+interface EffectConfig {
+  id: CameraEffect;
+  label: string;
+  className: string;
+}
+
+const EFFECTS: EffectConfig[] = [
+  { id: 'normal', label: 'Normal', className: styles.filterNormal },
+  { id: 'noir', label: 'Noir', className: styles.filterNoir },
+  { id: 'vivid', label: 'Vivid', className: styles.filterVivid },
+  { id: 'warm', label: 'Warm', className: styles.filterWarm },
 ];
 
 function targetLabel(target: CameraTarget) {
-  if (target === 'snap-post') return 'Snap post';
-  if (target === 'snap-story') return 'Snap story';
-  if (target === 'snap-avatar') return 'Snap avatar';
+  if (target === 'snap-post') return 'Snap Post';
+  if (target === 'snap-story') return 'Snap Story';
+  if (target === 'snap-avatar') return 'Avatar';
   if (target === 'chirp') return 'Chirp';
   if (target === 'clips') return 'Clips';
-  return 'Sin destino';
+  return 'Foto';
 }
 
 export function CameraApp() {
@@ -32,14 +39,25 @@ export function CameraApp() {
   const [effect, setEffect] = createSignal<CameraEffect>('normal');
   const [fov, setFov] = createSignal(52);
   const [blur, setBlur] = createSignal(0);
-  const [caption, setCaption] = createSignal('');
   const [lastUrl, setLastUrl] = createSignal('');
   const [busy, setBusy] = createSignal(false);
   const [error, setError] = createSignal('');
   const [target, setTarget] = createSignal<CameraTarget>('');
   const [flash, setFlash] = createSignal(true);
   const [selfie, setSelfie] = createSignal(false);
+  const [frozen, setFrozen] = createSignal(false);
+  const [landscape, setLandscape] = createSignal(false);
+  const [flashlight, setFlashlight] = createSignal(false);
+  const [flashlightSupported, setFlashlightSupported] = createSignal(false);
+  const [quickZooms, setQuickZooms] = createSignal<number[]>([30, 52, 78]);
+  const [videoSupported, setVideoSupported] = createSignal(false);
   const [sessionReady, setSessionReady] = createSignal(false);
+  const [isRecording, setIsRecording] = createSignal(false);
+
+  useNuiEvent('cameraSessionClosed', () => {
+    setSessionReady(false);
+    router.goBack();
+  });
 
   createEffect(() => {
     const params = router.params();
@@ -57,6 +75,12 @@ export function CameraApp() {
     }
   });
 
+  createEffect(() => {
+    if (target() === 'clips' && !landscape()) {
+      setLandscape(true);
+    }
+  });
+
   const closeCamera = async () => {
     await fetchNui('stopCameraSession', {}, true);
     setSessionReady(false);
@@ -70,12 +94,19 @@ export function CameraApp() {
   });
 
   onMount(async () => {
+    const capabilities = await fetchNui<{ flashlight?: boolean; quickZooms?: number[]; video?: boolean }>('cameraGetCapabilities', {}, { flashlight: false, quickZooms: [30, 52, 78], video: false });
+    setFlashlightSupported(capabilities?.flashlight === true);
+    setQuickZooms((capabilities?.quickZooms || [30, 52, 78]).map((value) => Number(value)).filter((value) => Number.isFinite(value)));
+    setVideoSupported(capabilities?.video === true);
+
     await fetchNui('startCameraSession', {
       effect: effect(),
       fov: fov(),
       blur: blur(),
       flash: flash(),
       selfie: selfie(),
+      frozen: frozen(),
+      landscape: landscape(),
     }, true);
     setSessionReady(true);
   });
@@ -93,10 +124,40 @@ export function CameraApp() {
       blur: blur(),
       flash: flash(),
       selfie: selfie(),
+      frozen: frozen(),
+      landscape: landscape(),
     }, true);
   });
 
-  const fovPercent = createMemo(() => Math.round(((fov() - 25) / 65) * 100));
+  const toggleFreeze = async () => {
+    const result = await fetchNui<{ success?: boolean; frozen?: boolean }>('cameraSetFreeze', { enabled: !frozen() }, { success: true, frozen: !frozen() });
+    if (result?.success) {
+      setFrozen(result.frozen === true);
+    }
+  };
+
+  const toggleLandscape = async () => {
+    const result = await fetchNui<{ success?: boolean; landscape?: boolean }>('cameraSetLandscape', { enabled: !landscape() }, { success: true, landscape: !landscape() });
+    if (result?.success) {
+      setLandscape(result.landscape === true);
+    }
+  };
+
+  const applyQuickZoom = async (index: number) => {
+    const result = await fetchNui<{ success?: boolean; fov?: number }>('cameraSetQuickZoom', { index }, { success: true, fov: fov() });
+    if (result?.success && typeof result.fov === 'number') {
+      setFov(Math.round(result.fov));
+    }
+  };
+
+  const toggleFlashlight = async () => {
+    if (!flashlightSupported()) return;
+    const nextState = !flashlight();
+    const result = await fetchNui<{ success?: boolean; enabled?: boolean }>('cameraToggleFlashlight', { enabled: nextState }, { success: true, enabled: nextState });
+    if (result?.success) {
+      setFlashlight(result.enabled === true);
+    }
+  };
 
   const takePhoto = async () => {
     if (busy()) return;
@@ -121,9 +182,9 @@ export function CameraApp() {
     if (!mediaUrl) {
       setBusy(false);
       if (result?.error === 'upload_not_configured') {
-        setError('Subida no configurada en el servidor');
+        setError('Subida no configurada');
       } else {
-        setError('Captura cancelada o invalida');
+        setError('Captura cancelada');
       }
       return;
     }
@@ -133,26 +194,25 @@ export function CameraApp() {
     if (target() === 'snap-post') {
       await fetchNui('snapPublishPost', {
         mediaUrl,
-        mediaType: resolveMediaType(mediaUrl) === 'video' ? 'video' : 'image',
-        caption: sanitizeText(caption(), 500),
+        mediaType: 'image',
       });
       router.navigate('snap');
     } else if (target() === 'snap-story') {
       await fetchNui('snapPublishStory', {
         mediaUrl,
-        mediaType: resolveMediaType(mediaUrl) === 'video' ? 'video' : 'image',
+        mediaType: 'image',
       });
       router.navigate('snap');
     } else if (target() === 'snap-avatar') {
       router.navigate('snap', { avatarMedia: mediaUrl, openProfile: '1' });
     } else if (target() === 'chirp') {
       await fetchNui('chirpPublishTweet', {
-        content: sanitizeText(caption(), 280) || 'Nueva captura',
+        content: 'Nueva foto',
         mediaUrl,
       });
       router.navigate('chirp');
     } else if (target() === 'clips') {
-      setError('Clips requiere video. Usa "Publicar clip" con URL de video.');
+      setError('Clips requiere video');
     }
 
     setBusy(false);
@@ -163,8 +223,7 @@ export function CameraApp() {
     if (!mediaUrl) return;
     await fetchNui('snapPublishPost', {
       mediaUrl,
-      mediaType: resolveMediaType(mediaUrl) === 'video' ? 'video' : 'image',
-      caption: sanitizeText(caption(), 500),
+      mediaType: 'image',
     });
     router.navigate('snap');
   };
@@ -174,7 +233,7 @@ export function CameraApp() {
     if (!mediaUrl) return;
     await fetchNui('snapPublishStory', {
       mediaUrl,
-      mediaType: resolveMediaType(mediaUrl) === 'video' ? 'video' : 'image',
+      mediaType: 'image',
     });
     router.navigate('snap');
   };
@@ -183,18 +242,18 @@ export function CameraApp() {
     const mediaUrl = sanitizeMediaUrl(lastUrl());
     if (!mediaUrl) return;
     await fetchNui('chirpPublishTweet', {
-      content: sanitizeText(caption(), 280) || 'Nueva captura',
+      content: 'Nueva foto',
       mediaUrl,
     });
     router.navigate('chirp');
   };
 
   const publishClipFromUrl = async () => {
-    const input = await uiPrompt('Pega URL de video para Clips (mp4/webm/mov/m3u8)', { title: 'Publicar clip' });
+    const input = await uiPrompt('URL del video (mp4/webm/mov)', { title: 'Publicar clip' });
     const videoUrl = sanitizeMediaUrl(input);
     if (!videoUrl || resolveMediaType(videoUrl) !== 'video') {
       if (input && input.trim()) {
-        setError('URL de video invalida para Clips');
+        setError('URL invalida');
       }
       return;
     }
@@ -202,7 +261,6 @@ export function CameraApp() {
     await fetchNui('storeMediaUrl', { url: videoUrl }, { success: false });
     const result = await fetchNui<{ success?: boolean }>('clipsPublish', {
       mediaUrl: videoUrl,
-      caption: sanitizeText(caption(), 500),
     }, { success: false });
 
     if (result?.success) {
@@ -210,7 +268,7 @@ export function CameraApp() {
       return;
     }
 
-    setError('No se pudo publicar el clip');
+    setError('No se pudo publicar');
   };
 
   const publishClipFromGallery = async () => {
@@ -222,13 +280,12 @@ export function CameraApp() {
 
     const videoUrl = sanitizeMediaUrl(picked?.url);
     if (!videoUrl || resolveMediaType(videoUrl) !== 'video') {
-      setError('No hay videos en galeria para publicar');
+      setError('No hay videos');
       return;
     }
 
     const result = await fetchNui<{ success?: boolean }>('clipsPublish', {
       mediaUrl: videoUrl,
-      caption: sanitizeText(caption(), 500),
     }, { success: false });
 
     if (result?.success) {
@@ -236,10 +293,11 @@ export function CameraApp() {
       return;
     }
 
-    setError('No se pudo publicar el clip');
+    setError('No se pudo publicar');
   };
 
   const publishClipFromRecording = async () => {
+    setIsRecording(true);
     const storage = await fetchNui<{ uploadUrl?: string; uploadField?: string; customUploadUrl?: string; customUploadField?: string }>('getStorageConfig', undefined, {
       uploadUrl: '',
       uploadField: 'files[]',
@@ -253,12 +311,14 @@ export function CameraApp() {
       durationSeconds: 20,
     }, { url: '', error: 'video_not_supported' });
 
+    setIsRecording(false);
+
     const videoUrl = sanitizeMediaUrl(result?.url);
     if (!videoUrl || resolveMediaType(videoUrl) !== 'video') {
       if (result?.error === 'video_not_supported') {
-        setError('Grabacion de video no disponible en este servidor');
+        setError('Video no disponible');
       } else {
-        setError('No se pudo grabar o subir el video');
+        setError('Error al grabar');
       }
       return;
     }
@@ -266,7 +326,6 @@ export function CameraApp() {
     await fetchNui('storeMediaUrl', { url: videoUrl }, { success: false });
     const publish = await fetchNui<{ success?: boolean }>('clipsPublish', {
       mediaUrl: videoUrl,
-      caption: sanitizeText(caption(), 500),
     }, { success: false });
 
     if (publish?.success) {
@@ -274,12 +333,54 @@ export function CameraApp() {
       return;
     }
 
-    setError('No se pudo publicar el clip');
+    setError('No se pudo publicar');
+  };
+
+  // Vertical slider handlers
+  const handleFovChange = (e: Event) => {
+    const target = e.target as HTMLInputElement;
+    const value = parseInt(target.value);
+    setFov(value);
+  };
+
+  const handleBlurChange = (e: Event) => {
+    const target = e.target as HTMLInputElement;
+    const value = parseInt(target.value);
+    setBlur(value);
   };
 
   return (
     <div class={styles.app}>
-      <div class={styles.preview}>
+      {/* Left vertical slider - FOV */}
+      <div class={styles.leftSlider}>
+        <span class={styles.sliderLabel}>FOV</span>
+        <input
+          type="range"
+          min="25"
+          max="90"
+          value={fov()}
+          onInput={handleFovChange}
+          class={styles.verticalSlider}
+        />
+        <span class={styles.sliderValue}>{fov()}°</span>
+      </div>
+
+      {/* Right vertical slider - Blur */}
+      <div class={styles.rightSlider}>
+        <span class={styles.sliderLabel}>BLUR</span>
+        <input
+          type="range"
+          min="0"
+          max="70"
+          value={blur()}
+          onInput={handleBlurChange}
+          class={styles.verticalSlider}
+        />
+        <span class={styles.sliderValue}>{blur()}</span>
+      </div>
+
+      <div class={styles.preview} classList={{ [styles.previewLandscapeShell]: landscape() }}>
+        {/* Feed layer with effects */}
         <div
           class={styles.feedLayer}
           classList={{
@@ -289,26 +390,87 @@ export function CameraApp() {
             [styles.previewSelfie]: selfie(),
           }}
         />
-        <div class={styles.topBar}>
-          <button class={styles.iconBtn} onClick={() => void closeCamera()}>×</button>
-          <div class={styles.topCenter}>
-            <div class={styles.brandPill}>CineCam</div>
-            <div class={styles.targetPill}>{targetLabel(target())}</div>
+
+        {/* Recording indicator */}
+        <Show when={isRecording()}>
+          <div class={styles.recordingIndicator}>
+            <div class={styles.recordingDot} />
+            <span class={styles.recordingText}>REC</span>
           </div>
-          <div class={styles.topActions}>
-            <button class={styles.iconBtn} classList={{ [styles.iconBtnActive]: flash() }} onClick={() => setFlash((v) => !v)} title={t('camera.flash', language())}>
+        </Show>
+
+        {/* Top bar - compact */}
+        <div class={styles.topBar}>
+          <div class={styles.topLeft}>
+            <button
+              class={styles.iconBtn}
+              classList={{ [styles.iconBtnActive]: flash() }}
+              onClick={() => setFlash((v) => !v)}
+              title={t('camera.flash', language())}
+            >
               ⚡
             </button>
-            <button class={styles.iconBtn} classList={{ [styles.iconBtnActive]: selfie() }} onClick={() => setSelfie((v) => !v)} title={t('camera.switch', language())}>
-              ⇄
+            <Show when={flashlightSupported()}>
+              <button
+                class={styles.iconBtn}
+                classList={{ [styles.iconBtnActive]: flashlight() }}
+                onClick={() => void toggleFlashlight()}
+                title="Linterna"
+              >
+                🔦
+              </button>
+            </Show>
+            <button
+              class={styles.iconBtn}
+              classList={{ [styles.iconBtnActive]: frozen() }}
+              onClick={() => void toggleFreeze()}
+              title="Congelar"
+            >
+              🧊
             </button>
-            <button class={styles.iconBtn} onClick={() => router.navigate('gallery')} title={t('camera.gallery', language())}>
+          </div>
+
+          <div class={styles.topCenter}>
+            <span class={styles.brandLabel}>CineCam</span>
+            <span class={styles.modeLabel}>{targetLabel(target())}</span>
+          </div>
+
+          <div class={styles.topRight}>
+            <button
+              class={styles.iconBtn}
+              classList={{ [styles.iconBtnActive]: selfie() }}
+              onClick={() => setSelfie((v) => !v)}
+              title="Selfie"
+            >
+              🔄
+            </button>
+            <button
+              class={styles.iconBtn}
+              classList={{ [styles.iconBtnActive]: landscape() }}
+              onClick={() => void toggleLandscape()}
+              title="Landscape"
+            >
+              ▭
+            </button>
+            <button
+              class={styles.iconBtn}
+              onClick={() => router.navigate('gallery')}
+              title={t('camera.gallery', language())}
+            >
               🖼
+            </button>
+            <button
+              class={styles.iconBtn}
+              onClick={() => void closeCamera()}
+              title="Cerrar"
+            >
+              ✕
             </button>
           </div>
         </div>
 
-        <div class={styles.filterRail}>
+        {/* Compact filter row at top */}
+        <div class={styles.filterRow}>
           <For each={EFFECTS}>
             {(item) => (
               <button
@@ -316,79 +478,73 @@ export function CameraApp() {
                 classList={{ [styles.filterChipActive]: effect() === item.id }}
                 onClick={() => setEffect(item.id)}
               >
-                {item.label}
+                <span class={styles.filterChipDot} classList={{ [item.className]: true }} />
+                <span class={styles.filterChipLabel}>{item.label}</span>
               </button>
             )}
           </For>
         </div>
 
-        <div class={styles.controlsCard}>
-          <div class={styles.effectBadge}>FX: {effect().toUpperCase()}</div>
-          <div class={styles.sliderRow}>
-            <span>FOV</span>
-            <input 
-              class="ios-slider-dark" 
-              type="range" 
-              min="25" 
-              max="90" 
-              step="1" 
-              value={fov()} 
-              style={{ '--value-percent': `${((fov() - 25) / (90 - 25)) * 100}%` }}
-              onInput={(e) => {
-                const val = Number(e.currentTarget.value);
-                e.currentTarget.style.setProperty('--value-percent', `${((val - 25) / (90 - 25)) * 100}%`);
-                setFov(val);
-              }} 
-            />
-            <strong>{fovPercent()}%</strong>
-          </div>
-          <div class={styles.sliderRow}>
-            <span>Blur</span>
-            <input 
-              class="ios-slider-dark" 
-              type="range" 
-              min="0" 
-              max="70" 
-              step="1" 
-              value={blur()} 
-              style={{ '--value-percent': `${(blur() / 70) * 100}%` }}
-              onInput={(e) => {
-                const val = Number(e.currentTarget.value);
-                e.currentTarget.style.setProperty('--value-percent', `${(val / 70) * 100}%`);
-                setBlur(val);
-              }} 
-            />
-            <strong>{blur()}%</strong>
-          </div>
-          <input class={styles.captionInput} maxlength="140" placeholder={t('camera.caption_placeholder', language())} value={caption()} onInput={(e) => setCaption(e.currentTarget.value)} />
+        <div class={styles.quickZoomRow}>
+          <For each={quickZooms()}>
+            {(zoom, index) => {
+              const label = `${(52 / zoom).toFixed(1).replace('.0', '')}x`;
+              return (
+                <button
+                  class={styles.quickZoomBtn}
+                  classList={{ [styles.quickZoomBtnActive]: Math.abs(fov() - zoom) <= 2 }}
+                  onClick={() => void applyQuickZoom(index() + 1)}
+                >
+                  {label}
+                </button>
+              );
+            }}
+          </For>
         </div>
 
-        <div class={styles.shutterWrap}>
-          <button class={styles.shutterBtn} onClick={() => void takePhoto()} disabled={busy()} data-testid="camera-capture-btn">
-            <span class={styles.shutterInner} />
-          </button>
-        </div>
-
+        {/* Clips row (conditional) */}
         <Show when={target() === 'clips'}>
           <div class={styles.clipsRow}>
-            <button class="ios-btn" onClick={() => void publishClipFromRecording()}>{t('camera.record_clip', language())}</button>
-            <button class="ios-btn" onClick={() => void publishClipFromGallery()}>{t('camera.gallery_video', language())}</button>
-            <button class="ios-btn ios-btn-primary" onClick={() => void publishClipFromUrl()}>{t('camera.publish_clip', language())}</button>
+            <Show when={videoSupported()} fallback={<button class="ios-btn" disabled>Video no disponible</button>}>
+              <button class="ios-btn" onClick={() => void publishClipFromRecording()}>
+                {t('camera.record_clip', language())}
+              </button>
+            </Show>
+            <button class="ios-btn" onClick={() => void publishClipFromGallery()}>
+              {t('camera.gallery_video', language())}
+            </button>
+            <button class="ios-btn ios-btn-primary" onClick={() => void publishClipFromUrl()}>
+              {t('camera.publish_clip', language())}
+            </button>
           </div>
         </Show>
       </div>
 
+      {/* Bottom controls */}
+      <div class={styles.bottomControls}>
+        {/* Shutter button */}
+        <button
+          class={styles.shutterBtn}
+          onClick={() => void takePhoto()}
+          disabled={busy()}
+        >
+          <div class={styles.shutterInner} />
+        </button>
+      </div>
+
+      {/* Error display */}
       <Show when={error()}>
         <div class={styles.error}>{error()}</div>
       </Show>
 
+      {/* Last capture preview */}
       <Show when={lastUrl()}>
         <div class={styles.lastRow}>
-          <img src={lastUrl()} alt="ultima captura" />
+          <img src={lastUrl()} alt="Última" />
           <div class={styles.lastActions}>
-            <button class="ios-btn" onClick={() => void shareSnapPost()}>{t('camera.snap_post', language())}</button>
-            <button class="ios-btn" onClick={() => void shareSnapStory()}>{t('camera.snap_story', language())}</button>
-            <button class="ios-btn" onClick={() => void shareChirp()}>Chirp</button>
+            <button onClick={() => void shareSnapPost()}>Snap Post</button>
+            <button onClick={() => void shareSnapStory()}>Snap Story</button>
+            <button onClick={() => void shareChirp()}>Chirp</button>
           </div>
         </div>
       </Show>

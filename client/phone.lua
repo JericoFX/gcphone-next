@@ -5,6 +5,59 @@ local useMouse = false
 local ignoreFocus = false
 local phoneProp = nil
 local PHONE_PROP_MODEL = GetHashKey("prop_npc_phone_02")
+local phoneVisualMode = 'text'
+local phoneVisualOptions = {}
+
+local function GetVisualPreset()
+    local cfg = Config.PhoneVisual or {}
+
+    if phoneVisualMode == 'call' then
+        return cfg.Call or cfg.Text or {}
+    end
+
+    if phoneVisualMode == 'camera' then
+        if phoneVisualOptions.landscape == true then
+            return cfg.CameraLandscape or cfg.Camera or cfg.Text or {}
+        end
+
+        return cfg.Camera or cfg.Text or {}
+    end
+
+    if phoneVisualMode == 'live' then
+        return cfg.Live or cfg.Camera or cfg.Text or {}
+    end
+
+    return cfg.Text or {}
+end
+
+local function ApplyPhonePropAttachment()
+    if not phoneProp or not DoesEntityExist(phoneProp) then return end
+
+    local ped = cache.ped
+    if not ped or ped <= 0 then return end
+
+    local preset = GetVisualPreset()
+    local offset = preset.offset or {}
+    local rotation = preset.rotation or {}
+
+    AttachEntityToEntity(
+        phoneProp,
+        ped,
+        GetPedBoneIndex(ped, 28422),
+        offset.x or 0.0,
+        offset.y or 0.0,
+        offset.z or 0.0,
+        rotation.x or 0.0,
+        rotation.y or 0.0,
+        rotation.z or 0.0,
+        true,
+        true,
+        false,
+        true,
+        1,
+        true
+    )
+end
 
 local function EnsurePhoneProp()
     local ped = cache.ped
@@ -17,8 +70,8 @@ local function EnsurePhoneProp()
 
     phoneProp = CreateObject(PHONE_PROP_MODEL, 0.0, 0.0, 0.0, true, true, false)
     if phoneProp and DoesEntityExist(phoneProp) then
-        AttachEntityToEntity(phoneProp, ped, GetPedBoneIndex(ped, 28422), 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, true, true, false, true, 1, true)
         SetEntityAsMissionEntity(phoneProp, true, true)
+        ApplyPhonePropAttachment()
     end
 
     SetModelAsNoLongerNeeded(PHONE_PROP_MODEL)
@@ -64,6 +117,8 @@ function TogglePhone()
         PhoneState.isOpen = false
         TriggerServerEvent('gcphone:stateChanged', false)
         RemovePhoneProp()
+        phoneVisualMode = 'text'
+        phoneVisualOptions = {}
         
         SendNUIMessage({ action = 'hidePhone' })
         
@@ -74,6 +129,16 @@ function TogglePhone()
         
         PlayPhoneAnimation('out')
     end
+end
+
+function SetPhoneVisualMode(mode, options)
+    phoneVisualMode = type(mode) == 'string' and mode or 'text'
+    phoneVisualOptions = type(options) == 'table' and options or {}
+    ApplyPhonePropAttachment()
+end
+
+function GetPhoneVisualMode()
+    return phoneVisualMode, phoneVisualOptions
 end
 
 function ClosePhone()
@@ -143,6 +208,11 @@ RegisterNUICallback('setIgnoreFocus', function(data, cb)
     cb(true)
 end)
 
+RegisterNUICallback('phoneSetVisualMode', function(data, cb)
+    SetPhoneVisualMode(type(data) == 'table' and data.mode or 'text', type(data) == 'table' and data.options or {})
+    cb(true)
+end)
+
 RegisterNetEvent('gcphone:forceOpenPhone', function()
     if not menuIsOpen then
         TogglePhone()
@@ -158,3 +228,5 @@ end)
 exports('TogglePhone', TogglePhone)
 exports('ClosePhone', ClosePhone)
 exports('IsPhoneOpen', function() return menuIsOpen end)
+exports('SetPhoneVisualMode', SetPhoneVisualMode)
+exports('GetPhoneVisualMode', GetPhoneVisualMode)
