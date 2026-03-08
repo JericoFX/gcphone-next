@@ -76,6 +76,61 @@ local function ResolveAuthorProfile(identifier, source)
 end
 
 local ActiveLiveNews = {}
+
+local function GetViewerCount(liveData)
+    if type(liveData) ~= 'table' or type(liveData.viewers) ~= 'table' then
+        return 0
+    end
+
+    local count = 0
+    for _ in pairs(liveData.viewers) do
+        count = count + 1
+    end
+    return count
+end
+
+local function BroadcastViewerCount(articleId)
+    local id = tonumber(articleId)
+    if not id or id < 1 then return end
+
+    local liveData = ActiveLiveNews[id]
+    local viewers = GetViewerCount(liveData)
+
+    MySQL.update.await(
+        'UPDATE phone_news SET live_viewers = ? WHERE id = ? AND is_live = 1',
+        { viewers, id }
+    )
+
+    TriggerClientEvent('gcphone:news:viewersUpdated', -1, {
+        articleId = id,
+        viewers = viewers,
+    })
+end
+
+local function RemoveViewerFromLive(articleId, source, identifier)
+    local id = tonumber(articleId)
+    if not id or id < 1 then return false end
+
+    local liveData = ActiveLiveNews[id]
+    if not liveData or type(liveData.viewers) ~= 'table' then
+        return false
+    end
+
+    local key = identifier or GetIdentifier(source)
+    if not key or key == '' then return false end
+    if not liveData.viewers[key] then return false end
+
+    liveData.viewers[key] = nil
+    BroadcastViewerCount(id)
+    return true
+end
+
+local function RemoveViewerFromAllLives(source, identifier)
+    for articleId in pairs(ActiveLiveNews) do
+        RemoveViewerFromLive(articleId, source, identifier)
+    end
+end
+
 local function HitRateLimit(source, key, windowMs, maxHits)
     return Utils.HitRateLimit(source, key, windowMs, maxHits)
 end
@@ -208,6 +263,7 @@ lib.callback.register('gcphone:news:startLive', function(source, data)
         identifier = identifier,
         startTime = os.time(),
         scaleform = scaleform,
+        viewers = {},
     }
     
     local article = MySQL.single.await(
@@ -219,6 +275,52 @@ lib.callback.register('gcphone:news:startLive', function(source, data)
     TriggerClientEvent('gcphone:news:liveStarted', -1, article)
     
     return true, { articleId = articleId }
+end)
+
+lib.callback.register('gcphone:news:joinLive', function(source, data)
+    local identifier = GetIdentifier(source)
+    if not identifier then return false, 'MISSING_IDENTIFIER' end
+    if type(data) ~= 'table' then return false, 'INVALID_PAYLOAD' end
+
+    local articleId = tonumber(data.articleId)
+    if not articleId or articleId < 1 then return false, 'INVALID_LIVE' end
+
+    local liveData = ActiveLiveNews[articleId]
+    if not liveData then return false, 'LIVE_UNAVAILABLE' end
+    if liveData.identifier == identifier then
+        return true, { articleId = articleId, viewers = GetViewerCount(liveData) }
+    end
+
+    if not GetPlayerName(liveData.source) then
+        return false, 'HOST_OFFLINE'
+    end
+
+    local liveStillActive = MySQL.scalar.await(
+        'SELECT 1 FROM phone_news WHERE id = ? AND is_live = 1 LIMIT 1',
+        { articleId }
+    )
+    if not liveStillActive then
+        return false, 'LIVE_ENDED'
+    end
+
+    liveData.viewers[identifier] = {
+        source = source,
+        joinedAt = os.time(),
+    }
+    BroadcastViewerCount(articleId)
+
+    return true, { articleId = articleId, viewers = GetViewerCount(liveData) }
+end)
+
+lib.callback.register('gcphone:news:leaveLive', function(source, data)
+    local articleId = tonumber(type(data) == 'table' and data.articleId or data)
+    if articleId and articleId > 0 then
+        RemoveViewerFromLive(articleId, source)
+        return true
+    end
+
+    RemoveViewerFromAllLives(source)
+    return true
 end)
 
 lib.callback.register('gcphone:news:setScaleform', function(source, data)
@@ -284,6 +386,10 @@ lib.callback.register('gcphone:news:deleteArticle', function(source, articleId)
     )
     
     return true
+end)
+
+AddEventHandler('playerDropped', function()
+    RemoveViewerFromAllLives(source)
 end)
 
 lib.callback.register('gcphone:news:viewArticle', function(source, articleId)

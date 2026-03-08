@@ -701,6 +701,18 @@ RegisterNUICallback('newsGetScaleform', function(data, cb)
     end, articleId)
 end)
 
+RegisterNUICallback('newsJoinLive', function(data, cb)
+    lib.callback('gcphone:news:joinLive', false, function(success, payload)
+        cb(cbSuccess(success, nil, payload))
+    end, data or {})
+end)
+
+RegisterNUICallback('newsLeaveLive', function(data, cb)
+    lib.callback('gcphone:news:leaveLive', false, function(success)
+        cb(cbSuccess(success))
+    end, data or {})
+end)
+
 RegisterNUICallback('newsSetScaleform', function(data, cb)
     lib.callback('gcphone:news:setScaleform', false, function(success)
         cb(cbSuccess(success))
@@ -1036,6 +1048,13 @@ RegisterNetEvent('gcphone:news:scaleformUpdated', function(articleId, scaleform)
             articleId = articleId,
             scaleform = scaleform
         }
+    })
+end)
+
+RegisterNetEvent('gcphone:news:viewersUpdated', function(payload)
+    SendNUIMessage({
+        action = 'gcphone:news:viewersUpdated',
+        data = payload
     })
 end)
 
