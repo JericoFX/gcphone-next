@@ -31,11 +31,20 @@ export function HomeScreen() {
 
   const APPS_PER_PAGE = 12;
 
-  const homeApps = createMemo(() =>
-    state.appLayout.home
+  const homeApps = createMemo(() => {
+    const enabled = new Set(state.enabledApps);
+    const ordered = state.appLayout.home
       .map((id) => APP_BY_ID[id])
-      .filter((app): app is NonNullable<typeof app> => Boolean(app))
-  );
+      .filter((app): app is NonNullable<typeof app> => Boolean(app) && enabled.has(app.id));
+
+    const required = (['contacts', 'messages', 'mail'] as const).filter((id) => enabled.has(id));
+    const present = new Set(ordered.map((app) => app.id));
+    const pinned = required
+      .map((id) => APP_BY_ID[id])
+      .filter((app): app is NonNullable<typeof app> => Boolean(app) && !present.has(app.id));
+
+    return [...pinned, ...ordered];
+  });
 
   const pageCount = createMemo(() => Math.max(1, Math.ceil(homeApps().length / APPS_PER_PAGE)));
   const isSelected = createSelector(selectedApp);
