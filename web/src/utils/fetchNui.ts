@@ -27,7 +27,7 @@ export async function fetchNui<T = unknown>(
   mockData?: T
 ): Promise<T> {
   if (isEnvBrowser()) {
-    const mockResult = handleBrowserNui<T>(eventName, data);
+    const mockResult = await handleBrowserNui<T>(eventName, data);
     if (mockResult !== undefined) {
       return mockResult;
     }
