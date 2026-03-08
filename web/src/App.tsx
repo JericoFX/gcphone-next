@@ -10,6 +10,7 @@ import { setNuiAuthToken } from './utils/fetchNui';
 import { isEnvBrowser } from './utils/misc';
 import { setupBrowserMock } from './mock/browserMock';
 import { localeTagFromLanguage } from './i18n';
+import { setLiveKitRemoteAudioPriority, setLiveKitRemoteAudioVolume } from './utils/livekit';
 import './App.scss';
 
 function PhoneContent() {
@@ -50,6 +51,44 @@ function PhoneContent() {
 
     onCleanup(() => {
       window.removeEventListener('phone:uiAlert', onUiAlert as EventListener);
+    });
+  });
+
+  onMount(() => {
+    const onNearbyVoiceState = (event: Event) => {
+      const detail = (event as CustomEvent<{ active?: boolean; listening?: boolean; peerId?: string | null }>).detail;
+      const peerId = typeof detail?.peerId === 'string' ? detail.peerId.trim() : '';
+
+      if (!detail?.active || !peerId) {
+        setLiveKitRemoteAudioPriority(null);
+        setLiveKitRemoteAudioVolume(1);
+        return;
+      }
+
+      setLiveKitRemoteAudioPriority(peerId, {
+        priorityScale: detail.listening ? 1 : 0.7,
+        othersScale: detail.listening ? 0.35 : 0.18,
+      });
+    };
+
+    const onNearbyVoiceVolume = (event: Event) => {
+      const detail = (event as CustomEvent<{ active?: boolean; volume?: number }>).detail;
+      if (!detail?.active) {
+        setLiveKitRemoteAudioVolume(1);
+        return;
+      }
+
+      setLiveKitRemoteAudioVolume(typeof detail.volume === 'number' ? detail.volume : 1);
+    };
+
+    window.addEventListener('gcphone:nearbyVoiceState', onNearbyVoiceState as EventListener);
+    window.addEventListener('gcphone:nearbyVoiceVolume', onNearbyVoiceVolume as EventListener);
+
+    onCleanup(() => {
+      window.removeEventListener('gcphone:nearbyVoiceState', onNearbyVoiceState as EventListener);
+      window.removeEventListener('gcphone:nearbyVoiceVolume', onNearbyVoiceVolume as EventListener);
+      setLiveKitRemoteAudioPriority(null);
+      setLiveKitRemoteAudioVolume(1);
     });
   });
 

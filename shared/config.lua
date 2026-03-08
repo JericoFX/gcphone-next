@@ -2,7 +2,7 @@ Config = Config or {}
 Config.Phone = {
     KeyOpen = 288,
     KeyTakeCall = 38,
-    
+
     NumberFormat = 'XXX-XXXX',
     NumberPrefix = { 555, 556, 557, 558, 559 },
 
@@ -11,7 +11,6 @@ Config.Phone = {
         ringtone = 'ring.ogg',
         volume = 0.5,
         lockCode = '0000',
-        coque = 'funda_negra.png',
         theme = 'light',
         language = 'es',
         audioProfile = 'normal',
@@ -52,19 +51,98 @@ Config.Calls = {
 
 Config.LiveKit = {
     Enabled = true,
-    Host = 'ws://127.0.0.1:7880',
     MaxCallDurationSeconds = 300,
 }
 
 Config.Socket = {
     Enabled = false,
-    Host = 'ws://127.0.0.1:3001',
 }
 
 Config.LiveLocation = {
     Enabled = true,
     UpdateIntervalSeconds = 10,
     MaxDurationMinutes = 15,
+}
+
+Config.Camera = {
+    Enabled = true,
+    AllowRunning = true,
+    LookSensitivity = 7.5,
+    PitchMax = 22.0,
+    PitchMin = 65.0,
+    YawMax = 95.0,
+    RollStep = 2.5,
+    LandscapeRoll = -90.0,
+    RearOffset = {
+        x = 0.02,
+        y = -0.06,
+        z = 0.72,
+    },
+    SelfieOffset = {
+        x = 0.0,
+        y = 0.72,
+        z = 0.62,
+    },
+    VehicleRearOffset = {
+        x = 0.18,
+        y = 0.52,
+        z = 0.88,
+    },
+    VehicleSelfieOffset = {
+        x = 0.08,
+        y = 1.05,
+        z = 0.96,
+    },
+    Fov = {
+        Min = 25.0,
+        Max = 90.0,
+        Default = 52.0,
+    },
+    QuickZooms = { 30.0, 52.0, 78.0 },
+    Freeze = {
+        Enabled = true,
+        MaxDistance = 8.0,
+    },
+}
+
+Config.PhoneVisual = {
+    Text = {
+        offset = { x = 0.0, y = 0.0, z = 0.0 },
+        rotation = { x = 0.0, y = 0.0, z = 0.0 },
+    },
+    Call = {
+        offset = { x = 0.02, y = 0.01, z = 0.0 },
+        rotation = { x = 10.0, y = -8.0, z = 8.0 },
+    },
+    Camera = {
+        offset = { x = 0.015, y = -0.01, z = 0.0 },
+        rotation = { x = -4.0, y = 2.0, z = 10.0 },
+    },
+    CameraLandscape = {
+        offset = { x = 0.01, y = 0.01, z = 0.0 },
+        rotation = { x = -2.0, y = 0.0, z = 96.0 },
+    },
+    Live = {
+        offset = { x = 0.015, y = -0.005, z = 0.0 },
+        rotation = { x = -2.0, y = -4.0, z = 18.0 },
+    },
+}
+
+Config.Flashlight = {
+    Enabled = true,
+    SyncDistance = 30.0,
+    Distance = 18.0,
+    Intensity = 1.1,
+    Kelvin = {
+        Min = 2600,
+        Max = 9000,
+        Default = 5200,
+    },
+    Lumens = {
+        Min = 350,
+        Max = 2200,
+        Default = 1200,
+    },
 }
 
 Config.Music = {
@@ -90,7 +168,7 @@ Config.Features = {
 
 Config.Mail = {
     Enabled = true,
-    Domain = 'noimotors.gg',
+    Domain = 'jericofx.gg',
     MinAliasLength = 3,
     MaxAliasLength = 24,
     MaxSubjectLength = 120,
@@ -257,13 +335,13 @@ Config.Proximity = {
 }
 
 Config.FixePhone = {
-    ['911'] = { 
-        name = 'Central de Emergencias', 
-        coords = vector3(441.2, -979.7, 30.58) 
+    ['911'] = {
+        name = 'Central de Emergencias',
+        coords = vector3(441.2, -979.7, 30.58)
     },
-    ['555-0001'] = { 
-        name = 'Cabina Telefónica', 
-        coords = vector3(372.25, -965.75, 28.58) 
+    ['555-0001'] = {
+        name = 'Cabina Telefónica',
+        coords = vector3(372.25, -965.75, 28.58)
     },
 }
 

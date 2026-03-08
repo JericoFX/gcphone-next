@@ -76,6 +76,16 @@ interface SnapFollowRequest {
   created_at?: string;
 }
 
+interface FlashlightSettings {
+  enabled?: boolean;
+  kelvin?: number;
+  lumens?: number;
+  minKelvin?: number;
+  maxKelvin?: number;
+  minLumens?: number;
+  maxLumens?: number;
+}
+
 interface SnapDiscoverPost {
   id: number;
   account_id: number;
@@ -250,6 +260,13 @@ export function SnapApp() {
   const [liveAudioNear, setLiveAudioNear] = createSignal(false);
   const [liveAudioTargetOnline, setLiveAudioTargetOnline] = createSignal(true);
   const [liveAudioDistanceMeters, setLiveAudioDistanceMeters] = createSignal(-1);
+  const [liveFlashlightEnabled, setLiveFlashlightEnabled] = createSignal(false);
+  const [liveFlashlightSupported, setLiveFlashlightSupported] = createSignal(false);
+  const [liveFlashlightPanelOpen, setLiveFlashlightPanelOpen] = createSignal(false);
+  const [liveFlashlightKelvin, setLiveFlashlightKelvin] = createSignal(5200);
+  const [liveFlashlightLumens, setLiveFlashlightLumens] = createSignal(1200);
+  const [liveFlashlightKelvinRange, setLiveFlashlightKelvinRange] = createSignal({ min: 2600, max: 9000 });
+  const [liveFlashlightLumensRange, setLiveFlashlightLumensRange] = createSignal({ min: 350, max: 2200 });
 
   // Create Post
   const [showCreatePost, setShowCreatePost] = createSignal(false);
@@ -262,6 +279,8 @@ export function SnapApp() {
   let stopSnapMockFeed: (() => void) | undefined;
   let liveAudioWatchdogTimer: number | undefined;
   let liveAudioRetryTimer: number | undefined;
+  let liveFlashlightPressTimer: number | undefined;
+  let liveFlashlightLongPress = false;
 
   // FAB Tooltip
   let fabTimeout: number;
@@ -309,6 +328,74 @@ export function SnapApp() {
     await loadDiscoverFeed(true);
     
     setLoading(false);
+  };
+
+  const loadLiveFlashlightSettings = async () => {
+    if (!liveFlashlightSupported()) return;
+
+    const settings = await fetchNui<FlashlightSettings>('cameraGetFlashlightSettings', {}, {
+      enabled: false,
+      kelvin: 5200,
+      lumens: 1200,
+      minKelvin: 2600,
+      maxKelvin: 9000,
+      minLumens: 350,
+      maxLumens: 2200,
+    });
+
+    setLiveFlashlightEnabled(settings.enabled === true);
+    setLiveFlashlightKelvin(settings.kelvin || 5200);
+    setLiveFlashlightLumens(settings.lumens || 1200);
+    setLiveFlashlightKelvinRange({ min: settings.minKelvin || 2600, max: settings.maxKelvin || 9000 });
+    setLiveFlashlightLumensRange({ min: settings.minLumens || 350, max: settings.maxLumens || 2200 });
+  };
+
+  const saveLiveFlashlightSettings = async (next: { kelvin?: number; lumens?: number }) => {
+    const result = await fetchNui<FlashlightSettings>('cameraSetFlashlightSettings', next, {
+      kelvin: next.kelvin || liveFlashlightKelvin(),
+      lumens: next.lumens || liveFlashlightLumens(),
+    });
+
+    if (typeof result.kelvin === 'number') setLiveFlashlightKelvin(result.kelvin);
+    if (typeof result.lumens === 'number') setLiveFlashlightLumens(result.lumens);
+  };
+
+  const applyLiveFlashlightPreset = async (kelvin: number, lumens = liveFlashlightLumens()) => {
+    setLiveFlashlightKelvin(kelvin);
+    setLiveFlashlightLumens(lumens);
+    await saveLiveFlashlightSettings({ kelvin, lumens });
+  };
+
+  const beginLiveFlashlightPress = () => {
+    if (!liveFlashlightSupported()) return;
+    liveFlashlightLongPress = false;
+    if (liveFlashlightPressTimer) window.clearTimeout(liveFlashlightPressTimer);
+    liveFlashlightPressTimer = window.setTimeout(() => {
+      liveFlashlightLongPress = true;
+      setLiveFlashlightPanelOpen(true);
+      void loadLiveFlashlightSettings();
+    }, 420);
+  };
+
+  const endLiveFlashlightPress = () => {
+    if (liveFlashlightPressTimer) {
+      window.clearTimeout(liveFlashlightPressTimer);
+      liveFlashlightPressTimer = undefined;
+    }
+
+    if (liveFlashlightLongPress) {
+      liveFlashlightLongPress = false;
+      return;
+    }
+
+    void toggleLiveFlashlight();
+  };
+
+  const cancelLiveFlashlightPress = () => {
+    if (liveFlashlightPressTimer) {
+      window.clearTimeout(liveFlashlightPressTimer);
+      liveFlashlightPressTimer = undefined;
+    }
   };
 
   const refreshFollowRequests = async () => {
@@ -397,6 +484,19 @@ export function SnapApp() {
 
   onMount(() => {
     void loadData();
+    void (async () => {
+      const capabilities = await fetchNui<{ flashlight?: boolean }>('cameraGetCapabilities', {}, { flashlight: false });
+      setLiveFlashlightSupported(capabilities?.flashlight === true);
+      if (capabilities?.flashlight) {
+        await loadLiveFlashlightSettings();
+      }
+    })();
+  });
+
+  onCleanup(() => {
+    if (liveFlashlightPressTimer) {
+      window.clearTimeout(liveFlashlightPressTimer);
+    }
   });
 
   createEffect(() => {
@@ -814,6 +914,7 @@ export function SnapApp() {
 
   const openLiveViewer = async (live: SnapLive) => {
     const owner = !!(myAccount()?.username && live.username && myAccount()?.username === live.username);
+    await fetchNui('phoneSetVisualMode', { mode: 'live' }, true);
     setStatusMessage('');
     setActiveLive(live);
     setLiveChatOpen(false);
@@ -929,6 +1030,13 @@ export function SnapApp() {
   };
 
   const closeLiveViewer = async () => {
+    await fetchNui('phoneSetVisualMode', { mode: 'text' }, true);
+    setLiveFlashlightPanelOpen(false);
+    if (liveFlashlightEnabled()) {
+      await fetchNui('cameraToggleFlashlight', { enabled: false }, { success: true, enabled: false });
+      setLiveFlashlightEnabled(false);
+    }
+
     const stream = activeLive();
     const isMock = !!stream && Number(stream.id) < 0;
     if (stream) {
@@ -990,6 +1098,19 @@ export function SnapApp() {
     };
     setLiveStreaming(true);
     await openLiveViewer(stream);
+  };
+
+  const toggleLiveFlashlight = async () => {
+    if (!liveFlashlightSupported()) return;
+
+    const nextState = !liveFlashlightEnabled();
+    const result = await fetchNui<{ success?: boolean; enabled?: boolean }>('cameraToggleFlashlight', { enabled: nextState }, { success: true, enabled: nextState });
+    if (result?.success) {
+      setLiveFlashlightEnabled(result.enabled === true);
+      if (!result.enabled) {
+        setLiveFlashlightPanelOpen(false);
+      }
+    }
   };
 
   const startMockLive = async () => {
@@ -1777,7 +1898,74 @@ export function SnapApp() {
                   </Show>
                 </div>
               </Show>
-              <button class={styles.liveChatToggle} onClick={() => setLiveChatOpen((prev) => !prev)}>💬</button>
+              <Show when={liveFlashlightSupported() && isLiveOwner()}>
+                <div class={styles.liveFlashlightDock}>
+                  <button
+                    class={styles.liveUtilityButton}
+                    classList={{ [styles.liveUtilityButtonActive]: liveFlashlightEnabled() }}
+                    onPointerDown={beginLiveFlashlightPress}
+                    onPointerUp={endLiveFlashlightPress}
+                    onPointerLeave={cancelLiveFlashlightPress}
+                    onPointerCancel={cancelLiveFlashlightPress}
+                    title="Linterna"
+                  >
+                    🔦
+                  </button>
+                  <Show when={liveFlashlightEnabled()}>
+                    <div class={styles.liveFlashlightBadge}>
+                      {liveFlashlightKelvin()}K · {liveFlashlightLumens()}lm
+                    </div>
+                  </Show>
+                  <Show when={liveFlashlightPanelOpen()}>
+                    <div class={styles.liveFlashlightPanel}>
+                      <div class={styles.liveFlashlightPanelHeader}>
+                        <strong>Tono de linterna</strong>
+                        <span>Manten presionado para abrir</span>
+                      </div>
+                      <div class={styles.liveFlashlightStats}>
+                        <span>{liveFlashlightKelvin()}K</span>
+                        <span>{liveFlashlightLumens()} lm</span>
+                      </div>
+                      <label class={styles.liveFlashlightControl}>
+                        <span>Kelvin</span>
+                        <input
+                          type="range"
+                          min={liveFlashlightKelvinRange().min}
+                          max={liveFlashlightKelvinRange().max}
+                          step="100"
+                          value={liveFlashlightKelvin()}
+                          onInput={(e) => {
+                            const value = Number(e.currentTarget.value);
+                            setLiveFlashlightKelvin(value);
+                            void saveLiveFlashlightSettings({ kelvin: value });
+                          }}
+                        />
+                      </label>
+                      <label class={styles.liveFlashlightControl}>
+                        <span>Lumenes</span>
+                        <input
+                          type="range"
+                          min={liveFlashlightLumensRange().min}
+                          max={liveFlashlightLumensRange().max}
+                          step="50"
+                          value={liveFlashlightLumens()}
+                          onInput={(e) => {
+                            const value = Number(e.currentTarget.value);
+                            setLiveFlashlightLumens(value);
+                            void saveLiveFlashlightSettings({ lumens: value });
+                          }}
+                        />
+                      </label>
+                      <div class={styles.liveFlashlightPresets}>
+                        <button type="button" onClick={() => void applyLiveFlashlightPreset(3200, 950)}>Calida</button>
+                        <button type="button" onClick={() => void applyLiveFlashlightPreset(5200, 1200)}>Neutra</button>
+                        <button type="button" onClick={() => void applyLiveFlashlightPreset(7600, 1500)}>Fria</button>
+                      </div>
+                    </div>
+                  </Show>
+                </div>
+              </Show>
+              <button class={styles.liveUtilityButton} onClick={() => setLiveChatOpen((prev) => !prev)}>💬</button>
             </div>
           </div>
 
