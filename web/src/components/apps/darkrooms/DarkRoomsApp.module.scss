@@ -185,7 +185,7 @@
 // FAB (Floating Action Button)
 .fabContainer {
   position: fixed;
-  bottom: 24px;
+  bottom: calc(24px + var(--phone-bottom-ui-gap, 0px));
   right: 24px;
   z-index: 100;
   display: flex;

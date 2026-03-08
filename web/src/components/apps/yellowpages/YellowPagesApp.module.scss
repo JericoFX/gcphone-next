@@ -344,7 +344,7 @@
 // FAB
 .fab {
   position: fixed;
-  bottom: 24px;
+  bottom: calc(24px + var(--phone-bottom-ui-gap, 0px));
   right: 24px;
   width: 56px;
   height: 56px;
@@ -403,7 +403,7 @@
 }
 
 .detailContent {
-  padding-bottom: 100px;
+  padding-bottom: calc(100px + var(--phone-bottom-ui-gap, 0px));
 }
 
 .detailImage {
@@ -686,7 +686,7 @@
 
 // Composer
 .composerContent {
-  padding: 4px;
+  padding: 4px 4px calc(12px + var(--phone-bottom-ui-gap, 0px));
 }
 
 .formField {

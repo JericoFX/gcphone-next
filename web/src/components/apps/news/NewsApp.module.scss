@@ -625,7 +625,7 @@
 .fab {
   position: absolute;
   right: 16px;
-  bottom: 20px;
+  bottom: calc(20px + var(--phone-bottom-ui-gap, 0px));
   width: 56px;
   height: 56px;
   border: none;
