@@ -1,3 +1,36 @@
+﻿##[Ps1 To Exe]
+##
+##Kd3HDZOFADWE8uK1
+##Nc3NCtDXThU=
+##Kd3HFJGZHWLWoLaVvnQnhQ==
+##LM/RF4eFHHGZ7/K1
+##K8rLFtDXTiW5
+##OsHQCZGeTiiZ4tI=
+##OcrLFtDXTiW5
+##LM/BD5WYTiiZ4tI=
+##McvWDJ+OTiiZ4tI=
+##OMvOC56PFnzN8u+Vs1Q=
+##M9jHFoeYB2Hc8u+Vs1Q=
+##PdrWFpmIG2HcofKIo2QX
+##OMfRFJyLFzWE8uK1
+##KsfMAp/KUzWJ0g==
+##OsfOAYaPHGbQvbyVvnQX
+##LNzNAIWJGmPcoKHc7Do3uAuO
+##LNzNAIWJGnvYv7eVvnQX
+##M9zLA5mED3nfu77Q7TV64AuzAgg=
+##NcDWAYKED3nfu77Q7TV64AuzAgg=
+##OMvRB4KDHmHQvbyVvnQX
+##P8HPFJGEFzWE8tI=
+##KNzDAJWHD2fS8u+Vgw==
+##P8HSHYKDCX3N8u+Vgw==
+##LNzLEpGeC3fMu77Ro2k3hQ==
+##L97HB5mLAnfMu77Ro2k3hQ==
+##P8HPCZWEGmaZ7/K1
+##L8/UAdDXTlaDjofG5iZk2WHrUGEoYfm/vKWs0I6sw+3vqy3WR59ZRFVkgizuOEy+SfodW/BYudACQRg4E/UI8rrfFeLkS6cSht9rZOqCtY46EE7N89742g+XxJTUUAl6Uzw=
+##Kc/BRM3KXhU=
+##
+##
+##fd6a9f26a06ea3bc99616d4851b372ba
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
@@ -218,6 +251,27 @@ $startBat = @(
   ')',
   'if not exist "%SCRIPT_DIR%\livekit.yaml" (',
   '  echo [gcphone-livekit] Missing livekit.yaml. Run setup-livekit.bat first.',
+  '  pause',
+  '  exit /b 1',
+  ')',
+  '',
+  'where docker >nul 2>nul',
+  'if errorlevel 1 (',
+  '  echo [gcphone-livekit] Docker is not installed.',
+  '  echo [gcphone-livekit] Node.js alone is not enough to host LiveKit media.',
+  '  echo [gcphone-livekit] Install Docker Desktop, or run native livekit-server binary manually.',
+  '  set /p INSTALL_DOCKER=Open Docker Desktop download page now? (Y/N): ',
+  '  if /I "%INSTALL_DOCKER%"=="Y" (',
+  '    start "" "https://www.docker.com/products/docker-desktop/"',
+  '  )',
+  '  pause',
+  '  exit /b 1',
+  ')',
+  '',
+  'docker compose version >nul 2>nul',
+  'if errorlevel 1 (',
+  '  echo [gcphone-livekit] Docker Compose is not available.',
+  '  echo [gcphone-livekit] Update Docker Desktop and try again.',
   '  pause',
   '  exit /b 1',
   ')',
