@@ -7,10 +7,11 @@ import { AppScaffold } from '../../shared/layout';
 import { useAppCache } from '../../../hooks';
 import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { MediaLightbox } from '../../shared/ui/MediaLightbox';
-import { Modal, ModalActions, ModalButton } from '../../shared/ui/Modal';
+import { MediaAttachmentPreview } from '../../shared/ui/MediaAttachmentPreview';
+import { MediaActionButtons } from '../../shared/ui/MediaActionButtons';
+import { FormField, FormTextarea, Modal, ModalActions, ModalButton } from '../../shared/ui/Modal';
 import { EmojiPickerButton } from '../../shared/ui/EmojiPicker';
 import { SocialOnboardingModal, type SocialOnboardingPayload } from '../../shared/ui/SocialOnboardingModal';
-import { uiPrompt } from '../../../utils/uiDialog';
 import styles from './ClipsApp.module.scss';
 
 interface Clip {
@@ -66,6 +67,11 @@ export function ClipsApp() {
   const [statusMessage, setStatusMessage] = createSignal('');
   const [deleteClipId, setDeleteClipId] = createSignal<number | null>(null);
   const [showOnboarding, setShowOnboarding] = createSignal(false);
+  const [showProfileModal, setShowProfileModal] = createSignal(false);
+  const [profileDisplayName, setProfileDisplayName] = createSignal('');
+  const [profileAvatar, setProfileAvatar] = createSignal('');
+  const [profileBio, setProfileBio] = createSignal('');
+  const [profilePrivate, setProfilePrivate] = createSignal(false);
 
   // Upload
   const [showUpload, setShowUpload] = createSignal(false);
@@ -125,6 +131,18 @@ export function ClipsApp() {
 
   createEffect(() => {
     void loadClips();
+  });
+
+  let lastAvatarMedia = '';
+  createEffect(() => {
+    const params = router.params();
+    const sharedAvatar = sanitizeMediaUrl(typeof params.avatarMedia === 'string' ? params.avatarMedia : '');
+    const openProfile = params.openProfile === '1';
+    if (!openProfile || !sharedAvatar || sharedAvatar === lastAvatarMedia) return;
+    lastAvatarMedia = sharedAvatar;
+    setProfileAvatar(sharedAvatar);
+    setShowProfileModal(true);
+    setStatusMessage('Avatar listo para guardar');
   });
 
   usePhoneKeyHandler({
@@ -242,32 +260,49 @@ export function ClipsApp() {
     router.navigate('camera', { target: 'clips' });
   };
 
-  const editProfile = async () => {
+  const openProfileEditor = async () => {
     const account = await fetchNui<SharedSnapAccount | null>('snapGetAccount', {});
     if (!account?.username) {
       setShowOnboarding(true);
       return;
     }
     if (!account) return;
-    const nextNameInput = await uiPrompt('Nombre visible para Snap/Clips/Noticias', {
-      title: 'Perfil',
-      defaultValue: account.display_name || '',
-      placeholder: 'Tu nombre',
-    });
-    if (nextNameInput === null) return;
-    const nextName = sanitizeText(nextNameInput, 50);
-    if (!nextName) return;
+    setProfileDisplayName(account.display_name || '');
+    setProfileAvatar(account.avatar || '');
+    setProfileBio(account.bio || '');
+    setProfilePrivate(!!account.is_private);
+    setShowProfileModal(true);
+  };
 
+  const saveProfile = async () => {
     const ok = await fetchNui<{ success?: boolean }>('snapUpdateAccount', {
-      displayName: nextName,
-      avatar: account.avatar || undefined,
-      bio: account.bio || undefined,
-      isPrivate: !!account.is_private,
+      displayName: sanitizeText(profileDisplayName(), 50),
+      avatar: sanitizeMediaUrl(profileAvatar()) || undefined,
+      bio: sanitizeText(profileBio(), 180) || undefined,
+      isPrivate: profilePrivate(),
     });
+
     if (ok?.success) {
       setStatusMessage('Perfil actualizado');
+      setShowProfileModal(false);
       await loadClips();
     }
+  };
+
+  const attachAvatarFromGallery = async () => {
+    const gallery = await fetchNui<any[]>('getGallery', undefined, []);
+    const image = gallery?.find((item: any) => item?.url && !item.url.match(/\.(mp4|webm|mov)$/i));
+    if (image?.url) {
+      setProfileAvatar(sanitizeMediaUrl(image.url) || '');
+      setStatusMessage('Avatar listo para guardar');
+      setShowProfileModal(true);
+    } else {
+      setStatusMessage('No se encontraron imagenes en la galeria.');
+    }
+  };
+
+  const openAvatarCamera = () => {
+    router.navigate('camera', { target: 'clips-avatar' });
   };
 
   const createSnapAccount = async (payload: SocialOnboardingPayload) => {
@@ -349,7 +384,7 @@ export function ClipsApp() {
           >
             Mis Videos
           </button>
-          <button class={styles.profileBtn} onClick={() => void editProfile()}>
+          <button class={styles.profileBtn} onClick={() => void openProfileEditor()}>
             Perfil
           </button>
         </div>
@@ -595,6 +630,36 @@ export function ClipsApp() {
               tone="primary"
               disabled={!uploadMedia() || loading()}
             />
+          </ModalActions>
+        </Modal>
+
+        <Modal
+          open={showProfileModal()}
+          title="Editar perfil"
+          onClose={() => setShowProfileModal(false)}
+          size="md"
+        >
+          <Show when={profileAvatar()}>
+            <MediaAttachmentPreview url={profileAvatar()} removable onRemove={() => setProfileAvatar('')} />
+          </Show>
+          <MediaActionButtons
+            actions={[
+              { icon: '📷', label: 'Camara', onClick: openAvatarCamera },
+              { icon: '🖼', label: 'Galeria', onClick: () => void attachAvatarFromGallery() },
+              ...(profileAvatar() ? [{ icon: '✕', label: 'Quitar', onClick: () => setProfileAvatar(''), tone: 'danger' as const }] : []),
+            ]}
+            variant="compact"
+          />
+          <FormField label="Nombre visible" value={profileDisplayName()} onChange={setProfileDisplayName} placeholder="Tu nombre" />
+          <FormField label="Avatar (URL opcional)" type="url" value={profileAvatar()} onChange={setProfileAvatar} placeholder="https://..." />
+          <FormTextarea label="Bio" value={profileBio()} onChange={setProfileBio} rows={3} placeholder="Cuenta algo sobre vos" />
+          <label class={styles.profileToggle}>
+            <input type="checkbox" checked={profilePrivate()} onChange={(e) => setProfilePrivate(e.currentTarget.checked)} />
+            <span>Cuenta privada</span>
+          </label>
+          <ModalActions>
+            <ModalButton label="Cancelar" onClick={() => setShowProfileModal(false)} />
+            <ModalButton label="Guardar" tone="primary" onClick={() => void saveProfile()} />
           </ModalActions>
         </Modal>
 

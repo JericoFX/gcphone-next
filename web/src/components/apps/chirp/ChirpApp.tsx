@@ -213,6 +213,18 @@ export function ChirpApp() {
     setShowComposer(true);
   });
 
+  let lastAvatarMedia = '';
+  createEffect(() => {
+    const params = router.params();
+    const sharedAvatar = sanitizeMediaUrl(typeof params.avatarMedia === 'string' ? params.avatarMedia : '');
+    const openProfile = params.openProfile === '1';
+    if (!openProfile || !sharedAvatar || sharedAvatar === lastAvatarMedia) return;
+    lastAvatarMedia = sharedAvatar;
+    setProfileAvatar(sharedAvatar);
+    setShowProfileModal(true);
+    setStatusMessage('Avatar listo para guardar');
+  });
+
   usePhoneKeyHandler({
     Backspace: () => {
       if (showAttachUrlModal()) {
@@ -410,6 +422,23 @@ export function ChirpApp() {
 
   const openCamera = () => {
     router.navigate('camera', { target: 'chirp' });
+  };
+
+  const attachAvatarFromGallery = async () => {
+    const gallery = await fetchNui<any[]>('getGallery', undefined, []);
+    const image = gallery?.find((item: any) => resolveMediaType(item?.url || '') === 'image');
+    if (image?.url) {
+      const clean = sanitizeMediaUrl(image.url) || '';
+      setProfileAvatar(clean);
+      setShowProfileModal(true);
+      setStatusMessage('Avatar listo para guardar');
+    } else {
+      setStatusMessage('No se encontraron imagenes en la galeria');
+    }
+  };
+
+  const openAvatarCamera = () => {
+    router.navigate('camera', { target: 'chirp-avatar' });
   };
 
   const openProfileEditor = () => {
@@ -935,6 +964,17 @@ export function ChirpApp() {
         onClose={() => setShowProfileModal(false)}
         size="md"
       >
+        <Show when={profileAvatar()}>
+          <MediaAttachmentPreview url={profileAvatar()} removable onRemove={() => setProfileAvatar('')} />
+        </Show>
+        <MediaActionButtons
+          actions={[
+            { icon: '📷', label: 'Camara', onClick: openAvatarCamera },
+            { icon: '🖼', label: 'Galeria', onClick: () => void attachAvatarFromGallery() },
+            ...(profileAvatar() ? [{ icon: '✕', label: 'Quitar', onClick: () => setProfileAvatar(''), tone: 'danger' as const }] : []),
+          ]}
+          variant="compact"
+        />
         <FormField label="Nombre visible" value={profileDisplayName()} onChange={setProfileDisplayName} placeholder="Tu nombre" />
         <FormField label="Avatar (URL opcional)" type="url" value={profileAvatar()} onChange={setProfileAvatar} placeholder="https://..." />
         <FormTextarea label="Bio" value={profileBio()} onChange={setProfileBio} rows={3} placeholder="Cuenta algo sobre vos" />

@@ -9,7 +9,7 @@ import { useNuiEvent } from '../../../utils/useNui';
 import styles from './CameraApp.module.scss';
 
 type CameraEffect = 'normal' | 'noir' | 'vivid' | 'warm';
-type CameraTarget = 'snap-post' | 'snap-story' | 'snap-avatar' | 'chirp' | 'clips' | '';
+type CameraTarget = 'snap-post' | 'snap-story' | 'snap-avatar' | 'chirp' | 'chirp-avatar' | 'clips' | 'clips-avatar' | '';
 
 interface EffectConfig {
   id: CameraEffect;
@@ -29,7 +29,9 @@ function targetLabel(target: CameraTarget) {
   if (target === 'snap-story') return 'Snap Story';
   if (target === 'snap-avatar') return 'Avatar';
   if (target === 'chirp') return 'Chirp';
+  if (target === 'chirp-avatar') return 'Avatar';
   if (target === 'clips') return 'Clips';
+  if (target === 'clips-avatar') return 'Avatar';
   return 'Foto';
 }
 
@@ -205,6 +207,10 @@ export function CameraApp() {
       router.navigate('snap');
     } else if (target() === 'snap-avatar') {
       router.navigate('snap', { avatarMedia: mediaUrl, openProfile: '1' });
+    } else if (target() === 'chirp-avatar') {
+      router.navigate('chirp', { avatarMedia: mediaUrl, openProfile: '1' });
+    } else if (target() === 'clips-avatar') {
+      router.navigate('clips', { avatarMedia: mediaUrl, openProfile: '1' });
     } else if (target() === 'chirp') {
       await fetchNui('chirpPublishTweet', {
         content: 'Nueva foto',
