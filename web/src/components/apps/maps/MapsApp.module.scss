@@ -93,7 +93,7 @@
 
 .fab {
   position: absolute;
-  bottom: 24px;
+  bottom: calc(24px + var(--phone-bottom-ui-gap, 0px));
   right: 16px;
   width: 56px;
   height: 56px;
@@ -139,7 +139,7 @@
 
 .fabMenu {
   position: absolute;
-  bottom: 92px;
+  bottom: calc(92px + var(--phone-bottom-ui-gap, 0px));
   right: 16px;
   display: flex;
   flex-direction: column;

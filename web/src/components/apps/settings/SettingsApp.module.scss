@@ -4,7 +4,7 @@
 
 .settings-canvas {
   background: transparent;
-  padding: 12px 16px;
+  padding: 12px 16px calc(28px + var(--phone-bottom-ui-gap, 0px));
 }
 
 .settings-header {
