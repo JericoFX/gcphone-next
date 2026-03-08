@@ -29,7 +29,7 @@
   font-weight: 600;
   cursor: pointer;
   position: relative;
-  transition: all 150ms ease;
+  transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease, opacity 150ms ease, transform 150ms ease, box-shadow 150ms ease;
   
   &:hover {
     color: #3a3a3c;
@@ -75,7 +75,7 @@
   border-radius: 16px;
   margin-bottom: 12px;
   cursor: pointer;
-  transition: all 150ms ease;
+  transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease, opacity 150ms ease, transform 150ms ease, box-shadow 150ms ease;
   
   &:hover {
     transform: translateX(4px);
@@ -187,7 +187,7 @@
   font-weight: 300;
   cursor: pointer;
   box-shadow: 0 4px 14px rgba(0, 122, 255, 0.4);
-  transition: all 200ms ease;
+  transition: background-color 200ms ease, color 200ms ease, border-color 200ms ease, opacity 200ms ease, transform 200ms ease, box-shadow 200ms ease;
   z-index: 100;
   
   &:hover {
@@ -220,7 +220,7 @@
   border-radius: 16px;
   background: #ffffff;
   cursor: pointer;
-  transition: all 150ms ease;
+  transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease, opacity 150ms ease, transform 150ms ease, box-shadow 150ms ease;
   
   &:hover {
     border-color: #007aff;
@@ -625,7 +625,7 @@
   border-radius: 12px;
   background: #ffffff;
   cursor: pointer;
-  transition: all 150ms ease;
+  transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease, opacity 150ms ease, transform 150ms ease, box-shadow 150ms ease;
   
   span:first-child {
     font-size: 24px;
