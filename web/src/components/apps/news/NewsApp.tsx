@@ -99,6 +99,7 @@ export function NewsApp() {
   const [mediaUrl, setMediaUrl] = createSignal('');
   const [category, setCategory] = createSignal('general');
   const [liveArticleId, setLiveArticleId] = createSignal<number | null>(null);
+  const [joinedLiveId, setJoinedLiveId] = createSignal<number | null>(null);
   const [activeLive, setActiveLive] = createSignal<NewsArticle | null>(null);
   const [liveChatOpen, setLiveChatOpen] = createSignal(false);
   const [liveChatInput, setLiveChatInput] = createSignal('');
@@ -174,7 +175,31 @@ export function NewsApp() {
     setMockLiveMessages((prev) => [...prev.slice(-19), next]);
   };
 
+  const syncLiveViewerCount = (articleId: number, viewers: number) => {
+    const nextViewers = Math.max(0, Math.floor(viewers));
+    setArticles((prev) => prev.map((article) => (article.id === articleId ? { ...article, live_viewers: nextViewers } : article)));
+    setLiveArticles((prev) => prev.map((article) => (article.id === articleId ? { ...article, live_viewers: nextViewers } : article)));
+    setActiveLive((prev) => (prev?.id === articleId ? { ...prev, live_viewers: nextViewers } : prev));
+  };
+
+  const leaveJoinedLive = async (articleId = joinedLiveId()) => {
+    if (!articleId || articleId === liveArticleId()) {
+      if (joinedLiveId() === articleId) setJoinedLiveId(null);
+      return;
+    }
+
+    await fetchNui('newsLeaveLive', { articleId }, { success: true });
+    if (joinedLiveId() === articleId) setJoinedLiveId(null);
+  };
+
   const closeLiveViewer = () => {
+    const current = activeLive();
+    if (joinedLiveId() && current?.id === joinedLiveId()) {
+      void leaveJoinedLive(joinedLiveId());
+    }
+    if (!current || current.id !== liveArticleId()) {
+      void fetchNui('phoneSetVisualMode', { mode: 'text' }, true);
+    }
     setActiveLive(null);
     setLiveChatOpen(false);
     setLiveChatInput('');
@@ -182,10 +207,24 @@ export function NewsApp() {
   };
 
   const openLiveViewer = async (article: NewsArticle) => {
+    if (joinedLiveId() && joinedLiveId() !== article.id) {
+      await leaveJoinedLive(joinedLiveId());
+    }
+
     setActiveLive(article);
     setLiveChatOpen(false);
     if (isLiveArticle(article) && article.id > 0 && !mockLiveEnabled()) {
       await refreshScaleform(article.id);
+
+      if (liveArticleId() !== article.id) {
+        const joinResult = await fetchNui<{ success?: boolean; viewers?: number }>('newsJoinLive', { articleId: article.id }, { success: false });
+        if (joinResult?.success) {
+          setJoinedLiveId(article.id);
+          if (typeof joinResult.viewers === 'number') {
+            syncLiveViewerCount(article.id, joinResult.viewers);
+          }
+        }
+      }
     }
   };
 
@@ -210,6 +249,10 @@ export function NewsApp() {
 
   onMount(() => {
     void loadAccount();
+  });
+
+  onCleanup(() => {
+    void leaveJoinedLive();
   });
 
   usePhoneKeyHandler({
@@ -248,14 +291,30 @@ export function NewsApp() {
   useNuiCustomEvent<number>('gcphone:news:liveEnded', (articleId) => {
     const nextId = Number(articleId || 0);
     if (nextId && liveArticleId() === nextId) setLiveArticleId(null);
+    if (nextId && joinedLiveId() === nextId) setJoinedLiveId(null);
     if (nextId && activeLive()?.id === nextId) closeLiveViewer();
     void load();
   });
 
-  useNuiCustomEvent<{ articleId?: number }>('gcphone:news:scaleformUpdated', (payload) => {
+  useNuiCustomEvent<{ articleId?: number; scaleform?: NewsScaleform }>('gcphone:news:scaleformUpdated', (payload) => {
     const nextId = Number(payload?.articleId || activeLive()?.id || 0);
+    if (nextId > 0 && payload?.scaleform) {
+      setScalePreset((payload.scaleform.preset || 'breaking') as NewsScaleform['preset']);
+      setScaleHeadline(sanitizeText(payload.scaleform.headline || '', 80) || 'ULTIMO MOMENTO');
+      setScaleSubtitle(sanitizeText(payload.scaleform.subtitle || '', 120) || 'Cobertura en vivo');
+      setScaleTicker(sanitizeText(payload.scaleform.ticker || '', 180) || 'Desarrollo en curso...');
+      return;
+    }
     if (nextId > 0) {
       void refreshScaleform(nextId);
+    }
+  });
+
+  useNuiCustomEvent<{ articleId?: number; viewers?: number }>('gcphone:news:viewersUpdated', (payload) => {
+    const articleId = Number(payload?.articleId || 0);
+    const viewers = Number(payload?.viewers ?? -1);
+    if (articleId > 0 && viewers >= 0) {
+      syncLiveViewerCount(articleId, viewers);
     }
   });
 

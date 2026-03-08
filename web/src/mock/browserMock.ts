@@ -758,6 +758,7 @@ const mockNewsArticles: Array<Record<string, unknown>> = [
 const mockNewsScaleforms = new Map<number, Record<string, string>>([
   [2, { preset: 'breaking', headline: 'TRAFICO EN VIVO', subtitle: 'Cobertura desde la autopista', ticker: 'Desvios activos en este momento' }],
 ]);
+const mockJoinedNewsLives = new Set<number>();
 const mockWalletRequests: Array<{
   id: number;
   requesterIdentifier: string;
@@ -2258,6 +2259,44 @@ export async function handleBrowserNui<T = unknown>(eventName: string, data?: un
     return (mockNewsScaleforms.get(articleId) || null) as T;
   }
 
+  if (eventName === 'newsJoinLive') {
+    const articleId = Number(payload?.articleId || 0);
+    const article = mockNewsArticles.find((entry) => Number(entry.id || 0) === articleId && Number(entry.is_live || 0) === 1);
+    if (!article) {
+      return { success: false, error: 'LIVE_UNAVAILABLE' } as T;
+    }
+    if (!mockJoinedNewsLives.has(articleId)) {
+      mockJoinedNewsLives.add(articleId);
+      article.live_viewers = Math.max(0, Number(article.live_viewers || 0)) + 1;
+      emitMessage('gcphone:news:viewersUpdated', { articleId, viewers: article.live_viewers });
+    }
+    return { success: true, articleId, viewers: Number(article.live_viewers || 0) } as T;
+  }
+
+  if (eventName === 'newsLeaveLive') {
+    const articleId = Number(payload?.articleId || 0);
+    if (articleId > 0) {
+      const article = mockNewsArticles.find((entry) => Number(entry.id || 0) === articleId);
+      if (article && mockJoinedNewsLives.has(articleId)) {
+        mockJoinedNewsLives.delete(articleId);
+        article.live_viewers = Math.max(0, Number(article.live_viewers || 0) - 1);
+        emitMessage('gcphone:news:viewersUpdated', { articleId, viewers: article.live_viewers });
+      }
+      return { success: true } as T;
+    }
+
+    for (const joinedId of Array.from(mockJoinedNewsLives)) {
+      const article = mockNewsArticles.find((entry) => Number(entry.id || 0) === joinedId);
+      if (article) {
+        article.live_viewers = Math.max(0, Number(article.live_viewers || 0) - 1);
+        emitMessage('gcphone:news:viewersUpdated', { articleId: joinedId, viewers: article.live_viewers });
+      }
+      mockJoinedNewsLives.delete(joinedId);
+    }
+
+    return { success: true } as T;
+  }
+
   if (eventName === 'newsStartLive') {
     const articleId = nextMockNewsId++;
     const scaleform = (payload?.scaleform as Record<string, unknown> | undefined) || {};
@@ -2293,7 +2332,7 @@ export async function handleBrowserNui<T = unknown>(eventName: string, data?: un
         subtitle: String(scaleform.subtitle || 'Cobertura en vivo'),
         ticker: String(scaleform.ticker || 'Desarrollo en curso...'),
       });
-      emitMessage('gcphone:news:scaleformUpdated', { articleId });
+      emitMessage('gcphone:news:scaleformUpdated', { articleId, scaleform: mockNewsScaleforms.get(articleId) });
     }
     return { success: true } as T;
   }
@@ -2305,6 +2344,7 @@ export async function handleBrowserNui<T = unknown>(eventName: string, data?: un
       article.is_live = 0;
       article.live_viewers = 0;
     }
+    mockJoinedNewsLives.delete(articleId);
     mockNewsScaleforms.delete(articleId);
     emitMessage('gcphone:news:liveEnded', articleId);
     return { success: true } as T;
