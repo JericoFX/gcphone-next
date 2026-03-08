@@ -16,7 +16,6 @@ CREATE TABLE IF NOT EXISTS `phone_numbers` (
     `ringtone` VARCHAR(50) DEFAULT 'ring.ogg',
     `volume` FLOAT DEFAULT 0.5,
     `lock_code` VARCHAR(10) DEFAULT '0000',
-    `coque` VARCHAR(50) DEFAULT 'sin_funda.png',
     `theme` VARCHAR(10) DEFAULT 'light',
     `language` VARCHAR(8) DEFAULT 'es',
     `audio_profile` VARCHAR(16) DEFAULT 'normal',
@@ -841,7 +840,10 @@ CREATE INDEX IF NOT EXISTS `idx_messages_transmitter_receiver` ON `phone_message
 CREATE INDEX IF NOT EXISTS `idx_calls_owner_time` ON `phone_calls` (`owner`, `time`);
 
 ALTER TABLE `phone_numbers`
-ADD COLUMN IF NOT EXISTS `theme` VARCHAR(10) DEFAULT 'light' AFTER `coque`;
+DROP COLUMN IF EXISTS `coque`;
+
+ALTER TABLE `phone_numbers`
+ADD COLUMN IF NOT EXISTS `theme` VARCHAR(10) DEFAULT 'light' AFTER `lock_code`;
 
 ALTER TABLE `phone_numbers`
 ADD COLUMN IF NOT EXISTS `language` VARCHAR(8) DEFAULT 'es' AFTER `theme`;

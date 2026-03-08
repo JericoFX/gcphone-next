@@ -174,13 +174,6 @@ export const PhoneFrame: ParentComponent & { Router: () => JSX.Element } = (prop
 
   return (
     <div class={styles.phoneWrapper} style={browserMode ? { transform: 'none', right: '20px', bottom: '20px' } : undefined}>
-      <Show when={phoneState.settings.coque && phoneState.settings.coque !== 'sin_funda.png'}>
-        <div
-          class={styles.phoneCoque}
-          style={{ 'background-image': `url(./img/coque/${phoneState.settings.coque})` }}
-        />
-      </Show>
-
       <div class={styles.phoneScreen} style={{ 'background-image': `url(${phoneState.settings.wallpaper})`, filter: `brightness(${notifications.brightness})` }}>
         <RouterContext.Provider value={router}>
           <ControlCenter />

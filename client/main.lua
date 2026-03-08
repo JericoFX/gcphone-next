@@ -106,7 +106,6 @@ CreateThread(function()
             PhoneState.ringtone = data.ringtone
             PhoneState.volume = data.volume
             PhoneState.lockCode = data.lockCode
-            PhoneState.coque = data.coque
             PhoneState.language = data.language
             PhoneState.audioProfile = data.audioProfile
             data.nuiAuthToken = RotateNuiAuthToken()
@@ -125,7 +124,6 @@ RegisterNetEvent('gcphone:init', function(data)
     PhoneState.ringtone = data.ringtone
     PhoneState.volume = data.volume
     PhoneState.lockCode = data.lockCode
-    PhoneState.coque = data.coque
     PhoneState.language = data.language
     PhoneState.audioProfile = data.audioProfile
     data.nuiAuthToken = RotateNuiAuthToken()
