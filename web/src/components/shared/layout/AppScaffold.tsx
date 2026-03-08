@@ -15,6 +15,7 @@ interface AppScaffoldProps extends ParentProps {
   headerRight?: JSX.Element;
   footer?: JSX.Element;
   bodyClass?: string;
+  bodyPadding?: 'none' | 'sm' | 'md';
   footerFixed?: boolean;
   transparent?: boolean;
 }
@@ -32,7 +33,7 @@ export function AppScaffold(props: AppScaffoldProps) {
         {props.headerRight}
       </AppHeader>
 
-      <AppBody class={props.bodyClass}>{props.children}</AppBody>
+      <AppBody class={props.bodyClass} padding={props.bodyPadding}>{props.children}</AppBody>
 
       <Show when={props.footer}>
         <AppFooter fixed={props.footerFixed}>{props.footer}</AppFooter>

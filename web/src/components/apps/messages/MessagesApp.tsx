@@ -273,7 +273,7 @@ export function MessagesApp() {
         onDeleteConversation={() => void deleteConversation(selectedConversation()!)}
       />
     }>
-      <AppScaffold title="Mensajes" subtitle="Tus conversaciones" onBack={() => router.goBack()}>
+      <AppScaffold title="Mensajes" subtitle="Tus conversaciones" onBack={() => router.goBack()} bodyPadding="none">
         <div class={styles.messagesApp}>
           <div class={styles.conversationList}>
             <Show
