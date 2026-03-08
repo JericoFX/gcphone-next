@@ -5,6 +5,8 @@
   display: flex;
   flex-direction: column;
   background-color: var(--color-background);
+  box-sizing: border-box;
+  padding-bottom: var(--phone-bottom-ui-gap, 0px);
 }
 
 @mixin custom-scrollbar {
