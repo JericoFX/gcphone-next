@@ -260,7 +260,7 @@ $startBat = @(
   '  echo [gcphone-livekit] Docker is not installed.',
   '  echo [gcphone-livekit] Node.js alone is not enough to host LiveKit media.',
   '  echo [gcphone-livekit] Install Docker Desktop, or run native livekit-server binary manually.',
-  '  set /p INSTALL_DOCKER=Open Docker Desktop download page now? (Y/N): ',
+  '  set /p INSTALL_DOCKER=Open Docker Desktop download page now? Y/N: ',
   '  if /I "%INSTALL_DOCKER%"=="Y" (',
   '    start "" "https://www.docker.com/products/docker-desktop/"',
   '  )',
