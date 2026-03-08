@@ -5,6 +5,7 @@ import { useNotifications } from '../../../store/notifications';
 import { fetchNui } from '../../../utils/fetchNui';
 import { APP_DEFINITIONS } from '../../../config/apps';
 import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
+import { AppScaffold } from '../../shared/layout';
 import { appName, t } from '../../../i18n';
 import styles from './SettingsApp.module.scss';
 
@@ -650,25 +651,19 @@ export function SettingsApp() {
   );
 
   return (
-    <div class={`ios-page ${styles.app}`}>
-      <div class="ios-nav">
-        <button class="ios-icon-btn k-touch-ripple" onClick={() => router.goBack()}>‹</button>
-        <div class="ios-nav-title">{t('settings.title', language())}</div>
-      </div>
-
-      <div class={`ios-content ${styles.settingsCanvas}`}>
-        <div class={styles.settingsHeader}>
-          <div class={styles.settingsTitle}>{t('settings.title', language())}</div>
-          <div class={styles.settingsSubtitle}>Personaliza tu experiencia</div>
-        </div>
-
+    <AppScaffold
+      title={t('settings.title', language())}
+      subtitle='Personaliza tu experiencia'
+      onBack={() => router.goBack()}
+      bodyClass={`${styles.app} ${styles.settingsCanvas}`}
+      bodyPadding='none'
+    >
         {renderNav()}
 
         <Show when={tab() === 'appearance'}>{renderAppearance()}</Show>
         <Show when={tab() === 'sound'}>{renderSound()}</Show>
         <Show when={tab() === 'security'}>{renderSecurity()}</Show>
         <Show when={tab() === 'advanced'}>{renderAdvanced()}</Show>
-      </div>
-    </div>
+    </AppScaffold>
   );
 }
