@@ -553,14 +553,14 @@ export function WaveChatApp() {
   });
 
   return (
-    <div class={styles.app}>
+    <>
       <Show
         when={!selectedConversation()}
         fallback={
-            <ConversationView
-              phoneNumber={selectedConversation()!}
-              contactName={getContactName(selectedConversation()!)}
-              messages={selectedConversationMessages()}
+          <ConversationView
+            phoneNumber={selectedConversation()!}
+            contactName={getContactName(selectedConversation()!)}
+            messages={selectedConversationMessages()}
             messageInput={messageInput()}
             attachmentUrl={attachmentUrl()}
             showAttachSheet={showAttachSheet()}
@@ -593,22 +593,17 @@ export function WaveChatApp() {
           />
         }
       >
-        <div class={styles.nav}>
-          <button class={styles.iconBtn} onClick={() => router.goBack()}>
-            ‹
-          </button>
-          <div class={styles.navTitle}>WaveChat</div>
-          <button class={styles.iconBtn}>💬</button>
-        </div>
-        <div class={styles.tabs}>
-          <button class={styles.tabBtn} classList={{ [styles.tabActive]: activeTab() === 'chats' }} onClick={() => setActiveTab('chats')}>Chats</button>
-          <button class={styles.tabBtn} classList={{ [styles.tabActive]: activeTab() === 'status' }} onClick={() => setActiveTab('status')}>Estado</button>
-          <button class={styles.tabBtn} classList={{ [styles.tabActive]: activeTab() === 'calls' }} onClick={() => setActiveTab('calls')}>Llamadas</button>
-          <button class={styles.tabBtn} classList={{ [styles.tabActive]: activeTab() === 'groups' }} onClick={() => setActiveTab('groups')}>Grupos</button>
-        </div>
+        <AppScaffold title='WaveChat' subtitle='Chats, grupos y llamadas' onBack={() => router.goBack()} bodyPadding='none'>
+          <div class={styles.app}>
+            <div class={styles.tabs}>
+              <button class={styles.tabBtn} classList={{ [styles.tabActive]: activeTab() === 'chats' }} onClick={() => setActiveTab('chats')}>Chats</button>
+              <button class={styles.tabBtn} classList={{ [styles.tabActive]: activeTab() === 'status' }} onClick={() => setActiveTab('status')}>Estado</button>
+              <button class={styles.tabBtn} classList={{ [styles.tabActive]: activeTab() === 'calls' }} onClick={() => setActiveTab('calls')}>Llamadas</button>
+              <button class={styles.tabBtn} classList={{ [styles.tabActive]: activeTab() === 'groups' }} onClick={() => setActiveTab('groups')}>Grupos</button>
+            </div>
 
-        <div class={styles.list}>
-          <Show when={activeTab() === 'chats'}>
+            <div class={styles.list}>
+              <Show when={activeTab() === 'chats'}>
             <VirtualList items={conversations} itemHeight={78} overscan={5}>
               {(convo, index) => (
                 <div
@@ -730,7 +725,9 @@ export function WaveChatApp() {
               </div>
             </Show>
           </Show>
-        </div>
+            </div>
+          </div>
+        </AppScaffold>
       </Show>
 
       <Show when={showGifPicker()}>
@@ -775,7 +772,7 @@ export function WaveChatApp() {
         </div>
       </Show>
       <MediaLightbox url={viewerUrl()} onClose={() => setViewerUrl(null)} />
-    </div>
+    </>
   );
 }
 
