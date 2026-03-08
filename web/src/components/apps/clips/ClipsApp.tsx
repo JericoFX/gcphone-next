@@ -9,6 +9,7 @@ import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { MediaLightbox } from '../../shared/ui/MediaLightbox';
 import { Modal, ModalActions, ModalButton } from '../../shared/ui/Modal';
 import { EmojiPickerButton } from '../../shared/ui/EmojiPicker';
+import { SocialOnboardingModal, type SocialOnboardingPayload } from '../../shared/ui/SocialOnboardingModal';
 import { uiPrompt } from '../../../utils/uiDialog';
 import styles from './ClipsApp.module.scss';
 
@@ -34,6 +35,14 @@ interface Comment {
   created_at?: string;
 }
 
+interface SharedSnapAccount {
+  username?: string;
+  display_name?: string;
+  avatar?: string;
+  bio?: string;
+  is_private?: boolean | number;
+}
+
 export function ClipsApp() {
   const router = useRouter();
   const cache = useAppCache('clips');
@@ -43,7 +52,7 @@ export function ClipsApp() {
   const [currentClipIndex, setCurrentClipIndex] = createSignal(0);
   const [comments, setComments] = createSignal<Comment[]>([]);
   const [showComments, setShowComments] = createSignal(false);
-  const [myAccount, setMyAccount] = createSignal<any>(null);
+  const [myAccount, setMyAccount] = createSignal<SharedSnapAccount | null>(null);
 
   // Tabs
   const [currentTab, setCurrentTab] = createSignal<'feed' | 'myVideos'>('feed');
@@ -56,6 +65,7 @@ export function ClipsApp() {
   const [pausedClips, setPausedClips] = createSignal<Set<number>>(new Set());
   const [statusMessage, setStatusMessage] = createSignal('');
   const [deleteClipId, setDeleteClipId] = createSignal<number | null>(null);
+  const [showOnboarding, setShowOnboarding] = createSignal(false);
 
   // Upload
   const [showUpload, setShowUpload] = createSignal(false);
@@ -79,8 +89,9 @@ export function ClipsApp() {
   const loadClips = async () => {
     setLoading(true);
     
-    const account = await fetchNui('snapGetAccount', {});
+    const account = await fetchNui<SharedSnapAccount | null>('snapGetAccount', {});
     setMyAccount(account);
+    setShowOnboarding(!account?.username);
     
     if (currentTab() === 'myVideos') {
       const cached = cache.get<Clip[]>('clips:myvideos');
@@ -218,7 +229,11 @@ export function ClipsApp() {
   };
 
   const editProfile = async () => {
-    const account = await fetchNui<any>('snapGetAccount', {});
+    const account = await fetchNui<SharedSnapAccount | null>('snapGetAccount', {});
+    if (!account?.username) {
+      setShowOnboarding(true);
+      return;
+    }
     if (!account) return;
     const nextNameInput = await uiPrompt('Nombre visible para Snap/Clips/Noticias', {
       title: 'Perfil',
@@ -239,6 +254,23 @@ export function ClipsApp() {
       setStatusMessage('Perfil actualizado');
       await loadClips();
     }
+  };
+
+  const createSnapAccount = async (payload: SocialOnboardingPayload) => {
+    const response = await fetchNui<{ success?: boolean; error?: string }>('snapCreateAccount', {
+      username: payload.username,
+      displayName: payload.displayName,
+      avatar: '',
+    }, { success: false });
+
+    if (!response?.success) {
+      return { ok: false, error: response?.error || 'No se pudo crear la cuenta de Snap.' };
+    }
+
+    setShowOnboarding(false);
+    setStatusMessage('Cuenta creada');
+    await loadClips();
+    return { ok: true };
   };
 
   const togglePause = (clipId: number) => {
@@ -292,6 +324,15 @@ export function ClipsApp() {
             Perfil
           </button>
         </div>
+
+        <SocialOnboardingModal
+          open={showOnboarding()}
+          appName="Snap/Clips"
+          usernameHint={myAccount()?.username || ''}
+          displayNameHint={myAccount()?.display_name || ''}
+          onCreate={createSnapAccount}
+          onClose={() => setShowOnboarding(false)}
+        />
 
         {/* Feed */}
         <div class={styles.feed} ref={scrollContainer} onScroll={handleScroll}>

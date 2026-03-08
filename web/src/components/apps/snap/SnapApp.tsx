@@ -26,6 +26,7 @@ import { MediaLightbox } from '../../shared/ui/MediaLightbox';
 import { FormField, FormTextarea, Modal, ModalActions, ModalButton } from '../../shared/ui/Modal';
 import { ActionSheet } from '../../shared/ui/ActionSheet';
 import { EmojiPickerButton } from '../../shared/ui/EmojiPicker';
+import { SocialOnboardingModal, type SocialOnboardingPayload } from '../../shared/ui/SocialOnboardingModal';
 import { VirtualList } from '../../shared/ui/VirtualList';
 import styles from './SnapApp.module.scss';
 
@@ -217,6 +218,7 @@ export function SnapApp() {
   const [statusMessage, setStatusMessage] = createSignal('');
   const [deletePostId, setDeletePostId] = createSignal<number | null>(null);
   const [showRequestsModal, setShowRequestsModal] = createSignal(false);
+  const [showOnboarding, setShowOnboarding] = createSignal(false);
   const [activeTab, setActiveTab] = createSignal<'discover' | 'feed' | 'profile'>('feed');
   const [requestsLoading, setRequestsLoading] = createSignal(false);
   const [discoverLoading, setDiscoverLoading] = createSignal(false);
@@ -278,6 +280,7 @@ export function SnapApp() {
     // Load account
     const account = await fetchNui<SnapAccount>('snapGetAccount', {}, {});
     setMyAccount(account);
+    setShowOnboarding(!account?.username);
     setProfileDisplayName(account?.display_name || '');
     setProfileAvatar(account?.avatar || '');
     setProfileBio(account?.bio || '');
@@ -596,6 +599,10 @@ export function SnapApp() {
         setActiveStoryIndex(null);
         return;
       }
+      if (showOnboarding()) {
+        setShowOnboarding(false);
+        return;
+      }
       router.goBack();
     },
   });
@@ -638,6 +645,22 @@ export function SnapApp() {
     }
 
     setStatusMessage('No se pudo actualizar el perfil');
+  };
+
+  const createSnapAccount = async (payload: SocialOnboardingPayload) => {
+    const response = await fetchNui<{ success?: boolean; error?: string; account?: SnapAccount }>('snapCreateAccount', {
+      username: payload.username,
+      displayName: payload.displayName,
+      avatar: '',
+    }, { success: false });
+
+    if (!response?.success) {
+      return { ok: false, error: response?.error || 'No se pudo crear la cuenta de Snap.' };
+    }
+
+    setShowOnboarding(false);
+    await loadData();
+    return { ok: true };
   };
 
   const respondFollowRequest = async (requestId: number, accept: boolean) => {
@@ -1821,6 +1844,15 @@ export function SnapApp() {
           </Show>
         </div>
       </Show>
+
+      <SocialOnboardingModal
+        open={showOnboarding()}
+        appName="Snap"
+        usernameHint={myAccount()?.username || ''}
+        displayNameHint={profileDisplayName() || myAccount()?.display_name || ''}
+        onCreate={createSnapAccount}
+        onClose={() => setShowOnboarding(false)}
+      />
 
       <Modal
         open={showRequestsModal()}
