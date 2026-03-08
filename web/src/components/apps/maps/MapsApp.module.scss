@@ -1,25 +1,15 @@
 .mapsPage {
-  position: absolute;
-  inset: 0;
+  position: relative;
+  min-height: 100%;
   display: flex;
   flex-direction: column;
   background: #0d131d;
   overflow: hidden;
 }
 
-.navBar {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 1250;
-  background: rgba(8, 12, 18, 0.68);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.18);
-}
-
 .topHud {
   position: absolute;
-  top: 54px;
+  top: 12px;
   left: 10px;
   right: 10px;
   z-index: 1200;
@@ -183,7 +173,7 @@
 
 .coordDisplay {
   position: absolute;
-  top: 70px;
+  top: 64px;
   left: 12px;
   right: 12px;
   padding: 10px 14px;

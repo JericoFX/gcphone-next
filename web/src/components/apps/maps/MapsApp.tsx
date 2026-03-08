@@ -2,6 +2,7 @@ import { For, Show, createEffect, createMemo, createSignal, onCleanup, onMount }
 import { useRouter } from '../../Phone/PhoneFrame';
 import { fetchNui } from '../../../utils/fetchNui';
 import { ActionSheet } from '../../shared/ui/ActionSheet';
+import { AppScaffold } from '../../shared/layout';
 import { sanitizeText } from '../../../utils/sanitize';
 import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { LeafletMap } from './LeafletMap';
@@ -239,202 +240,199 @@ export function MapsApp() {
   };
 
   return (
-    <div class={styles.mapsPage}>
-      <div class={`ios-nav ${styles.navBar}`}>
-        <button class="ios-icon-btn" onClick={() => router.goBack()}>‹</button>
-        <div class="ios-nav-title">Mapas</div>
-      </div>
-
-      <div class={styles.topHud}>
-        <div class={styles.hudText}>
-          <span>{status()}</span>
+    <AppScaffold title="Mapas" subtitle="GPS y ubicaciones" onBack={() => router.goBack()} bodyPadding="none">
+      <div class={styles.mapsPage}>
+        <div class={styles.topHud}>
+          <div class={styles.hudText}>
+            <span>{status()}</span>
+          </div>
         </div>
-      </div>
 
-      <div class={styles.mapContainer}>
-        <LeafletMap
-          pins={pins()}
-          onPickCoords={(x, y) => {
-            addManualMarker(x, y);
-            setShowMarkerSheet(true);
-          }}
-          onPinClick={(pin) => {
-            if (pin.kind === 'manual') {
-              const marker = manualMarkers().find((row) => row.id === pin.id);
-              if (marker) {
-                setSelectedMarker(marker);
-                setPickedCoords({ x: marker.x, y: marker.y });
-                setCoordsX(marker.x.toFixed(5));
-                setCoordsY(marker.y.toFixed(5));
-                setShowMarkerSheet(true);
+        <div class={styles.mapContainer}>
+          <LeafletMap
+            pins={pins()}
+            onPickCoords={(x, y) => {
+              addManualMarker(x, y);
+              setShowMarkerSheet(true);
+            }}
+            onPinClick={(pin) => {
+              if (pin.kind === 'manual') {
+                const marker = manualMarkers().find((row) => row.id === pin.id);
+                if (marker) {
+                  setSelectedMarker(marker);
+                  setPickedCoords({ x: marker.x, y: marker.y });
+                  setCoordsX(marker.x.toFixed(5));
+                  setCoordsY(marker.y.toFixed(5));
+                  setShowMarkerSheet(true);
+                }
+                return;
               }
-              return;
-            }
-            void setGps(pin.x, pin.y);
+              void setGps(pin.x, pin.y);
+            }}
+          />
+        </div>
+
+        <Show when={pickedCoords()}>
+          <div class={styles.coordDisplay}>
+            <span>📍 Coordenada activa</span>
+            <span class={styles.coordValue}>{coordsX()}, {coordsY()}</span>
+          </div>
+        </Show>
+
+        <button
+          class={styles.fab}
+          classList={{ [styles.fabMenuOpen]: showFabMenu() }}
+          onClick={() => setShowFabMenu(!showFabMenu())}
+        >
+          <span class={styles.fabIcon}>+</span>
+        </button>
+
+        <Show when={showFabMenu()}>
+          <div class={styles.fabOverlay} onClick={() => setShowFabMenu(false)} />
+          <div class={styles.fabMenu}>
+            <button class={styles.fabMenuItem} onClick={() => {
+              setShowFabMenu(false);
+              setShowManualGpsSheet(true);
+            }}>
+              <span class={styles.fabMenuIcon}>📍</span>
+              <span>GPS Manual</span>
+            </button>
+            <button class={styles.fabMenuItem} onClick={() => {
+              setShowFabMenu(false);
+              setShowShareSheet(true);
+            }}>
+              <span class={styles.fabMenuIcon}>📤</span>
+              <span>Compartir punto</span>
+            </button>
+            <button class={styles.fabMenuItem} onClick={() => {
+              setShowFabMenu(false);
+              setShowLocationsSheet(true);
+            }}>
+              <span class={styles.fabMenuIcon}>📋</span>
+              <span>Ubicaciones activas</span>
+            </button>
+            <button class={styles.fabMenuItem} onClick={() => {
+              setShowFabMenu(false);
+              void getMyLocation();
+            }}>
+              <span class={styles.fabMenuIcon}>🎯</span>
+              <span>Mi ubicacion</span>
+            </button>
+            <button class={styles.fabMenuItem} onClick={() => {
+              setShowFabMenu(false);
+              clearAllMarkers();
+            }}>
+              <span class={styles.fabMenuIcon}>🗑️</span>
+              <span>Limpiar puntos</span>
+            </button>
+          </div>
+        </Show>
+
+        <Show when={showManualGpsSheet()}>
+          <div class={styles.sheetOverlay} onClick={() => setShowManualGpsSheet(false)}>
+            <div class={styles.sheet} onClick={(e) => e.stopPropagation()}>
+              <h3>GPS Manual</h3>
+              <div class={styles.sheetGrid}>
+                <input class="ios-input" type="number" step="0.00001" placeholder="X" value={coordsX()} onInput={(e) => setCoordsX(e.currentTarget.value)} />
+                <input class="ios-input" type="number" step="0.00001" placeholder="Y" value={coordsY()} onInput={(e) => setCoordsY(e.currentTarget.value)} />
+              </div>
+              <div class={styles.sheetActions}>
+                <button class="ios-btn" onClick={() => setShowManualGpsSheet(false)}>Cancelar</button>
+                <button class="ios-btn ios-btn-primary" onClick={() => void setCustomGps()}>Establecer</button>
+              </div>
+            </div>
+          </div>
+        </Show>
+
+        <Show when={showShareSheet()}>
+          <div class={styles.sheetOverlay} onClick={() => setShowShareSheet(false)}>
+            <div class={styles.sheet} onClick={(e) => e.stopPropagation()}>
+              <h3>Compartir ubicacion</h3>
+              <select class="ios-select" value={shareApp()} onChange={(e) => setShareApp(e.currentTarget.value as 'messages' | 'chirp' | 'wavechat')}>
+                <option value="messages">Mensajes</option>
+                <option value="chirp">Chirp</option>
+                <option value="wavechat">WaveChat Grupo</option>
+              </select>
+
+              <Show when={shareApp() === 'messages'}>
+                <>
+                  <select class="ios-select" onChange={(e) => setShareNumber(e.currentTarget.value)}>
+                    <option value="">Elegir contacto</option>
+                    <For each={contacts()}>{(contact) => <option value={contact.number}>{contact.display} ({contact.number})</option>}</For>
+                  </select>
+                  <input class="ios-input" type="text" placeholder="Numero" value={shareNumber()} onInput={(e) => setShareNumber(e.currentTarget.value)} />
+                </>
+              </Show>
+
+              <Show when={shareApp() === 'wavechat'}>
+                <select class="ios-select" value={shareGroupId()} onChange={(e) => setShareGroupId(e.currentTarget.value)}>
+                  <option value="">Elegir grupo</option>
+                  <For each={groups()}>{(group) => <option value={String(group.id)}>{group.name}</option>}</For>
+                </select>
+              </Show>
+
+              <Show when={shareError()}>
+                <div class={styles.sheetError}>{shareError()}</div>
+              </Show>
+
+              <div class={styles.sheetActions}>
+                <button class="ios-btn" onClick={() => void copyCoords()}>Copiar</button>
+                <button class="ios-btn ios-btn-primary" onClick={() => void shareSelectedCoords()}>Compartir</button>
+              </div>
+            </div>
+          </div>
+        </Show>
+
+        <ActionSheet
+          open={showLocationsSheet()}
+          title="Ubicaciones activas"
+          onClose={() => {
+            setShowLocationsSheet(false);
           }}
+          actions={locations().map((location) => ({
+            label: `${location.from}: ${location.message || 'Ubicacion'}`,
+            onClick: () => {
+              void setGps(location.x, location.y);
+              setShowLocationsSheet(false);
+            },
+          }))}
+        />
+
+        <ActionSheet
+          open={showMarkerSheet()}
+          title="Punto marcado"
+          onClose={() => {
+            setShowMarkerSheet(false);
+          }}
+          actions={[
+            {
+              label: 'Ir con GPS',
+              tone: 'primary',
+              onClick: () => {
+                const marker = selectedMarker();
+                if (!marker) return;
+                void setGps(marker.x, marker.y);
+              },
+            },
+            {
+              label: 'Compartir',
+              onClick: () => {
+                setShowShareSheet(true);
+              },
+            },
+            {
+              label: 'Eliminar punto',
+              tone: 'danger',
+              onClick: () => {
+                const marker = selectedMarker();
+                if (!marker) return;
+                removeMarker(marker.id);
+                setShowMarkerSheet(false);
+              },
+            },
+          ]}
         />
       </div>
-
-      <Show when={pickedCoords()}>
-        <div class={styles.coordDisplay}>
-          <span>📍 Coordenada activa</span>
-          <span class={styles.coordValue}>{coordsX()}, {coordsY()}</span>
-        </div>
-      </Show>
-
-      <button
-        class={styles.fab}
-        classList={{ [styles.fabMenuOpen]: showFabMenu() }}
-        onClick={() => setShowFabMenu(!showFabMenu())}
-      >
-        <span class={styles.fabIcon}>+</span>
-      </button>
-
-      <Show when={showFabMenu()}>
-        <div class={styles.fabOverlay} onClick={() => setShowFabMenu(false)} />
-        <div class={styles.fabMenu}>
-          <button class={styles.fabMenuItem} onClick={() => {
-            setShowFabMenu(false);
-            setShowManualGpsSheet(true);
-          }}>
-            <span class={styles.fabMenuIcon}>📍</span>
-            <span>GPS Manual</span>
-          </button>
-          <button class={styles.fabMenuItem} onClick={() => {
-            setShowFabMenu(false);
-            setShowShareSheet(true);
-          }}>
-            <span class={styles.fabMenuIcon}>📤</span>
-            <span>Compartir punto</span>
-          </button>
-          <button class={styles.fabMenuItem} onClick={() => {
-            setShowFabMenu(false);
-            setShowLocationsSheet(true);
-          }}>
-            <span class={styles.fabMenuIcon}>📋</span>
-            <span>Ubicaciones activas</span>
-          </button>
-          <button class={styles.fabMenuItem} onClick={() => {
-            setShowFabMenu(false);
-            void getMyLocation();
-          }}>
-            <span class={styles.fabMenuIcon}>🎯</span>
-            <span>Mi ubicacion</span>
-          </button>
-          <button class={styles.fabMenuItem} onClick={() => {
-            setShowFabMenu(false);
-            clearAllMarkers();
-          }}>
-            <span class={styles.fabMenuIcon}>🗑️</span>
-            <span>Limpiar puntos</span>
-          </button>
-        </div>
-      </Show>
-
-      <Show when={showManualGpsSheet()}>
-        <div class={styles.sheetOverlay} onClick={() => setShowManualGpsSheet(false)}>
-          <div class={styles.sheet} onClick={(e) => e.stopPropagation()}>
-            <h3>GPS Manual</h3>
-            <div class={styles.sheetGrid}>
-              <input class="ios-input" type="number" step="0.00001" placeholder="X" value={coordsX()} onInput={(e) => setCoordsX(e.currentTarget.value)} />
-              <input class="ios-input" type="number" step="0.00001" placeholder="Y" value={coordsY()} onInput={(e) => setCoordsY(e.currentTarget.value)} />
-            </div>
-            <div class={styles.sheetActions}>
-              <button class="ios-btn" onClick={() => setShowManualGpsSheet(false)}>Cancelar</button>
-              <button class="ios-btn ios-btn-primary" onClick={() => void setCustomGps()}>Establecer</button>
-            </div>
-          </div>
-        </div>
-      </Show>
-
-      <Show when={showShareSheet()}>
-        <div class={styles.sheetOverlay} onClick={() => setShowShareSheet(false)}>
-          <div class={styles.sheet} onClick={(e) => e.stopPropagation()}>
-            <h3>Compartir ubicacion</h3>
-            <select class="ios-select" value={shareApp()} onChange={(e) => setShareApp(e.currentTarget.value as 'messages' | 'chirp' | 'wavechat')}>
-              <option value="messages">Mensajes</option>
-              <option value="chirp">Chirp</option>
-              <option value="wavechat">WaveChat Grupo</option>
-            </select>
-
-            <Show when={shareApp() === 'messages'}>
-              <>
-                <select class="ios-select" onChange={(e) => setShareNumber(e.currentTarget.value)}>
-                  <option value="">Elegir contacto</option>
-                  <For each={contacts()}>{(contact) => <option value={contact.number}>{contact.display} ({contact.number})</option>}</For>
-                </select>
-                <input class="ios-input" type="text" placeholder="Numero" value={shareNumber()} onInput={(e) => setShareNumber(e.currentTarget.value)} />
-              </>
-            </Show>
-
-            <Show when={shareApp() === 'wavechat'}>
-              <select class="ios-select" value={shareGroupId()} onChange={(e) => setShareGroupId(e.currentTarget.value)}>
-                <option value="">Elegir grupo</option>
-                <For each={groups()}>{(group) => <option value={String(group.id)}>{group.name}</option>}</For>
-              </select>
-            </Show>
-
-            <Show when={shareError()}>
-              <div class={styles.sheetError}>{shareError()}</div>
-            </Show>
-
-            <div class={styles.sheetActions}>
-              <button class="ios-btn" onClick={() => void copyCoords()}>Copiar</button>
-              <button class="ios-btn ios-btn-primary" onClick={() => void shareSelectedCoords()}>Compartir</button>
-            </div>
-          </div>
-        </div>
-      </Show>
-
-      <ActionSheet
-        open={showLocationsSheet()}
-        title="Ubicaciones activas"
-        onClose={() => {
-          setShowLocationsSheet(false);
-        }}
-        actions={locations().map((location) => ({
-          label: `${location.from}: ${location.message || 'Ubicacion'}`,
-          onClick: () => {
-            void setGps(location.x, location.y);
-            setShowLocationsSheet(false);
-          },
-        }))}
-      />
-
-      <ActionSheet
-        open={showMarkerSheet()}
-        title="Punto marcado"
-        onClose={() => {
-          setShowMarkerSheet(false);
-        }}
-        actions={[
-          {
-            label: 'Ir con GPS',
-            tone: 'primary',
-            onClick: () => {
-              const marker = selectedMarker();
-              if (!marker) return;
-              void setGps(marker.x, marker.y);
-            },
-          },
-          {
-            label: 'Compartir',
-            onClick: () => {
-              setShowShareSheet(true);
-            },
-          },
-          {
-            label: 'Eliminar punto',
-            tone: 'danger',
-            onClick: () => {
-              const marker = selectedMarker();
-              if (!marker) return;
-              removeMarker(marker.id);
-              setShowMarkerSheet(false);
-            },
-          },
-        ]}
-      />
-    </div>
+    </AppScaffold>
   );
 }
