@@ -84,7 +84,7 @@ lib.callback.register('gcphone:getContactsForTransfer', function(source)
     for _, contact in ipairs(contacts) do
         local contactIdentifier = GetIdentifierByPhone(contact.number)
         if contactIdentifier then
-            table.insert(result, contact)
+            result[#result + 1] = contact
         end
     end
     

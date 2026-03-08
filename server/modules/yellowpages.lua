@@ -54,18 +54,18 @@ lib.callback.register('gcphone:yellowpages:getListings', function(source, data)
     
     if category ~= 'all' and category ~= '' then
         sql = sql .. " AND m.category = ?"
-        table.insert(params, category)
+        params[#params + 1] = category
     end
     
     if search ~= '' then
         sql = sql .. " AND (m.title LIKE ? OR m.description LIKE ?)"
-        table.insert(params, '%' .. search .. '%')
-        table.insert(params, '%' .. search .. '%')
+        params[#params + 1] = '%' .. search .. '%'
+        params[#params + 1] = '%' .. search .. '%'
     end
     
     sql = sql .. " ORDER BY m.created_at DESC LIMIT ? OFFSET ?"
-    table.insert(params, limit)
-    table.insert(params, offset)
+    params[#params + 1] = limit
+    params[#params + 1] = offset
     
     return MySQL.query.await(sql, params) or {}
 end)
@@ -104,7 +104,7 @@ lib.callback.register('gcphone:yellowpages:createListing', function(source, data
     if type(data.photos) == 'table' then
         for _, url in ipairs(data.photos) do
             local clean = SanitizeMediaUrl(url)
-            if clean then table.insert(photos, clean) end
+            if clean then photos[#photos + 1] = clean end
         end
     elseif type(data.photos) == 'string' then
         local clean = SanitizeMediaUrl(data.photos)

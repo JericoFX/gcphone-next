@@ -58,7 +58,7 @@ AddEventHandler('gcphone:live:join', function(clipId)
     local history = {}
     local startIdx = math.max(1, #live.messages - 19)
     for i = startIdx, #live.messages do
-        table.insert(history, live.messages[i])
+        history[#history + 1] = live.messages[i]
     end
     
     TriggerClientEvent('gcphone:live:joined', source, {
@@ -111,7 +111,7 @@ AddEventHandler('gcphone:live:message', function(clipId, content)
     }
     
     -- Add to history (keep only last 20)
-    table.insert(live.messages, message)
+    live.messages[#live.messages + 1] = message
     if #live.messages > 20 then
         table.remove(live.messages, 1)
     end

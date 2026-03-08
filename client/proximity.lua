@@ -23,11 +23,11 @@ local function GetNearbyPlayers(maxDistance)
             local distance = #(coords - targetCoords)
             
             if distance <= maxDistance then
-                table.insert(nearbyPlayers, {
+                nearbyPlayers[#nearbyPlayers + 1] = {
                     serverId = GetPlayerServerId(player),
                     ped = targetPed,
                     distance = distance
-                })
+                }
             end
         end
     end
