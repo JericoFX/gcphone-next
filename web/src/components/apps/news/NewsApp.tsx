@@ -8,9 +8,11 @@ import { uiAlert } from '../../../utils/uiAlert';
 import { startMockLiveFeed } from '../../../utils/liveMock';
 import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { ActionSheet } from '../../shared/ui/ActionSheet';
+import { LiveFlashlightControl } from '../../shared/ui/LiveFlashlightControl';
 import { MediaLightbox } from '../../shared/ui/MediaLightbox';
 import { SocialOnboardingModal, type SocialOnboardingPayload } from '../../shared/ui/SocialOnboardingModal';
 import { AppScaffold } from '../../shared/layout';
+import { useLiveFlashlight } from '../../../hooks/useLiveFlashlight';
 import styles from './NewsApp.module.scss';
 
 interface NewsArticle {
@@ -44,16 +46,6 @@ interface SharedSnapAccount {
   is_private?: boolean | number;
 }
 
-interface FlashlightSettings {
-  enabled?: boolean;
-  kelvin?: number;
-  lumens?: number;
-  minKelvin?: number;
-  maxKelvin?: number;
-  minLumens?: number;
-  maxLumens?: number;
-}
-
 const NEWS_MOCK_USERS = ['Cronista', 'Mika', 'Luna', 'Santi', 'Mery'];
 const NEWS_MOCK_LINES = [
   'Cobertura impecable 👏',
@@ -85,17 +77,9 @@ export function NewsApp() {
   const [scaleHeadline, setScaleHeadline] = createSignal('ULTIMO MOMENTO');
   const [scaleSubtitle, setScaleSubtitle] = createSignal('Cobertura en vivo');
   const [scaleTicker, setScaleTicker] = createSignal('Desarrollo en curso...');
-  const [liveFlashlightEnabled, setLiveFlashlightEnabled] = createSignal(false);
-  const [liveFlashlightSupported, setLiveFlashlightSupported] = createSignal(false);
-  const [liveFlashlightPanelOpen, setLiveFlashlightPanelOpen] = createSignal(false);
-  const [liveFlashlightKelvin, setLiveFlashlightKelvin] = createSignal(5200);
-  const [liveFlashlightLumens, setLiveFlashlightLumens] = createSignal(1200);
-  const [liveFlashlightKelvinRange, setLiveFlashlightKelvinRange] = createSignal({ min: 2600, max: 9000 });
-  const [liveFlashlightLumensRange, setLiveFlashlightLumensRange] = createSignal({ min: 350, max: 2200 });
+  const liveFlashlight = useLiveFlashlight();
 
   let stopNewsMock: (() => void) | undefined;
-  let liveFlashlightPressTimer: number | undefined;
-  let liveFlashlightLongPress = false;
 
   const load = async () => {
     const data = await fetchNui<NewsArticle[]>('newsGetArticles', { category: selectedCategory(), limit: 50, offset: 0 }, []);
@@ -110,93 +94,12 @@ export function NewsApp() {
     setShowOnboarding(!account?.username);
   };
 
-  const loadLiveFlashlightSettings = async () => {
-    if (!liveFlashlightSupported()) return;
-
-    const settings = await fetchNui<FlashlightSettings>('cameraGetFlashlightSettings', {}, {
-      enabled: false,
-      kelvin: 5200,
-      lumens: 1200,
-      minKelvin: 2600,
-      maxKelvin: 9000,
-      minLumens: 350,
-      maxLumens: 2200,
-    });
-
-    setLiveFlashlightEnabled(settings.enabled === true);
-    setLiveFlashlightKelvin(settings.kelvin || 5200);
-    setLiveFlashlightLumens(settings.lumens || 1200);
-    setLiveFlashlightKelvinRange({ min: settings.minKelvin || 2600, max: settings.maxKelvin || 9000 });
-    setLiveFlashlightLumensRange({ min: settings.minLumens || 350, max: settings.maxLumens || 2200 });
-  };
-
-  const saveLiveFlashlightSettings = async (next: { kelvin?: number; lumens?: number }) => {
-    const result = await fetchNui<FlashlightSettings>('cameraSetFlashlightSettings', next, {
-      kelvin: next.kelvin || liveFlashlightKelvin(),
-      lumens: next.lumens || liveFlashlightLumens(),
-    });
-
-    if (typeof result.kelvin === 'number') setLiveFlashlightKelvin(result.kelvin);
-    if (typeof result.lumens === 'number') setLiveFlashlightLumens(result.lumens);
-  };
-
-  const applyLiveFlashlightPreset = async (kelvin: number, lumens = liveFlashlightLumens()) => {
-    setLiveFlashlightKelvin(kelvin);
-    setLiveFlashlightLumens(lumens);
-    await saveLiveFlashlightSettings({ kelvin, lumens });
-  };
-
-  const beginLiveFlashlightPress = () => {
-    if (!liveFlashlightSupported()) return;
-    liveFlashlightLongPress = false;
-    if (liveFlashlightPressTimer) window.clearTimeout(liveFlashlightPressTimer);
-    liveFlashlightPressTimer = window.setTimeout(() => {
-      liveFlashlightLongPress = true;
-      setLiveFlashlightPanelOpen(true);
-      void loadLiveFlashlightSettings();
-    }, 420);
-  };
-
-  const endLiveFlashlightPress = () => {
-    if (liveFlashlightPressTimer) {
-      window.clearTimeout(liveFlashlightPressTimer);
-      liveFlashlightPressTimer = undefined;
-    }
-
-    if (liveFlashlightLongPress) {
-      liveFlashlightLongPress = false;
-      return;
-    }
-
-    void toggleLiveFlashlight();
-  };
-
-  const cancelLiveFlashlightPress = () => {
-    if (liveFlashlightPressTimer) {
-      window.clearTimeout(liveFlashlightPressTimer);
-      liveFlashlightPressTimer = undefined;
-    }
-  };
-
   createEffect(() => {
     void load();
   });
 
   onMount(() => {
     void loadAccount();
-    void (async () => {
-      const capabilities = await fetchNui<{ flashlight?: boolean }>('cameraGetCapabilities', {}, { flashlight: false });
-      setLiveFlashlightSupported(capabilities?.flashlight === true);
-      if (capabilities?.flashlight) {
-        await loadLiveFlashlightSettings();
-      }
-    })();
-  });
-
-  onCleanup(() => {
-    if (liveFlashlightPressTimer) {
-      window.clearTimeout(liveFlashlightPressTimer);
-    }
   });
 
   usePhoneKeyHandler({
@@ -321,11 +224,8 @@ export function NewsApp() {
       const result = await fetchNui<{ success?: boolean }>('newsEndLive', { articleId: liveArticleId() });
       if (result?.success) {
         await fetchNui('phoneSetVisualMode', { mode: 'text' }, true);
-        setLiveFlashlightPanelOpen(false);
-        if (liveFlashlightEnabled()) {
-          await fetchNui('cameraToggleFlashlight', { enabled: false }, { success: true, enabled: false });
-          setLiveFlashlightEnabled(false);
-        }
+        liveFlashlight.setPanelOpen(false);
+        await liveFlashlight.turnOff();
         setLiveArticleId(null);
       }
       return;
@@ -371,11 +271,8 @@ export function NewsApp() {
     setMockLiveEnabled(next);
     if (!next) {
       void fetchNui('phoneSetVisualMode', { mode: 'text' }, true);
-      setLiveFlashlightPanelOpen(false);
-      if (liveFlashlightEnabled()) {
-        void fetchNui('cameraToggleFlashlight', { enabled: false }, { success: true, enabled: false });
-        setLiveFlashlightEnabled(false);
-      }
+      liveFlashlight.setPanelOpen(false);
+      void liveFlashlight.turnOff();
       setMockLiveMessages([]);
       return;
     }
@@ -389,19 +286,6 @@ export function NewsApp() {
         at: 'ahora',
       },
     ]);
-  };
-
-  const toggleLiveFlashlight = async () => {
-    if (!liveFlashlightSupported()) return;
-
-    const nextState = !liveFlashlightEnabled();
-    const result = await fetchNui<{ success?: boolean; enabled?: boolean }>('cameraToggleFlashlight', { enabled: nextState }, { success: true, enabled: nextState });
-    if (result?.success) {
-      setLiveFlashlightEnabled(result.enabled === true);
-      if (!result.enabled) {
-        setLiveFlashlightPanelOpen(false);
-      }
-    }
   };
 
   const editProfile = async () => {
@@ -487,70 +371,33 @@ export function NewsApp() {
           <div class={styles.liveActions}>
             <button class={styles.liveBtn} onClick={toggleLive}>{liveArticleId() ? 'Terminar live' : 'Iniciar live'}</button>
             <button class={styles.mockBtn} onClick={toggleMockLive}>{mockLiveEnabled() ? 'Mock off' : 'Mock live'}</button>
-            <Show when={liveFlashlightSupported() && (liveArticleId() !== null || mockLiveEnabled())}>
-              <div class={styles.flashlightDock}>
-                <button
-                  class={styles.flashlightBtn}
-                  classList={{ [styles.flashlightBtnActive]: liveFlashlightEnabled() }}
-                  onPointerDown={beginLiveFlashlightPress}
-                  onPointerUp={endLiveFlashlightPress}
-                  onPointerLeave={cancelLiveFlashlightPress}
-                  onPointerCancel={cancelLiveFlashlightPress}
-                >
-                  Linterna
-                </button>
-                <Show when={liveFlashlightEnabled()}>
-                  <div class={styles.flashlightBadge}>{liveFlashlightKelvin()}K · {liveFlashlightLumens()}lm</div>
-                </Show>
-                <Show when={liveFlashlightPanelOpen()}>
-                  <div class={styles.flashlightPanel}>
-                    <div class={styles.flashlightPanelHeader}>
-                      <strong>Tono de linterna</strong>
-                      <span>Manten presionado para abrir</span>
-                    </div>
-                    <div class={styles.flashlightStats}>
-                      <span>{liveFlashlightKelvin()}K</span>
-                      <span>{liveFlashlightLumens()} lm</span>
-                    </div>
-                    <label class={styles.flashlightControl}>
-                      <span>Kelvin</span>
-                      <input
-                        type="range"
-                        min={liveFlashlightKelvinRange().min}
-                        max={liveFlashlightKelvinRange().max}
-                        step="100"
-                        value={liveFlashlightKelvin()}
-                        onInput={(e) => {
-                          const value = Number(e.currentTarget.value);
-                          setLiveFlashlightKelvin(value);
-                          void saveLiveFlashlightSettings({ kelvin: value });
-                        }}
-                      />
-                    </label>
-                    <label class={styles.flashlightControl}>
-                      <span>Lumenes</span>
-                      <input
-                        type="range"
-                        min={liveFlashlightLumensRange().min}
-                        max={liveFlashlightLumensRange().max}
-                        step="50"
-                        value={liveFlashlightLumens()}
-                        onInput={(e) => {
-                          const value = Number(e.currentTarget.value);
-                          setLiveFlashlightLumens(value);
-                          void saveLiveFlashlightSettings({ lumens: value });
-                        }}
-                      />
-                    </label>
-                    <div class={styles.flashlightPresets}>
-                      <button type="button" onClick={() => void applyLiveFlashlightPreset(3200, 950)}>Calida</button>
-                      <button type="button" onClick={() => void applyLiveFlashlightPreset(5200, 1200)}>Neutra</button>
-                      <button type="button" onClick={() => void applyLiveFlashlightPreset(7600, 1500)}>Fria</button>
-                    </div>
-                  </div>
-                </Show>
-              </div>
-            </Show>
+            <LiveFlashlightControl
+              visible={liveFlashlight.supported() && (liveArticleId() !== null || mockLiveEnabled())}
+              enabled={liveFlashlight.enabled()}
+              panelOpen={liveFlashlight.panelOpen()}
+              kelvin={liveFlashlight.kelvin()}
+              lumens={liveFlashlight.lumens()}
+              kelvinRange={liveFlashlight.kelvinRange()}
+              lumensRange={liveFlashlight.lumensRange()}
+              buttonLabel={<span>Linterna</span>}
+              theme="light"
+              variant="pill"
+              onPointerDown={liveFlashlight.beginPress}
+              onPointerUp={liveFlashlight.endPress}
+              onPointerLeave={liveFlashlight.cancelPress}
+              onPointerCancel={liveFlashlight.cancelPress}
+              onKelvinInput={(value) => {
+                liveFlashlight.setKelvin(value);
+                void liveFlashlight.saveSettings({ kelvin: value });
+              }}
+              onLumensInput={(value) => {
+                liveFlashlight.setLumens(value);
+                void liveFlashlight.saveSettings({ lumens: value });
+              }}
+              onPreset={(kelvin, lumens) => {
+                void liveFlashlight.applyPreset(kelvin, lumens);
+              }}
+            />
             <button class={styles.profileBtn} onClick={() => void editProfile()}>Perfil</button>
           </div>
         </div>
