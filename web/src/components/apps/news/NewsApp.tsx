@@ -7,9 +7,10 @@ import { uiPrompt } from '../../../utils/uiDialog';
 import { uiAlert } from '../../../utils/uiAlert';
 import { startMockLiveFeed } from '../../../utils/liveMock';
 import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
-import { ActionSheet } from '../../shared/ui/ActionSheet';
 import { LiveFlashlightControl } from '../../shared/ui/LiveFlashlightControl';
 import { MediaLightbox } from '../../shared/ui/MediaLightbox';
+import { MediaActionButtons } from '../../shared/ui/MediaActionButtons';
+import { MediaAttachmentPreview } from '../../shared/ui/MediaAttachmentPreview';
 import { SocialOnboardingModal, type SocialOnboardingPayload } from '../../shared/ui/SocialOnboardingModal';
 import { AppFAB, AppScaffold } from '../../shared/layout';
 import { useLiveFlashlight } from '../../../hooks/useLiveFlashlight';
@@ -66,7 +67,6 @@ export function NewsApp() {
   const [mediaUrl, setMediaUrl] = createSignal('');
   const [category, setCategory] = createSignal('general');
   const [liveArticleId, setLiveArticleId] = createSignal<number | null>(null);
-  const [showAttachSheet, setShowAttachSheet] = createSignal(false);
   const [viewerUrl, setViewerUrl] = createSignal<string | null>(null);
   const [myAccount, setMyAccount] = createSignal<SharedSnapAccount | null>(null);
   const [showOnboarding, setShowOnboarding] = createSignal(false);
@@ -473,17 +473,19 @@ export function NewsApp() {
               <input type="text" placeholder="Titulo" value={title()} onInput={(e) => setTitle(e.currentTarget.value)} />
               <textarea placeholder="Contenido" value={content()} onInput={(e) => setContent(e.currentTarget.value)} />
               <div class={styles.composeAttachments}>
-                <button onClick={() => setShowAttachSheet(true)}>Adjuntar</button>
+                <MediaActionButtons
+                  actions={[
+                    { icon: '🖼', label: 'Galeria', onClick: attachFromGallery },
+                    { icon: '📷', label: 'Camara', onClick: attachFromCamera },
+                    { icon: '🔗', label: 'URL', onClick: () => void attachByUrl() },
+                    ...(mediaUrl() ? [{ icon: '✕', label: 'Quitar', onClick: () => setMediaUrl(''), tone: 'danger' as const }] : []),
+                  ]}
+                  variant="compact"
+                  class={styles.composeMediaButtons}
+                />
                 <input type="text" placeholder="URL media (opcional)" value={mediaUrl()} onInput={(e) => setMediaUrl(sanitizeMediaUrl(e.currentTarget.value))} />
               </div>
-              <Show when={mediaUrl()}>
-                <Show when={resolveMediaType(mediaUrl()) === 'image'}>
-                  <img class={styles.articleMedia} src={mediaUrl()} alt="preview" onClick={() => setViewerUrl(mediaUrl())} />
-                </Show>
-                <Show when={resolveMediaType(mediaUrl()) === 'video'}>
-                  <video class={styles.articleMedia} src={mediaUrl()} controls playsinline preload="metadata" />
-                </Show>
-              </Show>
+              <MediaAttachmentPreview url={mediaUrl()} mediaClass={styles.articleMedia} onOpen={() => setViewerUrl(mediaUrl())} />
               <input type="text" placeholder="Categoria" value={category()} onInput={(e) => setCategory(sanitizeText(e.currentTarget.value, 30))} />
               <div class={styles.actions}>
                 <button onClick={() => setShowCompose(false)}>Cancelar</button>
@@ -492,18 +494,6 @@ export function NewsApp() {
             </div>
           </div>
         </Show>
-
-        <ActionSheet
-          open={showAttachSheet()}
-          title="Adjuntar en noticias"
-          onClose={() => setShowAttachSheet(false)}
-          actions={[
-            { label: 'Elegir desde galeria', tone: 'primary', onClick: attachFromGallery },
-            { label: 'Tomar foto con camara', onClick: attachFromCamera },
-            { label: 'Pegar URL multimedia', onClick: attachByUrl },
-            { label: 'Quitar adjunto', tone: 'danger', onClick: () => { setMediaUrl(''); } },
-          ]}
-        />
 
         <AppFAB class={styles.fab} icon="+" onClick={() => setShowCompose(true)} />
         <MediaLightbox url={viewerUrl()} onClose={() => setViewerUrl(null)} />

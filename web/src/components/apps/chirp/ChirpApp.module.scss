@@ -508,26 +508,6 @@
   margin-right: 8px;
 }
 
-.mediaButtons {
-  display: flex;
-  gap: 10px;
-}
-
-.mediaBtn {
-  width: 40px;
-  height: 40px;
-  border: 1px solid #e5e5ea;
-  border-radius: 10px;
-  background: #f5f5f7;
-  font-size: 20px;
-  cursor: pointer;
-  transition: background-color 150ms ease, border-color 150ms ease;
-  
-  &:hover {
-    background: #e5e5ea;
-  }
-}
-
 .socialStrip {
   display: grid;
   grid-template-columns: 1fr 1fr;

@@ -27,6 +27,7 @@ import { FormField, FormTextarea, Modal, ModalActions, ModalButton } from '../..
 import { ActionSheet } from '../../shared/ui/ActionSheet';
 import { EmojiPickerButton } from '../../shared/ui/EmojiPicker';
 import { LiveFlashlightControl } from '../../shared/ui/LiveFlashlightControl';
+import { MediaActionButtons } from '../../shared/ui/MediaActionButtons';
 import { MediaAttachmentPreview } from '../../shared/ui/MediaAttachmentPreview';
 import { SocialOnboardingModal, type SocialOnboardingPayload } from '../../shared/ui/SocialOnboardingModal';
 import { VirtualList } from '../../shared/ui/VirtualList';
@@ -1648,16 +1649,13 @@ export function SnapApp() {
           </div>
 
           <Show when={!postMedia()}>
-            <div class={styles.uploadOptions}>
-              <button class={styles.uploadBtn} onClick={openCamera}>
-                <span class={styles.uploadIcon}>📷</span>
-                <span>Camara</span>
-              </button>
-              <button class={styles.uploadBtn} onClick={attachFromGallery}>
-                <span class={styles.uploadIcon}>🖼</span>
-                <span>Galeria</span>
-              </button>
-            </div>
+            <MediaActionButtons
+              actions={[
+                { icon: '📷', label: 'Camara', onClick: openCamera },
+                { icon: '🖼', label: 'Galeria', onClick: attachFromGallery },
+              ]}
+              variant="tiles"
+            />
           </Show>
 
           <Show when={postMedia()}>
