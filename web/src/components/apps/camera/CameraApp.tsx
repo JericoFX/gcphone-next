@@ -69,7 +69,9 @@ export function CameraApp() {
       nextTarget === 'snap-story' ||
       nextTarget === 'snap-avatar' ||
       nextTarget === 'chirp' ||
-      nextTarget === 'clips'
+      nextTarget === 'chirp-avatar' ||
+      nextTarget === 'clips' ||
+      nextTarget === 'clips-avatar'
     ) {
       setTarget(nextTarget as CameraTarget);
     } else {

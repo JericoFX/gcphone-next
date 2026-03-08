@@ -125,7 +125,7 @@ export function MarketApp() {
   const contactSeller = async (listingId: number) => {
     const result = await fetchNui<{ phoneNumber?: string }>('marketContactSeller', { listingId });
     if (result?.phoneNumber) {
-      router.navigate('messages.view', { number: result.phoneNumber, display: 'Vendedor' });
+      router.navigate('messages.view', { phoneNumber: result.phoneNumber, display: 'Vendedor' });
     }
   };
 
