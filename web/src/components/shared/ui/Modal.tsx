@@ -1,4 +1,4 @@
-import { Show, mergeProps, splitProps, type ParentComponent, type ParentProps } from 'solid-js';
+import { Show, mergeProps, splitProps, type JSX, type ParentComponent, type ParentProps } from 'solid-js';
 import { getStoredLanguage, tl } from '../../../i18n';
 import styles from './Modal.module.scss';
 
@@ -142,5 +142,65 @@ export function FormTextarea(props: FormTextareaProps) {
         disabled={local.disabled}
       />
     </div>
+  );
+}
+
+export interface FormSectionProps extends ParentProps {
+  label?: string;
+  class?: string;
+  labelClass?: string;
+  contentClass?: string;
+}
+
+export const FormSection: ParentComponent<FormSectionProps> = (props) => {
+  return (
+    <div classList={{ [styles.field]: true, [props.class || '']: !!props.class }}>
+      <Show when={props.label}>
+        <label classList={{ [styles.label]: true, [props.labelClass || '']: !!props.labelClass }}>{props.label}</label>
+      </Show>
+      <div classList={{ [styles.sectionContent]: true, [props.contentClass || '']: !!props.contentClass }}>{props.children}</div>
+    </div>
+  );
+};
+
+export interface FormRowProps extends ParentProps {
+  class?: string;
+  columns?: 1 | 2 | 3;
+}
+
+export const FormRow: ParentComponent<FormRowProps> = (props) => {
+  return (
+    <div
+      classList={{
+        [styles.row]: true,
+        [styles.rowThree]: props.columns === 3,
+        [props.class || '']: !!props.class,
+      }}
+    >
+      {props.children}
+    </div>
+  );
+};
+
+export interface FormCheckboxProps {
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  label: JSX.Element | string;
+  class?: string;
+  labelClass?: string;
+  inputClass?: string;
+}
+
+export function FormCheckbox(props: FormCheckboxProps) {
+  return (
+    <label classList={{ [styles.checkboxLabel]: true, [props.labelClass || '']: !!props.labelClass, [props.class || '']: !!props.class }}>
+      <input
+        class={props.inputClass}
+        type="checkbox"
+        checked={props.checked}
+        onChange={(event) => props.onChange(event.currentTarget.checked)}
+      />
+      <span>{props.label}</span>
+    </label>
   );
 }

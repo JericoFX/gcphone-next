@@ -8,7 +8,7 @@ import { useNuiEvent } from '../../../utils/useNui';
 import { AppScaffold } from '../../shared/layout';
 import { useAppCache } from '../../../hooks';
 import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
-import { Modal, ModalActions, ModalButton } from '../../shared/ui/Modal';
+import { FormCheckbox, FormSection, Modal, ModalActions, ModalButton } from '../../shared/ui/Modal';
 import styles from './DocumentsApp.module.scss';
 
 interface Document {
@@ -419,8 +419,7 @@ export function DocumentsApp() {
           size="md"
         >
           <div class={styles.composerContent}>
-            <div class={styles.formField}>
-              <label>Tipo de Documento</label>
+            <FormSection class={styles.formField} label="Tipo de Documento">
               <div class={styles.typeGrid}>
                 <For each={docTypes()}>
                   {(type) => (
@@ -436,57 +435,51 @@ export function DocumentsApp() {
                   )}
                 </For>
               </div>
-            </div>
+            </FormSection>
             
-            <div class={styles.formField}>
-              <label>Titulo *</label>
+            <FormSection class={styles.formField} label="Titulo *">
               <input
                 type="text"
                 placeholder="Ej: Licencia de Conducir"
                 value={composerTitle()}
                 onInput={(e) => setComposerTitle(e.currentTarget.value)}
               />
-            </div>
+            </FormSection>
             
-            <div class={styles.formField}>
-              <label>Nombre del Titular</label>
+            <FormSection class={styles.formField} label="Nombre del Titular">
               <input
                 type="text"
                 placeholder="Nombre completo"
                 value={composerHolderName()}
                 onInput={(e) => setComposerHolderName(e.currentTarget.value)}
               />
-            </div>
+            </FormSection>
             
-            <div class={styles.formField}>
-              <label>Numero de Documento</label>
+            <FormSection class={styles.formField} label="Numero de Documento">
               <input
                 type="text"
                 placeholder="Opcional"
                 value={composerHolderNumber()}
                 onInput={(e) => setComposerHolderNumber(e.currentTarget.value)}
               />
-            </div>
+            </FormSection>
             
-            <div class={styles.formField}>
-              <label>Fecha de Vencimiento</label>
+            <FormSection class={styles.formField} label="Fecha de Vencimiento">
               <input
                 type="date"
                 value={composerExpires()}
                 onInput={(e) => setComposerExpires(e.currentTarget.value)}
               />
-            </div>
+            </FormSection>
             
-            <div class={styles.formField}>
-              <label class={styles.checkboxLabel}>
-                <input
-                  type="checkbox"
-                  checked={composerNFC()}
-                  onChange={(e) => setComposerNFC(e.currentTarget.checked)}
-                />
-                <span>Habilitar NFC (otros pueden escanear este documento)</span>
-              </label>
-            </div>
+            <FormSection class={styles.formField}>
+              <FormCheckbox
+                checked={composerNFC()}
+                onChange={setComposerNFC}
+                label="Habilitar NFC (otros pueden escanear este documento)"
+                labelClass={styles.checkboxLabel}
+              />
+            </FormSection>
           </div>
           
           <ModalActions>

@@ -7,7 +7,7 @@ import { useAppCache } from '../../../hooks';
 import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { MediaLightbox } from '../../shared/ui/MediaLightbox';
 import { VirtualList } from '../../shared/ui/VirtualList';
-import { Modal, ModalActions, ModalButton, FormField } from '../../shared/ui/Modal';
+import { FormCheckbox, FormField, FormSection, Modal, ModalActions, ModalButton } from '../../shared/ui/Modal';
 import styles from './DarkRoomsApp.module.scss';
 
 interface Room {
@@ -651,8 +651,7 @@ export function DarkRoomsApp() {
           onChange={setRoomSlug} 
           placeholder="mercado"
         />
-        <div class={styles.formField}>
-          <label class={styles.formLabel}>Icono</label>
+        <FormSection class={styles.formField} label="Icono" labelClass={styles.formLabel}>
           <div class={styles.emojiPresetGrid}>
             <For each={ROOM_ICON_PRESETS}>
               {(emoji) => (
@@ -667,9 +666,8 @@ export function DarkRoomsApp() {
               )}
             </For>
           </div>
-        </div>
-        <div class={styles.formField}>
-          <label class={styles.formLabel}>Descripcion</label>
+        </FormSection>
+        <FormSection class={styles.formField} label="Descripcion" labelClass={styles.formLabel}>
           <textarea
             class={styles.formTextarea}
             value={roomDescription()}
@@ -677,18 +675,16 @@ export function DarkRoomsApp() {
             placeholder="De que trata esta sala?"
             rows={3}
           />
-        </div>
+        </FormSection>
         
-        <div class={styles.checkboxField}>
-          <label class={styles.checkboxLabel}>
-            <input 
-              type="checkbox" 
-              checked={isPrivateRoom()}
-              onChange={(e) => setIsPrivateRoom(e.currentTarget.checked)}
-            />
-            <span>🔒 Sala privada (requiere clave)</span>
-          </label>
-        </div>
+        <FormSection class={styles.checkboxField}>
+          <FormCheckbox
+            checked={isPrivateRoom()}
+            onChange={setIsPrivateRoom}
+            label="🔒 Sala privada (requiere clave)"
+            labelClass={styles.checkboxLabel}
+          />
+        </FormSection>
         
         <Show when={isPrivateRoom()}>
           <FormField 
@@ -740,8 +736,7 @@ export function DarkRoomsApp() {
           onChange={setPostTitle} 
           placeholder="Titulo descriptivo"
         />
-        <div class={styles.formField}>
-          <label class={styles.formLabel}>Contenido</label>
+        <FormSection class={styles.formField} label="Contenido" labelClass={styles.formLabel}>
           <textarea
             class={styles.formTextarea}
             value={postContent()}
@@ -749,7 +744,7 @@ export function DarkRoomsApp() {
             placeholder="Cuenta contexto, evidencia o propuesta"
             rows={4}
           />
-        </div>
+        </FormSection>
         <FormField 
           label="URL de imagen/video (opcional)" 
           value={postMediaUrl()} 
@@ -758,16 +753,14 @@ export function DarkRoomsApp() {
           type="url"
         />
         
-        <div class={styles.checkboxField}>
-          <label class={styles.checkboxLabel}>
-            <input 
-              type="checkbox" 
-              checked={postAnonymous()}
-              onChange={(e) => setPostAnonymous(e.currentTarget.checked)}
-            />
-            <span>Publicar anonimamente</span>
-          </label>
-        </div>
+        <FormSection class={styles.checkboxField}>
+          <FormCheckbox
+            checked={postAnonymous()}
+            onChange={setPostAnonymous}
+            label="Publicar anonimamente"
+            labelClass={styles.checkboxLabel}
+          />
+        </FormSection>
         
         <ModalActions>
           <ModalButton label="Cancelar" onClick={() => setShowCreatePost(false)} />

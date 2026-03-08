@@ -9,7 +9,7 @@ import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { AppScaffold } from '../../shared/layout';
 import { useAppCache } from '../../../hooks';
 import { MediaLightbox } from '../../shared/ui/MediaLightbox';
-import { Modal, ModalActions, ModalButton } from '../../shared/ui/Modal';
+import { FormRow, FormSection, Modal, ModalActions, ModalButton } from '../../shared/ui/Modal';
 import styles from './YellowPagesApp.module.scss';
 
 interface Listing {
@@ -479,8 +479,7 @@ export function YellowPagesApp() {
           size="md"
         >
           <div class={styles.composerContent}>
-            <div class={styles.formField}>
-              <label>Titulo *</label>
+            <FormSection class={styles.formField} label="Titulo *">
               <input
                 type="text"
                 placeholder="Ej: Auto deportivo en venta"
@@ -488,10 +487,9 @@ export function YellowPagesApp() {
                 onInput={(e) => setTitle(e.currentTarget.value)}
                 maxlength={100}
               />
-            </div>
+            </FormSection>
             
-            <div class={styles.formField}>
-              <label>Descripcion</label>
+            <FormSection class={styles.formField} label="Descripcion">
               <textarea
                 placeholder="Describe tu producto o servicio..."
                 value={description()}
@@ -499,11 +497,10 @@ export function YellowPagesApp() {
                 rows={4}
                 maxlength={1000}
               />
-            </div>
+            </FormSection>
             
-            <div class={styles.formRow}>
-              <div class={styles.formField}>
-                <label>Precio ($)</label>
+            <FormRow class={styles.formRow}>
+              <FormSection class={styles.formField} label="Precio ($)">
                 <input
                   type="number"
                   placeholder="0"
@@ -511,10 +508,9 @@ export function YellowPagesApp() {
                   onInput={(e) => setPrice(e.currentTarget.value)}
                   min="0"
                 />
-              </div>
+              </FormSection>
               
-              <div class={styles.formField}>
-                <label>Categoria</label>
+              <FormSection class={styles.formField} label="Categoria">
                 <select
                   value={composerCategory()}
                   onChange={(e) => setComposerCategory(e.currentTarget.value)}
@@ -525,11 +521,10 @@ export function YellowPagesApp() {
                     )}
                   </For>
                 </select>
-              </div>
-            </div>
+              </FormSection>
+            </FormRow>
             
-            <div class={styles.formField}>
-              <label>Fotos ({photos().length}/5)</label>
+            <FormSection class={styles.formField} label={`Fotos (${photos().length}/5)`}>
               <div class={styles.photosGrid}>
                 <For each={photos()}>
                   {(photo, index) => (
@@ -545,7 +540,7 @@ export function YellowPagesApp() {
                   </button>
                 </Show>
               </div>
-            </div>
+            </FormSection>
           </div>
           
           <ModalActions>
