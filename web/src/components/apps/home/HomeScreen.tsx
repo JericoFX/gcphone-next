@@ -5,6 +5,7 @@ import { useRouter } from '../../Phone/PhoneFrame';
 import { APP_BY_ID } from '../../../config/apps';
 import { appName, formatDate as formatDateI18n, formatTime as formatTimeI18n, t } from '../../../i18n';
 import { fetchNui } from '../../../utils/fetchNui';
+import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { timeAgo } from '../../../utils/misc';
 import styles from './HomeScreen.module.scss';
 
@@ -70,6 +71,16 @@ export function HomeScreen() {
     return homeApps().slice(start, start + APPS_PER_PAGE);
   });
 
+  const openFolder = createMemo(() => {
+    const id = openFolderId();
+    if (!id) return null;
+    return folderGroups().find((group) => group.id === id) || null;
+  });
+
+  const formattedTime = createMemo(() => formatTime(currentTime()));
+  const formattedDate = createMemo(() => formatDate(currentTime()));
+  const formattedWidgetDate = createMemo(() => formatDateI18n(currentTime(), language(), { day: '2-digit', month: 'short' }));
+
   const searchResults = createMemo(() => {
     const q = searchQuery().trim().toLowerCase();
     if (!q) {
@@ -103,6 +114,11 @@ export function HomeScreen() {
       .slice(0, 6);
 
     return { apps, contacts, conversations, calls };
+  });
+
+  const hasSearchMatches = createMemo(() => {
+    const results = searchResults();
+    return results.apps.length + results.contacts.length + results.conversations.length + results.calls.length > 0;
   });
 
   const loadSearchIndex = async () => {
@@ -244,17 +260,17 @@ export function HomeScreen() {
     });
   });
   
-  const formatTime = (date: Date) => {
+  function formatTime(date: Date) {
     return formatTimeI18n(date, language(), { hour: '2-digit', minute: '2-digit' });
-  };
+  }
   
-  const formatDate = (date: Date) => {
+  function formatDate(date: Date) {
     return formatDateI18n(date, language(), {
       weekday: 'long', 
       day: 'numeric', 
       month: 'long' 
     });
-  };
+  }
   
   const openApp = (app: { id: string; route: string }) => {
     if (untrack(editing)) return;
