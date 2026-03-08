@@ -2,7 +2,7 @@ import { For, Show, createEffect, createMemo, createSignal, onMount } from 'soli
 import { useRouter } from '../../Phone/PhoneFrame';
 import { fetchNui } from '../../../utils/fetchNui';
 import { uiAlert } from '../../../utils/uiAlert';
-import { AppScaffold } from '../../shared/layout';
+import { AppFAB, AppScaffold } from '../../shared/layout';
 import { useAppCache } from '../../../hooks';
 import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { MediaLightbox } from '../../shared/ui/MediaLightbox';
@@ -430,20 +430,16 @@ export function DarkRoomsApp() {
       </div>
 
       {/* FAB */}
-      <div class={styles.fabContainer}>
-        <Show when={fabTooltipVisible()}>
-          <div class={styles.fabTooltip}>Crear sala</div>
-        </Show>
-        <button 
-          class={styles.fab}
-          onClick={() => setShowCreateRoom(true)}
-          onPointerDown={showFabTooltip}
-          onPointerUp={hideFabTooltip}
-          onPointerLeave={hideFabTooltip}
-        >
-          +
-        </button>
-      </div>
+      <AppFAB
+        class={styles.fab}
+        icon="+"
+        onClick={() => setShowCreateRoom(true)}
+        tooltip="Crear sala"
+        tooltipVisible={fabTooltipVisible()}
+        onPointerDown={showFabTooltip}
+        onPointerUp={hideFabTooltip}
+        onPointerLeave={hideFabTooltip}
+      />
     </div>
   );
 
@@ -510,20 +506,16 @@ export function DarkRoomsApp() {
         </div>
 
         {/* FAB for creating post */}
-        <div class={styles.fabContainer}>
-          <Show when={fabTooltipVisible()}>
-            <div class={styles.fabTooltip}>Nuevo post</div>
-          </Show>
-          <button 
-            class={styles.fab}
-            onClick={() => setShowCreatePost(true)}
-            onPointerDown={showFabTooltip}
-            onPointerUp={hideFabTooltip}
-            onPointerLeave={hideFabTooltip}
-          >
-            ✎
-          </button>
-        </div>
+        <AppFAB
+          class={styles.fab}
+          icon="✎"
+          onClick={() => setShowCreatePost(true)}
+          tooltip="Nuevo post"
+          tooltipVisible={fabTooltipVisible()}
+          onPointerDown={showFabTooltip}
+          onPointerUp={hideFabTooltip}
+          onPointerLeave={hideFabTooltip}
+        />
       </div>
     );
   };

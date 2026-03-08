@@ -228,40 +228,6 @@
   }
 }
 
-// FAB
-.fabContainer {
-  position: fixed;
-  bottom: calc(24px + var(--phone-bottom-ui-gap, 0px));
-  right: 24px;
-  z-index: 100;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 8px;
-}
-
-.fabTooltip {
-  background: rgba(0, 0, 0, 0.8);
-  color: #ffffff;
-  padding: 8px 14px;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 500;
-  white-space: nowrap;
-  animation: fadeIn 150ms ease;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
 .fab {
   width: 56px;
   height: 56px;

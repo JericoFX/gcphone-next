@@ -11,7 +11,7 @@ import { ActionSheet } from '../../shared/ui/ActionSheet';
 import { LiveFlashlightControl } from '../../shared/ui/LiveFlashlightControl';
 import { MediaLightbox } from '../../shared/ui/MediaLightbox';
 import { SocialOnboardingModal, type SocialOnboardingPayload } from '../../shared/ui/SocialOnboardingModal';
-import { AppScaffold } from '../../shared/layout';
+import { AppFAB, AppScaffold } from '../../shared/layout';
 import { useLiveFlashlight } from '../../../hooks/useLiveFlashlight';
 import styles from './NewsApp.module.scss';
 
@@ -505,7 +505,7 @@ export function NewsApp() {
           ]}
         />
 
-        <button class={styles.fab} onClick={() => setShowCompose(true)}>+</button>
+        <AppFAB class={styles.fab} icon="+" onClick={() => setShowCompose(true)} />
         <MediaLightbox url={viewerUrl()} onClose={() => setViewerUrl(null)} />
         <SocialOnboardingModal
           open={showOnboarding()}

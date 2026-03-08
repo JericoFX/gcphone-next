@@ -3,7 +3,7 @@ import { useRouter } from '../../Phone/PhoneFrame';
 import { fetchNui } from '../../../utils/fetchNui';
 import { timeAgo } from '../../../utils/misc';
 import { resolveMediaType, sanitizeMediaUrl, sanitizeText } from '../../../utils/sanitize';
-import { AppScaffold } from '../../shared/layout';
+import { AppFAB, AppScaffold } from '../../shared/layout';
 import { useAppCache } from '../../../hooks';
 import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { MediaLightbox } from '../../shared/ui/MediaLightbox';
@@ -655,20 +655,16 @@ export function ChirpApp() {
       </div>
 
       {/* FAB */}
-      <div class={styles.fabContainer}>
-        <Show when={fabTooltipVisible()}>
-          <div class={styles.fabTooltip}>Nuevo Chirp</div>
-        </Show>
-        <button 
-          class={styles.fab}
-          onClick={() => setShowComposer(true)}
-          onPointerDown={showFabTooltip}
-          onPointerUp={hideFabTooltip}
-          onPointerLeave={hideFabTooltip}
-        >
-          ✎
-        </button>
-      </div>
+      <AppFAB
+        class={styles.fab}
+        icon="✎"
+        onClick={() => setShowComposer(true)}
+        tooltip="Nuevo Chirp"
+        tooltipVisible={fabTooltipVisible()}
+        onPointerDown={showFabTooltip}
+        onPointerUp={hideFabTooltip}
+        onPointerLeave={hideFabTooltip}
+      />
     </div>
   );
 

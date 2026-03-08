@@ -1,4 +1,4 @@
-import type { ParentComponent, ParentProps } from 'solid-js';
+import type { JSX, ParentComponent, ParentProps } from 'solid-js';
 import { Show } from 'solid-js';
 import { getStoredLanguage, tl } from '../../../i18n';
 import styles from './layout.module.scss';
@@ -130,15 +130,24 @@ export const AppFooter: ParentComponent<AppFooterProps> = (props) => {
 };
 
 export interface AppFABProps {
-  icon?: string;
+  icon?: JSX.Element | string;
   onClick: () => void;
   position?: 'bottom-right' | 'bottom-left' | 'bottom-center';
   class?: string;
+  containerClass?: string;
+  tooltip?: string;
+  tooltipVisible?: boolean;
+  tooltipClass?: string;
   disabled?: boolean;
+  onPointerDown?: JSX.EventHandlerUnion<HTMLButtonElement, PointerEvent>;
+  onPointerUp?: JSX.EventHandlerUnion<HTMLButtonElement, PointerEvent>;
+  onPointerLeave?: JSX.EventHandlerUnion<HTMLButtonElement, PointerEvent>;
+  onPointerCancel?: JSX.EventHandlerUnion<HTMLButtonElement, PointerEvent>;
+  title?: string;
 }
 
 export function AppFAB(props: AppFABProps) {
-  return (
+  const button = (
     <button
       classList={{
         [styles.fab]: true,
@@ -147,10 +156,30 @@ export function AppFAB(props: AppFABProps) {
         [props.class || '']: !!props.class,
       }}
       onClick={props.onClick}
+      onPointerDown={props.onPointerDown}
+      onPointerUp={props.onPointerUp}
+      onPointerLeave={props.onPointerLeave}
+      onPointerCancel={props.onPointerCancel}
       disabled={props.disabled}
+      title={props.title}
     >
       {props.icon || '+'}
     </button>
+  );
+
+  if (!props.tooltip && !props.containerClass) {
+    return button;
+  }
+
+  return (
+    <div classList={{ [styles.fabDock]: true, [props.containerClass || '']: !!props.containerClass }}>
+      <Show when={props.tooltip && props.tooltipVisible}>
+        <div classList={{ [styles.fabTooltip]: true, [props.tooltipClass || '']: !!props.tooltipClass }}>
+          {props.tooltip}
+        </div>
+      </Show>
+      {button}
+    </div>
   );
 }
 
