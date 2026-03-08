@@ -1,4 +1,4 @@
-import { createEffect, createMemo, createSignal, For, onCleanup, Show } from 'solid-js';
+import { createEffect, createMemo, createSignal, For, onCleanup, onMount, Show } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { fetchNui } from '../../../utils/fetchNui';
 import { timeAgo } from '../../../utils/misc';
@@ -9,6 +9,7 @@ import { startMockLiveFeed } from '../../../utils/liveMock';
 import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { ActionSheet } from '../../shared/ui/ActionSheet';
 import { MediaLightbox } from '../../shared/ui/MediaLightbox';
+import { SocialOnboardingModal, type SocialOnboardingPayload } from '../../shared/ui/SocialOnboardingModal';
 import { AppScaffold } from '../../shared/layout';
 import styles from './NewsApp.module.scss';
 
@@ -35,6 +36,14 @@ interface MockLiveMessage {
   at: string;
 }
 
+interface SharedSnapAccount {
+  username?: string;
+  display_name?: string;
+  avatar?: string;
+  bio?: string;
+  is_private?: boolean | number;
+}
+
 const NEWS_MOCK_USERS = ['Cronista', 'Mika', 'Luna', 'Santi', 'Mery'];
 const NEWS_MOCK_LINES = [
   'Cobertura impecable 👏',
@@ -57,6 +66,8 @@ export function NewsApp() {
   const [liveArticleId, setLiveArticleId] = createSignal<number | null>(null);
   const [showAttachSheet, setShowAttachSheet] = createSignal(false);
   const [viewerUrl, setViewerUrl] = createSignal<string | null>(null);
+  const [myAccount, setMyAccount] = createSignal<SharedSnapAccount | null>(null);
+  const [showOnboarding, setShowOnboarding] = createSignal(false);
   const [query, setQuery] = createSignal('');
   const [mockLiveEnabled, setMockLiveEnabled] = createSignal(false);
   const [mockLiveMessages, setMockLiveMessages] = createSignal<MockLiveMessage[]>([]);
@@ -74,8 +85,18 @@ export function NewsApp() {
     setCategories(cats || ['general']);
   };
 
+  const loadAccount = async () => {
+    const account = await fetchNui<SharedSnapAccount | null>('snapGetAccount', {}, null);
+    setMyAccount(account);
+    setShowOnboarding(!account?.username);
+  };
+
   createEffect(() => {
     void load();
+  });
+
+  onMount(() => {
+    void loadAccount();
   });
 
   usePhoneKeyHandler({
@@ -254,7 +275,11 @@ export function NewsApp() {
   };
 
   const editProfile = async () => {
-    const account = await fetchNui<any>('snapGetAccount', {});
+    const account = myAccount() || await fetchNui<SharedSnapAccount | null>('snapGetAccount', {}, null);
+    if (!account?.username) {
+      setShowOnboarding(true);
+      return;
+    }
     if (!account) return;
     const nextNameInput = await uiPrompt('Nombre visible para Snap/Clips/Noticias', {
       title: 'Perfil',
@@ -273,7 +298,24 @@ export function NewsApp() {
     });
     if (ok?.success) {
       uiAlert('Perfil actualizado');
+      await loadAccount();
     }
+  };
+
+  const createSnapAccount = async (payload: SocialOnboardingPayload) => {
+    const response = await fetchNui<{ success?: boolean; error?: string }>('snapCreateAccount', {
+      username: payload.username,
+      displayName: payload.displayName,
+      avatar: '',
+    }, { success: false });
+
+    if (!response?.success) {
+      return { ok: false, error: response?.error || 'No se pudo crear la cuenta de Snap.' };
+    }
+
+    setShowOnboarding(false);
+    await loadAccount();
+    return { ok: true };
   };
 
   const categoryOptions = createMemo(() => ['all', ...categories().filter((entry) => entry !== 'all')]);
@@ -410,6 +452,14 @@ export function NewsApp() {
 
         <button class={styles.fab} onClick={() => setShowCompose(true)}>+</button>
         <MediaLightbox url={viewerUrl()} onClose={() => setViewerUrl(null)} />
+        <SocialOnboardingModal
+          open={showOnboarding()}
+          appName="Snap/Noticias"
+          usernameHint={myAccount()?.username || ''}
+          displayNameHint={myAccount()?.display_name || ''}
+          onCreate={createSnapAccount}
+          onClose={() => setShowOnboarding(false)}
+        />
       </div>
     </AppScaffold>
   );

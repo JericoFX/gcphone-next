@@ -9,6 +9,7 @@ import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { MediaLightbox } from '../../shared/ui/MediaLightbox';
 import { FormField, FormTextarea, Modal, ModalActions, ModalButton } from '../../shared/ui/Modal';
 import { EmojiPickerButton } from '../../shared/ui/EmojiPicker';
+import { SocialOnboardingModal, type SocialOnboardingPayload } from '../../shared/ui/SocialOnboardingModal';
 import styles from './ChirpApp.module.scss';
 
 interface ChirpTweet {
@@ -98,6 +99,7 @@ export function ChirpApp() {
   const [attachUrlInput, setAttachUrlInput] = createSignal('');
   const [showProfileModal, setShowProfileModal] = createSignal(false);
   const [showRequestsModal, setShowRequestsModal] = createSignal(false);
+  const [showOnboarding, setShowOnboarding] = createSignal(false);
   const [requestsLoading, setRequestsLoading] = createSignal(false);
 
   const [profileDisplayName, setProfileDisplayName] = createSignal('');
@@ -182,6 +184,7 @@ export function ChirpApp() {
   const loadSocialState = async () => {
     const account = await fetchNui<ChirpAccount | null>('chirpGetAccount', {}, null);
     setMyAccount(account);
+    setShowOnboarding(!account?.username);
     setProfileDisplayName(account?.display_name || '');
     setProfileAvatar(account?.avatar || '');
     setProfileBio(account?.bio || '');
@@ -232,6 +235,10 @@ export function ChirpApp() {
       }
       if (showComposer()) {
         setShowComposer(false);
+        return;
+      }
+      if (showOnboarding()) {
+        setShowOnboarding(false);
         return;
       }
       if (viewMode() === 'detail') {
@@ -405,6 +412,11 @@ export function ChirpApp() {
 
   const openProfileEditor = () => {
     const account = myAccount();
+    if (!account?.username) {
+      setShowOnboarding(true);
+      return;
+    }
+
     setProfileDisplayName(account?.display_name || '');
     setProfileAvatar(account?.avatar || '');
     setProfileBio(account?.bio || '');
@@ -430,6 +442,25 @@ export function ChirpApp() {
     setStatusMessage('Perfil actualizado');
     cache.invalidate(`tweets:${currentTab()}`);
     await Promise.all([loadSocialState(), loadTweets()]);
+  };
+
+  const createChirpAccount = async (payload: SocialOnboardingPayload) => {
+    const response = await fetchNui<{ success?: boolean; error?: string; account?: ChirpAccount }>('chirpCreateAccount', {
+      username: payload.username,
+      displayName: payload.displayName,
+      avatar: '',
+      bio: '',
+      isPrivate: false,
+    }, { success: false });
+
+    if (!response?.success) {
+      return { ok: false, error: response?.error || 'No se pudo crear la cuenta de Chirp.' };
+    }
+
+    setShowOnboarding(false);
+    cache.invalidate(`tweets:${currentTab()}`);
+    await Promise.all([loadSocialState(), loadTweets()]);
+    return { ok: true };
   };
 
   const respondFollowRequest = async (requestId: number, accept: boolean) => {
@@ -818,6 +849,15 @@ export function ChirpApp() {
           <ModalButton label="Adjuntar" tone="primary" onClick={confirmAttachUrl} />
         </ModalActions>
       </Modal>
+
+      <SocialOnboardingModal
+        open={showOnboarding()}
+        appName="Chirp"
+        usernameHint={myAccount()?.username || ''}
+        displayNameHint={myAccount()?.display_name || ''}
+        onCreate={createChirpAccount}
+        onClose={() => setShowOnboarding(false)}
+      />
 
       <Modal
         open={showRequestsModal()}

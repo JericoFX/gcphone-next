@@ -93,6 +93,12 @@ RegisterNUICallback('mailMarkRead', function(data, cb)
     end, data or {})
 end)
 
+RegisterNUICallback('mailDelete', function(data, cb)
+    lib.callback('gcphone:mail:delete', false, function(payload)
+        cb(payload or { success = false, error = 'NO_RESPONSE' })
+    end, data or {})
+end)
+
 RegisterNUICallback('phoneGetSetupState', function(_, cb)
     lib.callback('gcphone:phone:getSetupState', false, function(payload)
         cb(payload or { success = false, error = 'NO_RESPONSE', requiresSetup = true })
@@ -406,6 +412,18 @@ RegisterNUICallback('chirpGetAccount', function(_, cb)
     end)
 end)
 
+RegisterNUICallback('chirpCreateAccount', function(data, cb)
+    lib.callback('gcphone:chirp:createAccount', false, function(success, payload)
+        if success then
+            cb(cbSuccess(true, nil, { account = payload }))
+            return
+        end
+
+        local errorMessage = type(payload) == 'string' and payload or 'No se pudo crear la cuenta'
+        cb(cbSuccess(false, errorMessage))
+    end, data or {})
+end)
+
 RegisterNUICallback('chirpUpdateAccount', function(data, cb)
     lib.callback('gcphone:chirp:updateAccount', false, function(success)
         cb(cbSuccess(success))
@@ -488,6 +506,30 @@ RegisterNUICallback('snapGetAccount', function(_, cb)
     lib.callback('gcphone:snap:getAccount', false, function(account)
         cb(account)
     end)
+end)
+
+RegisterNUICallback('snapCreateAccount', function(data, cb)
+    lib.callback('gcphone:snap:createAccount', false, function(success, payload)
+        if success then
+            cb(cbSuccess(true, nil, { account = payload }))
+            return
+        end
+
+        local errorMessage = type(payload) == 'string' and payload or 'No se pudo crear la cuenta'
+        cb(cbSuccess(false, errorMessage))
+    end, data or {})
+end)
+
+RegisterNUICallback('snapGetDiscoverAccounts', function(data, cb)
+    lib.callback('gcphone:snap:getDiscoverAccounts', false, function(accounts)
+        cb(accounts or {})
+    end, data or {})
+end)
+
+RegisterNUICallback('snapGetDiscoverFeed', function(data, cb)
+    lib.callback('gcphone:snap:getDiscoverFeed', false, function(rows)
+        cb(rows or {})
+    end, data or {})
 end)
 
 RegisterNUICallback('snapUpdateAccount', function(data, cb)
