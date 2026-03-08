@@ -84,6 +84,14 @@ local function HitRateLimit(source, key, windowMs, maxHits)
     return blocked == true
 end
 
+local function GetRateLimitWindow(key, fallback)
+    local value = tonumber(Config.Security and Config.Security.RateLimits and Config.Security.RateLimits[key]) or fallback
+    if not value or value < 100 then
+        value = fallback
+    end
+    return math.floor(value)
+end
+
 lib.callback.register('gcphone:clips:getFeed', function(source, data)
     local identifier = RequirePlayerIdentifier(source)
     data = type(data) == 'table' and data or {}
@@ -172,7 +180,7 @@ lib.callback.register('gcphone:clips:publish', function(source, data)
         return false, 'NOT_AUTHORIZED_JOB'
     end
 
-    local clipsMs = (Config.Security and Config.Security.RateLimits and Config.Security.RateLimits.clips) or 1500
+    local clipsMs = GetRateLimitWindow('clips', 1500)
     if HitRateLimit(source, 'clips_publish', clipsMs, 1) then
         return false, 'RATE_LIMITED'
     end
@@ -217,6 +225,11 @@ lib.callback.register('gcphone:clips:toggleLike', function(source, data)
     if type(data) ~= 'table' then return false end
     local postId = tonumber(data.postId)
     if not postId then return false end
+
+    local clipsMs = GetRateLimitWindow('clips', 1500)
+    if HitRateLimit(source, 'clips_like', clipsMs, 3) then
+        return false
+    end
 
     local account = GetSnapAccount(identifier)
     if not account then return false end
@@ -272,6 +285,11 @@ lib.callback.register('gcphone:clips:addComment', function(source, data)
     local clipId = tonumber(data.clipId)
     local content = SanitizeText(data.content, 500)
     if not clipId or content == '' then return false end
+
+    local clipsMs = GetRateLimitWindow('clips', 1500)
+    if HitRateLimit(source, 'clips_comment', clipsMs, 2) then
+        return false
+    end
 
     local account = GetSnapAccount(identifier)
     if not account then return false end

@@ -35,6 +35,14 @@ local function HitRateLimit(source, key, windowMs, maxHits)
     return blocked == true
 end
 
+local function GetRateLimitWindow(key, fallback)
+    local value = tonumber(Config.Security and Config.Security.RateLimits and Config.Security.RateLimits[key]) or fallback
+    if not value or value < 100 then
+        value = fallback
+    end
+    return math.floor(value)
+end
+
 local function RefreshFollowCounts(accountId, targetAccountId)
     if accountId then
         MySQL.update.await(
@@ -194,6 +202,10 @@ lib.callback.register('gcphone:chirp:getTweets', function(source, data)
     if identifier then
         account = GetAccount(identifier)
     end
+
+    if (tab == 'following' or tab == 'myActivity') and not account then
+        return {}
+    end
     
     if tab == 'following' and account then
         -- Tweets from followed accounts
@@ -289,7 +301,7 @@ lib.callback.register('gcphone:chirp:publishTweet', function(source, data)
     local account = GetAccount(identifier)
     if not account then return false end
 
-    local chirpMs = (Config.Security and Config.Security.RateLimits and Config.Security.RateLimits.chirp) or 1400
+    local chirpMs = GetRateLimitWindow('chirp', 1400)
     if HitRateLimit(source, 'chirp', chirpMs, 1) then
         return false, 'RATE_LIMITED'
     end
@@ -502,6 +514,11 @@ lib.callback.register('gcphone:chirp:follow', function(source, data)
     local account = GetAccount(identifier)
     if not account then return false end
 
+    local chirpMs = GetRateLimitWindow('chirp', 1400)
+    if HitRateLimit(source, 'chirp_follow', chirpMs, 2) then
+        return { following = false, requested = false, error = 'rate_limited' }
+    end
+
     if not IsPublishJobAllowed(source) then
         return false, 'NOT_AUTHORIZED_JOB'
     end
@@ -647,6 +664,11 @@ lib.callback.register('gcphone:chirp:respondFollowRequest', function(source, dat
     local accept = data.accept == true
     if not requestId or requestId < 1 then return false end
 
+    local chirpMs = GetRateLimitWindow('chirp', 1400)
+    if HitRateLimit(source, 'chirp_follow_requests', chirpMs, 3) then
+        return false
+    end
+
     local request = MySQL.single.await([[
         SELECT id, from_identifier, to_identifier
         FROM phone_friend_requests
@@ -694,6 +716,11 @@ lib.callback.register('gcphone:chirp:cancelFollowRequest', function(source, data
 
     local targetAccountId = tonumber(data.targetAccountId)
     if not targetAccountId or targetAccountId < 1 then return false end
+
+    local chirpMs = GetRateLimitWindow('chirp', 1400)
+    if HitRateLimit(source, 'chirp_follow_requests', chirpMs, 3) then
+        return false
+    end
 
     local targetAccount = MySQL.single.await(
         'SELECT identifier FROM phone_chirp_accounts WHERE id = ?',

@@ -100,6 +100,14 @@ local function HitRateLimit(source, key, windowMs, maxHits)
     return blocked == true
 end
 
+local function GetRateLimitWindow(key, fallback)
+    local value = tonumber(Config.Security and Config.Security.RateLimits and Config.Security.RateLimits[key]) or fallback
+    if not value or value < 100 then
+        value = fallback
+    end
+    return math.floor(value)
+end
+
 lib.callback.register('gcphone:news:getArticles', function(source, data)
     data = type(data) == 'table' and data or {}
     local category = SanitizeText(data.category, 30)
@@ -141,7 +149,7 @@ lib.callback.register('gcphone:news:publishArticle', function(source, data)
     
     local name, avatar = ResolveAuthorProfile(identifier, source)
 
-    local newsMs = (Config.Security and Config.Security.RateLimits and Config.Security.RateLimits.news) or 2500
+    local newsMs = GetRateLimitWindow('news', 2500)
     if HitRateLimit(source, 'news_publish', newsMs, 1) then
         return false, 'RATE_LIMITED'
     end
@@ -190,7 +198,7 @@ lib.callback.register('gcphone:news:startLive', function(source, data)
     
     local name, avatar = ResolveAuthorProfile(identifier, source)
 
-    local newsMs = (Config.Security and Config.Security.RateLimits and Config.Security.RateLimits.news) or 2500
+    local newsMs = GetRateLimitWindow('news', 2500)
     if HitRateLimit(source, 'news_live', newsMs, 1) then
         return false, 'RATE_LIMITED'
     end
@@ -245,6 +253,10 @@ lib.callback.register('gcphone:news:setScaleform', function(source, data)
     local articleId = tonumber(data.articleId)
     if not articleId or articleId < 1 then return false end
 
+    if HitRateLimit(source, 'news_scaleform', 1200, 8) then
+        return false
+    end
+
     local liveData = ActiveLiveNews[articleId]
     if not liveData or liveData.identifier ~= identifier then
         return false
@@ -267,15 +279,18 @@ end)
 lib.callback.register('gcphone:news:endLive', function(source, articleId)
     local identifier = GetIdentifier(source)
     if not identifier then return false end
+
+    local id = tonumber(articleId)
+    if not id or id < 1 then return false end
     
     MySQL.execute.await(
         'UPDATE phone_news SET is_live = 0 WHERE id = ? AND identifier = ?',
-        { articleId, identifier }
+        { id, identifier }
     )
     
-    ActiveLiveNews[articleId] = nil
+    ActiveLiveNews[id] = nil
     
-    TriggerClientEvent('gcphone:news:liveEnded', -1, articleId)
+    TriggerClientEvent('gcphone:news:liveEnded', -1, id)
     
     return true
 end)
@@ -283,19 +298,25 @@ end)
 lib.callback.register('gcphone:news:deleteArticle', function(source, articleId)
     local identifier = GetIdentifier(source)
     if not identifier then return false end
+
+    local id = tonumber(articleId)
+    if not id or id < 1 then return false end
     
     MySQL.execute.await(
         'DELETE FROM phone_news WHERE id = ? AND identifier = ?',
-        { articleId, identifier }
+        { id, identifier }
     )
     
     return true
 end)
 
 lib.callback.register('gcphone:news:viewArticle', function(source, articleId)
+    local id = tonumber(articleId)
+    if not id or id < 1 then return false end
+
     MySQL.update.await(
         'UPDATE phone_news SET views = views + 1 WHERE id = ?',
-        { articleId }
+        { id }
     )
     
     return true

@@ -134,6 +134,14 @@ local function GetSnapLiveAudioConfig()
     }
 end
 
+local function GetRateLimitWindow(key, fallback)
+    local value = tonumber(Config.Security and Config.Security.RateLimits and Config.Security.RateLimits[key]) or fallback
+    if not value or value < 100 then
+        value = fallback
+    end
+    return math.floor(value)
+end
+
 local function RefreshFollowCounts(accountId, targetAccountId)
     if accountId then
         MySQL.update.await(
@@ -178,6 +186,171 @@ lib.callback.register('gcphone:snap:getAccount', function(source)
     if not identifier then return nil end
 
     return GetAccount(identifier)
+end)
+
+lib.callback.register('gcphone:snap:getDiscoverAccounts', function(source, data)
+    local identifier = GetIdentifier(source)
+    if not identifier then return {} end
+
+    local me = GetAccount(identifier)
+    if not me then return {} end
+
+    data = type(data) == 'table' and data or {}
+    local limit = tonumber(data.limit) or 30
+    local offset = tonumber(data.offset) or 0
+    if limit < 1 then limit = 1 end
+    if limit > 100 then limit = 100 end
+    if offset < 0 then offset = 0 end
+
+    return MySQL.query.await([[
+        SELECT
+            a.id as account_id,
+            a.username,
+            a.display_name,
+            a.avatar,
+            a.bio,
+            a.verified,
+            a.is_private,
+            a.followers,
+            a.following,
+            CASE WHEN EXISTS (
+                SELECT 1
+                FROM phone_snap_following sf
+                WHERE sf.follower_id = ?
+                  AND sf.following_id = a.id
+                LIMIT 1
+            ) THEN 1 ELSE 0 END as is_following,
+            CASE WHEN EXISTS (
+                SELECT 1
+                FROM phone_friend_requests fr
+                WHERE fr.from_identifier = ?
+                  AND fr.to_identifier = a.identifier
+                  AND fr.type = 'snap'
+                  AND fr.status = 'pending'
+                LIMIT 1
+            ) THEN 1 ELSE 0 END as requested_by_me
+        FROM phone_snap_accounts a
+        WHERE a.id <> ?
+        ORDER BY a.verified DESC, a.followers DESC, a.display_name ASC
+        LIMIT ? OFFSET ?
+    ]], { me.id, identifier, me.id, limit, offset }) or {}
+end)
+
+lib.callback.register('gcphone:snap:getDiscoverFeed', function(source, data)
+    local identifier = GetIdentifier(source)
+    if not identifier then return {} end
+
+    local me = GetAccount(identifier)
+    if not me then return {} end
+
+    data = type(data) == 'table' and data or {}
+    local limit = tonumber(data.limit) or 30
+    local offset = tonumber(data.offset) or 0
+    local search = SanitizeText(tostring(data.search or ''), 60)
+
+    if limit < 1 then limit = 1 end
+    if limit > 100 then limit = 100 end
+    if offset < 0 then offset = 0 end
+
+    local rows
+    if search ~= '' then
+        local q = '%' .. search .. '%'
+        rows = MySQL.query.await([[
+            SELECT
+                p.id,
+                p.account_id,
+                p.media_url,
+                p.media_type,
+                p.caption,
+                p.likes,
+                p.created_at,
+                a.username,
+                a.display_name,
+                a.avatar,
+                a.verified,
+                a.is_private,
+                a.followers,
+                CASE WHEN EXISTS (
+                    SELECT 1
+                    FROM phone_snap_following sf
+                    WHERE sf.follower_id = ?
+                      AND sf.following_id = a.id
+                    LIMIT 1
+                ) THEN 1 ELSE 0 END as is_following,
+                CASE WHEN EXISTS (
+                    SELECT 1
+                    FROM phone_friend_requests fr
+                    WHERE fr.from_identifier = ?
+                      AND fr.to_identifier = a.identifier
+                      AND fr.type = 'snap'
+                      AND fr.status = 'pending'
+                    LIMIT 1
+                ) THEN 1 ELSE 0 END as requested_by_me
+            FROM phone_snap_posts p
+            INNER JOIN (
+                SELECT account_id, MAX(id) AS latest_post_id
+                FROM phone_snap_posts
+                WHERE is_live = 0
+                GROUP BY account_id
+            ) latest ON latest.latest_post_id = p.id
+            INNER JOIN phone_snap_accounts a ON a.id = p.account_id
+            WHERE a.id <> ?
+              AND (
+                a.username LIKE ?
+                OR a.display_name LIKE ?
+                OR a.bio LIKE ?
+                OR p.caption LIKE ?
+              )
+            ORDER BY a.verified DESC, p.created_at DESC
+            LIMIT ? OFFSET ?
+        ]], { me.id, identifier, me.id, q, q, q, q, limit, offset }) or {}
+    else
+        rows = MySQL.query.await([[
+            SELECT
+                p.id,
+                p.account_id,
+                p.media_url,
+                p.media_type,
+                p.caption,
+                p.likes,
+                p.created_at,
+                a.username,
+                a.display_name,
+                a.avatar,
+                a.verified,
+                a.is_private,
+                a.followers,
+                CASE WHEN EXISTS (
+                    SELECT 1
+                    FROM phone_snap_following sf
+                    WHERE sf.follower_id = ?
+                      AND sf.following_id = a.id
+                    LIMIT 1
+                ) THEN 1 ELSE 0 END as is_following,
+                CASE WHEN EXISTS (
+                    SELECT 1
+                    FROM phone_friend_requests fr
+                    WHERE fr.from_identifier = ?
+                      AND fr.to_identifier = a.identifier
+                      AND fr.type = 'snap'
+                      AND fr.status = 'pending'
+                    LIMIT 1
+                ) THEN 1 ELSE 0 END as requested_by_me
+            FROM phone_snap_posts p
+            INNER JOIN (
+                SELECT account_id, MAX(id) AS latest_post_id
+                FROM phone_snap_posts
+                WHERE is_live = 0
+                GROUP BY account_id
+            ) latest ON latest.latest_post_id = p.id
+            INNER JOIN phone_snap_accounts a ON a.id = p.account_id
+            WHERE a.id <> ?
+            ORDER BY a.verified DESC, p.created_at DESC
+            LIMIT ? OFFSET ?
+        ]], { me.id, identifier, me.id, limit, offset }) or {}
+    end
+
+    return rows
 end)
 
 lib.callback.register('gcphone:snap:createAccount', function(source, data)
@@ -275,7 +448,7 @@ lib.callback.register('gcphone:snap:publishPost', function(source, data)
         return false, 'NOT_AUTHORIZED_JOB'
     end
 
-    local snapMs = (Config.Security and Config.Security.RateLimits and Config.Security.RateLimits.snap) or 1500
+    local snapMs = GetRateLimitWindow('snap', 1500)
     if HitRateLimit(source, 'snap_post', snapMs, 1) then
         return false, 'RATE_LIMITED'
     end
@@ -315,7 +488,7 @@ lib.callback.register('gcphone:snap:publishStory', function(source, data)
         return false, 'NOT_AUTHORIZED_JOB'
     end
 
-    local snapMs = (Config.Security and Config.Security.RateLimits and Config.Security.RateLimits.snap) or 1500
+    local snapMs = GetRateLimitWindow('snap', 1500)
     if HitRateLimit(source, 'snap_story', snapMs, 1) then
         return false, 'RATE_LIMITED'
     end
@@ -399,7 +572,7 @@ lib.callback.register('gcphone:snap:startLive', function(source)
     local account = GetAccount(identifier)
     if not account then return false end
 
-    local snapMs = (Config.Security and Config.Security.RateLimits and Config.Security.RateLimits.snap) or 1500
+    local snapMs = GetRateLimitWindow('snap', 1500)
     if HitRateLimit(source, 'snap_live', snapMs, 1) then
         return false, 'RATE_LIMITED'
     end
@@ -528,6 +701,11 @@ lib.callback.register('gcphone:snap:follow', function(source, data)
     
     local account = GetAccount(identifier)
     if not account then return false end
+
+    local snapMs = GetRateLimitWindow('snap', 1500)
+    if HitRateLimit(source, 'snap_follow', snapMs, 2) then
+        return { following = false, requested = false, error = 'rate_limited' }
+    end
 
     if not IsPublishJobAllowed(source) then
         return false, 'NOT_AUTHORIZED_JOB'
@@ -674,6 +852,11 @@ lib.callback.register('gcphone:snap:respondFollowRequest', function(source, data
     local accept = data.accept == true
     if not requestId or requestId < 1 then return false end
 
+    local snapMs = GetRateLimitWindow('snap', 1500)
+    if HitRateLimit(source, 'snap_follow_requests', snapMs, 3) then
+        return false
+    end
+
     local request = MySQL.single.await([[
         SELECT id, from_identifier, to_identifier
         FROM phone_friend_requests
@@ -721,6 +904,11 @@ lib.callback.register('gcphone:snap:cancelFollowRequest', function(source, data)
 
     local targetAccountId = tonumber(data.targetAccountId)
     if not targetAccountId or targetAccountId < 1 then return false end
+
+    local snapMs = GetRateLimitWindow('snap', 1500)
+    if HitRateLimit(source, 'snap_follow_requests', snapMs, 3) then
+        return false
+    end
 
     local targetAccount = MySQL.single.await(
         'SELECT identifier FROM phone_snap_accounts WHERE id = ?',
