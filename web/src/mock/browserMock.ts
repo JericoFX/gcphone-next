@@ -39,6 +39,7 @@ interface BrowserMockState {
   theme: 'auto' | 'light' | 'dark';
   language: 'es' | 'en' | 'pt' | 'fr';
   audioProfile: 'normal' | 'street' | 'vehicle' | 'silent';
+  requiresSetup: boolean;
   contacts: Contact[];
   messages: Message[];
   calls: Call[];
@@ -577,6 +578,7 @@ const state: BrowserMockState = {
   theme: 'light',
   language: 'es',
   audioProfile: 'normal',
+  requiresSetup: false,
   contacts: [
     { id: 1, display: 'Maria Garcia', number: '555-1111', favorite: true },
     { id: 2, display: 'Juan Perez', number: '555-2222', favorite: false },
@@ -683,9 +685,19 @@ const phonePayload = () => ({
     darkrooms: true,
     clips: true,
     wallet: true,
+    mail: true,
     documents: true,
     music: true,
     yellowpages: true,
+  },
+  requiresSetup: state.requiresSetup,
+  setup: {
+    requiresSetup: state.requiresSetup,
+    hasSnap: !state.requiresSetup,
+    hasChirp: !state.requiresSetup,
+    hasClips: !state.requiresSetup,
+    hasMail: !state.requiresSetup || Boolean(state.mailAccount),
+    mailDomain: state.mailDomain,
   },
 });
 
@@ -695,9 +707,48 @@ let nextPhotoId = 3;
 let nextCallId = 2;
 let nextMailMessageId = 3;
 let nextWalletRequestId = 1;
+let nextMockNewsId = 4;
 let started = false;
 let mockLiveLocationActive = false;
 let mockLiveLocationInterval = 10;
+const mockNewsArticles: Array<Record<string, unknown>> = [
+  {
+    id: 1,
+    author_name: 'Daily LS',
+    title: 'Ultima hora',
+    content: 'Evento masivo en Legion Square con operativo especial.',
+    category: 'general',
+    media_url: './img/background/neon.jpg',
+    created_at: nowIso(),
+    is_live: 0,
+    live_viewers: 0,
+  },
+  {
+    id: 2,
+    author_name: 'Canal 6',
+    title: 'Transito',
+    content: 'Demoras en autopista por obras, usar rutas alternativas.',
+    category: 'trafico',
+    media_url: './img/background/tokio.jpg',
+    created_at: nowIso(),
+    is_live: 1,
+    live_viewers: 24,
+  },
+  {
+    id: 3,
+    author_name: 'Noticias Vespucci',
+    title: 'Cultura',
+    content: 'Festival de arte urbano durante todo el fin de semana.',
+    category: 'general',
+    media_url: './img/background/back004.jpg',
+    created_at: nowIso(),
+    is_live: 0,
+    live_viewers: 0,
+  },
+];
+const mockNewsScaleforms = new Map<number, Record<string, string>>([
+  [2, { preset: 'breaking', headline: 'TRAFICO EN VIVO', subtitle: 'Cobertura desde la autopista', ticker: 'Desvios activos en este momento' }],
+]);
 const mockWalletRequests: Array<{
   id: number;
   requesterIdentifier: string;
@@ -1200,6 +1251,61 @@ export async function handleBrowserNui<T = unknown>(eventName: string, data?: un
       };
     }
     return true as T;
+  }
+
+  if (eventName === 'phoneGetSetupState') {
+    return {
+      success: true,
+      requiresSetup: state.requiresSetup,
+      setup: phonePayload().setup,
+    } as T;
+  }
+
+  if (eventName === 'phoneCompleteSetup') {
+    const pin = String(payload.pin || '').replace(/\D/g, '').slice(0, 6);
+    const mailAlias = String(payload.mailAlias || '').trim().toLowerCase();
+    const nextLanguage = String(payload.language || state.language);
+    const nextTheme = String(payload.theme || state.theme);
+    const nextAudioProfile = String(payload.audioProfile || state.audioProfile);
+    const handles = [payload.snapUsername, payload.chirpUsername, payload.clipsUsername].map((value) => String(value || '').trim().toLowerCase());
+
+    if (pin.length < 4 || handles.some((value) => !/^[a-z0-9._-]{3,32}$/.test(value)) || !/^[a-z0-9._-]{3,24}$/.test(mailAlias)) {
+      return { success: false, error: 'INVALID_SETUP_DATA' } as T;
+    }
+
+    if (nextLanguage === 'es' || nextLanguage === 'en' || nextLanguage === 'pt' || nextLanguage === 'fr') {
+      state.language = nextLanguage;
+    }
+    if (nextTheme === 'auto' || nextTheme === 'light' || nextTheme === 'dark') {
+      state.theme = nextTheme;
+    }
+    if (nextAudioProfile === 'normal' || nextAudioProfile === 'street' || nextAudioProfile === 'vehicle' || nextAudioProfile === 'silent') {
+      state.audioProfile = nextAudioProfile;
+    }
+
+    state.lockCode = pin;
+    state.requiresSetup = false;
+    state.mailAccount = {
+      id: state.mailAccount?.id || 1,
+      alias: mailAlias,
+      email: `${mailAlias}@${state.mailDomain}`,
+    };
+
+    emitMessage('showPhone', phonePayload());
+
+    return {
+      success: true,
+      requiresSetup: state.requiresSetup,
+      setup: phonePayload().setup,
+    } as T;
+  }
+
+  if (eventName === 'phoneVerifyPin') {
+    const pin = String(payload.pin || '').replace(/\D/g, '').slice(0, 6);
+    return {
+      success: true,
+      unlocked: pin.length >= 4 && pin === state.lockCode,
+    } as T;
   }
 
   if (eventName === 'getContacts') {
@@ -2088,38 +2194,26 @@ export async function handleBrowserNui<T = unknown>(eventName: string, data?: un
   }
 
   if (eventName === 'newsGetArticles') {
-    return [
-      {
-        id: 1,
-        author_name: 'Daily LS',
-        title: 'Ultima hora',
-        content: 'Evento masivo en Legion Square con operativo especial.',
-        category: 'general',
-        media_url: './img/background/neon.jpg',
-        created_at: nowIso(),
-      },
-      {
-        id: 2,
-        author_name: 'Canal 6',
-        title: 'Transito',
-        content: 'Demoras en autopista por obras, usar rutas alternativas.',
-        category: 'trafico',
-        media_url: './img/background/tokio.jpg',
-        created_at: nowIso(),
-      },
-      {
-        id: 3,
-        author_name: 'Noticias Vespucci',
-        title: 'Cultura',
-        content: 'Festival de arte urbano durante todo el fin de semana.',
-        category: 'general',
-        media_url: './img/background/back004.jpg',
-        created_at: nowIso(),
-      },
-    ] as T;
+    const requestedCategory = String(payload?.category || 'all');
+    const rows = requestedCategory === 'all'
+      ? mockNewsArticles
+      : mockNewsArticles.filter((entry) => String(entry.category || 'general') === requestedCategory);
+    return [...rows].sort((left, right) => String(right.created_at || '').localeCompare(String(left.created_at || ''))) as T;
   }
 
   if (eventName === 'newsPublishArticle') {
+    mockNewsArticles.unshift({
+      id: nextMockNewsId++,
+      author_name: 'Mock Newsroom',
+      title: String(payload.title || 'Nueva noticia'),
+      content: String(payload.content || ''),
+      category: String(payload.category || 'general'),
+      media_url: String(payload.mediaUrl || ''),
+      created_at: nowIso(),
+      is_live: 0,
+      live_viewers: 0,
+    });
+    emitMessage('gcphone:news:newArticle', { success: true });
     return { success: true } as T;
   }
 
@@ -2128,14 +2222,72 @@ export async function handleBrowserNui<T = unknown>(eventName: string, data?: un
   }
 
   if (eventName === 'newsDeleteArticle' || eventName === 'newsViewArticle') {
+    if (eventName === 'newsDeleteArticle') {
+      const articleId = Number(payload?.articleId || 0);
+      const index = mockNewsArticles.findIndex((entry) => Number(entry.id || 0) === articleId);
+      if (index >= 0) mockNewsArticles.splice(index, 1);
+    }
     return { success: true } as T;
   }
 
+  if (eventName === 'newsGetLiveNews') {
+    return mockNewsArticles.filter((entry) => Number(entry.is_live || 0) === 1) as T;
+  }
+
+  if (eventName === 'newsGetScaleform') {
+    const articleId = Number(payload?.articleId || 0);
+    return (mockNewsScaleforms.get(articleId) || null) as T;
+  }
+
   if (eventName === 'newsStartLive') {
-    return { success: true, articleId: 5 } as T;
+    const articleId = nextMockNewsId++;
+    const scaleform = (payload?.scaleform as Record<string, unknown> | undefined) || {};
+    const article = {
+      id: articleId,
+      author_name: 'Mock Newsroom',
+      title: String(payload.title || 'Transmision en vivo'),
+      content: String(payload.content || 'Cobertura en vivo'),
+      category: String(payload.category || 'general'),
+      media_url: './img/background/back001.jpg',
+      created_at: nowIso(),
+      is_live: 1,
+      live_viewers: 1,
+    };
+    mockNewsArticles.unshift(article);
+    mockNewsScaleforms.set(articleId, {
+      preset: String(scaleform.preset || 'breaking'),
+      headline: String(scaleform.headline || 'ULTIMO MOMENTO'),
+      subtitle: String(scaleform.subtitle || 'Cobertura en vivo'),
+      ticker: String(scaleform.ticker || 'Desarrollo en curso...'),
+    });
+    emitMessage('gcphone:news:liveStarted', article);
+    return { success: true, articleId } as T;
+  }
+
+  if (eventName === 'newsSetScaleform') {
+    const articleId = Number(payload?.articleId || 0);
+    const scaleform = (payload?.scaleform as Record<string, unknown> | undefined) || {};
+    if (articleId > 0) {
+      mockNewsScaleforms.set(articleId, {
+        preset: String(scaleform.preset || 'breaking'),
+        headline: String(scaleform.headline || 'ULTIMO MOMENTO'),
+        subtitle: String(scaleform.subtitle || 'Cobertura en vivo'),
+        ticker: String(scaleform.ticker || 'Desarrollo en curso...'),
+      });
+      emitMessage('gcphone:news:scaleformUpdated', { articleId });
+    }
+    return { success: true } as T;
   }
 
   if (eventName === 'newsEndLive') {
+    const articleId = Number(payload?.articleId || 0);
+    const article = mockNewsArticles.find((entry) => Number(entry.id || 0) === articleId);
+    if (article) {
+      article.is_live = 0;
+      article.live_viewers = 0;
+    }
+    mockNewsScaleforms.delete(articleId);
+    emitMessage('gcphone:news:liveEnded', articleId);
     return { success: true } as T;
   }
 
