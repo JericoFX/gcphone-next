@@ -45,6 +45,7 @@ server_scripts {
     'server/modules/phone.lua',
     'server/modules/contacts.lua',
     'server/modules/security.lua',
+    'server/modules/_utils.lua',
     'server/modules/notifications.lua',
     'server/modules/messages.lua',
     'server/modules/mail.lua',

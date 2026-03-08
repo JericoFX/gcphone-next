@@ -5,14 +5,10 @@ local LastTokenRequestId = 0
 local REQUEST_TIMEOUT_MS = 7000
 local CLEANUP_INTERVAL_MS = 30000
 
+local Utils = GcPhoneUtils
+
 local function SafeString(value, maxLen)
-    if type(value) ~= 'string' then return nil end
-    local normalized = value:gsub('[%z\1-\31\127]', ''):gsub('^%s+', ''):gsub('%s+$', '')
-    if normalized == '' then return nil end
-    if #normalized > maxLen then
-        normalized = normalized:sub(1, maxLen)
-    end
-    return normalized
+    return Utils.SafeString(value, maxLen)
 end
 
 local function NextRequestId()
@@ -28,6 +24,20 @@ local function IsParticipantOfCall(callId, source)
     local call = calls[callId]
     if not call then return false end
     return source == call.transmitterSrc or source == call.receiverSrc
+end
+
+local function GetLiveKitHost()
+    local host = SafeString(GetConvar('livekit_host', ''), 240)
+    if not host then
+        return nil, 'MISSING_HOST'
+    end
+
+    local lowered = string.lower(host)
+    if lowered:sub(1, 5) ~= 'ws://' and lowered:sub(1, 6) ~= 'wss://' then
+        return nil, 'INVALID_HOST_SCHEME'
+    end
+
+    return host
 end
 
 local function IsSnapLiveParticipant(liveId, source)
@@ -132,6 +142,10 @@ lib.callback.register('gcphone:livekit:getToken', function(source, data)
     local identity = SafeString('player:' .. tostring(identifier), 64)
     local participantName = SafeString(GetName(source) or ('player-' .. tostring(source)), 64)
     local maxDuration = tonumber(data and data.maxDuration) or 300
+    local host, hostError = GetLiveKitHost()
+    if not host then
+        return { success = false, error = hostError or 'MISSING_HOST' }
+    end
 
     local requestId = NextRequestId()
     local p = promise.new()
@@ -146,7 +160,7 @@ lib.callback.register('gcphone:livekit:getToken', function(source, data)
     if type(result) == 'table' and result.ok then
         return {
             success = true,
-            url = tostring(GetConvar('livekit_host', tostring((Config.LiveKit and Config.LiveKit.Host) or ''))),
+            url = host,
             token = result.token,
             roomName = roomName,
             identity = identity,
