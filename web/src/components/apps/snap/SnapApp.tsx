@@ -27,6 +27,7 @@ import { FormField, FormTextarea, Modal, ModalActions, ModalButton } from '../..
 import { ActionSheet } from '../../shared/ui/ActionSheet';
 import { EmojiPickerButton } from '../../shared/ui/EmojiPicker';
 import { LiveFlashlightControl } from '../../shared/ui/LiveFlashlightControl';
+import { MediaAttachmentPreview } from '../../shared/ui/MediaAttachmentPreview';
 import { SocialOnboardingModal, type SocialOnboardingPayload } from '../../shared/ui/SocialOnboardingModal';
 import { VirtualList } from '../../shared/ui/VirtualList';
 import { useLiveFlashlight } from '../../../hooks/useLiveFlashlight';
@@ -1660,14 +1661,7 @@ export function SnapApp() {
           </Show>
 
           <Show when={postMedia()}>
-            <div class={styles.mediaPreview}>
-              {resolveMediaType(postMedia()) === 'video' ? (
-                <video src={postMedia()} controls playsinline />
-              ) : (
-                <img src={postMedia()} alt="" />
-              )}
-              <button class={styles.removeMedia} onClick={() => setPostMedia('')}>✕</button>
-            </div>
+            <MediaAttachmentPreview url={postMedia()} removable onRemove={() => setPostMedia('')} />
 
             <Show when={postMode() === 'post'}>
               <EmojiPickerButton value={postCaption()} onChange={setPostCaption} maxLength={2200} />

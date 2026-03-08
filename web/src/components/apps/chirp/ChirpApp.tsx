@@ -7,6 +7,7 @@ import { AppFAB, AppScaffold } from '../../shared/layout';
 import { useAppCache } from '../../../hooks';
 import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { MediaLightbox } from '../../shared/ui/MediaLightbox';
+import { MediaAttachmentPreview } from '../../shared/ui/MediaAttachmentPreview';
 import { FormField, FormTextarea, Modal, ModalActions, ModalButton } from '../../shared/ui/Modal';
 import { EmojiPickerButton } from '../../shared/ui/EmojiPicker';
 import { SocialOnboardingModal, type SocialOnboardingPayload } from '../../shared/ui/SocialOnboardingModal';
@@ -817,11 +818,7 @@ export function ChirpApp() {
           </div>
           
           <Show when={composerMedia()}>
-            {resolveMediaType(composerMedia()) === 'image' ? (
-              <img class={styles.mediaPreview} src={composerMedia()} alt="" />
-            ) : (
-              <video class={styles.mediaPreview} src={composerMedia()} controls playsinline />
-            )}
+            <MediaAttachmentPreview url={composerMedia()} />
           </Show>
           
           <div class={styles.composerActions}>
