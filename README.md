@@ -130,14 +130,75 @@ setr livekit_max_call_duration "300"
 
 ## Operacion del resource
 
-Documentacion operativa y de mantenimiento:
+### Dependencias
 
-- `docs/operations/resource-runbook.md`
-- `docs/operations/troubleshooting.md`
-- `docs/dev/lua-oxlib-guidelines.md`
-- `docs/qa/regression-social-audio.md`
+- `ox_lib`
+- `oxmysql`
+- `qb-core`
+- server build con `onesync`
 
-Si vas a desplegar en servidor real, empieza por el runbook y despues usa troubleshooting para diagnostico rapido.
+### Orden de arranque recomendado
+
+1. `oxmysql`
+2. `ox_lib`
+3. `qb-core`
+4. servicios externos opcionales (LiveKit / Socket)
+5. `gcphone-next`
+
+### Config server.cfg (LiveKit)
+
+setr livekit_host "ws://IP_DEL_SERVIDOR:7880"
+setr livekit_api_key "TU_KEY"
+setr livekit_api_secret "TU_SECRET"
+setr livekit_room_prefix "gcphone"
+setr livekit_max_call_duration "300"
+
+Notas:
+
+- `livekit_host` debe empezar con `ws://` o `wss://`.
+- `livekit_api_key` y `livekit_api_secret` son server-side only.
+
+### Config server.cfg (Socket opcional)
+
+setr gcphone_socket_host "ws://IP_DEL_SERVIDOR:3001"
+setr gcphone_socket_jwt_secret "TU_SECRET"
+
+Notas:
+
+- Socket es opcional, activar solo si realmente se usa.
+- el JWT secret del socket server debe coincidir con `gcphone_socket_jwt_secret`.
+
+### Verificacion rapida despues de reinicio
+
+1. abrir telefono y validar carga inicial.
+2. probar una accion social (follow/request o publicar).
+3. probar llamada/LiveKit si esta habilitado.
+4. revisar consola por errores de callback/convar.
+
+### Troubleshooting rapido
+
+- `MISSING_HOST` o `INVALID_HOST_SCHEME` (LiveKit): revisar `livekit_host`.
+- 401 en LiveKit token: revisar key/secret y host correctos.
+- `MISSING_SOCKET_HOST` o `INVALID_SOCKET_HOST_SCHEME`: revisar `gcphone_socket_host`.
+- setup de LiveKit que "se cierra": ejecutar `tools\\livekit\\setup-livekit.bat` desde `cmd` para ver el error exacto.
+
+### Estandar Lua (resumen)
+
+- usar `lib.callback.register` con validacion defensiva en server.
+- no confiar en estado cliente para ownership/permisos.
+- usar sanitizacion de input y rate-limit en acciones spameables.
+- mantener error codes estables para debug (`INVALID_PAYLOAD`, `RATE_LIMITED`, etc.).
+
+### Lluvia de ideas (rendimiento)
+
+- reemplazar `transition: all` restante por transiciones de propiedades especificas (`transform`, `opacity`, `background-color`, etc.).
+- revisar apps con listas largas y mover filtros/derivados a `createMemo` para evitar recomputes innecesarios.
+- virtualizar listas pesadas que todavia no usan `VirtualList`.
+- revisar callbacks sociales mas usados y aplicar cooldown por accion/usuario segun `Config.Security.RateLimits`.
+- agregar comando de health (`gcphone_health`) con estado de DB, LiveKit, Socket y callbacks criticos.
+- reducir trabajo por tick en cliente y mover validaciones sensibles al server.
+- unificar cache TTL de apps sociales para evitar doble fetch al navegar rapido.
+- eliminar queries redundantes en flujos follow/request y consolidar lecturas post-accion.
 
 ---
 
