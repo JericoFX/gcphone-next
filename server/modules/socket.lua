@@ -13,6 +13,26 @@ local function NextRequestId()
     return LastSocketTokenRequestId
 end
 
+local Utils = GcPhoneUtils
+
+local function SafeString(value, maxLen)
+    return Utils.SafeString(value, maxLen)
+end
+
+local function GetSocketHost()
+    local host = SafeString(GetConvar('gcphone_socket_host', ''), 240)
+    if not host then
+        return nil, 'MISSING_SOCKET_HOST'
+    end
+
+    local lowered = string.lower(host)
+    if lowered:sub(1, 5) ~= 'ws://' and lowered:sub(1, 6) ~= 'wss://' then
+        return nil, 'INVALID_SOCKET_HOST_SCHEME'
+    end
+
+    return host
+end
+
 local function CleanupExpiredRequests()
     local now = GetGameTimer()
     for id, data in pairs(PendingSocketTokenRequests) do
@@ -71,6 +91,10 @@ lib.callback.register('gcphone:socket:getToken', function(source)
     end
 
     local groupIds = GetUserGroupIds(identifier)
+    local host, hostError = GetSocketHost()
+    if not host then
+        return { success = false, error = hostError or 'MISSING_SOCKET_HOST' }
+    end
 
     local requestId = NextRequestId()
     local p = promise.new()
@@ -83,7 +107,6 @@ lib.callback.register('gcphone:socket:getToken', function(source)
 
     local result = Citizen.Await(p)
     if type(result) == 'table' and result.ok then
-        local host = tostring(GetConvar('gcphone_socket_host', tostring((Config.Socket and Config.Socket.Host) or '')))
         return {
             success = true,
             host = host,

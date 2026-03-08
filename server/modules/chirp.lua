@@ -1,46 +1,22 @@
 -- Creado/Modificado por JericoFX
 -- Chirp (Twitter/X Clone) - Backend
 
+local Utils = GcPhoneUtils
+
 local function SanitizeText(value, maxLength)
-    if type(value) ~= 'string' then return '' end
-    local text = value:gsub('[%z\1-\31\127]', '')
-    text = text:gsub('<.->', '')
-    text = text:gsub('^%s+', ''):gsub('%s+$', '')
-    return text:sub(1, maxLength or 280)
+    return Utils.SanitizeText(value, maxLength or 280, true)
 end
 
 local function SanitizeMediaUrl(value)
-    if type(value) ~= 'string' then return nil end
-    local url = value:gsub('[%z\1-\31\127]', '')
-    url = url:gsub('^%s+', ''):gsub('%s+$', '')
-    if url == '' then return nil end
-    if not url:match('^https?://') then return nil end
-    local base = (url:match('^[^?]+') or url):lower()
-    local allowed = { '.png', '.jpg', '.jpeg', '.webp', '.gif', '.mp4', '.webm', '.mov', '.m3u8' }
-    for _, ext in ipairs(allowed) do
-        if base:sub(-#ext) == ext then
-            return url:sub(1, 500)
-        end
-    end
-    return nil
+    return Utils.SanitizeMediaUrl(value, { '.png', '.jpg', '.jpeg', '.webp', '.gif', '.mp4', '.webm', '.mov', '.m3u8' }, 500)
 end
 
-local SecurityResource = GetCurrentResourceName()
-
 local function HitRateLimit(source, key, windowMs, maxHits)
-    local ok, blocked = pcall(function()
-        return exports[SecurityResource]:HitRateLimit(source, key, windowMs, maxHits)
-    end)
-    if not ok then return false end
-    return blocked == true
+    return Utils.HitRateLimit(source, key, windowMs, maxHits)
 end
 
 local function GetRateLimitWindow(key, fallback)
-    local value = tonumber(Config.Security and Config.Security.RateLimits and Config.Security.RateLimits[key]) or fallback
-    if not value or value < 100 then
-        value = fallback
-    end
-    return math.floor(value)
+    return Utils.GetRateLimitWindow(key, fallback)
 end
 
 local function RefreshFollowCounts(accountId, targetAccountId)
