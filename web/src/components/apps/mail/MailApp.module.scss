@@ -61,6 +61,7 @@
   height: 100%;
   background: var(--mail-bg);
   overflow: hidden;
+  padding-bottom: calc(10px + var(--phone-bottom-ui-gap, 0px));
 }
 
 /* Error alert */
@@ -768,7 +769,7 @@
 /* Floating Action Button */
 .fab {
   position: fixed;
-  bottom: var(--space-5);
+  bottom: calc(var(--space-5) + var(--phone-bottom-ui-gap, 0px));
   right: var(--space-5);
   width: 56px;
   height: 56px;
