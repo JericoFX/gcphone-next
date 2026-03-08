@@ -1,0 +1,37 @@
+═══════════════════════════════════════════════════════════════
+       CRYPTOGRAPHIC HASH VERIFICATION REPORT
+               Hash-File.Online v3.14.16
+═══════════════════════════════════════════════════════════════
+
+Report ID: 9835dd9b-d3ff-4032-b5c6-13ad3e270ae3
+Generated: March 7, 2026 at 08:35:16 PM GMT-3
+Title: Security Hash
+Purpose: Valida que el Hash sea el correcto
+Verified by: JericoFX
+Algorithm: SHA-256
+
+───────────────────────────────────────────────────────────────
+FILE VERIFICATION RESULTS
+───────────────────────────────────────────────────────────────
+
+[1] setup-livekit.ps1
+    Size: 0.01 MB (9.399 bytes)
+    Hash: 97868090b70e5fd1b5757808c679eeec258f0e5e88fe0fd14e0360a38079167e
+    Status: ✓ VERIFIED
+
+───────────────────────────────────────────────────────────────
+SUMMARY
+───────────────────────────────────────────────────────────────
+Total Files: 1
+Successful: 1 (100.0%)
+Failed: 0 (0.0%)
+
+───────────────────────────────────────────────────────────────
+REPORT VERIFICATION
+───────────────────────────────────────────────────────────────
+Report Hash (SHA-256): b5e3b3e330d83ace7cdfc5229ceb69b256e03e48fe0d63fa3ffa297b43543e1a
+Verify at: https://hash-file.online/
+
+This report was generated using 100% client-side processing.
+No files were uploaded to any server.
+═══════════════════════════════════════════════════════════════
