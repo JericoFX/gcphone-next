@@ -7,7 +7,7 @@ import { AppScaffold } from '../../shared/layout';
 import { useAppCache } from '../../../hooks';
 import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { MediaLightbox } from '../../shared/ui/MediaLightbox';
-import { Modal, ModalActions, ModalButton, FormField } from '../../shared/ui/Modal';
+import { FormField, FormTextarea, Modal, ModalActions, ModalButton } from '../../shared/ui/Modal';
 import { EmojiPickerButton } from '../../shared/ui/EmojiPicker';
 import styles from './ChirpApp.module.scss';
 
@@ -52,6 +52,14 @@ interface ChirpFollowRequest {
   created_at?: string;
 }
 
+interface ChirpAccount {
+  username?: string;
+  display_name?: string;
+  avatar?: string;
+  bio?: string;
+  is_private?: boolean | number;
+}
+
 type TabMode = 'forYou' | 'following' | 'myActivity';
 
 export function ChirpApp() {
@@ -66,7 +74,7 @@ export function ChirpApp() {
   // Data
   const [tweets, setTweets] = createSignal<ChirpTweet[]>([]);
   const [comments, setComments] = createSignal<ChirpComment[]>([]);
-  const [myAccount, setMyAccount] = createSignal<any>(null);
+  const [myAccount, setMyAccount] = createSignal<ChirpAccount | null>(null);
   const [pendingRequests, setPendingRequests] = createSignal<ChirpFollowRequest[]>([]);
   const [sentRequests, setSentRequests] = createSignal<ChirpFollowRequest[]>([]);
 
@@ -100,6 +108,9 @@ export function ChirpApp() {
   // Viewer
   const [viewerUrl, setViewerUrl] = createSignal<string | null>(null);
   const [query, setQuery] = createSignal('');
+
+  const pendingCount = createMemo(() => pendingRequests().length);
+  const sentCount = createMemo(() => sentRequests().length);
 
   // FAB Tooltip
   let fabTimeout: number;
@@ -159,20 +170,24 @@ export function ChirpApp() {
     setLoading(false);
   };
 
-  const loadSocialState = async () => {
-    const account = await fetchNui('chirpGetAccount', {}, null);
-    setMyAccount(account);
-    setProfileDisplayName(account?.display_name || '');
-    setProfileAvatar(account?.avatar || '');
-    setProfileBio(account?.bio || '');
-    setProfilePrivate(account?.is_private === 1 || account?.is_private === true);
-
+  const refreshFollowRequests = async () => {
     setRequestsLoading(true);
     const incoming = await fetchNui<ChirpFollowRequest[]>('chirpGetPendingFollowRequests', {}, []);
     const outgoing = await fetchNui<ChirpFollowRequest[]>('chirpGetSentFollowRequests', {}, []);
     setPendingRequests(incoming || []);
     setSentRequests(outgoing || []);
     setRequestsLoading(false);
+  };
+
+  const loadSocialState = async () => {
+    const account = await fetchNui<ChirpAccount | null>('chirpGetAccount', {}, null);
+    setMyAccount(account);
+    setProfileDisplayName(account?.display_name || '');
+    setProfileAvatar(account?.avatar || '');
+    setProfileBio(account?.bio || '');
+    setProfilePrivate(account?.is_private === 1 || account?.is_private === true);
+
+    await refreshFollowRequests();
   };
 
   createEffect(() => {
@@ -195,6 +210,30 @@ export function ChirpApp() {
 
   usePhoneKeyHandler({
     Backspace: () => {
+      if (showAttachUrlModal()) {
+        setShowAttachUrlModal(false);
+        return;
+      }
+      if (deleteTweetId() !== null) {
+        setDeleteTweetId(null);
+        return;
+      }
+      if (deleteCommentId() !== null) {
+        setDeleteCommentId(null);
+        return;
+      }
+      if (showRequestsModal()) {
+        setShowRequestsModal(false);
+        return;
+      }
+      if (showProfileModal()) {
+        setShowProfileModal(false);
+        return;
+      }
+      if (showComposer()) {
+        setShowComposer(false);
+        return;
+      }
       if (viewMode() === 'detail') {
         setViewMode('list');
         setSelectedTweet(null);
@@ -364,6 +403,59 @@ export function ChirpApp() {
     router.navigate('camera', { target: 'chirp' });
   };
 
+  const openProfileEditor = () => {
+    const account = myAccount();
+    setProfileDisplayName(account?.display_name || '');
+    setProfileAvatar(account?.avatar || '');
+    setProfileBio(account?.bio || '');
+    setProfilePrivate(account?.is_private === 1 || account?.is_private === true);
+    setShowProfileModal(true);
+  };
+
+  const saveProfile = async () => {
+    const payload = {
+      displayName: sanitizeText(profileDisplayName(), 32),
+      avatar: sanitizeMediaUrl(profileAvatar()),
+      bio: sanitizeText(profileBio(), 180),
+      isPrivate: profilePrivate(),
+    };
+
+    const ok = await fetchNui<boolean>('chirpUpdateAccount', payload, false);
+    if (!ok) {
+      setStatusMessage('No se pudo guardar el perfil');
+      return;
+    }
+
+    setShowProfileModal(false);
+    setStatusMessage('Perfil actualizado');
+    cache.invalidate(`tweets:${currentTab()}`);
+    await Promise.all([loadSocialState(), loadTweets()]);
+  };
+
+  const respondFollowRequest = async (requestId: number, accept: boolean) => {
+    const ok = await fetchNui<boolean>('chirpRespondFollowRequest', { requestId, accept }, false);
+    if (!ok) {
+      setStatusMessage('No se pudo responder la solicitud');
+      return;
+    }
+
+    setStatusMessage(accept ? 'Solicitud aceptada' : 'Solicitud rechazada');
+    cache.invalidate(`tweets:${currentTab()}`);
+    await Promise.all([refreshFollowRequests(), loadTweets()]);
+  };
+
+  const cancelSentRequest = async (targetAccountId: number) => {
+    const ok = await fetchNui<boolean>('chirpCancelFollowRequest', { targetAccountId }, false);
+    if (!ok) {
+      setStatusMessage('No se pudo cancelar la solicitud');
+      return;
+    }
+
+    setStatusMessage('Solicitud cancelada');
+    cache.invalidate(`tweets:${currentTab()}`);
+    await Promise.all([refreshFollowRequests(), loadTweets()]);
+  };
+
   const TweetActions = (props: {
     tweet: ChirpTweet;
     onComment: (e: Event) => void;
@@ -486,6 +578,17 @@ export function ChirpApp() {
             onClick={() => setCurrentTab('myActivity')}
           >
             Mi Actividad
+          </button>
+        </div>
+
+        <div class={styles.socialStrip}>
+          <button class={styles.socialBtn} onClick={() => { setShowRequestsModal(true); void refreshFollowRequests(); }}>
+            <span>Solicitudes</span>
+            <span class={styles.socialCounts}>R{pendingCount()} / E{sentCount()}</span>
+          </button>
+          <button class={styles.socialBtn} onClick={openProfileEditor}>
+            <span>Perfil</span>
+            <span class={styles.socialMeta}>{profilePrivate() ? 'Privado' : 'Publico'}</span>
           </button>
         </div>
       </div>
@@ -713,6 +816,87 @@ export function ChirpApp() {
         <ModalActions>
           <ModalButton label="Cancelar" onClick={() => setShowAttachUrlModal(false)} />
           <ModalButton label="Adjuntar" tone="primary" onClick={confirmAttachUrl} />
+        </ModalActions>
+      </Modal>
+
+      <Modal
+        open={showRequestsModal()}
+        title="Solicitudes"
+        onClose={() => setShowRequestsModal(false)}
+        size="md"
+      >
+        <div class={styles.requestsWrap}>
+          <div class={styles.requestsSection}>
+            <h4>Recibidas</h4>
+            <Show when={!requestsLoading()} fallback={<p>Cargando...</p>}>
+              <For each={pendingRequests()}>
+                {(request) => (
+                  <div class={styles.requestRow}>
+                    <div class={styles.requestIdentity}>
+                      <strong>{request.display_name || request.username || 'Usuario'}</strong>
+                      <span>@{request.username || 'user'}</span>
+                    </div>
+                    <div class={styles.requestActions}>
+                      <button class={styles.ghostBtn} onClick={() => void respondFollowRequest(request.id, false)}>Rechazar</button>
+                      <button class={styles.primaryBtn} onClick={() => void respondFollowRequest(request.id, true)}>Aceptar</button>
+                    </div>
+                  </div>
+                )}
+              </For>
+              <Show when={pendingRequests().length === 0}>
+                <p>No tienes solicitudes pendientes.</p>
+              </Show>
+            </Show>
+          </div>
+
+          <div class={styles.requestsSection}>
+            <h4>Enviadas</h4>
+            <Show when={!requestsLoading()} fallback={<p>Cargando...</p>}>
+              <For each={sentRequests()}>
+                {(request) => (
+                  <div class={styles.requestRow}>
+                    <div class={styles.requestIdentity}>
+                      <strong>{request.display_name || request.username || 'Usuario'}</strong>
+                      <span>@{request.username || 'user'}</span>
+                    </div>
+                    <div class={styles.requestActions}>
+                      <button class={styles.ghostBtn} onClick={() => void cancelSentRequest(request.account_id)}>Cancelar</button>
+                    </div>
+                  </div>
+                )}
+              </For>
+              <Show when={sentRequests().length === 0}>
+                <p>No tienes solicitudes enviadas.</p>
+              </Show>
+            </Show>
+          </div>
+        </div>
+
+        <ModalActions>
+          <ModalButton label="Cerrar" onClick={() => setShowRequestsModal(false)} />
+        </ModalActions>
+      </Modal>
+
+      <Modal
+        open={showProfileModal()}
+        title="Editar perfil"
+        onClose={() => setShowProfileModal(false)}
+        size="md"
+      >
+        <FormField label="Nombre visible" value={profileDisplayName()} onChange={setProfileDisplayName} placeholder="Tu nombre" />
+        <FormField label="Avatar (URL opcional)" type="url" value={profileAvatar()} onChange={setProfileAvatar} placeholder="https://..." />
+        <FormTextarea label="Bio" value={profileBio()} onChange={setProfileBio} rows={3} placeholder="Cuenta algo sobre vos" />
+        <label class={styles.privateToggle}>
+          <input
+            type="checkbox"
+            checked={profilePrivate()}
+            onChange={(e) => setProfilePrivate(e.currentTarget.checked)}
+          />
+          <span>Cuenta privada</span>
+        </label>
+        <ModalActions>
+          <ModalButton label="Cancelar" onClick={() => setShowProfileModal(false)} />
+          <ModalButton label="Guardar" tone="primary" onClick={() => void saveProfile()} />
         </ModalActions>
       </Modal>
 
