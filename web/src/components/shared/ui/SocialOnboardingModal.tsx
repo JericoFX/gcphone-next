@@ -1,10 +1,13 @@
 import { createEffect, createSignal } from 'solid-js';
-import { FormField, Modal, ModalActions, ModalButton } from './Modal';
+import { FormField, FormTextarea, Modal, ModalActions, ModalButton } from './Modal';
 import styles from './SocialOnboardingModal.module.scss';
 
 interface SocialOnboardingPayload {
   username: string;
   displayName: string;
+  avatar: string;
+  bio: string;
+  isPrivate: boolean;
 }
 
 interface SocialOnboardingModalProps {
@@ -13,6 +16,9 @@ interface SocialOnboardingModalProps {
   description?: string;
   usernameHint?: string;
   displayNameHint?: string;
+  avatarHint?: string;
+  bioHint?: string;
+  isPrivateHint?: boolean;
   onCreate: (payload: SocialOnboardingPayload) => Promise<boolean | { ok: boolean; error?: string }>;
   onClose?: () => void;
 }
@@ -30,6 +36,9 @@ function normalizeUsername(value: string) {
 export function SocialOnboardingModal(props: SocialOnboardingModalProps) {
   const [username, setUsername] = createSignal('');
   const [displayName, setDisplayName] = createSignal('');
+  const [avatar, setAvatar] = createSignal('');
+  const [bio, setBio] = createSignal('');
+  const [isPrivate, setIsPrivate] = createSignal(false);
   const [submitting, setSubmitting] = createSignal(false);
   const [error, setError] = createSignal('');
 
@@ -40,11 +49,16 @@ export function SocialOnboardingModal(props: SocialOnboardingModalProps) {
     setSubmitting(false);
     setUsername((prev) => prev || normalizeUsername(props.usernameHint || ''));
     setDisplayName((prev) => prev || (props.displayNameHint || '').trim());
+    setAvatar((prev) => prev || (props.avatarHint || '').trim());
+    setBio((prev) => prev || (props.bioHint || '').trim());
+    setIsPrivate(props.isPrivateHint === true);
   });
 
   const submit = async () => {
     const normalizedUsername = normalizeUsername(username());
     const normalizedDisplayName = displayName().trim().slice(0, 32);
+    const normalizedAvatar = avatar().trim().slice(0, 255);
+    const normalizedBio = bio().trim().slice(0, 180);
 
     if (normalizedUsername.length < 3) {
       setError('El usuario debe tener al menos 3 caracteres validos.');
@@ -62,6 +76,9 @@ export function SocialOnboardingModal(props: SocialOnboardingModalProps) {
     const result = await props.onCreate({
       username: normalizedUsername,
       displayName: normalizedDisplayName,
+      avatar: normalizedAvatar,
+      bio: normalizedBio,
+      isPrivate: isPrivate(),
     });
 
     const ok = typeof result === 'boolean' ? result : result.ok;
@@ -96,6 +113,34 @@ export function SocialOnboardingModal(props: SocialOnboardingModalProps) {
         placeholder="Tu nombre"
         disabled={submitting()}
       />
+
+      <FormField
+        label="Avatar (URL opcional)"
+        type="url"
+        value={avatar()}
+        onChange={setAvatar}
+        placeholder="https://..."
+        disabled={submitting()}
+      />
+
+      <FormTextarea
+        label="Bio"
+        value={bio()}
+        onChange={setBio}
+        rows={3}
+        placeholder="Cuenta algo sobre vos"
+        disabled={submitting()}
+      />
+
+      <label class={styles.privateToggle}>
+        <input
+          type="checkbox"
+          checked={isPrivate()}
+          onChange={(e) => setIsPrivate(e.currentTarget.checked)}
+          disabled={submitting()}
+        />
+        <span>Cuenta privada</span>
+      </label>
 
       <p class={styles.hint}>Solo letras, numeros, punto, guion y guion bajo para el usuario.</p>
 
