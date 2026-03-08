@@ -426,7 +426,7 @@ lib.callback.register('gcphone:mail:markRead', function(source, data)
         { messageId, account.id }
     )
 
-    return { success = changed ~= nil }
+    return { success = (tonumber(changed) or 0) > 0 }
 end)
 
 lib.callback.register('gcphone:mail:getMessages', function(source, data)
@@ -461,6 +461,61 @@ lib.callback.register('gcphone:mail:getMessages', function(source, data)
         folder = folder,
         messages = rows,
     }
+end)
+
+lib.callback.register('gcphone:mail:delete', function(source, data)
+    if Config.Mail and Config.Mail.Enabled == false then
+        return { success = false, error = 'MAIL_DISABLED' }
+    end
+
+    if HitRateLimit(source, 'mail_delete', 1500, 12) then
+        return { success = false, error = 'RATE_LIMITED' }
+    end
+
+    local identifier = GetIdentifier(source)
+    if not identifier then
+        return { success = false, error = 'MISSING_IDENTIFIER' }
+    end
+
+    local account = GetPrimaryAccount(identifier)
+    if not account then
+        return { success = false, error = 'ACCOUNT_REQUIRED' }
+    end
+
+    local messageId = tonumber(type(data) == 'table' and data.messageId or nil)
+    if not messageId or messageId < 1 then
+        return { success = false, error = 'INVALID_MESSAGE' }
+    end
+
+    local folder = tostring(type(data) == 'table' and data.folder or 'inbox')
+    if folder ~= 'sent' then folder = 'inbox' end
+
+    local changed
+    if folder == 'sent' then
+        changed = MySQL.update.await(
+            [[
+                UPDATE phone_mail_messages
+                SET is_deleted_sender = 1
+                WHERE id = ?
+                  AND sender_account_id = ?
+                  AND is_deleted_sender = 0
+            ]],
+            { messageId, account.id }
+        )
+    else
+        changed = MySQL.update.await(
+            [[
+                UPDATE phone_mail_messages
+                SET is_deleted_recipient = 1
+                WHERE id = ?
+                  AND recipient_account_id = ?
+                  AND is_deleted_recipient = 0
+            ]],
+            { messageId, account.id }
+        )
+    end
+
+    return { success = changed ~= nil }
 end)
 
 exports('SendInGameMail', function(fromIdentifier, payload)
