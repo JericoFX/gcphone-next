@@ -10,6 +10,8 @@
   flex-direction: column;
   background-size: cover;
   background-position: center;
+  box-sizing: border-box;
+  padding-bottom: var(--phone-bottom-ui-gap, 0px);
   
   .status-bar {
     height: 44px;
@@ -51,7 +53,7 @@
     flex-wrap: wrap;
     padding: var(--spacing-sm);
     justify-content: space-between;
-    padding-bottom: var(--spacing-xl);
+    padding-bottom: calc(var(--spacing-xl) + var(--phone-bottom-ui-gap, 0px));
   }
   
   .app-icon {
@@ -81,6 +83,8 @@
   height: 100%;
   display: flex;
   flex-direction: column;
+  box-sizing: border-box;
+  padding-bottom: var(--phone-bottom-ui-gap, 0px);
   
   .menu-backblur {
     position: absolute;
