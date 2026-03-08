@@ -462,25 +462,11 @@
 
 .compose-attachments {
   display: grid;
-  grid-template-columns: auto 1fr;
   gap: 8px;
+}
 
-  button {
-    border: none;
-    border-radius: 8px;
-    min-height: 36px;
-    padding: 0 12px;
-    color: #007AFF;
-    background: rgba(0, 122, 255, 0.1);
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, opacity 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
-
-    &:hover {
-      background: rgba(0, 122, 255, 0.2);
-    }
-  }
+.compose-media-buttons {
+  justify-self: start;
 }
 
 .actions {

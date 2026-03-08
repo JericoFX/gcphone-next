@@ -10,6 +10,7 @@ import { MediaLightbox } from '../../shared/ui/MediaLightbox';
 import { MediaAttachmentPreview } from '../../shared/ui/MediaAttachmentPreview';
 import { FormField, FormTextarea, Modal, ModalActions, ModalButton } from '../../shared/ui/Modal';
 import { EmojiPickerButton } from '../../shared/ui/EmojiPicker';
+import { MediaActionButtons } from '../../shared/ui/MediaActionButtons';
 import { SocialOnboardingModal, type SocialOnboardingPayload } from '../../shared/ui/SocialOnboardingModal';
 import styles from './ChirpApp.module.scss';
 
@@ -822,14 +823,15 @@ export function ChirpApp() {
           </Show>
           
           <div class={styles.composerActions}>
-            <div class={styles.mediaButtons}>
-              <button class={styles.mediaBtn} onClick={openCamera}>📷</button>
-              <button class={styles.mediaBtn} onClick={attachFromGallery}>🖼</button>
-              <button class={styles.mediaBtn} onClick={attachByUrl}>🔗</button>
-              <Show when={composerMedia()}>
-                <button class={styles.mediaBtn} onClick={() => setComposerMedia('')}>✕</button>
-              </Show>
-            </div>
+            <MediaActionButtons
+              actions={[
+                { icon: '📷', label: 'Camara', onClick: openCamera },
+                { icon: '🖼', label: 'Galeria', onClick: attachFromGallery },
+                { icon: '🔗', label: 'URL', onClick: attachByUrl },
+                ...(composerMedia() ? [{ icon: '✕', label: 'Quitar', onClick: () => setComposerMedia(''), tone: 'danger' as const }] : []),
+              ]}
+              variant="compact"
+            />
           </div>
         </div>
         
