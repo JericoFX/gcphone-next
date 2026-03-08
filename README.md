@@ -135,6 +135,7 @@ Documentacion operativa y de mantenimiento:
 - `docs/operations/resource-runbook.md`
 - `docs/operations/troubleshooting.md`
 - `docs/dev/lua-oxlib-guidelines.md`
+- `docs/qa/regression-social-audio.md`
 
 Si vas a desplegar en servidor real, empieza por el runbook y despues usa troubleshooting para diagnostico rapido.
 
