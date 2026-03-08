@@ -5,7 +5,7 @@ import { useContacts } from '../../../store/contacts';
 import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { fetchNui } from '../../../utils/fetchNui';
 import { generateColorForString, timeAgo } from '../../../utils/misc';
-import { resolveMediaType, sanitizeMediaUrl, sanitizeText } from '../../../utils/sanitize';
+import { resolveMediaType, sanitizeMediaUrl, sanitizePhone, sanitizeText } from '../../../utils/sanitize';
 import { parseSharedContactMessage } from '../../../utils/contactShare';
 import { uiPrompt } from '../../../utils/uiDialog';
 import { uiAlert } from '../../../utils/uiAlert';
@@ -38,6 +38,7 @@ export function MessagesApp() {
   const [selectedIndex, setSelectedIndex] = createSignal(-1);
   const [search, setSearch] = createSignal('');
   const [showUnreadOnly, setShowUnreadOnly] = createSignal(false);
+  const [routeConversationName, setRouteConversationName] = createSignal('');
 
   const getMediaUrl = (msg: any): string | undefined => sanitizeMediaUrl(msg.mediaUrl || msg.media_url) || undefined;
   
@@ -97,10 +98,15 @@ export function MessagesApp() {
   
   createEffect(() => {
     const params = router.params();
-    const number = typeof params.phoneNumber === 'string' ? params.phoneNumber : '';
+    const number = sanitizePhone(typeof params.phoneNumber === 'string' ? params.phoneNumber : typeof params.number === 'string' ? params.number : '');
+    const display = sanitizeText(
+      typeof params.display === 'string' ? params.display : typeof params.displayName === 'string' ? params.displayName : '',
+      80,
+    );
     const mediaUrl = sanitizeMediaUrl(typeof params.attachmentUrl === 'string' ? params.attachmentUrl : '');
     if (!number) return;
     setSelectedConversation(number);
+    setRouteConversationName(display || '');
     if (mediaUrl) {
       setAttachmentUrl(mediaUrl);
     }
@@ -121,20 +127,22 @@ export function MessagesApp() {
       if (selectedConversation()) return;
       const convos = filteredConversations();
       if (selectedIndex() >= 0 && selectedIndex() < convos.length) {
-        setSelectedConversation(convos[selectedIndex()].number);
+        openConversation(convos[selectedIndex()].number, convos[selectedIndex()].display);
       }
     },
     Backspace: () => {
       if (selectedConversation()) {
         setSelectedConversation(null);
+        setRouteConversationName('');
         return;
       }
       router.goBack();
     },
   });
   
-  const openConversation = (number: string) => {
+  const openConversation = (number: string, display?: string) => {
     setSelectedConversation(number);
+    setRouteConversationName(sanitizeText(display, 80));
     messagesActions.markAsRead(number);
   };
 
@@ -142,6 +150,7 @@ export function MessagesApp() {
     const ok = await messagesActions.deleteConversation(number);
     if (ok && selectedConversation() === number) {
       setSelectedConversation(null);
+      setRouteConversationName('');
     }
   };
   
@@ -222,9 +231,10 @@ export function MessagesApp() {
 
   const openNewChat = async () => {
     const input = await uiPrompt('Numero para iniciar chat', { title: 'Nuevo chat' });
-    const number = sanitizeText(input, 20);
+    const number = sanitizePhone(input);
     if (!number) return;
     setSelectedConversation(number);
+    setRouteConversationName('');
   };
 
   const sendLocationText = async () => {
@@ -238,9 +248,9 @@ export function MessagesApp() {
   
   return (
     <Show when={!selectedConversation()} fallback={
-      <ConversationView
-        phoneNumber={selectedConversation()!}
-        contactName={getContactName(selectedConversation()!)}
+        <ConversationView
+          phoneNumber={selectedConversation()!}
+          contactName={routeConversationName() || getContactName(selectedConversation()!)}
         messages={getConversationMessages()}
         messageInput={messageInput()}
         attachmentUrl={attachmentUrl()}
@@ -256,7 +266,10 @@ export function MessagesApp() {
         getMediaUrl={getMediaUrl}
         isKnownContact={isKnownContact}
         onAddContact={addContactFromMessage}
-        onBack={() => setSelectedConversation(null)}
+        onBack={() => {
+          setSelectedConversation(null);
+          setRouteConversationName('');
+        }}
         onDeleteConversation={() => void deleteConversation(selectedConversation()!)}
       />
     }>
@@ -271,7 +284,7 @@ export function MessagesApp() {
                     <div
                       class={styles.conversationItem}
                       classList={{ [styles.selected]: isSelectedConversationIndex(index()) }}
-                      onClick={() => openConversation(convo.number)}
+                      onClick={() => openConversation(convo.number, convo.display)}
                     >
                       <div class={styles.avatar} style={{ 'background-color': generateColorForString(convo.number) }}>
                         {convo.display.charAt(0).toUpperCase()}

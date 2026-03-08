@@ -1,8 +1,9 @@
-import { createSignal, For, Show, createEffect, onCleanup, batch } from 'solid-js';
+import { createSignal, For, Show, createEffect, onCleanup, batch, untrack } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { fetchNui } from '../../../utils/fetchNui';
 import { useNuiEvent } from '../../../utils/useNui';
 import { generateColorForString, timeAgo } from '../../../utils/misc';
+import { sanitizePhone, sanitizeText } from '../../../utils/sanitize';
 import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { ScreenState } from '../../shared/ui/ScreenState';
 import { SkeletonList } from '../../shared/ui/SkeletonList';
@@ -167,7 +168,7 @@ export function CallsApp() {
     },
   });
   
-  const startCall = async (number: string) => {
+  const startCall = async (number: string, displayName?: string) => {
     if (notifications.airplaneMode) {
       notificationsActions.receive({
         appId: 'calls',
@@ -216,11 +217,33 @@ export function CallsApp() {
     
     if (result) {
       batch(() => {
-        setCallInfo(result);
+        setCallInfo({
+          ...result,
+          displayName: sanitizeText(displayName, 80) || result?.displayName,
+        });
         setInCall(true);
       });
     }
   };
+
+  createEffect(() => {
+    const params = router.params();
+    const number = sanitizePhone(typeof params.phoneNumber === 'string' ? params.phoneNumber : typeof params.number === 'string' ? params.number : '');
+    const displayName = sanitizeText(
+      typeof params.display === 'string' ? params.display : typeof params.displayName === 'string' ? params.displayName : '',
+      80,
+    );
+    const autoStart = params.autoStartCall === true || params.autoStart === true;
+
+    if (!number || untrack(() => inCall())) return;
+
+    setDialNumber(number);
+    setActiveTab('keypad');
+
+    if (autoStart) {
+      void startCall(number, displayName);
+    }
+  });
   
   const endCall = async () => {
     if (callInfo()?.id) {
@@ -459,7 +482,7 @@ export function CallsApp() {
                           <span class={styles.number}>{contact.display}</span>
                           <span class={styles.time}>{contact.number}</span>
                         </div>
-                        <button class={styles.callBtn} onClick={() => startCall(contact.number)}>
+                        <button class={styles.callBtn} onClick={() => startCall(contact.number, contact.display)}>
                           📞
                         </button>
                       </div>
@@ -557,10 +580,10 @@ function ActiveCallView(props: { callInfo: any; videoMode: boolean; videoStatus:
       </Show>
       <div class={styles.callerInfo}>
         <div class={styles.avatar}>
-          {props.callInfo?.receiverNum?.charAt(0) || '?'}
+          {(props.callInfo?.displayName || props.callInfo?.receiverNum)?.charAt(0) || '?'}
         </div>
         <div class={styles.name}>
-          {props.callInfo?.receiverNum || 'Llamando...'}
+          {props.callInfo?.displayName || props.callInfo?.receiverNum || 'Llamando...'}
         </div>
         <Show when={remainingTime() !== null && remainingTime()! > 0 && remainingTime()! <= 60 && props.videoMode}>
           <div class={styles.callTimer}>

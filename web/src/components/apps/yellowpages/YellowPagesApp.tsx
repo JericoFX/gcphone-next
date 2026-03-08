@@ -168,11 +168,16 @@ export function YellowPagesApp() {
     });
 
     if (type === 'call') {
-      // Navigate to calls app with number
-      router.navigate('calls', { number: seller.phone_number });
+      router.navigate('calls', {
+        phoneNumber: seller.phone_number,
+        display: seller.seller_name,
+        autoStartCall: true,
+      });
     } else {
-      // Navigate to messages app
-      router.navigate('messages', { number: seller.phone_number });
+      router.navigate('messages', {
+        phoneNumber: seller.phone_number,
+        display: seller.seller_name,
+      });
     }
     
     setShowContactModal(false);

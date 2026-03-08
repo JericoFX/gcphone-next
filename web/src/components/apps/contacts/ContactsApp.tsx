@@ -72,7 +72,7 @@ export function ContactsApp() {
       const contacts = filteredContacts();
       if (selectedIndex() >= 0 && selectedIndex() < contacts.length) {
         const contact = contacts[selectedIndex()];
-        router.navigate('messages.view', { number: contact.number, display: contact.display });
+        router.navigate('messages.view', { phoneNumber: contact.number, display: contact.display });
       }
     },
     Backspace: () => {
@@ -120,7 +120,7 @@ export function ContactsApp() {
   };
   
   const handleSelect = (contact: { number: string; display: string }) => {
-    router.navigate('messages.view', { number: contact.number, display: contact.display });
+    router.navigate('messages.view', { phoneNumber: contact.number, display: contact.display });
   };
 
   const openShareContact = () => {
