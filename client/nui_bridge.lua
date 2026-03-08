@@ -670,6 +670,12 @@ RegisterNUICallback('newsGetCategories', function(_, cb)
     end)
 end)
 
+RegisterNUICallback('newsGetLiveNews', function(_, cb)
+    lib.callback('gcphone:news:getLiveNews', false, function(articles)
+        cb(articles or {})
+    end)
+end)
+
 RegisterNUICallback('newsDeleteArticle', function(data, cb)
     lib.callback('gcphone:news:deleteArticle', false, function(success)
         cb(cbSuccess(success))
@@ -1005,6 +1011,37 @@ RegisterNetEvent('gcphone:bankTransferReceived', function(payload)
     SendNUIMessage({
         action = 'bankTransferReceived',
         data = payload
+    })
+end)
+
+RegisterNetEvent('gcphone:news:newArticle', function(article)
+    SendNUIMessage({
+        action = 'gcphone:news:newArticle',
+        data = article
+    })
+end)
+
+RegisterNetEvent('gcphone:news:liveStarted', function(article)
+    SendNUIMessage({
+        action = 'gcphone:news:liveStarted',
+        data = article
+    })
+end)
+
+RegisterNetEvent('gcphone:news:liveEnded', function(articleId)
+    SendNUIMessage({
+        action = 'gcphone:news:liveEnded',
+        data = articleId
+    })
+end)
+
+RegisterNetEvent('gcphone:news:scaleformUpdated', function(articleId, scaleform)
+    SendNUIMessage({
+        action = 'gcphone:news:scaleformUpdated',
+        data = {
+            articleId = articleId,
+            scaleform = scaleform
+        }
     })
 end)
 
