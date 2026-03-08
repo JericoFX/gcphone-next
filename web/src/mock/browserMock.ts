@@ -701,6 +701,15 @@ const phonePayload = () => ({
   },
 });
 
+const showMockPhone = () => {
+  emitMessage('showPhone', phonePayload());
+};
+
+const bootMockPhone = () => {
+  emitMessage('initPhone', phonePayload());
+  showMockPhone();
+};
+
 let nextContactId = 4;
 let nextMessageId = 2;
 let nextPhotoId = 3;
@@ -1139,14 +1148,24 @@ export function setupBrowserMock() {
   started = true;
 
   setTimeout(() => {
-    emitMessage('initPhone', phonePayload());
-    emitMessage('showPhone', phonePayload());
+    bootMockPhone();
   }, 120);
 
   (window as Window & { gcphoneMock?: AnyRecord }).gcphoneMock = {
     reset: () => {
       emitMessage('hidePhone');
-      setTimeout(() => emitMessage('showPhone', phonePayload()), 100);
+      setTimeout(() => showMockPhone(), 100);
+    },
+    showHome: () => {
+      state.requiresSetup = false;
+      showMockPhone();
+    },
+    showSetup: () => {
+      state.requiresSetup = true;
+      showMockPhone();
+    },
+    boot: () => {
+      bootMockPhone();
     },
     incomingMessage: () => {
       const incoming: Message = {
