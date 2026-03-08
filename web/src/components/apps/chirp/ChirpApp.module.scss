@@ -231,7 +231,7 @@
 // FAB
 .fabContainer {
   position: fixed;
-  bottom: 24px;
+  bottom: calc(24px + var(--phone-bottom-ui-gap, 0px));
   right: 24px;
   z-index: 100;
   display: flex;
@@ -490,7 +490,7 @@
 
 // Composer Modal
 .composerContent {
-  padding: 4px;
+  padding: 4px 4px calc(12px + var(--phone-bottom-ui-gap, 0px));
 }
 
 .composerTextarea {

@@ -399,7 +399,7 @@
 }
 
 .input-container {
-  margin: 8px 16px 16px;
+  margin: 8px 16px calc(16px + var(--phone-bottom-ui-gap, 0px));
   border-radius: 24px;
   background: #F2F2F7;
   border: 1px solid rgba(0, 0, 0, 0.08);
@@ -458,7 +458,7 @@
 }
 
 .voice-row {
-  margin: 0 16px 12px;
+  margin: 0 16px calc(12px + var(--phone-bottom-ui-gap, 0px));
   display: flex;
   align-items: center;
   gap: 10px;
