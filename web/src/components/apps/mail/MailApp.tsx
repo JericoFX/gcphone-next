@@ -435,87 +435,91 @@ export function MailApp() {
 
               {/* Vista de Detail */}
               <Show when={view() === 'detail'}>
-                <div class={styles.detailView}>
-                  <div class={styles.detailHeader}>
-                    <button
-                      class={styles.backButton}
-                      onClick={() => backToList()}
-                    >
-                      ← Volver
-                    </button>
-                    <h4 class={styles.detailTitle}>
-                      {selectedMessage()?.subject || '(Sin asunto)'}
-                    </h4>
-                    <div class={styles.detailActions}>
-                      <button
-                        class={styles.deleteButton}
-                        onClick={() => void deleteMessage()}
-                      >
-                        🗑 Eliminar
-                      </button>
-                    </div>
-                  </div>
+                <Show when={selectedMessage()}>
+                  {(message) => (
+                    <div class={styles.detailView}>
+                      <div class={styles.detailHeader}>
+                        <button
+                          class={styles.backButton}
+                          onClick={() => backToList()}
+                        >
+                          ← Volver
+                        </button>
+                        <h4 class={styles.detailTitle}>
+                          {message().subject || '(Sin asunto)'}
+                        </h4>
+                        <div class={styles.detailActions}>
+                          <button
+                            class={styles.deleteButton}
+                            onClick={() => void deleteMessage()}
+                          >
+                            🗑 Eliminar
+                          </button>
+                        </div>
+                      </div>
 
-                  <div class={styles.detailContent}>
-                    <div class={styles.detailMeta}>
-                      <div class={styles.metaRow}>
-                        <span class={styles.metaLabel}>De:</span>
-                        <span class={styles.metaValue}>
-                          {selectedMessage()?.sender_alias ||
-                            selectedMessage()?.sender_email ||
-                            'Desconocido'}
-                        </span>
-                      </div>
-                      <div class={styles.metaRow}>
-                        <span class={styles.metaLabel}>Para:</span>
-                        <span class={styles.metaValue}>
-                          {selectedMessage()?.recipient_alias ||
-                            selectedMessage()?.recipient_email}
-                        </span>
-                      </div>
-                      <div class={styles.metaRow}>
-                        <span class={styles.metaLabel}>Fecha:</span>
-                        <span class={styles.metaValue}>
-                          {new Date(
-                            Number(selectedMessage()?.created_at),
-                          ).toLocaleString()}
-                        </span>
+                      <div class={styles.detailContent}>
+                        <div class={styles.detailMeta}>
+                          <div class={styles.metaRow}>
+                            <span class={styles.metaLabel}>De:</span>
+                            <span class={styles.metaValue}>
+                              {message().sender_alias ||
+                                message().sender_email ||
+                                'Desconocido'}
+                            </span>
+                          </div>
+                          <div class={styles.metaRow}>
+                            <span class={styles.metaLabel}>Para:</span>
+                            <span class={styles.metaValue}>
+                              {message().recipient_alias ||
+                                message().recipient_email}
+                            </span>
+                          </div>
+                          <div class={styles.metaRow}>
+                            <span class={styles.metaLabel}>Fecha:</span>
+                            <span class={styles.metaValue}>
+                              {new Date(
+                                Number(message().created_at),
+                              ).toLocaleString()}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div class={styles.detailBody}>
+                          {message().body}
+                        </div>
+
+                        <Show
+                          when={(message().attachments || []).length > 0}
+                        >
+                          <div class={styles.detailAttachments}>
+                            <h5>
+                              Adjuntos ({(message().attachments || [])
+                                .length})
+                            </h5>
+                            <For each={message().attachments || []}>
+                              {(attachment) => (
+                                <div class={styles.attachmentItem}>
+                                  <span class={styles.attachmentType}>
+                                    {attachment.type}
+                                  </span>
+                                  <a
+                                    href={attachment.url}
+                                    target='_blank'
+                                    rel='noreferrer'
+                                    class={styles.attachmentLink}
+                                  >
+                                    {attachment.name || attachment.url}
+                                  </a>
+                                </div>
+                              )}
+                            </For>
+                          </div>
+                        </Show>
                       </div>
                     </div>
-
-                    <div class={styles.detailBody}>
-                      {selectedMessage()?.body}
-                    </div>
-
-                    <Show
-                      when={(selectedMessage()?.attachments || []).length > 0}
-                    >
-                      <div class={styles.detailAttachments}>
-                        <h5>
-                          Adjuntos ({(selectedMessage()?.attachments || [])
-                            .length})
-                        </h5>
-                        <For each={selectedMessage()?.attachments || []}>
-                          {(attachment) => (
-                            <div class={styles.attachmentItem}>
-                              <span class={styles.attachmentType}>
-                                {attachment.type}
-                              </span>
-                              <a
-                                href={attachment.url}
-                                target='_blank'
-                                rel='noreferrer'
-                                class={styles.attachmentLink}
-                              >
-                                {attachment.name || attachment.url}
-                              </a>
-                            </div>
-                          )}
-                        </For>
-                      </div>
-                    </Show>
-                  </div>
-                </div>
+                  )}
+                </Show>
               </Show>
 
               {/* Vista de Compose */}
