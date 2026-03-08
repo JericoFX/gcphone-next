@@ -1,4 +1,4 @@
-import { For, Show, createEffect, createSignal } from 'solid-js';
+import { For, Show, createEffect, createMemo, createSignal } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { fetchNui } from '../../../utils/fetchNui';
 import { timeAgo } from '../../../utils/misc';
@@ -75,6 +75,20 @@ export function ClipsApp() {
   // Chat
   const [commentText, setCommentText] = createSignal('');
 
+  const clipById = createMemo(() => {
+    const map = new Map<number, Clip>();
+    for (const clip of clips()) {
+      map.set(clip.id, clip);
+    }
+    return map;
+  });
+
+  const currentClip = createMemo(() => {
+    const index = currentClipIndex();
+    const list = clips();
+    return list[index] || null;
+  });
+
   // FAB Tooltip
   let fabTimeout: number;
   const showFabTooltip = () => {
@@ -140,7 +154,7 @@ export function ClipsApp() {
     setLikeAnimation(clipId);
     setTimeout(() => setLikeAnimation(null), 1000);
     
-    const clip = clips().find(c => c.id === clipId);
+    const clip = clipById().get(clipId);
     if (clip && !clip.liked) {
       void toggleLike(clipId);
     }
@@ -172,12 +186,12 @@ export function ClipsApp() {
   };
 
   const addComment = async () => {
-    const currentClip = clips()[currentClipIndex()];
+    const clip = currentClip();
     const content = sanitizeText(commentText(), 500);
-    if (!currentClip || !content) return;
+    if (!clip || !content) return;
 
     const result = await fetchNui<{ success?: boolean; comment?: Comment }>('clipsAddComment', {
-      clipId: currentClip.id,
+      clipId: clip.id,
       content,
     });
 
@@ -185,7 +199,7 @@ export function ClipsApp() {
       setCommentText('');
       setComments((prev) => [...prev, result.comment!]);
       setClips((prev) => prev.map((c) => (
-        c.id === currentClip.id ? { ...c, comments_count: (c.comments_count || 0) + 1 } : c
+        c.id === clip.id ? { ...c, comments_count: (c.comments_count || 0) + 1 } : c
       )));
     }
   };
@@ -305,7 +319,8 @@ export function ClipsApp() {
     if (!scrollContainer) return;
     const scrollTop = scrollContainer.scrollTop;
     const clipHeight = scrollContainer.clientHeight;
-    const newIndex = Math.round(scrollTop / clipHeight);
+    const maxIndex = Math.max(0, clips().length - 1);
+    const newIndex = Math.max(0, Math.min(maxIndex, Math.round(scrollTop / clipHeight)));
     setCurrentClipIndex(newIndex);
   };
 

@@ -85,6 +85,22 @@ export function WaveChatApp() {
   let recordingInterval: number | undefined;
   const typingTimers = new Map<string, number>();
 
+  const contactDisplayByNumber = createMemo(() => {
+    const map = new Map<string, string>();
+    for (const contact of contactsState.contacts) {
+      map.set(contact.number, contact.display || contact.number);
+    }
+    return map;
+  });
+
+  const knownContactNumbers = createMemo(() => {
+    const set = new Set<string>();
+    for (const contact of contactsState.contacts) {
+      set.add(contact.number);
+    }
+    return set;
+  });
+
   const getMediaUrl = (msg: any): string | undefined => sanitizeMediaUrl(msg.mediaUrl || msg.media_url) || undefined;
 
   const loadCallHistory = async () => {
@@ -139,10 +155,10 @@ export function WaveChatApp() {
       const number = msg.owner === 1 ? msg.receiver : msg.transmitter;
 
       if (!convos.has(number)) {
-        const contact = contactsState.contacts.find((c) => c.number === number);
+        const display = contactDisplayByNumber().get(number) || number;
         convos.set(number, {
           number,
-          display: contact?.display || number,
+          display,
           lastMessage: msg,
           unread: 0,
         });
@@ -165,6 +181,24 @@ export function WaveChatApp() {
 
   const isSelectedConversationIndex = createSelector(selectedIndex);
   const isSelectedGroup = createSelector(selectedGroupId);
+
+  const selectedConversationMessages = createMemo(() => {
+    const number = selectedConversation();
+    if (!number) return [];
+    return messagesActions.getConversation(number);
+  });
+
+  const selectedGroupMessages = createMemo(() => {
+    const groupId = selectedGroupId();
+    if (!groupId) return [];
+    return groupMessages()[groupId] || [];
+  });
+
+  const selectedGroupTypingList = createMemo(() => {
+    const groupId = selectedGroupId();
+    if (!groupId) return [] as string[];
+    return groupTyping()[groupId] || [];
+  });
 
   createEffect(() => {
     const maxIndex = conversations().length - 1;
@@ -343,12 +377,6 @@ export function WaveChatApp() {
     }
   };
 
-  const getConversationMessages = () => {
-    const number = selectedConversation();
-    if (!number) return [];
-    return messagesActions.getConversation(number);
-  };
-
   const sendMessage = async () => {
     const number = selectedConversation();
     const content = sanitizeText(messageInput(), 800);
@@ -405,11 +433,10 @@ export function WaveChatApp() {
   };
 
   const getContactName = (number: string) => {
-    const contact = contactsState.contacts.find((c) => c.number === number);
-    return contact?.display || number;
+    return contactDisplayByNumber().get(number) || number;
   };
 
-  const isKnownContact = (number: string) => contactsState.contacts.some((contact) => contact.number === number);
+  const isKnownContact = (number: string) => knownContactNumbers().has(number);
 
   const addContactFromMessage = async (display: string, number: string) => {
     if (isKnownContact(number)) {
@@ -530,10 +557,10 @@ export function WaveChatApp() {
       <Show
         when={!selectedConversation()}
         fallback={
-          <ConversationView
-            phoneNumber={selectedConversation()!}
-            contactName={getContactName(selectedConversation()!)}
-            messages={getConversationMessages()}
+            <ConversationView
+              phoneNumber={selectedConversation()!}
+              contactName={getContactName(selectedConversation()!)}
+              messages={selectedConversationMessages()}
             messageInput={messageInput()}
             attachmentUrl={attachmentUrl()}
             showAttachSheet={showAttachSheet()}
@@ -676,12 +703,12 @@ export function WaveChatApp() {
 
             <Show when={selectedGroupId()}>
               <div class={styles.groupThread}>
-                <Show when={(groupTyping()[selectedGroupId()!] || []).length > 0}>
+                <Show when={selectedGroupTypingList().length > 0}>
                   <div class={styles.groupTypingRow}>
-                    {(groupTyping()[selectedGroupId()!] || []).join(', ')} escribiendo...
+                    {selectedGroupTypingList().join(', ')} escribiendo...
                   </div>
                 </Show>
-                <For each={groupMessages()[selectedGroupId()!] || []}>
+                <For each={selectedGroupMessages()}>
                   {(msg) => (
                     <div class={styles.groupMsgRow}>
                       <strong>{msg.sender_number || 'usuario'}</strong>
@@ -806,14 +833,21 @@ function ConversationView(props: {
 
       <div class={styles.messagesList}>
         <For each={props.messages}>
-          {(msg) => (
+          {(msg) => {
+            const shared = parseSharedContactMessage(msg.message);
+            const messageText = sanitizeText(msg.message || '', 800);
+            const coords = extractCoords(msg.message);
+            const mediaUrl = props.getMediaUrl(msg);
+            const mediaType = resolveMediaType(mediaUrl);
+
+            return (
             <div class={styles.bubble} classList={{ [styles.sent]: msg.owner === 1, [styles.received]: msg.owner === 0 }}>
-              <Show when={parseSharedContactMessage(msg.message)} fallback={
+              <Show when={shared} fallback={
                 <>
-                  <Show when={sanitizeText(msg.message || '', 800)}>
-                    <span class={styles.messageText}>{sanitizeText(msg.message || '', 800)}</span>
+                  <Show when={messageText}>
+                    <span class={styles.messageText}>{messageText}</span>
                   </Show>
-                  <Show when={extractCoords(msg.message)}>
+                  <Show when={coords}>
                     {(coords) => (
                       <button class={styles.mapBtn} onClick={() => props.onOpenCoords(coords().x, coords().y)}>
                         Abrir en mapa
@@ -837,20 +871,20 @@ function ConversationView(props: {
                   </div>
                 )}
               </Show>
-              <Show when={props.getMediaUrl(msg)}>
-                <Show when={resolveMediaType(props.getMediaUrl(msg)) === 'image'}>
-                  <img class={styles.mediaPreview} src={props.getMediaUrl(msg)!} alt="adjunto" onClick={() => props.onOpenViewer(props.getMediaUrl(msg) || null)} />
+              <Show when={mediaUrl}>
+                <Show when={mediaType === 'image'}>
+                  <img class={styles.mediaPreview} src={mediaUrl!} alt="adjunto" onClick={() => props.onOpenViewer(mediaUrl || null)} />
                 </Show>
-                <Show when={resolveMediaType(props.getMediaUrl(msg)) === 'video'}>
-                  <video class={styles.mediaPreview} src={props.getMediaUrl(msg)!} controls playsinline preload="metadata" />
+                <Show when={mediaType === 'video'}>
+                  <video class={styles.mediaPreview} src={mediaUrl!} controls playsinline preload="metadata" />
                 </Show>
-                <Show when={resolveMediaType(props.getMediaUrl(msg)) === 'audio'}>
-                  <audio class={styles.audioPreview} src={props.getMediaUrl(msg)!} controls preload="metadata" />
+                <Show when={mediaType === 'audio'}>
+                  <audio class={styles.audioPreview} src={mediaUrl!} controls preload="metadata" />
                 </Show>
               </Show>
               <span class={styles.messageTime}>{timeAgo(msg.time)}</span>
             </div>
-          )}
+          )}}
         </For>
         <div ref={messagesEnd} />
       </div>
