@@ -18,7 +18,6 @@ local MIGRATIONS = {
                 `ringtone` VARCHAR(50) DEFAULT 'ring.ogg',
                 `volume` FLOAT DEFAULT 0.5,
                 `lock_code` VARCHAR(10) DEFAULT '0000',
-                `coque` VARCHAR(50) DEFAULT 'sin_funda.png',
                 `theme` VARCHAR(10) DEFAULT 'light',
                 `language` VARCHAR(8) DEFAULT 'es',
                 `audio_profile` VARCHAR(16) DEFAULT 'normal',
@@ -1190,6 +1189,16 @@ local MIGRATIONS = {
                 'created_at < (NOW() - INTERVAL 45 DAY)',
                 60
             )]]
+        }
+    },
+
+    {
+        version = 13,
+        name = "remove_phone_case_setting",
+        description = "Drop deprecated phone case column from phone numbers",
+        statements = {
+            [[ALTER TABLE `phone_numbers`
+                DROP COLUMN IF EXISTS `coque`]]
         }
     }
 }

@@ -28,12 +28,6 @@ const wallpapers = [
   './img/background/tokio.jpg',
 ];
 
-const coques = [
-  { id: 'funda_azul.png', name: 'Azul', color: '#4A90D9' },
-  { id: 'funda_roja.png', name: 'Roja', color: '#D94A4A' },
-  { id: 'funda_negra.png', name: 'Negra', color: '#333333' },
-];
-
 const ringtones = [
   { id: 'ring.ogg', name: 'Classic Ring', icon: '🔔' },
   { id: 'ring2.ogg', name: 'Tone Two', icon: '🎵' },

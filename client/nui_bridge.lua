@@ -201,12 +201,6 @@ RegisterNUICallback('setLockCode', function(data, cb)
     end, data)
 end)
 
-RegisterNUICallback('setCoque', function(data, cb)
-    lib.callback('gcphone:setCoque', false, function(success)
-        cb(success)
-    end, data)
-end)
-
 RegisterNUICallback('setAirplaneMode', function(data, cb)
     local enabled = data and data.enabled and true or false
     PhoneState.airplaneMode = enabled

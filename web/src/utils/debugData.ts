@@ -32,7 +32,6 @@ export function mockPhoneInit() {
         ringtone: 'ring.ogg',
         volume: 0.5,
         lockCode: '1234',
-        coque: 'sin_funda.png',
         theme: 'light'
       }
     }
@@ -49,7 +48,6 @@ export function mockShowPhone() {
         ringtone: 'ring.ogg',
         volume: 0.5,
         lockCode: '1234',
-        coque: 'sin_funda.png',
         theme: 'light'
       }
     }
