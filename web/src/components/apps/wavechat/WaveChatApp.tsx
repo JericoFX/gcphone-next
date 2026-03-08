@@ -6,7 +6,7 @@ import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { fetchNui } from '../../../utils/fetchNui';
 import { useNuiCustomEvent } from '../../../utils/useNui';
 import { generateColorForString, timeAgo } from '../../../utils/misc';
-import { resolveMediaType, sanitizeMediaUrl, sanitizeText } from '../../../utils/sanitize';
+import { resolveMediaType, sanitizeMediaUrl, sanitizePhone, sanitizeText } from '../../../utils/sanitize';
 import { parseSharedContactMessage } from '../../../utils/contactShare';
 import { fetchSocketToken } from '../../../utils/realtimeAuth';
 import { uiPrompt } from '../../../utils/uiDialog';
@@ -62,6 +62,7 @@ export function WaveChatApp() {
   const [messageInput, setMessageInput] = createSignal('');
   const [attachmentUrl, setAttachmentUrl] = createSignal<string | null>(null);
   const [viewerUrl, setViewerUrl] = createSignal<string | null>(null);
+  const [routeConversationName, setRouteConversationName] = createSignal('');
   const [selectedIndex, setSelectedIndex] = createSignal(-1);
   const [showAttachSheet, setShowAttachSheet] = createSignal(false);
   const [showGifPicker, setShowGifPicker] = createSignal(false);
@@ -214,10 +215,15 @@ export function WaveChatApp() {
 
   createEffect(() => {
     const params = router.params();
-    const number = typeof params.phoneNumber === 'string' ? params.phoneNumber : '';
+    const number = sanitizePhone(typeof params.phoneNumber === 'string' ? params.phoneNumber : typeof params.number === 'string' ? params.number : '');
+    const display = sanitizeText(
+      typeof params.display === 'string' ? params.display : typeof params.displayName === 'string' ? params.displayName : '',
+      80,
+    );
     const mediaUrl = sanitizeMediaUrl(typeof params.attachmentUrl === 'string' ? params.attachmentUrl : '');
     if (!number) return;
     setSelectedConversation(number);
+    setRouteConversationName(display || '');
     setActiveTab('chats');
     if (mediaUrl) {
       setAttachmentUrl(mediaUrl);
@@ -257,12 +263,13 @@ export function WaveChatApp() {
       if (selectedConversation()) return;
       const convos = conversations();
       if (selectedIndex() >= 0 && selectedIndex() < convos.length) {
-        setSelectedConversation(convos[selectedIndex()].number);
+        openConversation(convos[selectedIndex()].number, convos[selectedIndex()].display);
       }
     },
     Backspace: () => {
       if (selectedConversation()) {
         setSelectedConversation(null);
+        setRouteConversationName('');
         return;
       }
       router.goBack();
@@ -365,8 +372,9 @@ export function WaveChatApp() {
     });
   });
 
-  const openConversation = (number: string) => {
+  const openConversation = (number: string, display?: string) => {
     setSelectedConversation(number);
+    setRouteConversationName(sanitizeText(display, 80));
     messagesActions.markAsRead(number);
   };
 
@@ -374,6 +382,7 @@ export function WaveChatApp() {
     const ok = await messagesActions.deleteConversation(number);
     if (ok && selectedConversation() === number) {
       setSelectedConversation(null);
+      setRouteConversationName('');
     }
   };
 
@@ -559,7 +568,7 @@ export function WaveChatApp() {
         fallback={
           <ConversationView
             phoneNumber={selectedConversation()!}
-            contactName={getContactName(selectedConversation()!)}
+            contactName={routeConversationName() || getContactName(selectedConversation()!)}
             messages={selectedConversationMessages()}
             messageInput={messageInput()}
             attachmentUrl={attachmentUrl()}
@@ -587,7 +596,10 @@ export function WaveChatApp() {
             getMediaUrl={getMediaUrl}
             isKnownContact={isKnownContact}
             onAddContact={addContactFromMessage}
-            onBack={() => setSelectedConversation(null)}
+            onBack={() => {
+              setSelectedConversation(null);
+              setRouteConversationName('');
+            }}
             onOpenCoords={(x, y) => router.navigate('maps', { x, y })}
             onDeleteConversation={() => void deleteConversation(selectedConversation()!)}
           />
@@ -609,7 +621,7 @@ export function WaveChatApp() {
                 <div
                   class={styles.conversationItem}
                   classList={{ [styles.selected]: isSelectedConversationIndex(index()) }}
-                  onClick={() => openConversation(convo.number)}
+                  onClick={() => openConversation(convo.number, convo.display)}
                 >
                   <div class={styles.avatar} style={{ 'background-color': generateColorForString(convo.number) }}>
                     {convo.display.charAt(0).toUpperCase()}

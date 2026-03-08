@@ -356,11 +356,11 @@ function ConversationView(props: {
   
   return (
     <div class={styles.conversationView}>
-      <div class="ios-nav">
-        <button class="ios-icon-btn" onClick={props.onBack}>
+      <div class={styles.threadHeader}>
+        <button class={styles.threadBackButton} onClick={props.onBack}>
           ‹
         </button>
-        <div class="ios-nav-title">{props.contactName}</div>
+        <div class={styles.threadTitle}>{props.contactName}</div>
         <button class={styles.deleteConversationBtn} onClick={props.onDeleteConversation}>Borrar</button>
       </div>
       
