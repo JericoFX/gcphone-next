@@ -642,7 +642,7 @@ export function WaveChatApp() {
           </Show>
 
           <Show when={activeTab() === 'status'}>
-            <For each={conversations()}>
+            <VirtualList items={conversations} itemHeight={72} overscan={4}>
               {(convo) => (
                 <div class={styles.statusItem}>
                   <div class={styles.avatar} style={{ 'background-color': generateColorForString(convo.number) }}>
@@ -655,11 +655,11 @@ export function WaveChatApp() {
                   <button class={styles.statusBtn}>Ver</button>
                 </div>
               )}
-            </For>
+            </VirtualList>
           </Show>
 
           <Show when={activeTab() === 'calls'}>
-            <For each={callHistory()}>
+            <VirtualList items={callHistory} itemHeight={72} overscan={4}>
               {(call) => (
                 <div class={styles.callItem}>
                   <div class={styles.callDirection}>{call.incoming ? 'Entrante' : 'Saliente'}</div>
@@ -670,7 +670,7 @@ export function WaveChatApp() {
                   <button class={styles.statusBtn} onClick={() => fetchNui('startCall', { phoneNumber: call.num })}>Llamar</button>
                 </div>
               )}
-            </For>
+            </VirtualList>
           </Show>
 
           <Show when={activeTab() === 'groups'}>
