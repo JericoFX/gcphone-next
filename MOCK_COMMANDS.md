@@ -15,12 +15,14 @@ window.gcphoneMock.boot()
 window.gcphoneMock.reset()
 window.gcphoneMock.showHome()
 window.gcphoneMock.showSetup()
+window.gcphoneMock.showLocked()
 ```
 
 - `boot()` sends `initPhone` and `showPhone` again.
 - `reset()` hides the phone and reopens it.
 - `showHome()` reopens the phone with `requiresSetup = false`.
 - `showSetup()` reopens the phone with `requiresSetup = true`.
+- `showLocked()` reopens the phone forcing the lock screen in browser mode.
 
 Quick event helpers:
 
@@ -62,5 +64,4 @@ What each realtime helper does:
 
 Notes:
 
-- Browser mock startup state is controlled mainly through `showHome()` and `showSetup()`.
-- The browser environment intentionally skips the real lock-screen behavior, so there is no true `showLocked()` helper yet.
+- Browser mock startup state is controlled mainly through `showHome()`, `showSetup()`, and `showLocked()`.

@@ -701,8 +701,11 @@ const phonePayload = () => ({
   },
 });
 
-const showMockPhone = () => {
-  emitMessage('showPhone', phonePayload());
+const showMockPhone = (overrides: AnyRecord = {}) => {
+  emitMessage('showPhone', {
+    ...phonePayload(),
+    ...overrides,
+  });
 };
 
 const bootMockPhone = () => {
@@ -1164,6 +1167,10 @@ export function setupBrowserMock() {
     showSetup: () => {
       state.requiresSetup = true;
       showMockPhone();
+    },
+    showLocked: () => {
+      state.requiresSetup = false;
+      showMockPhone({ useLockScreen: true, forceLockScreen: true });
     },
     boot: () => {
       bootMockPhone();

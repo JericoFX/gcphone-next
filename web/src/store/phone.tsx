@@ -85,6 +85,7 @@ type PhonePayload = PhoneSettings & {
   requiresSetup?: boolean;
   setup?: PhoneSetupState;
   useLockScreen?: boolean;
+  forceLockScreen?: boolean;
 };
 
 const PINNED_HOME_APPS = ['contacts', 'messages', 'mail'] as const;
@@ -376,7 +377,8 @@ export const PhoneProvider: ParentComponent = (props) => {
     batch(() => {
       const needsSetup = data?.requiresSetup === true;
       const useLockScreen = data?.useLockScreen ?? state.locked;
-      const shouldLock = useLockScreen && !isEnvBrowser() && !needsSetup;
+      const forceLockScreen = data?.forceLockScreen === true;
+      const shouldLock = useLockScreen && (forceLockScreen || !isEnvBrowser()) && !needsSetup;
       setState('visible', true);
       setState('locked', shouldLock);
       setState('initialized', true);
