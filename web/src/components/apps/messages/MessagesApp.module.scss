@@ -227,6 +227,38 @@
     linear-gradient(180deg, #f8fff9 0%, #eef8f1 56%, #e7f2eb 100%);
 }
 
+.thread-header {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: rgba(248, 255, 249, 0.92);
+  border-bottom: 1px solid rgba(56, 133, 78, 0.14);
+}
+
+.thread-back-button {
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 10px;
+  background: rgba(53, 129, 79, 0.14);
+  color: #2e6a48;
+  font-size: 24px;
+  line-height: 1;
+}
+
+.thread-title {
+  min-width: 0;
+  font-size: 15px;
+  font-weight: 760;
+  color: #1e442e;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .messages-list {
   flex: 1;
   overflow-y: auto;
