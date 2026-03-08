@@ -10,6 +10,7 @@ import { SearchInput } from '../../shared/ui/SearchInput';
 import { ActionSheet } from '../../shared/ui/ActionSheet';
 import { ScreenState } from '../../shared/ui/ScreenState';
 import { SkeletonList } from '../../shared/ui/SkeletonList';
+import { AppScaffold } from '../../shared/layout';
 import styles from './GalleryApp.module.scss';
 
 function PlainIconButton(props: {
@@ -170,43 +171,42 @@ export function GalleryApp() {
   };
   
   return (
-    <div class="ios-page">
-      <div class="ios-nav">
-        <button class="ios-icon-btn" onClick={() => router.goBack()}>‹</button>
-        <div class="ios-nav-title">Galeria</div>
-        <PlainIconButton onClick={takePhoto} label="Camara" icon="./img/icons_ios/camera.svg" />
+    <AppScaffold
+      title="Galeria"
+      subtitle="Fotos y videos"
+      onBack={() => router.goBack()}
+      action={{ onClick: takePhoto, label: 'Camara', icon: './img/icons_ios/camera.svg' }}
+    >
+      <div class={styles.page}>
+        <div class={styles.toolbar}>
+          <SearchInput
+            class={styles.searchWrap}
+            inputClass={styles.searchInput}
+            value={query()}
+            onInput={setQuery}
+            placeholder="Buscar en galeria"
+          />
+          <div class={styles.counterPill}>{visiblePhotos().length}</div>
+        </div>
+        <div class={styles.grid}>
+          <Show when={loading()} fallback={<ScreenState loading={false} empty={visiblePhotos().length === 0} emptyTitle="Sin fotos" emptyDescription="Toma tu primera foto con la camara.">
+            <For each={visiblePhotos()}>
+              {(photo, index) => (
+                <div
+                  class={styles.photoItem}
+                  classList={{ [styles.selected]: selectedIndex() === index() }}
+                  onClick={() => openPhotoAt(index())}
+                >
+                  <img src={photo.url} alt="Photo" />
+                </div>
+              )}
+            </For>
+          </ScreenState>}>
+            <SkeletonList rows={9} />
+          </Show>
+        </div>
       </div>
-      
-      <div class="ios-content">
-      <div class={styles.toolbar}>
-        <SearchInput
-          class={styles.searchWrap}
-          inputClass={styles.searchInput}
-          value={query()}
-          onInput={setQuery}
-          placeholder="Buscar en galeria"
-        />
-        <div class={styles.counterPill}>{visiblePhotos().length}</div>
-      </div>
-      <div class={styles.grid}>
-        <Show when={loading()} fallback={<ScreenState loading={false} empty={visiblePhotos().length === 0} emptyTitle="Sin fotos" emptyDescription="Toma tu primera foto con la camara.">
-          <For each={visiblePhotos()}>
-            {(photo, index) => (
-              <div
-                class={styles.photoItem}
-                classList={{ [styles.selected]: selectedIndex() === index() }}
-                onClick={() => openPhotoAt(index())}
-              >
-                <img src={photo.url} alt="Photo" />
-              </div>
-            )}
-          </For>
-        </ScreenState>}>
-          <SkeletonList rows={9} />
-        </Show>
-      </div>
-      </div>
-      
+
       <Show when={selectedPhoto()}>
         <div class={styles.viewer}>
           <PlainIconButton class={styles.closeBtn} onClick={() => setSelectedPhoto(null)} label="Cerrar" icon="./img/icons_ios/ui-close.svg" />
@@ -250,6 +250,6 @@ export function GalleryApp() {
           { label: 'Ingresar numero', tone: 'primary' as const, onClick: () => void shareToChatManual() },
         ]}
       />
-    </div>
+    </AppScaffold>
   );
 }
