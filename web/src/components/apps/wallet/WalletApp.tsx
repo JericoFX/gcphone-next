@@ -1,8 +1,9 @@
-import { For, Show, createEffect, createSignal, onCleanup } from 'solid-js';
+import { For, Show, createEffect, createSignal, onCleanup, onMount } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { fetchNui } from '../../../utils/fetchNui';
 import { uiPrompt } from '../../../utils/uiDialog';
 import { uiAlert } from '../../../utils/uiAlert';
+import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { AppScaffold } from '../../shared/layout';
 import styles from './WalletApp.module.scss';
 
@@ -188,9 +189,8 @@ export function WalletApp() {
     setShowCreateInvoice(true);
   };
 
-  createEffect(() => {
-    const onKey = (e: CustomEvent<string>) => {
-      if (e.detail !== 'Backspace') return;
+  usePhoneKeyHandler({
+    Backspace: () => {
       if (incomingInvoice()) {
         setIncomingInvoice(null);
         return;
@@ -200,9 +200,7 @@ export function WalletApp() {
         return;
       }
       router.goBack();
-    };
-    window.addEventListener('phone:keyUp', onKey as EventListener);
-    onCleanup(() => window.removeEventListener('phone:keyUp', onKey as EventListener));
+    },
   });
 
   createEffect(() => {
@@ -237,7 +235,7 @@ export function WalletApp() {
     onCleanup(() => window.removeEventListener('message', onWalletEvent));
   });
 
-  createEffect(() => {
+  onMount(() => {
     void load();
   });
 

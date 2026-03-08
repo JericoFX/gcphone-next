@@ -1,10 +1,11 @@
-import { For, Show, createEffect, createSignal, onCleanup, onMount } from 'solid-js';
+import { For, Show, createEffect, createSignal } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { fetchNui } from '../../../utils/fetchNui';
 import { timeAgo } from '../../../utils/misc';
 import { sanitizeMediaUrl, sanitizeText } from '../../../utils/sanitize';
 import { AppScaffold } from '../../shared/layout';
 import { useAppCache } from '../../../hooks';
+import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { MediaLightbox } from '../../shared/ui/MediaLightbox';
 import { Modal, ModalActions, ModalButton } from '../../shared/ui/Modal';
 import { EmojiPickerButton } from '../../shared/ui/EmojiPicker';
@@ -101,28 +102,26 @@ export function ClipsApp() {
     void loadClips();
   });
 
-  createEffect(() => {
-    const onKey = (e: CustomEvent<string>) => {
-      if (e.detail === 'Backspace') {
-        if (showComments()) {
-          setShowComments(false);
-          return;
-        }
-        router.goBack();
+  usePhoneKeyHandler({
+    Backspace: () => {
+      if (showComments()) {
+        setShowComments(false);
+        return;
       }
-    };
-    window.addEventListener('phone:keyUp', onKey as EventListener);
-    onCleanup(() => window.removeEventListener('phone:keyUp', onKey as EventListener));
+      router.goBack();
+    },
   });
 
   const toggleLike = async (clipId: number) => {
     const result = await fetchNui<{ liked?: boolean }>('clipsToggleLike', { postId: clipId });
     if (result?.liked !== undefined) {
-      setClips(prev => prev.map(c => 
-        c.id === clipId 
-          ? { ...c, liked: result.liked, likes: (c.likes || 0) + (result.liked ? 1 : -1) }
-          : c
-      ));
+      setClips((prev) => prev.map((c) => {
+        if (c.id !== clipId) return c;
+        if (c.liked === result.liked) return c;
+
+        const likes = Math.max(0, (c.likes || 0) + (result.liked ? 1 : -1));
+        return { ...c, liked: result.liked, likes };
+      }));
     }
   };
 

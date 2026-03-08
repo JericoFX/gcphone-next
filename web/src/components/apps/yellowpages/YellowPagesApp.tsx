@@ -1,10 +1,11 @@
-import { For, Show, createEffect, createSignal, onCleanup } from 'solid-js';
+import { For, Show, createEffect, createSignal } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { fetchNui } from '../../../utils/fetchNui';
 import { timeAgo } from '../../../utils/misc';
 import { sanitizeMediaUrl, sanitizeText } from '../../../utils/sanitize';
 import { uiConfirm } from '../../../utils/uiDialog';
 import { uiAlert } from '../../../utils/uiAlert';
+import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { AppScaffold } from '../../shared/layout';
 import { useAppCache } from '../../../hooks';
 import { MediaLightbox } from '../../shared/ui/MediaLightbox';
@@ -122,27 +123,23 @@ export function YellowPagesApp() {
     void loadListings();
   });
 
-  createEffect(() => {
-    const onKey = (e: CustomEvent<string>) => {
-      if (e.detail === 'Backspace') {
-        if (showContactModal()) {
-          setShowContactModal(false);
-          return;
-        }
-        if (selectedListing()) {
-          setSelectedListing(null);
-          setSellerInfo(null);
-          return;
-        }
-        if (showComposer()) {
-          setShowComposer(false);
-          return;
-        }
-        router.goBack();
+  usePhoneKeyHandler({
+    Backspace: () => {
+      if (showContactModal()) {
+        setShowContactModal(false);
+        return;
       }
-    };
-    window.addEventListener('phone:keyUp', onKey as EventListener);
-    onCleanup(() => window.removeEventListener('phone:keyUp', onKey as EventListener));
+      if (selectedListing()) {
+        setSelectedListing(null);
+        setSellerInfo(null);
+        return;
+      }
+      if (showComposer()) {
+        setShowComposer(false);
+        return;
+      }
+      router.goBack();
+    },
   });
 
   const getCategoryIcon = (catId: string) => CATEGORY_ICON_MAP[catId] || './img/icons_ios/ui-list.svg';

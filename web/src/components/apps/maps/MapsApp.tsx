@@ -3,6 +3,7 @@ import { useRouter } from '../../Phone/PhoneFrame';
 import { fetchNui } from '../../../utils/fetchNui';
 import { ActionSheet } from '../../shared/ui/ActionSheet';
 import { sanitizeText } from '../../../utils/sanitize';
+import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { LeafletMap } from './LeafletMap';
 import styles from './MapsApp.module.scss';
 
@@ -63,13 +64,10 @@ export function MapsApp() {
   const routeParams = () => router.params();
   let lastRouteKey = '';
 
-  createEffect(() => {
-    const onKey = (e: CustomEvent<string>) => {
-      if (e.detail === 'Backspace') router.goBack();
-    };
-
-    window.addEventListener('phone:keyUp', onKey as EventListener);
-    onCleanup(() => window.removeEventListener('phone:keyUp', onKey as EventListener));
+  usePhoneKeyHandler({
+    Backspace: () => {
+      router.goBack();
+    },
   });
 
   const loadContactsAndGroups = async () => {

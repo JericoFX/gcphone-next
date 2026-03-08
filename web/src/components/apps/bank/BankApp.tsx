@@ -1,6 +1,7 @@
-import { createMemo, createSignal, Show, createEffect, onCleanup, For } from 'solid-js';
+import { createMemo, createSignal, Show, createEffect, onCleanup, For, onMount } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { fetchNui } from '../../../utils/fetchNui';
+import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { AppScaffold } from '../../shared/layout';
 import { ScreenState } from '../../shared/ui/ScreenState';
 import { SkeletonList } from '../../shared/ui/SkeletonList';
@@ -40,27 +41,22 @@ export function BankApp() {
     setLoading(false);
   };
   
-  createEffect(() => {
+  onMount(() => {
     loadData();
   });
   
-  createEffect(() => {
-    const handleKeyUp = (e: CustomEvent<string>) => {
-      if (e.detail === 'Backspace') {
-        if (incomingInvoice()) {
-          setIncomingInvoice(null);
-          return;
-        }
-        if (showTransfer()) {
-          setShowTransfer(false);
-          return;
-        }
-        router.goBack();
+  usePhoneKeyHandler({
+    Backspace: () => {
+      if (incomingInvoice()) {
+        setIncomingInvoice(null);
+        return;
       }
-    };
-    
-    window.addEventListener('phone:keyUp', handleKeyUp as EventListener);
-    onCleanup(() => window.removeEventListener('phone:keyUp', handleKeyUp as EventListener));
+      if (showTransfer()) {
+        setShowTransfer(false);
+        return;
+      }
+      router.goBack();
+    },
   });
 
   createEffect(() => {
