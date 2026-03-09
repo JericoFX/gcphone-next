@@ -1,23 +1,19 @@
+/* iOS 18 Design System - Phone Setup */
+
 .setupRoot {
   height: 100%;
   min-height: 100%;
-  padding: 14px 14px calc(16px + var(--phone-bottom-ui-gap, 0px));
-  background:
-    radial-gradient(circle at top, rgba(59, 130, 246, 0.16), transparent 38%),
-    radial-gradient(circle at bottom left, rgba(16, 185, 129, 0.1), transparent 32%),
-    linear-gradient(180deg, #f8fbff 0%, #eef5ff 48%, #edf6f2 100%);
+  padding: 0;
+  background: var(--bg, #F2F2F7);
 }
 
 .card {
   min-height: 100%;
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  padding: 16px 16px 100px;
-  border-radius: 28px;
-  background: rgba(255, 255, 255, 0.86);
-  border: 1px solid rgba(148, 163, 184, 0.18);
-  box-shadow: 0 20px 45px rgba(15, 23, 42, 0.12);
+  gap: var(--s-5, 20px);
+  padding: var(--s-5, 20px);
+  background: var(--bg, #F2F2F7);
   overflow-y: auto;
 }
 
@@ -30,37 +26,30 @@
 .sectionHeader,
 .preferenceHeader {
   display: grid;
-  gap: 10px;
-}
-
-.footer {
-  display: grid;
-  gap: 10px;
-  margin-top: auto;
-  padding-top: 8px;
-  position: sticky;
-  bottom: 0;
-  background: rgba(255, 255, 255, 0.86);
+  gap: var(--s-3, 12px);
 }
 
 .hero {
-  gap: 6px;
+  gap: var(--s-2, 8px);
+  text-align: center;
+  padding: var(--s-4, 16px) 0;
 }
 
 .eyebrow {
   margin: 0;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.16em;
+  font-size: var(--fs-footnote, 0.8125rem);
+  font-weight: 600;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #2563eb;
+  color: var(--tint, #007AFF);
 }
 
 .hero h2 {
   margin: 0;
-  font-size: 24px;
-  line-height: 1.05;
-  color: #0f172a;
+  font-size: var(--fs-title2, 1.375rem);
+  line-height: var(--lh-tight, 1.15);
+  color: var(--text, #111111);
+  font-weight: 700;
 }
 
 .lead,
@@ -70,78 +59,95 @@
 .optionCard span,
 .preferenceHeader span {
   margin: 0;
-  color: #64748b;
+  color: var(--text-2, rgba(17,17,17,.72));
 }
 
 .lead {
-  font-size: 13px;
-  line-height: 1.5;
+  font-size: var(--fs-body, 1rem);
+  line-height: var(--lh-relaxed, 1.55);
+  color: var(--text-2, rgba(17,17,17,.72));
 }
 
+/* Progress indicator - iOS style */
 .progress {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-2, 8px);
+  padding: var(--s-3, 12px) 0;
 }
 
 .progressStep {
-  display: grid;
-  gap: 6px;
-  justify-items: start;
-  min-width: 0;
-  padding: 10px 12px;
-  border: 1px solid rgba(148, 163, 184, 0.22);
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.72);
-  color: #64748b;
-  font-size: 11px;
-  box-shadow: 0 8px 18px rgba(148, 163, 184, 0.08);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-1, 4px);
+  min-width: 80px;
+  padding: var(--s-2, 8px) var(--s-3, 12px);
+  border: none;
+  border-radius: var(--r-md, 12px);
+  background: transparent;
+  color: var(--text-3, rgba(17,17,17,.52));
+  font-size: var(--fs-caption1, 0.75rem);
+  cursor: pointer;
+  transition: all 180ms cubic-bezier(.25,.1,.25,1);
 }
 
 .progressStepActive,
 .progressStepDone {
-  color: #0f172a;
-  border-color: rgba(37, 99, 235, 0.26);
+  color: var(--text, #111111);
 }
 
 .progressStepActive {
-  background: linear-gradient(180deg, rgba(219, 234, 254, 0.95), rgba(255, 255, 255, 0.92));
-  box-shadow: 0 12px 24px rgba(37, 99, 235, 0.12);
+  background: var(--surface, #FFFFFF);
+  box-shadow: var(--shadow-1, 0 1px 2px rgba(0,0,0,.08));
 }
 
 .progressStepDone {
-  background: rgba(220, 252, 231, 0.78);
-  border-color: rgba(16, 185, 129, 0.24);
+  color: var(--success, #34C759);
+}
+
+.progressStepDone .progressIndex {
+  background: var(--success, #34C759);
+  color: #fff;
 }
 
 .progressIndex {
-  width: 22px;
-  height: 22px;
+  width: 28px;
+  height: 28px;
   display: grid;
   place-items: center;
-  border-radius: 999px;
-  background: rgba(37, 99, 235, 0.1);
-  font-size: 11px;
-  font-weight: 800;
-  color: #1d4ed8;
+  border-radius: var(--r-pill, 999px);
+  background: rgba(120,120,128,.16);
+  font-size: var(--fs-footnote, 0.8125rem);
+  font-weight: 700;
+  color: var(--text-2, rgba(17,17,17,.72));
 }
 
+.progressStepActive .progressIndex {
+  background: var(--tint, #007AFF);
+  color: #fff;
+}
+
+/* Sections - iOS cards */
 .section {
-  padding: 14px;
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.72);
-  border: 1px solid rgba(226, 232, 240, 0.9);
+  padding: var(--s-5, 20px);
+  border-radius: var(--r-xl, 20px);
+  background: var(--surface, #FFFFFF);
+  border: 1px solid var(--border, rgba(0,0,0,.12));
+  box-shadow: var(--shadow-1, 0 1px 2px rgba(0,0,0,.08));
   flex-shrink: 0;
 }
 
 .sectionHeader h3,
 .preferenceHeader strong {
   margin: 0;
-  color: #0f172a;
+  color: var(--text, #111111);
 }
 
 .sectionHeader h3 {
-  font-size: 17px;
+  font-size: var(--fs-title3, 1.25rem);
+  font-weight: 700;
 }
 
 .sectionHeader p,
@@ -149,14 +155,15 @@
 .field small,
 .hint,
 .optionCard span {
-  font-size: 12px;
-  line-height: 1.45;
+  font-size: var(--fs-footnote, 0.8125rem);
+  line-height: var(--lh-normal, 1.35);
 }
 
+/* Option grids */
 .optionGrid,
 .identityGrid {
   display: grid;
-  gap: 10px;
+  gap: var(--s-3, 12px);
 }
 
 .optionGrid {
@@ -165,131 +172,209 @@
 
 .optionCard {
   display: grid;
-  gap: 4px;
+  gap: var(--s-1, 4px);
   min-width: 0;
-  padding: 13px;
+  padding: var(--s-4, 16px);
   text-align: left;
-  border-radius: 16px;
-  border: 1px solid rgba(148, 163, 184, 0.18);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(248, 250, 252, 0.92));
-  color: #0f172a;
+  border-radius: var(--r-lg, 16px);
+  border: 1px solid var(--border, rgba(0,0,0,.12));
+  background: var(--surface, #FFFFFF);
+  color: var(--text, #111111);
+  cursor: pointer;
+  transition: all 180ms cubic-bezier(.25,.1,.25,1);
+}
+
+.optionCard:hover {
+  border-color: var(--tint, #007AFF);
 }
 
 .optionCard strong {
-  font-size: 13px;
+  font-size: var(--fs-body, 1rem);
+  font-weight: 600;
+}
+
+.optionCard span {
+  font-size: var(--fs-caption1, 0.75rem);
 }
 
 .optionCardActive {
-  border-color: rgba(37, 99, 235, 0.34);
-  background: linear-gradient(180deg, rgba(219, 234, 254, 0.98), rgba(239, 246, 255, 0.94));
-  box-shadow: inset 0 0 0 1px rgba(96, 165, 250, 0.18);
+  border-color: var(--tint, #007AFF);
+  background: color-mix(in srgb, var(--tint, #007AFF) 8%, var(--surface, #FFFFFF));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--tint, #007AFF) 20%, transparent);
 }
 
+/* Form fields - iOS style */
 .field {
   display: grid;
-  gap: 6px;
-  font-size: 12px;
-  color: #334155;
+  gap: var(--s-2, 8px);
+  font-size: var(--fs-footnote, 0.8125rem);
+  color: var(--text-2, rgba(17,17,17,.72));
 }
 
 .field span {
-  font-weight: 700;
+  font-weight: 600;
+  font-size: var(--fs-footnote, 0.8125rem);
+  color: var(--text, #111111);
 }
 
 .field input {
   width: 100%;
   min-width: 0;
-  padding: 12px 13px;
-  border-radius: 14px;
-  border: 1px solid rgba(148, 163, 184, 0.24);
-  background: rgba(255, 255, 255, 0.9);
-  color: #0f172a;
+  min-height: 44px;
+  padding: 10px 14px;
+  border-radius: var(--r-md, 12px);
+  border: 1px solid var(--border, rgba(0,0,0,.12));
+  background: var(--surface-2, #F7F7FA);
+  color: var(--text, #111111);
+  font-size: var(--fs-body, 1rem);
+  outline: none;
+  transition: all 180ms cubic-bezier(.25,.1,.25,1);
+}
+
+.field input:focus {
+  border-color: color-mix(in srgb, var(--tint, #007AFF) 60%, var(--border, rgba(0,0,0,.12)));
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--tint, #007AFF) 18%, transparent);
+  background: var(--surface, #FFFFFF);
 }
 
 .field input::placeholder {
-  color: #94a3b8;
+  color: var(--text-3, rgba(17,17,17,.52));
 }
 
+/* Input with domain badge */
 .inputWrap {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 8px;
-  align-items: center;
+  display: flex;
+  gap: var(--s-2, 8px);
+  align-items: stretch;
+}
+
+.inputWrap input {
+  flex: 1;
 }
 
 .domainBadge {
-  padding: 11px 12px;
-  border-radius: 14px;
-  background: rgba(241, 245, 249, 0.95);
-  border: 1px solid rgba(148, 163, 184, 0.18);
-  color: #475569;
-  font-size: 12px;
+  display: flex;
+  align-items: center;
+  padding: 0 var(--s-3, 12px);
+  border-radius: var(--r-md, 12px);
+  background: var(--surface-3, #EFEFF4);
+  border: 1px solid var(--border, rgba(0,0,0,.12));
+  color: var(--text-2, rgba(17,17,17,.72));
+  font-size: var(--fs-footnote, 0.8125rem);
+  font-weight: 600;
   white-space: nowrap;
 }
 
+/* Error message */
 .error {
   margin: 0;
-  padding: 11px 13px;
-  border-radius: 14px;
-  background: rgba(254, 226, 226, 0.92);
-  border: 1px solid rgba(248, 113, 113, 0.24);
-  color: #b91c1c;
-  font-size: 12px;
+  padding: var(--s-3, 12px) var(--s-4, 16px);
+  border-radius: var(--r-lg, 16px);
+  background: color-mix(in srgb, var(--danger, #FF3B30) 12%, var(--surface, #FFFFFF));
+  border: 1px solid color-mix(in srgb, var(--danger, #FF3B30) 40%, var(--border, rgba(0,0,0,.12)));
+  color: var(--danger, #FF3B30);
+  font-size: var(--fs-footnote, 0.8125rem);
+  font-weight: 500;
 }
 
+/* Hint text */
 .hint {
-  font-size: 12px;
+  font-size: var(--fs-caption1, 0.75rem);
+  color: var(--text-3, rgba(17,17,17,.52));
+  text-align: center;
+}
+
+/* Footer with buttons */
+.footer {
+  display: grid;
+  gap: var(--s-3, 12px);
+  margin-top: auto;
+  padding-top: var(--s-4, 16px);
+  padding-bottom: var(--s-5, 20px);
+  background: var(--bg, #F2F2F7);
 }
 
 .buttonRow {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  gap: var(--s-3, 12px);
 }
 
 .secondaryButton,
 .primaryButton {
-  border: 0;
-  border-radius: 16px;
-  padding: 12px 14px;
-  font-weight: 800;
+  appearance: none;
+  border: 1px solid var(--border, rgba(0,0,0,.12));
+  border-radius: var(--r-pill, 999px);
+  padding: 12px 16px;
+  min-height: 44px;
+  font-size: var(--fs-body, 1rem);
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  transition: all 120ms cubic-bezier(.2,.8,.2,1);
 }
 
 .secondaryButton {
-  background: rgba(226, 232, 240, 0.9);
-  color: #334155;
+  background: var(--surface-2, #F7F7FA);
+  color: var(--text, #111111);
+}
+
+.secondaryButton:hover {
+  background: color-mix(in srgb, var(--surface-2, #F7F7FA) 92%, black);
+}
+
+.secondaryButton:active {
+  transform: scale(0.98);
 }
 
 .primaryButton {
-  background: linear-gradient(135deg, #2563eb, #0ea5e9);
+  background: var(--tint, #007AFF);
+  border-color: transparent;
   color: #fff;
-  box-shadow: 0 16px 28px rgba(37, 99, 235, 0.2);
+}
+
+.primaryButton:hover {
+  background: color-mix(in srgb, var(--tint, #007AFF) 92%, black);
+}
+
+.primaryButton:active {
+  transform: scale(0.98);
 }
 
 .secondaryButton:disabled,
 .primaryButton:disabled,
 .progressStep:disabled {
-  opacity: 0.55;
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
 }
 
+/* Responsive */
 @media (max-width: 360px) {
-  .setupRoot {
-    padding: 10px 10px calc(14px + var(--phone-bottom-ui-gap, 0px));
-  }
-
   .card {
-    padding: 12px;
-    border-radius: 22px;
+    padding: var(--s-4, 16px);
   }
 
-  .progress,
+  .section {
+    padding: var(--s-4, 16px);
+  }
+
   .optionGrid,
-  .buttonRow,
-  .inputWrap {
+  .buttonRow {
     grid-template-columns: 1fr;
   }
 
+  .inputWrap {
+    flex-direction: column;
+  }
+
   .domainBadge {
-    text-align: center;
+    justify-content: center;
+    padding: var(--s-2, 8px);
   }
 }
