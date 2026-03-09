@@ -169,6 +169,7 @@ export function PhoneSetup() {
           ))}
         </div>
 
+        <div class={styles.content}>
         <Show when={step() === 0}>
           <section class={styles.section}>
             <div class={styles.sectionHeader}>
@@ -280,30 +281,31 @@ export function PhoneSetup() {
         <Show when={error()}>
           <p class={styles.error}>{error()}</p>
         </Show>
+        </div>
+      </div>
 
-        <div class={styles.footer}>
-          <p class={styles.hint}>
-            Este setup es obligatorio y define tus cuentas iniciales para usar el telefono desde el primer desbloqueo.
-          </p>
+      <div class={styles.footer}>
+        <p class={styles.hint}>
+          Paso {step() + 1} de {STEP_LABELS.length}
+        </p>
 
-          <div class={styles.buttonRow}>
-            <button type='button' class={styles.secondaryButton} onClick={goBack} disabled={step() === 0 || loading()}>
-              Atras
-            </button>
+        <div class={styles.buttonRow}>
+          <button type='button' class={styles.secondaryButton} onClick={goBack} disabled={step() === 0 || loading()}>
+            Atras
+          </button>
 
-            <Show
-              when={step() === STEP_LABELS.length - 1}
-              fallback={
-                <button type='button' class={styles.primaryButton} onClick={goNext} disabled={loading()}>
-                  Continuar
-                </button>
-              }
-            >
-              <button type='button' class={styles.primaryButton} onClick={() => void submitSetup()} disabled={loading()}>
-                {loading() ? 'Guardando...' : 'Finalizar configuracion'}
+          <Show
+            when={step() === STEP_LABELS.length - 1}
+            fallback={
+              <button type='button' class={styles.primaryButton} onClick={goNext} disabled={loading()}>
+                Continuar
               </button>
-            </Show>
-          </div>
+            }
+          >
+            <button type='button' class={styles.primaryButton} onClick={() => void submitSetup()} disabled={loading()}>
+              {loading() ? 'Guardando...' : 'Finalizar'}
+            </button>
+          </Show>
         </div>
       </div>
     </div>

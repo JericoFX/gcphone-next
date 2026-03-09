@@ -2,42 +2,33 @@
 
 .setupRoot {
   height: 100%;
-  min-height: 100%;
-  padding: 0;
+  display: flex;
+  flex-direction: column;
   background: var(--bg, #F2F2F7);
+  overflow: hidden;
 }
 
 .card {
-  min-height: 100%;
+  flex: 1;
   display: flex;
   flex-direction: column;
-  gap: var(--s-5, 20px);
-  padding: var(--s-5, 20px);
-  background: var(--bg, #F2F2F7);
-  overflow-y: auto;
-}
-
-.hero,
-.section,
-.preferenceStack,
-.preferenceGroup,
-.formGrid,
-.identityGrid,
-.sectionHeader,
-.preferenceHeader {
-  display: grid;
   gap: var(--s-3, 12px);
+  padding: var(--s-4, 16px);
+  background: var(--bg, #F2F2F7);
+  overflow: hidden;
 }
 
 .hero {
-  gap: var(--s-2, 8px);
+  display: grid;
+  gap: var(--s-1, 4px);
   text-align: center;
-  padding: var(--s-4, 16px) 0;
+  padding: var(--s-2, 8px) 0;
+  flex-shrink: 0;
 }
 
 .eyebrow {
   margin: 0;
-  font-size: var(--fs-footnote, 0.8125rem);
+  font-size: var(--fs-caption2, 0.6875rem);
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -46,25 +37,16 @@
 
 .hero h2 {
   margin: 0;
-  font-size: var(--fs-title2, 1.375rem);
+  font-size: var(--fs-title3, 1.25rem);
   line-height: var(--lh-tight, 1.15);
   color: var(--text, #111111);
   font-weight: 700;
 }
 
-.lead,
-.sectionHeader p,
-.hint,
-.field small,
-.optionCard span,
-.preferenceHeader span {
-  margin: 0;
-  color: var(--text-2, rgba(17,17,17,.72));
-}
-
 .lead {
-  font-size: var(--fs-body, 1rem);
-  line-height: var(--lh-relaxed, 1.55);
+  margin: 0;
+  font-size: var(--fs-footnote, 0.8125rem);
+  line-height: var(--lh-normal, 1.35);
   color: var(--text-2, rgba(17,17,17,.72));
 }
 
@@ -73,22 +55,23 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--s-2, 8px);
-  padding: var(--s-3, 12px) 0;
+  gap: var(--s-1, 4px);
+  padding: var(--s-1, 4px) 0;
+  flex-shrink: 0;
 }
 
 .progressStep {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--s-1, 4px);
-  min-width: 80px;
-  padding: var(--s-2, 8px) var(--s-3, 12px);
+  gap: 2px;
+  min-width: 60px;
+  padding: var(--s-1, 4px) var(--s-2, 8px);
   border: none;
   border-radius: var(--r-md, 12px);
   background: transparent;
   color: var(--text-3, rgba(17,17,17,.52));
-  font-size: var(--fs-caption1, 0.75rem);
+  font-size: var(--fs-caption2, 0.6875rem);
   cursor: pointer;
   transition: all 180ms cubic-bezier(.25,.1,.25,1);
 }
@@ -113,13 +96,13 @@
 }
 
 .progressIndex {
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
   display: grid;
   place-items: center;
   border-radius: var(--r-pill, 999px);
   background: rgba(120,120,128,.16);
-  font-size: var(--fs-footnote, 0.8125rem);
+  font-size: var(--fs-caption1, 0.75rem);
   font-weight: 700;
   color: var(--text-2, rgba(17,17,17,.72));
 }
@@ -129,41 +112,52 @@
   color: #fff;
 }
 
+/* Content area - scrollable */
+.content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3, 12px);
+  min-height: 0;
+}
+
 /* Sections - iOS cards */
 .section {
-  padding: var(--s-5, 20px);
-  border-radius: var(--r-xl, 20px);
+  padding: var(--s-4, 16px);
+  border-radius: var(--r-lg, 16px);
   background: var(--surface, #FFFFFF);
   border: 1px solid var(--border, rgba(0,0,0,.12));
   box-shadow: var(--shadow-1, 0 1px 2px rgba(0,0,0,.08));
   flex-shrink: 0;
 }
 
-.sectionHeader h3,
-.preferenceHeader strong {
-  margin: 0;
-  color: var(--text, #111111);
+.sectionHeader {
+  display: grid;
+  gap: var(--s-1, 4px);
+  margin-bottom: var(--s-3, 12px);
 }
 
 .sectionHeader h3 {
-  font-size: var(--fs-title3, 1.25rem);
+  margin: 0;
+  font-size: var(--fs-body, 1rem);
   font-weight: 700;
+  color: var(--text, #111111);
 }
 
-.sectionHeader p,
-.preferenceHeader span,
-.field small,
-.hint,
-.optionCard span {
-  font-size: var(--fs-footnote, 0.8125rem);
+.sectionHeader p {
+  margin: 0;
+  font-size: var(--fs-caption1, 0.75rem);
   line-height: var(--lh-normal, 1.35);
+  color: var(--text-2, rgba(17,17,17,.72));
 }
 
 /* Option grids */
 .optionGrid,
 .identityGrid {
   display: grid;
-  gap: var(--s-3, 12px);
+  gap: var(--s-2, 8px);
 }
 
 .optionGrid {
@@ -172,11 +166,11 @@
 
 .optionCard {
   display: grid;
-  gap: var(--s-1, 4px);
+  gap: 2px;
   min-width: 0;
-  padding: var(--s-4, 16px);
+  padding: var(--s-3, 12px);
   text-align: left;
-  border-radius: var(--r-lg, 16px);
+  border-radius: var(--r-md, 12px);
   border: 1px solid var(--border, rgba(0,0,0,.12));
   background: var(--surface, #FFFFFF);
   color: var(--text, #111111);
@@ -189,39 +183,45 @@
 }
 
 .optionCard strong {
-  font-size: var(--fs-body, 1rem);
+  font-size: var(--fs-footnote, 0.8125rem);
   font-weight: 600;
 }
 
 .optionCard span {
-  font-size: var(--fs-caption1, 0.75rem);
+  font-size: var(--fs-caption2, 0.6875rem);
+  color: var(--text-2, rgba(17,17,17,.72));
 }
 
 .optionCardActive {
   border-color: var(--tint, #007AFF);
   background: color-mix(in srgb, var(--tint, #007AFF) 8%, var(--surface, #FFFFFF));
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--tint, #007AFF) 20%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--tint, #007AFF) 20%, transparent);
 }
 
 /* Form fields - iOS style */
+.formGrid {
+  display: grid;
+  gap: var(--s-3, 12px);
+}
+
 .field {
   display: grid;
-  gap: var(--s-2, 8px);
-  font-size: var(--fs-footnote, 0.8125rem);
+  gap: var(--s-1, 4px);
+  font-size: var(--fs-caption1, 0.75rem);
   color: var(--text-2, rgba(17,17,17,.72));
 }
 
 .field span {
   font-weight: 600;
-  font-size: var(--fs-footnote, 0.8125rem);
+  font-size: var(--fs-caption1, 0.75rem);
   color: var(--text, #111111);
 }
 
 .field input {
   width: 100%;
   min-width: 0;
-  min-height: 44px;
-  padding: 10px 14px;
+  min-height: 40px;
+  padding: 8px 12px;
   border-radius: var(--r-md, 12px);
   border: 1px solid var(--border, rgba(0,0,0,.12));
   background: var(--surface-2, #F7F7FA);
@@ -233,11 +233,16 @@
 
 .field input:focus {
   border-color: color-mix(in srgb, var(--tint, #007AFF) 60%, var(--border, rgba(0,0,0,.12)));
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--tint, #007AFF) 18%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--tint, #007AFF) 18%, transparent);
   background: var(--surface, #FFFFFF);
 }
 
 .field input::placeholder {
+  color: var(--text-3, rgba(17,17,17,.52));
+}
+
+.field small {
+  font-size: var(--fs-caption2, 0.6875rem);
   color: var(--text-3, rgba(17,17,17,.52));
 }
 
@@ -265,39 +270,73 @@
   white-space: nowrap;
 }
 
+/* Identity grid */
+.identityGrid {
+  display: grid;
+  gap: var(--s-3, 12px);
+}
+
+/* Preference stack */
+.preferenceStack {
+  display: grid;
+  gap: var(--s-3, 12px);
+}
+
+.preferenceGroup {
+  display: grid;
+  gap: var(--s-2, 8px);
+}
+
+.preferenceHeader {
+  display: grid;
+  gap: 2px;
+}
+
+.preferenceHeader strong {
+  font-size: var(--fs-body, 1rem);
+  font-weight: 700;
+  color: var(--text, #111111);
+}
+
+.preferenceHeader span {
+  font-size: var(--fs-caption1, 0.75rem);
+  color: var(--text-2, rgba(17,17,17,.72));
+}
+
 /* Error message */
 .error {
   margin: 0;
-  padding: var(--s-3, 12px) var(--s-4, 16px);
-  border-radius: var(--r-lg, 16px);
+  padding: var(--s-2, 8px) var(--s-3, 12px);
+  border-radius: var(--r-md, 12px);
   background: color-mix(in srgb, var(--danger, #FF3B30) 12%, var(--surface, #FFFFFF));
   border: 1px solid color-mix(in srgb, var(--danger, #FF3B30) 40%, var(--border, rgba(0,0,0,.12)));
   color: var(--danger, #FF3B30);
-  font-size: var(--fs-footnote, 0.8125rem);
-  font-weight: 500;
-}
-
-/* Hint text */
-.hint {
   font-size: var(--fs-caption1, 0.75rem);
-  color: var(--text-3, rgba(17,17,17,.52));
-  text-align: center;
+  font-weight: 500;
+  flex-shrink: 0;
 }
 
-/* Footer with buttons */
+/* Footer with buttons - always visible */
 .footer {
   display: grid;
-  gap: var(--s-3, 12px);
-  margin-top: auto;
-  padding-top: var(--s-4, 16px);
-  padding-bottom: var(--s-5, 20px);
+  gap: var(--s-2, 8px);
+  padding: var(--s-3, 12px) 0 0;
   background: var(--bg, #F2F2F7);
+  border-top: 1px solid var(--separator, rgba(0,0,0,.1));
+  flex-shrink: 0;
+}
+
+.hint {
+  font-size: var(--fs-caption2, 0.6875rem);
+  color: var(--text-3, rgba(17,17,17,.52));
+  text-align: center;
+  margin: 0;
 }
 
 .buttonRow {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--s-3, 12px);
+  gap: var(--s-2, 8px);
 }
 
 .secondaryButton,
@@ -305,14 +344,14 @@
   appearance: none;
   border: 1px solid var(--border, rgba(0,0,0,.12));
   border-radius: var(--r-pill, 999px);
-  padding: 12px 16px;
-  min-height: 44px;
-  font-size: var(--fs-body, 1rem);
+  padding: 10px 14px;
+  min-height: 40px;
+  font-size: var(--fs-footnote, 0.8125rem);
   font-weight: 600;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: 8px;
   cursor: pointer;
   user-select: none;
   white-space: nowrap;
@@ -357,11 +396,11 @@
 /* Responsive */
 @media (max-width: 360px) {
   .card {
-    padding: var(--s-4, 16px);
+    padding: var(--s-3, 12px);
   }
 
   .section {
-    padding: var(--s-4, 16px);
+    padding: var(--s-3, 12px);
   }
 
   .optionGrid,
