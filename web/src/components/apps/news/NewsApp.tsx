@@ -110,6 +110,10 @@ export function NewsApp() {
   const [query, setQuery] = createSignal('');
   const [mockLiveEnabled, setMockLiveEnabled] = createSignal(false);
   const [mockLiveMessages, setMockLiveMessages] = createSignal<MockLiveMessage[]>([]);
+  const [showProfileModal, setShowProfileModal] = createSignal(false);
+  const [profileDisplayName, setProfileDisplayName] = createSignal('');
+  const [profileAvatar, setProfileAvatar] = createSignal('');
+  const [profileBio, setProfileBio] = createSignal('');
   const [scalePreset, setScalePreset] = createSignal<NewsScaleform['preset']>('breaking');
   const [scaleHeadline, setScaleHeadline] = createSignal('ULTIMO MOMENTO');
   const [scaleSubtitle, setScaleSubtitle] = createSignal('Cobertura en vivo');
@@ -517,26 +521,44 @@ export function NewsApp() {
     }
     if (!account) return;
 
-    const nextNameInput = await uiPrompt('Nombre visible para Noticias', {
-      title: 'Perfil',
-      defaultValue: account.display_name || '',
-      placeholder: 'Tu nombre',
-    });
-    if (nextNameInput === null) return;
+    setProfileDisplayName(account.display_name || '');
+    setProfileAvatar(account.avatar || '');
+    setProfileBio(account.bio || '');
+    setShowProfileModal(true);
+  };
 
-    const nextName = sanitizeText(nextNameInput, 50);
-    if (!nextName) return;
-
+  const saveProfile = async () => {
     const ok = await fetchNui<{ success?: boolean }>('newsUpdateAccount', {
-      displayName: nextName,
-      avatar: account.avatar || undefined,
-      bio: account.bio || undefined,
-      isPrivate: !!account.is_private,
+      displayName: sanitizeText(profileDisplayName(), 50),
+      avatar: sanitizeMediaUrl(profileAvatar()) || undefined,
+      bio: sanitizeText(profileBio(), 180) || undefined,
+      isPrivate: false,
     });
     if (ok?.success) {
-      uiAlert('Perfil actualizado');
+      setShowProfileModal(false);
+      setStatusMessage('Perfil actualizado');
       await loadAccount();
     }
+  };
+
+  const attachProfileFromGallery = async () => {
+    const gallery = await fetchNui<Array<{ url?: string }>>('getGallery', undefined, []);
+    const image = gallery?.find((item) => item?.url && resolveMediaType(item.url) === 'image');
+    if (image?.url) {
+      setProfileAvatar(sanitizeMediaUrl(image.url) || '');
+      return;
+    }
+    uiAlert('No se encontraron imagenes en la galeria');
+  };
+
+  const attachProfileFromCamera = async () => {
+    const shot = await fetchNui<{ url?: string }>('takePhoto', {}, { url: '' });
+    const nextUrl = sanitizeMediaUrl(shot?.url || '');
+    if (nextUrl) {
+      setProfileAvatar(nextUrl);
+      return;
+    }
+    await attachProfileFromGallery();
   };
 
   const createNewsAccount = async (payload: SocialOnboardingPayload) => {
@@ -726,6 +748,42 @@ export function NewsApp() {
               <div class={styles.actions}>
                 <button onClick={() => setShowCompose(false)}>Cancelar</button>
                 <button class={styles.primary} onClick={() => void publish()}>Publicar</button>
+              </div>
+            </div>
+          </div>
+        </Show>
+
+        <Show when={showProfileModal()}>
+          <div class={styles.modal}>
+            <div class={styles.modalContent}>
+              <h2>Perfil de Noticias</h2>
+              <input
+                type="text"
+                placeholder="Nombre visible"
+                value={profileDisplayName()}
+                onInput={(event) => setProfileDisplayName(event.currentTarget.value)}
+              />
+              <textarea
+                placeholder="Bio o firma editorial"
+                value={profileBio()}
+                onInput={(event) => setProfileBio(event.currentTarget.value)}
+              />
+              <div class={styles.composeAttachments}>
+                <MediaActionButtons
+                  actions={[
+                    { icon: '🖼', label: 'Galeria', onClick: attachProfileFromGallery },
+                    { icon: '📷', label: 'Camara', onClick: attachProfileFromCamera },
+                    ...(profileAvatar() ? [{ icon: '✕', label: 'Quitar', onClick: () => setProfileAvatar(''), tone: 'danger' as const }] : []),
+                  ]}
+                  variant="compact"
+                  class={styles.composeMediaButtons}
+                />
+                <input type="text" placeholder="URL de avatar" value={profileAvatar()} onInput={(event) => setProfileAvatar(sanitizeMediaUrl(event.currentTarget.value) || '')} />
+              </div>
+              <MediaAttachmentPreview url={profileAvatar()} mediaClass={styles.composePreviewMedia} onOpen={() => setViewerUrl(profileAvatar())} />
+              <div class={styles.actions}>
+                <button onClick={() => setShowProfileModal(false)}>Cancelar</button>
+                <button class={styles.primary} onClick={() => void saveProfile()}>Guardar perfil</button>
               </div>
             </div>
           </div>
