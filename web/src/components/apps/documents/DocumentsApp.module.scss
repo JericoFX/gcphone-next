@@ -469,7 +469,21 @@
 }
 
 .detailActions {
+  display: grid;
+  gap: 12px;
   padding: 20px;
+}
+
+.mailBtn {
+  width: 100%;
+  padding: 16px;
+  border: 1px solid rgba(15, 111, 206, 0.18);
+  border-radius: 12px;
+  background: rgba(15, 111, 206, 0.08);
+  color: #0f6fce;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
 }
 
 .deleteBtn {
