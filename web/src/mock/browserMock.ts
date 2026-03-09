@@ -762,9 +762,10 @@ const mockNewsScaleforms = new Map<number, Record<string, string>>([
   [2, { preset: 'breaking', headline: 'TRAFICO EN VIVO', subtitle: 'Cobertura desde la autopista', ticker: 'Desvios activos en este momento' }],
 ]);
 const mockJoinedNewsLives = new Set<number>();
-const mockNewsLiveMessages = new Map<number, Array<{ id: string; username: string; display: string; content: string; createdAt: number }>>([
-  [2, [{ id: '2:1', username: 'cronista', display: 'Cronista', content: 'Estamos saliendo en vivo desde la autopista.', createdAt: Date.now() }]],
+const mockNewsLiveMessages = new Map<number, Array<{ id: string; authorId: string; username: string; display: string; content: string; createdAt: number }>>([
+  [2, [{ id: '2:1', authorId: 'mock-cronista', username: 'cronista', display: 'Cronista', content: 'Estamos saliendo en vivo desde la autopista.', createdAt: Date.now() }]],
 ]);
+const mockMutedNewsUsers = new Map<number, Set<string>>();
 const mockWalletRequests: Array<{
   id: number;
   requesterIdentifier: string;
@@ -2317,6 +2318,7 @@ export async function handleBrowserNui<T = unknown>(eventName: string, data?: un
     const current = mockNewsLiveMessages.get(articleId) || [];
     const message = {
       id: `${articleId}:${Date.now()}`,
+      authorId: 'mocknews',
       username: 'mocknews',
       display: 'Mock Newsroom',
       content: String(payload?.content || '').trim(),
@@ -2344,6 +2346,27 @@ export async function handleBrowserNui<T = unknown>(eventName: string, data?: un
     return { success: true, reaction } as T;
   }
 
+  if (eventName === 'newsRemoveLiveMessage') {
+    const articleId = Number(payload?.articleId || 0);
+    const messageId = String(payload?.messageId || '');
+    const current = mockNewsLiveMessages.get(articleId) || [];
+    mockNewsLiveMessages.set(articleId, current.filter((entry) => entry.id !== messageId));
+    emitMessage('gcphone:news:liveMessageRemoved', { articleId, messageId });
+    return { success: true } as T;
+  }
+
+  if (eventName === 'newsMuteLiveUser') {
+    const articleId = Number(payload?.articleId || 0);
+    const username = String(payload?.username || '').trim();
+    const targetIdentifier = String(payload?.targetIdentifier || '').trim();
+    if (!mockMutedNewsUsers.has(articleId)) {
+      mockMutedNewsUsers.set(articleId, new Set());
+    }
+    mockMutedNewsUsers.get(articleId)!.add(targetIdentifier);
+    emitMessage('gcphone:news:liveUserMuted', { articleId, username });
+    return { success: true } as T;
+  }
+
   if (eventName === 'newsStartLive') {
     const articleId = nextMockNewsId++;
     const scaleform = (payload?.scaleform as Record<string, unknown> | undefined) || {};
@@ -2360,6 +2383,7 @@ export async function handleBrowserNui<T = unknown>(eventName: string, data?: un
     };
     mockNewsArticles.unshift(article);
     mockNewsLiveMessages.set(articleId, []);
+    mockMutedNewsUsers.set(articleId, new Set());
     mockNewsScaleforms.set(articleId, {
       preset: String(scaleform.preset || 'breaking'),
       headline: String(scaleform.headline || 'ULTIMO MOMENTO'),
@@ -2395,6 +2419,7 @@ export async function handleBrowserNui<T = unknown>(eventName: string, data?: un
     mockJoinedNewsLives.delete(articleId);
     mockNewsScaleforms.delete(articleId);
     mockNewsLiveMessages.delete(articleId);
+    mockMutedNewsUsers.delete(articleId);
     emitMessage('gcphone:news:liveEnded', articleId);
     return { success: true } as T;
   }
