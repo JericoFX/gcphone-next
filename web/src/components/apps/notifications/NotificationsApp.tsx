@@ -3,6 +3,7 @@ import { AppScaffold } from '../../shared/layout/AppScaffold';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { fetchNui } from '../../../utils/fetchNui';
 import { useNotifications } from '../../../store/notifications';
+import { usePhone } from '../../../store/phone';
 import { appName } from '../../../i18n';
 import styles from './NotificationsApp.module.scss';
 
@@ -19,13 +20,15 @@ interface InboxNotification {
 
 export function NotificationsApp() {
   const router = useRouter();
+  const [phoneState] = usePhone();
   const [notificationsState, notificationsActions] = useNotifications();
   const [loading, setLoading] = createSignal(false);
   const [error, setError] = createSignal('');
   const [notifications, setNotifications] = createSignal<InboxNotification[]>([]);
   const [unread, setUnread] = createSignal(0);
+  const language = () => phoneState.settings.language || 'es';
   const recentItems = () => notificationsState.history.slice(0, 8);
-  const localUnread = () => recentItems().reduce((count, entry) => count + notificationsActions.getUnreadCount(entry.appId), 0);
+  const localUnread = () => Array.from(new Set(recentItems().map((entry) => entry.appId))).reduce((count, appId) => count + notificationsActions.getUnreadCount(appId), 0);
 
   const loadInbox = async () => {
     setLoading(true);
@@ -48,13 +51,16 @@ export function NotificationsApp() {
   };
 
   const markRead = async (id: number) => {
+    const target = notifications().find((entry) => Number(entry.id) === Number(id));
     await fetchNui<{ success?: boolean }>('notificationsMarkRead', { id }, { success: false });
     setNotifications((prev) => prev.map((entry) => (
       Number(entry.id) === Number(id)
         ? { ...entry, is_read: 1 }
         : entry
     )));
-    setUnread((prev) => Math.max(0, prev - 1));
+    if (Number(target?.is_read) === 0) {
+      setUnread((prev) => Math.max(0, prev - 1));
+    }
   };
 
   const deleteNotification = async (id: number) => {
@@ -120,7 +126,7 @@ export function NotificationsApp() {
                       <small>{new Date(Number(entry.createdAt) || Date.now()).toLocaleString()}</small>
                     </div>
                     <p>{entry.message}</p>
-                    <span>{appName(entry.appId, entry.appId, 'es')}</span>
+                    <span>{appName(entry.appId, entry.appId, language())}</span>
                   </button>
                   <button class={styles.muteBtn} onClick={() => notificationsActions.toggleMuteApp(entry.appId)}>
                     {notificationsActions.isAppMuted(entry.appId) ? 'Activar' : 'Silenciar'}
@@ -150,7 +156,7 @@ export function NotificationsApp() {
                       <small>{new Date(Number(entry.createdAt) || Date.now()).toLocaleString()}</small>
                     </div>
                     <p>{entry.content}</p>
-                    <span>{entry.app_id}</span>
+                    <span>{appName(entry.app_id, entry.app_id, language())}</span>
                   </button>
                   <button class={styles.deleteBtn} onClick={() => void deleteNotification(entry.id)}>Eliminar</button>
                 </div>
