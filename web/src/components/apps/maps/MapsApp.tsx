@@ -47,7 +47,7 @@ export function MapsApp() {
   const [coordsX, setCoordsX] = createSignal('');
   const [coordsY, setCoordsY] = createSignal('');
 
-  const [shareApp, setShareApp] = createSignal<'messages' | 'chirp' | 'wavechat'>('messages');
+  const [shareApp, setShareApp] = createSignal<'messages' | 'chirp' | 'wavechat' | 'mail'>('messages');
   const [shareNumber, setShareNumber] = createSignal('');
   const [shareGroupId, setShareGroupId] = createSignal('');
   const [shareError, setShareError] = createSignal('');
@@ -232,6 +232,17 @@ export function MapsApp() {
       });
     }
 
+    if (shareApp() === 'mail') {
+      router.navigate('mail', {
+        compose: '1',
+        subject: 'Ubicacion compartida',
+        body: `Te comparto este punto:\n\nLOC:${marker.x.toFixed(2)},${marker.y.toFixed(2)}`,
+        attachmentUrl: `LOC:${marker.x.toFixed(2)},${marker.y.toFixed(2)}`,
+        attachmentType: 'link',
+        attachmentName: 'Coordenadas',
+      });
+    }
+
     setShowShareSheet(false);
     setStatus('Ubicacion compartida correctamente.');
   };
@@ -359,10 +370,11 @@ export function MapsApp() {
           <div class={styles.sheetOverlay} onClick={() => setShowShareSheet(false)}>
             <div class={styles.sheet} onClick={(e) => e.stopPropagation()}>
               <h3>Compartir ubicacion</h3>
-              <select class="ios-select" value={shareApp()} onChange={(e) => setShareApp(e.currentTarget.value as 'messages' | 'chirp' | 'wavechat')}>
+              <select class="ios-select" value={shareApp()} onChange={(e) => setShareApp(e.currentTarget.value as 'messages' | 'chirp' | 'wavechat' | 'mail')}>
                 <option value="messages">Mensajes</option>
                 <option value="chirp">Chirp</option>
                 <option value="wavechat">WaveChat Grupo</option>
+                <option value="mail">Mail</option>
               </select>
 
               <Show when={shareApp() === 'messages'}>
