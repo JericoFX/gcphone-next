@@ -13,6 +13,7 @@ export function LockScreen() {
   const [attempts, setAttempts] = createSignal(0);
   const [currentTime, setCurrentTime] = createSignal(new Date());
   const [showPad, setShowPad] = createSignal(false);
+  const [swipeValue, setSwipeValue] = createSignal(0);
   const [flashlightSupported, setFlashlightSupported] = createSignal(false);
   const [flashlightEnabled, setFlashlightEnabled] = createSignal(false);
   const [pendingRoute, setPendingRoute] = createSignal<string | null>(null);
@@ -85,6 +86,21 @@ export function LockScreen() {
     setPendingRoute('camera');
     setShowPad(true);
     setError(false);
+    setSwipeValue(0);
+  };
+
+  const triggerUnlockSheet = (route?: string | null) => {
+    setPendingRoute(route || null);
+    setShowPad(true);
+    setError(false);
+    setSwipeValue(0);
+  };
+
+  const handleSwipeInput = (value: number) => {
+    setSwipeValue(value);
+    if (value >= 92) {
+      triggerUnlockSheet(pendingRoute());
+    }
   };
 
   const formatClockTime = (date: Date) => formatTime(date, language(), { hour: '2-digit', minute: '2-digit' });
@@ -106,9 +122,9 @@ export function LockScreen() {
           <span class={styles.widgetLabel}>Focus</span>
           <strong>{notifications.doNotDisturb ? 'No molestar activo' : 'No molestar inactivo'}</strong>
         </button>
-        <button class={styles.widget} onClick={() => setShowPad(true)}>
+        <button class={styles.widget} onClick={() => triggerUnlockSheet()}>
           <span class={styles.widgetLabel}>Unlock</span>
-          <strong>Desliza arriba o toca para PIN</strong>
+          <strong>{pendingRoute() === 'camera' ? 'Desbloquear para abrir camara' : 'Desliza arriba o toca para PIN'}</strong>
         </button>
       </div>
 
@@ -126,9 +142,22 @@ export function LockScreen() {
         </For>
       </div>
 
-      <button class={styles.swipeHint} onClick={() => setShowPad(true)}>
-        Desliza arriba para desbloquear
-      </button>
+      <div class={styles.swipeHint}>
+        <span>{pendingRoute() === 'camera' ? 'Desliza para abrir la camara' : 'Desliza para desbloquear'}</span>
+        <input
+          class={styles.swipeControl}
+          type="range"
+          min="0"
+          max="100"
+          value={swipeValue()}
+          onInput={(event) => handleSwipeInput(Number(event.currentTarget.value))}
+          onChange={(event) => {
+            if (Number(event.currentTarget.value) < 92) {
+              setSwipeValue(0);
+            }
+          }}
+        />
+      </div>
 
       <Show when={showPad()}>
         <div class={styles.unlockSheet}>
@@ -157,7 +186,11 @@ export function LockScreen() {
           </div>
 
           <div class={styles.sheetActions}>
-            <button onClick={() => setShowPad(false)}>{t('lock.cancel', language())}</button>
+            <button onClick={() => {
+              setShowPad(false);
+              setPendingRoute(null);
+              setSwipeValue(0);
+            }}>{t('lock.cancel', language())}</button>
             <button onClick={() => void submitUnlock()}>{t('lock.unlock', language())}</button>
           </div>
         </div>
