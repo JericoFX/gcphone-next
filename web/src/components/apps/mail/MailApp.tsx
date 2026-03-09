@@ -1,4 +1,4 @@
-import { For, Show, createMemo, createSelector, createSignal, onMount } from 'solid-js';
+import { For, Show, createEffect, createMemo, createSelector, createSignal, onMount } from 'solid-js';
 import { AppScaffold } from '../../shared/layout/AppScaffold';
 import { MediaActionButtons } from '../../shared/ui/MediaActionButtons';
 import { MediaAttachmentPreview } from '../../shared/ui/MediaAttachmentPreview';
@@ -79,6 +79,7 @@ export function MailApp() {
     createSignal<MailAttachment['type']>('document');
   const [attachmentUrl, setAttachmentUrl] = createSignal('');
   const [attachmentName, setAttachmentName] = createSignal('');
+  const [lastComposeRouteKey, setLastComposeRouteKey] = createSignal('');
 
   const selectedMessage = createMemo(() => {
     const id = selectedId();
@@ -91,6 +92,37 @@ export function MailApp() {
     folder() === 'inbox' ? inbox() : sent(),
   );
   const isSelectedMessage = createSelector(selectedId);
+
+  createEffect(() => {
+    const params = router.params();
+    const routeKey = JSON.stringify(params || {});
+    if (routeKey === lastComposeRouteKey()) return;
+    setLastComposeRouteKey(routeKey);
+
+    const compose = params.compose === '1' || params.compose === true;
+    const subject = typeof params.subject === 'string' ? params.subject : '';
+    const body = typeof params.body === 'string' ? params.body : '';
+    const to = typeof params.to === 'string' ? params.to : '';
+    const url = typeof params.attachmentUrl === 'string' ? params.attachmentUrl : '';
+    const type = params.attachmentType === 'image' || params.attachmentType === 'video' || params.attachmentType === 'document' || params.attachmentType === 'link'
+      ? params.attachmentType
+      : null;
+    const name = typeof params.attachmentName === 'string' ? params.attachmentName : '';
+
+    if (!compose && !subject && !body && !to && !url) return;
+
+    setView('compose');
+    if (to) setToInput(to);
+    if (subject) setSubjectInput(subject);
+    if (body) setBodyInput(body);
+
+    if (url && type) {
+      setAttachments((prev) => {
+        if (prev.some((entry) => entry.url === url && entry.type === type)) return prev;
+        return [...prev, { type, url, name: name || undefined }];
+      });
+    }
+  });
 
   const loadState = async () => {
     setLoading(true);
