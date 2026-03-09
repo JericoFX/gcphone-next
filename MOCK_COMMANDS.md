@@ -5,17 +5,17 @@ Open the web phone in browser mode and run these from the devtools console.
 Base object:
 
 ```js
-window.gcphoneMock
+window.gcphoneMock;
 ```
 
 Startup helpers:
 
 ```js
-window.gcphoneMock.boot()
-window.gcphoneMock.reset()
-window.gcphoneMock.showHome()
-window.gcphoneMock.showSetup()
-window.gcphoneMock.showLocked()
+window.gcphoneMock.boot();
+window.gcphoneMock.reset();
+window.gcphoneMock.showHome();
+window.gcphoneMock.showSetup();
+window.gcphoneMock.showLocked();
 ```
 
 - `boot()` sends `initPhone` and `showPhone` again.
@@ -27,25 +27,25 @@ window.gcphoneMock.showLocked()
 Quick event helpers:
 
 ```js
-window.gcphoneMock.incomingMessage()
-window.gcphoneMock.incomingCall()
-window.gcphoneMock.contactRequest()
+window.gcphoneMock.incomingMessage();
+window.gcphoneMock.incomingCall();
+window.gcphoneMock.contactRequest();
 ```
 
 Realtime config helpers:
 
 ```js
-window.gcphoneMock.getRealtime()
-window.gcphoneMock.setRealtime({ socketHost: 'ws://127.0.0.1:3012' })
-window.gcphoneMock.clearRealtime()
-window.gcphoneMock.generateRealtime()
-window.gcphoneMock.importRealtimeFromText(text)
-window.gcphoneMock.exportRealtimeAsSetr()
-await window.gcphoneMock.copyRealtimeAsSetr()
-window.gcphoneMock.previewRealtime('call-test-room')
-window.gcphoneMock.useLocalRealtime()
-window.gcphoneMock.openRealtimePanel()
-window.gcphoneMock.closeRealtimePanel()
+window.gcphoneMock.getRealtime();
+window.gcphoneMock.setRealtime({ socketHost: 'ws://127.0.0.1:3012' });
+window.gcphoneMock.clearRealtime();
+window.gcphoneMock.generateRealtime();
+window.gcphoneMock.importRealtimeFromText(text);
+window.gcphoneMock.exportRealtimeAsSetr();
+await window.gcphoneMock.copyRealtimeAsSetr();
+window.gcphoneMock.previewRealtime('call-test-room');
+window.gcphoneMock.useLocalRealtime();
+window.gcphoneMock.openRealtimePanel();
+window.gcphoneMock.closeRealtimePanel();
 ```
 
 What each realtime helper does:
@@ -65,3 +65,7 @@ What each realtime helper does:
 Notes:
 
 - Browser mock startup state is controlled mainly through `showHome()`, `showSetup()`, and `showLocked()`.
+
+TODO:
+_ Refractor Settings css and functions.
+_
