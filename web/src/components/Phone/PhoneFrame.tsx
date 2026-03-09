@@ -184,40 +184,42 @@ export const PhoneFrame: ParentComponent & { Router: () => JSX.Element } = (prop
           </div>
           {props.children}
 
-          <button class={styles.multitaskBtn} onClick={() => setMultitaskOpen(true)} data-testid="multitask-btn">▤</button>
+          <Show when={!phoneState.requiresSetup}>
+            <button class={styles.multitaskBtn} onClick={() => setMultitaskOpen(true)} data-testid="multitask-btn">▤</button>
 
-          <Show when={multitaskOpen()}>
-            <div class={styles.multitaskOverlay} onClick={() => setMultitaskOpen(false)}>
-              <div class={styles.multitaskPanel} onClick={(event) => event.stopPropagation()}>
-                <For each={recentRoutes()}>
-                  {(route) => {
-                    const app = APP_BY_ID[route];
-                    return (
-                      <div class={styles.multitaskCard}>
-                        <button
-                          class={styles.multitaskOpen}
-                          onClick={() => {
-                            router.navigate(route);
-                            setMultitaskOpen(false);
-                          }}
-                        >
-                          <img src={app?.icon || './img/icons_ios/settings.svg'} alt={appName(route, app?.name || route, currentLanguage())} />
-                          <span>{appName(route, app?.name || route, currentLanguage())}</span>
-                        </button>
-                        <button
-                          class={styles.multitaskClose}
-                          onClick={() => {
-                            closeApp(route);
-                          }}
-                        >
-                          ×
-                        </button>
-                      </div>
-                    );
-                  }}
-                </For>
+            <Show when={multitaskOpen()}>
+              <div class={styles.multitaskOverlay} onClick={() => setMultitaskOpen(false)}>
+                <div class={styles.multitaskPanel} onClick={(event) => event.stopPropagation()}>
+                  <For each={recentRoutes()}>
+                    {(route) => {
+                      const app = APP_BY_ID[route];
+                      return (
+                        <div class={styles.multitaskCard}>
+                          <button
+                            class={styles.multitaskOpen}
+                            onClick={() => {
+                              router.navigate(route);
+                              setMultitaskOpen(false);
+                            }}
+                          >
+                            <img src={app?.icon || './img/icons_ios/settings.svg'} alt={appName(route, app?.name || route, currentLanguage())} />
+                            <span>{appName(route, app?.name || route, currentLanguage())}</span>
+                          </button>
+                          <button
+                            class={styles.multitaskClose}
+                            onClick={() => {
+                              closeApp(route);
+                            }}
+                          >
+                            ×
+                          </button>
+                        </div>
+                      );
+                    }}
+                  </For>
+                </div>
               </div>
-            </div>
+            </Show>
           </Show>
 
           <Show when={dialogOpen()}>

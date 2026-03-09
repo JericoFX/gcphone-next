@@ -247,7 +247,8 @@ export function MessagesApp() {
   };
   
   return (
-    <Show when={!selectedConversation()} fallback={
+    <>
+      <Show when={!selectedConversation()} fallback={
         <ConversationView
           phoneNumber={selectedConversation()!}
           contactName={routeConversationName() || getContactName(selectedConversation()!)}
@@ -273,50 +274,51 @@ export function MessagesApp() {
         onDeleteConversation={() => void deleteConversation(selectedConversation()!)}
       />
     }>
-      <AppScaffold title="Mensajes" subtitle="Tus conversaciones" onBack={() => router.goBack()} bodyPadding="none">
-        <div class={styles.messagesApp}>
-          <div class={styles.conversationList}>
-            <Show
-              when={messagesState.loading}
-              fallback={
-                <VirtualList items={conversations} itemHeight={78} overscan={5}>
-                  {(convo, index) => (
-                    <div
-                      class={styles.conversationItem}
-                      classList={{ [styles.selected]: isSelectedConversationIndex(index()) }}
-                      onClick={() => openConversation(convo.number, convo.display)}
-                    >
-                      <div class={styles.avatar} style={{ 'background-color': generateColorForString(convo.number) }}>
-                        {convo.display.charAt(0).toUpperCase()}
-                      </div>
-                      <div class={styles.info}>
-                        <div class={styles.topRow}>
-                          <span class={styles.name}>{convo.display}</span>
-                          <span class={styles.time}>{timeAgo(convo.lastMessage.time)}</span>
+        <AppScaffold title="Mensajes" subtitle="Tus conversaciones" onBack={() => router.goBack()} bodyPadding="none">
+          <div class={styles.messagesApp}>
+            <div class={styles.conversationList}>
+              <Show
+                when={messagesState.loading}
+                fallback={
+                  <VirtualList items={conversations} itemHeight={78} overscan={5}>
+                    {(convo, index) => (
+                      <div
+                        class={styles.conversationItem}
+                        classList={{ [styles.selected]: isSelectedConversationIndex(index()) }}
+                        onClick={() => openConversation(convo.number, convo.display)}
+                      >
+                        <div class={styles.avatar} style={{ 'background-color': generateColorForString(convo.number) }}>
+                          {convo.display.charAt(0).toUpperCase()}
                         </div>
-                        <div class={styles.preview}>
-                          <Show when={convo.unread > 0}>
-                            <span class={styles.unreadBadge}>{convo.unread}</span>
-                          </Show>
-                          <span class={styles.message}>{getPreviewText(convo.lastMessage)}</span>
+                        <div class={styles.info}>
+                          <div class={styles.topRow}>
+                            <span class={styles.name}>{convo.display}</span>
+                            <span class={styles.time}>{timeAgo(convo.lastMessage.time)}</span>
+                          </div>
+                          <div class={styles.preview}>
+                            <Show when={convo.unread > 0}>
+                              <span class={styles.unreadBadge}>{convo.unread}</span>
+                            </Show>
+                            <span class={styles.message}>{getPreviewText(convo.lastMessage)}</span>
+                          </div>
                         </div>
+                        <button class={styles.deleteConversationBtn} onClick={(e) => { e.stopPropagation(); void deleteConversation(convo.number); }}>
+                          Borrar
+                        </button>
                       </div>
-                      <button class={styles.deleteConversationBtn} onClick={(e) => { e.stopPropagation(); void deleteConversation(convo.number); }}>
-                        Borrar
-                      </button>
-                    </div>
-                  )}
-                </VirtualList>
-              }
-            >
-              <SkeletonList rows={6} avatar />
-            </Show>
+                    )}
+                  </VirtualList>
+                }
+              >
+                <SkeletonList rows={6} avatar />
+              </Show>
+            </div>
+            <AppFAB class={styles.fab} icon="+" onClick={openNewChat} />
           </div>
-          <AppFAB class={styles.fab} icon="+" onClick={openNewChat} />
-        </div>
-      </AppScaffold>
+        </AppScaffold>
+      </Show>
       <MediaLightbox url={viewerUrl()} onClose={() => setViewerUrl(null)} />
-    </Show>
+    </>
   );
 }
 
@@ -355,15 +357,14 @@ function ConversationView(props: {
   });
   
   return (
-    <div class={styles.conversationView}>
-      <div class={styles.threadHeader}>
-        <button class={styles.threadBackButton} onClick={props.onBack}>
-          ‹
-        </button>
-        <div class={styles.threadTitle}>{props.contactName}</div>
-        <button class={styles.deleteConversationBtn} onClick={props.onDeleteConversation}>Borrar</button>
-      </div>
-      
+    <AppScaffold
+      title={props.contactName}
+      subtitle={props.phoneNumber}
+      onBack={props.onBack}
+      bodyClass={styles.conversationView}
+      bodyPadding="none"
+      headerRight={<button class={styles.deleteConversationBtn} onClick={props.onDeleteConversation}>Borrar</button>}
+    >
       <div class={styles.messagesList}>
         <For each={props.messages}>
           {(msg) => (
@@ -418,7 +419,7 @@ function ConversationView(props: {
         </For>
         <div ref={messagesEnd} />
       </div>
-      
+
       <Show when={props.attachmentUrl}>
         <div class={styles.attachmentPreview}>
           <Show when={resolveMediaType(props.attachmentUrl || undefined) === 'image'}>
@@ -461,6 +462,6 @@ function ConversationView(props: {
           { label: 'Quitar adjunto', tone: 'danger', onClick: props.onClearAttachment },
         ]}
       />
-    </div>
+    </AppScaffold>
   );
 }
