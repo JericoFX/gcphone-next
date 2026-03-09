@@ -70,7 +70,7 @@ export function SettingsApp() {
   const [pinConfirm, setPinConfirm] = createSignal('');
   const [status, setStatus] = createSignal<{ type: 'ok' | 'error'; text: string } | null>(null);
   const [liveLocationEnabled, setLiveLocationEnabled] = createSignal(false);
-  const [liveLocationInterval, setLiveLocationInterval] = createSignal<5 | 10>(10);
+  const [liveLocationInterval, setLiveLocationInterval] = createSignal<10>(10);
   const [liveLocationStatus, setLiveLocationStatus] = createSignal('');
   const language = () => phoneState.settings.language || 'es';
 
@@ -82,19 +82,16 @@ export function SettingsApp() {
 
   onMount(async () => {
     const persisted = window.localStorage.getItem('gcphone:liveLocationInterval');
-    if (persisted === '5') setLiveLocationInterval(5);
     if (persisted === '10') setLiveLocationInterval(10);
 
     const state = await fetchNui<{ success?: boolean; active?: boolean; intervalSeconds?: number }>('getLiveLocationState', {}, { success: false, active: false, intervalSeconds: 10 });
     if (state?.success) {
       setLiveLocationEnabled(Boolean(state.active));
-      if (state.intervalSeconds === 5 || state.intervalSeconds === 10) {
-        setLiveLocationInterval(state.intervalSeconds);
-      }
+      setLiveLocationInterval(10);
     }
   });
 
-  const updateLiveLocationInterval = async (seconds: 5 | 10) => {
+  const updateLiveLocationInterval = async (seconds: 10) => {
     setLiveLocationInterval(seconds);
     window.localStorage.setItem('gcphone:liveLocationInterval', String(seconds));
     await fetchNui('setLiveLocationInterval', { seconds });
@@ -533,17 +530,10 @@ export function SettingsApp() {
             <div class={styles.locationFrequency}>
               <button
                 class={styles.freqBtn}
-                classList={{ [styles.selected]: liveLocationInterval() === 5 }}
-                onClick={() => void updateLiveLocationInterval(5)}
-              >
-                Cada 5s
-              </button>
-              <button
-                class={styles.freqBtn}
-                classList={{ [styles.selected]: liveLocationInterval() === 10 }}
+                classList={{ [styles.selected]: true }}
                 onClick={() => void updateLiveLocationInterval(10)}
               >
-                Cada 10s
+                Cada 10s (fijo)
               </button>
             </div>
           </Show>
