@@ -175,6 +175,20 @@ local function BroadcastLiveReaction(articleId, reaction)
     })
 end
 
+local function BroadcastLiveMessageRemoved(articleId, messageId)
+    TriggerClientEvent('gcphone:news:liveMessageRemoved', -1, {
+        articleId = articleId,
+        messageId = messageId,
+    })
+end
+
+local function BroadcastLiveUserMuted(articleId, username)
+    TriggerClientEvent('gcphone:news:liveUserMuted', -1, {
+        articleId = articleId,
+        username = username,
+    })
+end
+
 local function CanInteractWithLive(liveData, identifier)
     if type(liveData) ~= 'table' or type(identifier) ~= 'string' or identifier == '' then
         return false
@@ -321,6 +335,7 @@ lib.callback.register('gcphone:news:startLive', function(source, data)
         scaleform = scaleform,
         viewers = {},
         messages = {},
+        mutedUsers = {},
         sequence = 0,
     }
     
@@ -394,6 +409,9 @@ lib.callback.register('gcphone:news:sendLiveMessage', function(source, data)
     if not liveData or not CanInteractWithLive(liveData, identifier) then
         return false, 'LIVE_UNAVAILABLE'
     end
+    if liveData.identifier ~= identifier and liveData.mutedUsers and liveData.mutedUsers[identifier] then
+        return false, 'MUTED'
+    end
 
     local content = SanitizeText(data.content, 180)
     if content == '' then return false, 'INVALID_MESSAGE' end
@@ -402,6 +420,7 @@ lib.callback.register('gcphone:news:sendLiveMessage', function(source, data)
     local profile = BuildLiveParticipantProfile(identifier, source)
     local message = {
         id = string.format('%d:%d', articleId, liveData.sequence),
+        authorId = identifier,
         username = profile.username ~= '' and profile.username or profile.display,
         display = profile.display,
         content = content,
@@ -439,6 +458,55 @@ lib.callback.register('gcphone:news:sendLiveReaction', function(source, data)
 
     BroadcastLiveReaction(articleId, reaction)
     return true, { reaction = reaction }
+end)
+
+lib.callback.register('gcphone:news:removeLiveMessage', function(source, data)
+    local identifier = GetIdentifier(source)
+    if not identifier then return false, 'MISSING_IDENTIFIER' end
+    if type(data) ~= 'table' then return false, 'INVALID_PAYLOAD' end
+
+    local articleId = tonumber(data.articleId)
+    local messageId = SanitizeText(data.messageId, 80)
+    if not articleId or articleId < 1 or messageId == '' then return false, 'INVALID_MESSAGE' end
+
+    local liveData = ActiveLiveNews[articleId]
+    if not liveData or liveData.identifier ~= identifier or type(liveData.messages) ~= 'table' then
+        return false, 'NOT_ALLOWED'
+    end
+
+    for index, message in ipairs(liveData.messages) do
+        if tostring(message.id or '') == messageId then
+            table.remove(liveData.messages, index)
+            BroadcastLiveMessageRemoved(articleId, messageId)
+            return true
+        end
+    end
+
+    return false, 'MESSAGE_NOT_FOUND'
+end)
+
+lib.callback.register('gcphone:news:muteLiveUser', function(source, data)
+    local identifier = GetIdentifier(source)
+    if not identifier then return false, 'MISSING_IDENTIFIER' end
+    if type(data) ~= 'table' then return false, 'INVALID_PAYLOAD' end
+
+    local articleId = tonumber(data.articleId)
+    local targetIdentifier = SanitizeText(data.targetIdentifier, 80)
+    local username = SanitizeText(data.username, 40)
+    if not articleId or articleId < 1 or targetIdentifier == '' or username == '' then return false, 'INVALID_USER' end
+
+    local liveData = ActiveLiveNews[articleId]
+    if not liveData or liveData.identifier ~= identifier then
+        return false, 'NOT_ALLOWED'
+    end
+
+    if targetIdentifier == identifier then
+        return false, 'INVALID_USER'
+    end
+
+    liveData.mutedUsers[targetIdentifier] = true
+    BroadcastLiveUserMuted(articleId, username)
+    return true
 end)
 
 lib.callback.register('gcphone:news:setScaleform', function(source, data)

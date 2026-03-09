@@ -41,6 +41,8 @@ interface NewsScaleform {
 
 interface MockLiveMessage {
   id: number;
+  rawId?: string;
+  authorId?: string;
   user: string;
   text: string;
   at: string;
@@ -49,7 +51,7 @@ interface MockLiveMessage {
 interface LiveJoinResponse {
   success?: boolean;
   viewers?: number;
-  messages?: Array<{ id?: string; username?: string; display?: string; content?: string; createdAt?: number }>;
+  messages?: Array<{ id?: string; authorId?: string; username?: string; display?: string; content?: string; createdAt?: number }>;
 }
 
 interface NewsProfile {
@@ -110,6 +112,7 @@ export function NewsApp() {
   const [liveChatOpen, setLiveChatOpen] = createSignal(false);
   const [liveChatInput, setLiveChatInput] = createSignal('');
   const [liveReactions, setLiveReactions] = createSignal<LiveReaction[]>([]);
+  const [viewerMuted, setViewerMuted] = createSignal(false);
   const [viewerUrl, setViewerUrl] = createSignal<string | null>(null);
   const [myAccount, setMyAccount] = createSignal<NewsProfile | null>(null);
   const [showOnboarding, setShowOnboarding] = createSignal(false);
@@ -214,6 +217,7 @@ export function NewsApp() {
     setLiveChatOpen(false);
     setLiveChatInput('');
     setLiveReactions([]);
+    setViewerMuted(false);
   };
 
   const openLiveViewer = async (article: NewsArticle) => {
@@ -223,6 +227,7 @@ export function NewsApp() {
 
     setActiveLive(article);
     setLiveChatOpen(false);
+    setViewerMuted(false);
     if (isLiveArticle(article) && article.id > 0 && !mockLiveEnabled()) {
       await refreshScaleform(article.id);
 
@@ -235,6 +240,8 @@ export function NewsApp() {
           }
           setMockLiveMessages((joinResult.messages || []).map((message) => ({
             id: Number(String(message.id || Date.now()).replace(/\D/g, '').slice(0, 9)) || Date.now(),
+            rawId: String(message.id || ''),
+            authorId: typeof message.authorId === 'string' ? message.authorId : '',
             user: sanitizeText(message.display || message.username || '', 80) || 'Invitado',
             text: sanitizeText(message.content || '', 180),
             at: message.createdAt ? buildClockTime() : 'ahora',
@@ -257,7 +264,11 @@ export function NewsApp() {
     const articleId = Number(activeLive()?.id || 0);
     if (articleId < 1) return;
 
-    const result = await fetchNui<{ success?: boolean }>('newsSendLiveMessage', { articleId, content: text }, { success: false });
+    const result = await fetchNui<{ success?: boolean; error?: string }>('newsSendLiveMessage', { articleId, content: text }, { success: false });
+    if (result?.error === 'MUTED') {
+      setViewerMuted(true);
+      return;
+    }
     if (!result?.success) return;
     setLiveChatInput('');
   };
@@ -353,7 +364,7 @@ export function NewsApp() {
     }
   });
 
-  useNuiCustomEvent<{ articleId?: number; message?: { id?: string; username?: string; display?: string; content?: string; createdAt?: number } }>('gcphone:news:liveMessage', (payload) => {
+  useNuiCustomEvent<{ articleId?: number; message?: { id?: string; authorId?: string; username?: string; display?: string; content?: string; createdAt?: number } }>('gcphone:news:liveMessage', (payload) => {
     const articleId = Number(payload?.articleId || 0);
     if (articleId < 1 || activeLive()?.id !== articleId || !payload?.message) return;
 
@@ -361,6 +372,8 @@ export function NewsApp() {
     const at = `${String(when.getHours()).padStart(2, '0')}:${String(when.getMinutes()).padStart(2, '0')}`;
     setMockLiveMessages((prev) => [...prev.slice(-19), {
       id: Number(String(payload.message?.id || Date.now()).replace(/\D/g, '').slice(0, 9)) || Date.now(),
+      rawId: String(payload.message?.id || ''),
+      authorId: typeof payload.message?.authorId === 'string' ? payload.message.authorId : '',
       user: sanitizeText(payload.message.display || payload.message.username || '', 80) || 'Invitado',
       text: sanitizeText(payload.message.content || '', 180),
       at,
@@ -378,6 +391,34 @@ export function NewsApp() {
       setLiveReactions((prev) => prev.filter((entry) => entry.id !== id));
     }, 1600);
   });
+
+  useNuiCustomEvent<{ articleId?: number; messageId?: string }>('gcphone:news:liveMessageRemoved', (payload) => {
+    const articleId = Number(payload?.articleId || 0);
+    const messageId = String(payload?.messageId || '');
+    if (articleId < 1 || activeLive()?.id !== articleId || !messageId) return;
+    setMockLiveMessages((prev) => prev.filter((entry) => entry.rawId !== messageId));
+  });
+
+  useNuiCustomEvent<{ articleId?: number; username?: string }>('gcphone:news:liveUserMuted', (payload) => {
+    const articleId = Number(payload?.articleId || 0);
+    const username = sanitizeText(payload?.username || '', 40).toLowerCase();
+    if (articleId < 1 || activeLive()?.id !== articleId || !username) return;
+    if (sanitizeText(myAccount()?.username || '', 40).toLowerCase() === username) {
+      setViewerMuted(true);
+    }
+  });
+
+  const removeLiveMessage = async (messageId: string) => {
+    const articleId = Number(activeLive()?.id || 0);
+    if (articleId < 1 || !messageId) return;
+    await fetchNui('newsRemoveLiveMessage', { articleId, messageId }, { success: false });
+  };
+
+  const muteLiveUser = async (entry: MockLiveMessage) => {
+    const articleId = Number(activeLive()?.id || 0);
+    if (articleId < 1 || !entry.authorId || !entry.user) return;
+    await fetchNui('newsMuteLiveUser', { articleId, targetIdentifier: entry.authorId, username: entry.user }, { success: false });
+  };
 
   createEffect(() => {
     if (!mockLiveEnabled()) {
@@ -954,19 +995,30 @@ export function NewsApp() {
                           <strong>{entry.user}</strong>
                           <p>{entry.text}</p>
                         </div>
+                        <Show when={canEditActiveLive() && entry.authorId && sanitizeText(myAccount()?.username || '', 40) !== sanitizeText(entry.user || '', 40)}>
+                          <div class={styles.liveModerationCol}>
+                            <button onClick={() => void removeLiveMessage(entry.rawId || '')}>🗑</button>
+                            <button onClick={() => void muteLiveUser(entry)}>🚫</button>
+                          </div>
+                        </Show>
                         <small>{entry.at}</small>
                       </div>
                     )}
                   </For>
                 </div>
 
+                <Show when={viewerMuted()}>
+                  <div class={styles.liveMutedBanner}>Estas silenciado en este live</div>
+                </Show>
+
                 <div class={styles.liveChatInputRow}>
                   <input
                     value={liveChatInput()}
                     onInput={(event) => setLiveChatInput(event.currentTarget.value)}
                     placeholder="Escribe un comentario para el directo"
+                    disabled={viewerMuted()}
                   />
-                  <button onClick={sendViewerMessage}>Enviar</button>
+                  <button onClick={() => void sendViewerMessage()} disabled={viewerMuted() || !liveChatInput().trim()}>Enviar</button>
                 </div>
               </aside>
             </Show>

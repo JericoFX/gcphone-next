@@ -460,9 +460,32 @@
 
 .liveChatItem {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   gap: 10px;
   align-items: end;
+}
+
+.liveModerationCol {
+  display: grid;
+  gap: 6px;
+}
+
+.liveModerationCol button {
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+.liveMutedBanner {
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: rgba(255, 59, 48, 0.2);
+  color: #ffd4d0;
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .liveChatInputRow {
