@@ -9,6 +9,9 @@ Config.Phone = {
     DefaultSettings = {
         wallpaper = './img/background/back001.jpg',
         ringtone = 'ring.ogg',
+        callRingtone = 'ring.ogg',
+        notificationTone = 'soft-ping.ogg',
+        messageTone = 'pop.ogg',
         volume = 0.5,
         lockCode = '0000',
         theme = 'light',
@@ -249,7 +252,7 @@ Config.Storage = {
         Quality = 0.92,
     },
     MaxVideoSizeMB = 50,
-    MaxVideoDurationSeconds = 60,
+    MaxVideoDurationSeconds = 30,
 }
 
 Config.Gallery = {

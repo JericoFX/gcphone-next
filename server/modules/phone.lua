@@ -46,6 +46,13 @@ local function SafeAudioProfile(value)
     return nil
 end
 
+local function SafeToneId(value)
+    if type(value) ~= 'string' then return nil end
+    local tone = value:gsub('[^%w%._%-]', '')
+    if tone == '' then return nil end
+    return tone:sub(1, 64)
+end
+
 local AllowedApps = {
     contacts = true,
     messages = true,
@@ -87,11 +94,32 @@ local function GetFeatureFlags()
         return raw == '1' or raw == 'true' or raw == 'TRUE'
     end
 
+    local function hasClipStorageSupport()
+        local provider = tostring(GetConvar('gcphone_storage_provider', tostring(Config.Storage and Config.Storage.Provider or 'custom'))):lower()
+        if provider == 'direct' then provider = 'custom' end
+
+        if provider == 'server_folder' then
+            local publicUrl = tostring(GetConvar('gcphone_storage_server_folder_public_url', tostring(Config.Storage and Config.Storage.ServerFolder and Config.Storage.ServerFolder.PublicBaseUrl or '')))
+            return publicUrl:match('^https?://') ~= nil
+        end
+
+        local uploadUrl = ''
+        if provider == 'fivemanage' then
+            uploadUrl = tostring(GetConvar('gcphone_storage_fivemanage_url', tostring(Config.Storage and Config.Storage.FiveManage and Config.Storage.FiveManage.Endpoint or '')))
+        elseif provider == 'local' then
+            uploadUrl = tostring(GetConvar('gcphone_storage_local_url', ''))
+        else
+            uploadUrl = tostring(GetConvar('gcphone_storage_custom_url', tostring(Config.Storage and Config.Storage.Custom and Config.Storage.Custom.UploadUrl or '')))
+        end
+
+        return uploadUrl:match('^https?://') ~= nil
+    end
+
     return {
         appstore = resolveConvarBool('gcphone_feature_appstore', defaults.AppStore ~= false),
         wavechat = resolveConvarBool('gcphone_feature_wavechat', defaults.WaveChat ~= false),
         darkrooms = resolveConvarBool('gcphone_feature_darkrooms', defaults.DarkRooms ~= false),
-        clips = resolveConvarBool('gcphone_feature_clips', defaults.Clips ~= false),
+        clips = resolveConvarBool('gcphone_feature_clips', defaults.Clips ~= false) and hasClipStorageSupport(),
         wallet = resolveConvarBool('gcphone_feature_wallet', defaults.Wallet ~= false),
         documents = resolveConvarBool('gcphone_feature_documents', defaults.Documents ~= false),
         music = resolveConvarBool('gcphone_feature_music', defaults.Music ~= false),
@@ -309,13 +337,16 @@ local function GetOrCreatePhone(source)
     local imei = GenerateIMEI()
     
     MySQL.insert.await(
-        'INSERT INTO phone_numbers (identifier, phone_number, imei, wallpaper, ringtone, volume, lock_code, pin_hash, is_setup, theme, language, audio_profile, clips_username) VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, NULL)',
+        'INSERT INTO phone_numbers (identifier, phone_number, imei, wallpaper, ringtone, call_ringtone, notification_tone, message_tone, volume, lock_code, pin_hash, is_setup, theme, language, audio_profile, clips_username) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, NULL)',
         { 
             identifier, 
             phoneNumber, 
             imei,
             Config.Phone.DefaultSettings.wallpaper,
             Config.Phone.DefaultSettings.ringtone,
+            Config.Phone.DefaultSettings.callRingtone or Config.Phone.DefaultSettings.ringtone,
+            Config.Phone.DefaultSettings.notificationTone or 'soft-ping.ogg',
+            Config.Phone.DefaultSettings.messageTone or 'pop.ogg',
             Config.Phone.DefaultSettings.volume,
             Config.Phone.DefaultSettings.lockCode,
             (Config.Phone and Config.Phone.Setup and Config.Phone.Setup.RequireOnFirstUse ~= false) and 0 or 1,
@@ -351,6 +382,9 @@ lib.callback.register('gcphone:getPhoneData', function(source)
         imei = phone.imei,
         wallpaper = phone.wallpaper,
         ringtone = phone.ringtone,
+        callRingtone = phone.call_ringtone or phone.ringtone,
+        notificationTone = phone.notification_tone or (Config.Phone.DefaultSettings.notificationTone or 'soft-ping.ogg'),
+        messageTone = phone.message_tone or (Config.Phone.DefaultSettings.messageTone or 'pop.ogg'),
         volume = phone.volume,
         lockCode = '',
         theme = phone.theme or 'light',
@@ -536,10 +570,52 @@ lib.callback.register('gcphone:setRingtone', function(source, data)
     if not ringtone then return false end
     
     MySQL.update.await(
-        'UPDATE phone_numbers SET ringtone = ? WHERE identifier = ?',
-        { ringtone, identifier }
+        'UPDATE phone_numbers SET ringtone = ?, call_ringtone = ? WHERE identifier = ?',
+        { ringtone, ringtone, identifier }
     )
     
+    return true
+end)
+
+lib.callback.register('gcphone:setCallRingtone', function(source, data)
+    local identifier = GetIdentifier(source)
+    if not identifier then return false end
+    local ringtone = SafeToneId(type(data) == 'table' and data.ringtone or nil)
+    if not ringtone then return false end
+
+    MySQL.update.await(
+        'UPDATE phone_numbers SET call_ringtone = ?, ringtone = ? WHERE identifier = ?',
+        { ringtone, ringtone, identifier }
+    )
+
+    return true
+end)
+
+lib.callback.register('gcphone:setNotificationTone', function(source, data)
+    local identifier = GetIdentifier(source)
+    if not identifier then return false end
+    local tone = SafeToneId(type(data) == 'table' and data.tone or nil)
+    if not tone then return false end
+
+    MySQL.update.await(
+        'UPDATE phone_numbers SET notification_tone = ? WHERE identifier = ?',
+        { tone, identifier }
+    )
+
+    return true
+end)
+
+lib.callback.register('gcphone:setMessageTone', function(source, data)
+    local identifier = GetIdentifier(source)
+    if not identifier then return false end
+    local tone = SafeToneId(type(data) == 'table' and data.tone or nil)
+    if not tone then return false end
+
+    MySQL.update.await(
+        'UPDATE phone_numbers SET message_tone = ? WHERE identifier = ?',
+        { tone, identifier }
+    )
+
     return true
 end)
 
@@ -684,6 +760,9 @@ RegisterNetEvent('QBCore:Server:PlayerLoaded', function(Player)
             phoneNumber = phone.phone_number,
             wallpaper = phone.wallpaper,
             ringtone = phone.ringtone,
+            callRingtone = phone.call_ringtone or phone.ringtone,
+            notificationTone = phone.notification_tone or (Config.Phone.DefaultSettings.notificationTone or 'soft-ping.ogg'),
+            messageTone = phone.message_tone or (Config.Phone.DefaultSettings.messageTone or 'pop.ogg'),
             volume = phone.volume,
             lockCode = '',
             theme = phone.theme or 'light',

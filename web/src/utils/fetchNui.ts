@@ -56,10 +56,23 @@ export async function fetchNui<T = unknown>(
   
   try {
     const response = await fetch(`https://${resourceName}/${eventName}`, options);
+    if (!response.ok) {
+      if (mockData !== undefined) {
+        return mockData;
+      }
+      return null as T;
+    }
+
     const result = await response.json();
+    if ((result === null || result === undefined) && mockData !== undefined) {
+      return mockData;
+    }
     return result;
   } catch (error) {
     console.error(`[gcphone] Error calling ${eventName}:`, error);
+    if (mockData !== undefined) {
+      return mockData;
+    }
     return null as T;
   }
 }

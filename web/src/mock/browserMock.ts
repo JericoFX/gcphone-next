@@ -34,6 +34,9 @@ interface BrowserMockState {
   phoneNumber: string;
   wallpaper: string;
   ringtone: string;
+  callRingtone: string;
+  notificationTone: string;
+  messageTone: string;
   volume: number;
   lockCode: string;
   theme: 'auto' | 'light' | 'dark';
@@ -573,6 +576,9 @@ const state: BrowserMockState = {
   phoneNumber: '555-1234',
   wallpaper: './img/background/back001.jpg',
   ringtone: 'ring.ogg',
+  callRingtone: 'ring.ogg',
+  notificationTone: 'soft-ping.ogg',
+  messageTone: 'pop.ogg',
   volume: 0.5,
   lockCode: '1234',
   theme: 'light',
@@ -672,6 +678,9 @@ const phonePayload = () => ({
   phoneNumber: state.phoneNumber,
   wallpaper: state.wallpaper,
   ringtone: state.ringtone,
+  callRingtone: state.callRingtone,
+  notificationTone: state.notificationTone,
+  messageTone: state.messageTone,
   volume: state.volume,
   lockCode: state.lockCode,
   theme: state.theme,
@@ -1611,6 +1620,23 @@ export async function handleBrowserNui<T = unknown>(eventName: string, data?: un
 
   if (eventName === 'setRingtone') {
     state.ringtone = String(payload.ringtone || state.ringtone);
+    state.callRingtone = state.ringtone;
+    return true as T;
+  }
+
+  if (eventName === 'setCallRingtone') {
+    state.callRingtone = String(payload.ringtone || state.callRingtone);
+    state.ringtone = state.callRingtone;
+    return true as T;
+  }
+
+  if (eventName === 'setNotificationTone') {
+    state.notificationTone = String(payload.tone || state.notificationTone);
+    return true as T;
+  }
+
+  if (eventName === 'setMessageTone') {
+    state.messageTone = String(payload.tone || state.messageTone);
     return true as T;
   }
 

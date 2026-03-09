@@ -14,6 +14,9 @@ CREATE TABLE IF NOT EXISTS `phone_numbers` (
     `imei` VARCHAR(20) NOT NULL UNIQUE,
     `wallpaper` VARCHAR(255) DEFAULT './img/background/back001.jpg',
     `ringtone` VARCHAR(50) DEFAULT 'ring.ogg',
+    `call_ringtone` VARCHAR(64) DEFAULT 'ring.ogg',
+    `notification_tone` VARCHAR(64) DEFAULT 'soft-ping.ogg',
+    `message_tone` VARCHAR(64) DEFAULT 'pop.ogg',
     `volume` FLOAT DEFAULT 0.5,
     `lock_code` VARCHAR(10) DEFAULT '0000',
     `theme` VARCHAR(10) DEFAULT 'light',
@@ -35,7 +38,8 @@ CREATE TABLE IF NOT EXISTS `phone_contacts` (
     `favorite` TINYINT(1) DEFAULT 0,
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     KEY `idx_identifier` (`identifier`),
-    KEY `idx_number` (`number`)
+    KEY `idx_number` (`number`),
+    KEY `idx_identifier_number` (`identifier`, `number`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Messages (SMS)
@@ -85,6 +89,35 @@ CREATE TABLE IF NOT EXISTS `phone_chat_group_messages` (
     FOREIGN KEY (`group_id`) REFERENCES `phone_chat_groups`(`id`) ON DELETE CASCADE,
     KEY `idx_group_created` (`group_id`, `created_at`),
     KEY `idx_created_at` (`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `phone_chat_group_invites` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `group_id` INT NOT NULL,
+    `inviter_identifier` VARCHAR(50) NOT NULL,
+    `target_identifier` VARCHAR(50) NOT NULL,
+    `status` ENUM('pending', 'accepted', 'declined') NOT NULL DEFAULT 'pending',
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    `responded_at` TIMESTAMP NULL DEFAULT NULL,
+    UNIQUE KEY `uniq_group_target_pending` (`group_id`, `target_identifier`),
+    KEY `idx_group_invites_target` (`target_identifier`, `status`, `created_at`),
+    KEY `idx_group_invites_group` (`group_id`, `status`, `created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `phone_wavechat_statuses` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `identifier` VARCHAR(50) NOT NULL,
+    `phone_number` VARCHAR(15) NOT NULL,
+    `media_url` VARCHAR(500) NOT NULL,
+    `media_type` ENUM('image', 'video') NOT NULL DEFAULT 'image',
+    `caption` VARCHAR(140) DEFAULT NULL,
+    `views` INT NOT NULL DEFAULT 0,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    `expires_at` TIMESTAMP NOT NULL,
+    KEY `idx_wavechat_status_feed` (`expires_at`, `phone_number`, `created_at`),
+    KEY `idx_wavechat_status_owner` (`identifier`, `created_at`),
+    KEY `idx_wavechat_status_phone` (`phone_number`, `created_at`),
+    KEY `idx_wavechat_status_expires` (`expires_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Call history
@@ -281,6 +314,7 @@ CREATE TABLE IF NOT EXISTS `phone_news` (
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     KEY `idx_identifier` (`identifier`),
     KEY `idx_category` (`category`),
+    KEY `idx_news_live_created` (`is_live`, `created_at`),
     KEY `idx_created` (`created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -721,7 +755,7 @@ BEGIN
         'delete',
         'phone_news',
         NULL,
-        'created_at < (NOW() - INTERVAL 7 DAY)',
+        'is_live = 0 AND created_at < (NOW() - INTERVAL 10 DAY)',
         30
     );
 
@@ -894,4 +928,178 @@ CREATE TABLE IF NOT EXISTS `phone_documents` (
     KEY `idx_documents_identifier` (`identifier`),
     KEY `idx_documents_type` (`doc_type`),
     KEY `idx_documents_code` (`verification_code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+ALTER TABLE `phone_numbers`
+    ADD COLUMN IF NOT EXISTS `pin_hash` CHAR(64) NULL AFTER `lock_code`,
+    ADD COLUMN IF NOT EXISTS `is_setup` TINYINT(1) NOT NULL DEFAULT 1 AFTER `pin_hash`,
+    ADD COLUMN IF NOT EXISTS `clips_username` VARCHAR(32) NULL AFTER `audio_profile`,
+    ADD COLUMN IF NOT EXISTS `call_ringtone` VARCHAR(64) DEFAULT 'ring.ogg' AFTER `ringtone`,
+    ADD COLUMN IF NOT EXISTS `notification_tone` VARCHAR(64) DEFAULT 'soft-ping.ogg' AFTER `call_ringtone`,
+    ADD COLUMN IF NOT EXISTS `message_tone` VARCHAR(64) DEFAULT 'pop.ogg' AFTER `notification_tone`;
+
+CREATE UNIQUE INDEX IF NOT EXISTS `idx_phone_numbers_clips_username`
+    ON `phone_numbers` (`clips_username`);
+
+ALTER TABLE `phone_snap_accounts`
+    ADD COLUMN IF NOT EXISTS `verified` TINYINT(1) DEFAULT 0 AFTER `bio`;
+
+CREATE TABLE IF NOT EXISTS `phone_snap_likes` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `post_id` INT NOT NULL,
+    `account_id` INT NOT NULL,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (`post_id`) REFERENCES `phone_snap_posts`(`id`) ON DELETE CASCADE,
+    FOREIGN KEY (`account_id`) REFERENCES `phone_snap_accounts`(`id`) ON DELETE CASCADE,
+    UNIQUE KEY `idx_snap_post_account` (`post_id`, `account_id`),
+    KEY `idx_snap_likes_account` (`account_id`, `created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `phone_user_blocks` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `identifier` VARCHAR(64) NOT NULL,
+    `target_identifier` VARCHAR(64) DEFAULT NULL,
+    `target_phone` VARCHAR(20) NOT NULL,
+    `reason` VARCHAR(120) DEFAULT NULL,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY `uniq_block_pair` (`identifier`, `target_phone`),
+    KEY `idx_blocks_identifier` (`identifier`),
+    KEY `idx_blocks_target_phone` (`target_phone`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `phone_user_reports` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `identifier` VARCHAR(64) NOT NULL,
+    `target_identifier` VARCHAR(64) DEFAULT NULL,
+    `target_phone` VARCHAR(20) DEFAULT NULL,
+    `app_id` VARCHAR(24) NOT NULL,
+    `evidence` VARCHAR(500) DEFAULT NULL,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    KEY `idx_reports_identifier` (`identifier`),
+    KEY `idx_reports_target_phone` (`target_phone`),
+    KEY `idx_reports_app` (`app_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `phone_wallet_requests` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `requester_identifier` VARCHAR(64) NOT NULL,
+    `requester_phone` VARCHAR(20) NOT NULL,
+    `target_identifier` VARCHAR(64) NOT NULL,
+    `target_phone` VARCHAR(20) NOT NULL,
+    `amount` DECIMAL(12,2) NOT NULL,
+    `title` VARCHAR(64) DEFAULT NULL,
+    `method` ENUM('qr','nfc') NOT NULL DEFAULT 'qr',
+    `status` ENUM('pending','accepted','declined','expired','cancelled') NOT NULL DEFAULT 'pending',
+    `expires_at` TIMESTAMP NOT NULL,
+    `responded_at` TIMESTAMP NULL DEFAULT NULL,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    KEY `idx_wallet_requests_target` (`target_identifier`, `status`, `expires_at`),
+    KEY `idx_wallet_requests_requester` (`requester_identifier`, `status`),
+    KEY `idx_wallet_requests_expires` (`expires_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `phone_mail_accounts` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `identifier` VARCHAR(50) NOT NULL,
+    `alias` VARCHAR(32) NOT NULL,
+    `domain` VARCHAR(64) NOT NULL,
+    `email` VARCHAR(128) NOT NULL,
+    `password_hash` CHAR(64) NOT NULL,
+    `is_primary` TINYINT(1) DEFAULT 1,
+    `last_login_at` TIMESTAMP NULL DEFAULT NULL,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY `uniq_mail_email` (`email`),
+    UNIQUE KEY `uniq_mail_identifier_alias` (`identifier`, `alias`),
+    KEY `idx_mail_accounts_identifier` (`identifier`),
+    KEY `idx_mail_accounts_domain` (`domain`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `phone_mail_boxes` (
+    `account_id` INT PRIMARY KEY,
+    `unread_count` INT NOT NULL DEFAULT 0,
+    `total_count` INT NOT NULL DEFAULT 0,
+    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT `fk_mail_boxes_account`
+        FOREIGN KEY (`account_id`) REFERENCES `phone_mail_accounts`(`id`)
+        ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `phone_mail_messages` (
+    `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
+    `sender_account_id` INT NOT NULL,
+    `recipient_email` VARCHAR(128) NOT NULL,
+    `recipient_account_id` INT DEFAULT NULL,
+    `subject` VARCHAR(120) DEFAULT NULL,
+    `body` TEXT NOT NULL,
+    `attachments` LONGTEXT DEFAULT NULL,
+    `is_read` TINYINT(1) NOT NULL DEFAULT 0,
+    `is_deleted_sender` TINYINT(1) NOT NULL DEFAULT 0,
+    `is_deleted_recipient` TINYINT(1) NOT NULL DEFAULT 0,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    KEY `idx_mail_messages_sender` (`sender_account_id`, `created_at`),
+    KEY `idx_mail_messages_recipient` (`recipient_account_id`, `created_at`),
+    KEY `idx_mail_messages_recipient_email` (`recipient_email`),
+    CONSTRAINT `fk_mail_messages_sender`
+        FOREIGN KEY (`sender_account_id`) REFERENCES `phone_mail_accounts`(`id`)
+        ON DELETE CASCADE,
+    CONSTRAINT `fk_mail_messages_recipient`
+        FOREIGN KEY (`recipient_account_id`) REFERENCES `phone_mail_accounts`(`id`)
+        ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `phone_clips_accounts` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `identifier` VARCHAR(50) NOT NULL,
+    `username` VARCHAR(32) NOT NULL,
+    `display_name` VARCHAR(50) DEFAULT NULL,
+    `avatar` VARCHAR(500) DEFAULT NULL,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY `uniq_clips_identifier` (`identifier`),
+    UNIQUE KEY `uniq_clips_username` (`username`),
+    KEY `idx_clips_identifier` (`identifier`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `phone_notifications` (
+    `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
+    `identifier` VARCHAR(50) NOT NULL,
+    `app_id` VARCHAR(40) NOT NULL,
+    `title` VARCHAR(80) NOT NULL,
+    `content` VARCHAR(255) NOT NULL,
+    `avatar` VARCHAR(500) DEFAULT NULL,
+    `meta` LONGTEXT DEFAULT NULL,
+    `is_read` TINYINT(1) NOT NULL DEFAULT 0,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    KEY `idx_notifications_identifier` (`identifier`, `created_at`),
+    KEY `idx_notifications_unread` (`identifier`, `is_read`, `created_at`),
+    KEY `idx_notifications_app` (`identifier`, `app_id`, `created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `phone_yellowpages_contacts` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `listing_id` INT NOT NULL,
+    `buyer_identifier` VARCHAR(50) NOT NULL,
+    `seller_identifier` VARCHAR(50) NOT NULL,
+    `contact_type` ENUM('call', 'message') NOT NULL,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (`listing_id`) REFERENCES `phone_market`(`id`) ON DELETE CASCADE,
+    KEY `idx_buyer` (`buyer_identifier`),
+    KEY `idx_seller` (`seller_identifier`),
+    KEY `idx_created` (`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+ALTER TABLE `phone_documents`
+    ADD COLUMN IF NOT EXISTS `nfc_enabled` TINYINT(1) DEFAULT 0 AFTER `verification_code`;
+
+CREATE TABLE IF NOT EXISTS `phone_documents_nfc_scans` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `document_id` INT NOT NULL,
+    `scanned_by` VARCHAR(50) NOT NULL,
+    `scan_type` ENUM('nfc', 'manual') DEFAULT 'manual',
+    `scanned_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (`document_id`) REFERENCES `phone_documents`(`id`) ON DELETE CASCADE,
+    KEY `idx_scanned_by` (`scanned_by`),
+    KEY `idx_scanned_at` (`scanned_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

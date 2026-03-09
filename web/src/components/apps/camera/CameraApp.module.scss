@@ -212,20 +212,14 @@
 // Top bar
 .topBar {
   position: absolute;
-  top: 0;
+  top: 8px;
   left: 0;
   right: 0;
   z-index: 50;
-  padding: 8px 12px;
+  padding: 0 10px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.5) 0%, transparent 100%);
-  pointer-events: none;
-
-  & > * {
-    pointer-events: auto;
-  }
 }
 
 .topLeft,
@@ -255,16 +249,14 @@
 }
 
 .iconBtn {
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
-  border: none;
-  background: rgba(60, 60, 67, 0.6);
-  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(28, 28, 30, 0.78);
   color: #fff;
-  font-size: 16px;
+  font-size: 13px;
   cursor: pointer;
-  transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -278,9 +270,32 @@
   }
 }
 
-.iconBtnActive {
-  background: #FFD60A;
-  color: #000;
+.minimalRow {
+  position: absolute;
+  left: 50%;
+  bottom: 114px;
+  transform: translateX(-50%);
+  z-index: 35;
+  display: flex;
+  gap: 6px;
+}
+
+.minimalBtn {
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(28, 28, 30, 0.8);
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+}
+
+.minimalBtnActive {
+  background: #ffffff;
+  color: #111111;
 }
 
 // Filter chips row
@@ -292,8 +307,8 @@
   z-index: 30;
   display: flex;
   justify-content: center;
-  gap: 8px;
-  padding: 0 16px;
+  gap: 6px;
+  padding: 0 12px;
   pointer-events: none;
 
   & > * {
@@ -303,12 +318,12 @@
 
 .quickZoomRow {
   position: absolute;
-  top: 96px;
+  top: 90px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 30;
   display: flex;
-  gap: 8px;
+  gap: 6px;
 }
 
 .quickZoomBtn {
@@ -331,12 +346,11 @@
 .filterChip {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
+  gap: 4px;
+  padding: 5px 9px;
   border-radius: 16px;
   border: 1px solid rgba(255, 255, 255, 0.2);
   background: rgba(28, 28, 30, 0.7);
-  backdrop-filter: blur(10px);
   cursor: pointer;
   transition: all 0.2s ease;
 
@@ -366,9 +380,37 @@
 }
 
 .filterChipLabel {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 500;
   color: #fff;
+}
+
+.utilityRow {
+  position: absolute;
+  top: 126px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 30;
+  display: flex;
+  gap: 6px;
+}
+
+.utilityBtn {
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  background: rgba(28, 28, 30, 0.72);
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+}
+
+.utilityBtnActive {
+  background: #ffffff;
+  color: #111111;
 }
 
 // Filter colors
@@ -391,14 +433,31 @@
 // Clips row
 .clipsRow {
   position: absolute;
-  bottom: 100px;
+  bottom: 148px;
   left: 0;
   right: 0;
   display: flex;
   justify-content: center;
-  gap: 12px;
+  gap: 8px;
   padding: 0 16px;
   z-index: 20;
+}
+
+.clipsBtn {
+  min-height: 30px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.26);
+  background: rgba(28, 28, 30, 0.8);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.clipsBtnPrimary {
+  background: #ffffff;
+  color: #111111;
+  border-color: #ffffff;
 }
 
 // Bottom controls with shutter
@@ -412,7 +471,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.8) 0%, transparent 100%);
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.72) 0%, transparent 100%);
   pointer-events: none;
 
   & > * {
@@ -467,11 +526,10 @@
   transform: translateX(-50%);
   background: rgba(255, 59, 48, 0.9);
   color: #fff;
-  padding: 8px 16px;
+  padding: 7px 12px;
   border-radius: 8px;
-  font-size: 13px;
+  font-size: 12px;
   z-index: 100;
-  backdrop-filter: blur(10px);
 }
 
 // Last capture preview
@@ -488,7 +546,6 @@
   padding: 12px;
   border-radius: 12px;
   z-index: 100;
-  backdrop-filter: blur(10px);
 
   img {
     width: 80px;
@@ -517,5 +574,49 @@
     &:hover {
       background: #FFC800;
     }
+  }
+}
+
+@media (max-width: 360px) {
+  .topLeft,
+  .topRight {
+    gap: 6px;
+  }
+
+  .iconBtn {
+    width: 30px;
+    height: 30px;
+    font-size: 13px;
+  }
+
+  .minimalBtn {
+    padding: 0 8px;
+    font-size: 9px;
+  }
+
+  .minimalRow {
+    bottom: 110px;
+    gap: 5px;
+  }
+
+  .clipsRow {
+    bottom: 146px;
+    padding: 0 10px;
+    gap: 6px;
+  }
+
+  .clipsBtn {
+    font-size: 10px;
+    padding: 0 8px;
+  }
+
+  .leftSlider,
+  .rightSlider {
+    width: 38px;
+    height: 172px;
+  }
+
+  .verticalSlider {
+    width: 136px;
   }
 }

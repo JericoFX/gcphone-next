@@ -68,6 +68,27 @@ local function GetRateLimitWindow(key, fallback)
     return Utils.GetRateLimitWindow(key, fallback)
 end
 
+local function IsClipStorageReady()
+    local provider = tostring(GetConvar('gcphone_storage_provider', tostring(Config.Storage and Config.Storage.Provider or 'custom'))):lower()
+    if provider == 'direct' then provider = 'custom' end
+
+    if provider == 'server_folder' then
+        local publicUrl = tostring(GetConvar('gcphone_storage_server_folder_public_url', tostring(Config.Storage and Config.Storage.ServerFolder and Config.Storage.ServerFolder.PublicBaseUrl or '')))
+        return publicUrl:match('^https?://') ~= nil
+    end
+
+    local uploadUrl = ''
+    if provider == 'fivemanage' then
+        uploadUrl = tostring(GetConvar('gcphone_storage_fivemanage_url', tostring(Config.Storage and Config.Storage.FiveManage and Config.Storage.FiveManage.Endpoint or '')))
+    elseif provider == 'local' then
+        uploadUrl = tostring(GetConvar('gcphone_storage_local_url', ''))
+    else
+        uploadUrl = tostring(GetConvar('gcphone_storage_custom_url', tostring(Config.Storage and Config.Storage.Custom and Config.Storage.Custom.UploadUrl or '')))
+    end
+
+    return uploadUrl:match('^https?://') ~= nil
+end
+
 lib.callback.register('gcphone:clips:getFeed', function(source, data)
     local identifier = RequirePlayerIdentifier(source)
     data = type(data) == 'table' and data or {}
@@ -154,6 +175,10 @@ lib.callback.register('gcphone:clips:publish', function(source, data)
 
     if not IsPublishJobAllowed(source) then
         return false, 'NOT_AUTHORIZED_JOB'
+    end
+
+    if not IsClipStorageReady() then
+        return false, 'CLIPS_STORAGE_DISABLED'
     end
 
     local clipsMs = GetRateLimitWindow('clips', 1500)

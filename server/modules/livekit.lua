@@ -11,6 +11,14 @@ local function SafeString(value, maxLen)
     return Utils.SafeString(value, maxLen)
 end
 
+local function GetRateLimitWindow(key, fallback)
+    return Utils.GetRateLimitWindow(key, fallback)
+end
+
+local function HitRateLimit(source, key, windowMs, maxHits)
+    return Utils.HitRateLimit(source, key, windowMs, maxHits)
+end
+
 local function NextRequestId()
     LastTokenRequestId = LastTokenRequestId + 1
     if LastTokenRequestId > 2147483000 then
@@ -93,6 +101,11 @@ lib.callback.register('gcphone:livekit:getToken', function(source, data)
         return { success = false, error = 'LIVEKIT_DISABLED' }
     end
 
+    local livekitMs = GetRateLimitWindow('livekit_token', 1500)
+    if HitRateLimit(source, 'livekit_token', livekitMs, 2) then
+        return { success = false, error = 'RATE_LIMITED' }
+    end
+
     local identifier = GetIdentifier(source)
     if not identifier then
         return { success = false, error = 'INVALID_SOURCE' }
@@ -141,7 +154,15 @@ lib.callback.register('gcphone:livekit:getToken', function(source, data)
 
     local identity = SafeString('player:' .. tostring(identifier), 64)
     local participantName = SafeString(GetName(source) or ('player-' .. tostring(source)), 64)
-    local maxDuration = tonumber(data and data.maxDuration) or 300
+    local configuredDuration = tonumber(Config.LiveKit and Config.LiveKit.MaxCallDurationSeconds) or 300
+    if configuredDuration < 30 then configuredDuration = 30 end
+    if configuredDuration > 3600 then configuredDuration = 3600 end
+
+    local requestedDuration = tonumber(data and data.maxDuration) or configuredDuration
+    if requestedDuration < 30 then requestedDuration = 30 end
+    if requestedDuration > configuredDuration then requestedDuration = configuredDuration end
+    local maxDuration = math.floor(requestedDuration)
+
     local host, hostError = GetLiveKitHost()
     if not host then
         return { success = false, error = hostError or 'MISSING_HOST' }
@@ -154,7 +175,7 @@ lib.callback.register('gcphone:livekit:getToken', function(source, data)
         createdAt = GetGameTimer(),
     }
 
-    TriggerEvent('gcphone:livekit:requestToken', source, requestId, roomName, identity, participantName, grants)
+    TriggerEvent('gcphone:livekit:requestToken', source, requestId, roomName, identity, participantName, grants, maxDuration)
 
     local result = Citizen.Await(p)
     if type(result) == 'table' and result.ok then

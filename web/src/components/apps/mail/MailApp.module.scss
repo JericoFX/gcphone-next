@@ -59,7 +59,9 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: var(--mail-bg);
+  background:
+    radial-gradient(120% 90% at 50% -10%, rgba(10, 132, 255, 0.08), transparent 55%),
+    var(--mail-bg);
   overflow: hidden;
   padding-bottom: calc(10px + var(--phone-bottom-ui-gap, 0px));
 }
@@ -206,9 +208,7 @@
   position: sticky;
   top: 0;
   z-index: 10;
-  backdrop-filter: blur(var(--blur-2));
-  -webkit-backdrop-filter: blur(var(--blur-2));
-  background: rgba(255, 255, 255, 0.92);
+  background: var(--mail-surface);
 }
 
 .accountBar > div:first-child {
@@ -453,7 +453,7 @@
   display: flex;
   flex-direction: column;
   flex: 1;
-  gap: var(--space-3);
+  gap: var(--space-2);
   padding: var(--space-3) var(--space-4) var(--space-4);
   overflow: hidden;
   min-height: 0;
@@ -493,7 +493,7 @@
   background: var(--mail-surface);
   padding: var(--space-3);
   cursor: pointer;
-  transition: background-color var(--dur-normal) var(--ease-standard), color var(--dur-normal) var(--ease-standard), border-color var(--dur-normal) var(--ease-standard), opacity var(--dur-normal) var(--ease-standard), transform var(--dur-normal) var(--ease-standard), box-shadow var(--dur-normal) var(--ease-standard);
+  transition: background-color var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard), border-color var(--dur-fast) var(--ease-standard), opacity var(--dur-fast) var(--ease-standard), transform var(--dur-fast) var(--ease-standard), box-shadow var(--dur-fast) var(--ease-standard);
   position: relative;
   overflow: hidden;
 }
@@ -512,7 +512,6 @@
 .item:hover {
   background: var(--mail-surface-2);
   border-color: color-mix(in srgb, var(--mail-tint) 30%, var(--mail-border));
-  transform: translateX(2px);
 }
 
 .item:active {
@@ -588,13 +587,12 @@
 .preview {
   background: var(--mail-surface);
   border: 1px solid var(--mail-border);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-2);
-  padding: var(--space-5);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-1);
+  padding: var(--space-4);
   min-height: 200px;
   display: flex;
   flex-direction: column;
-  animation: fadeIn var(--dur-normal) var(--ease-standard);
 }
 
 @keyframes fadeIn {
@@ -791,15 +789,15 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: var(--shadow-2);
+  box-shadow: var(--shadow-1);
   transition: background-color var(--dur-normal) var(--ease-standard), color var(--dur-normal) var(--ease-standard), border-color var(--dur-normal) var(--ease-standard), opacity var(--dur-normal) var(--ease-standard), transform var(--dur-normal) var(--ease-standard), box-shadow var(--dur-normal) var(--ease-standard);
   z-index: 100;
 }
 
 .fab:hover {
   background: #0066CC;
-  transform: scale(1.05) translateY(-2px);
-  box-shadow: var(--shadow-3);
+  transform: scale(1.02);
+  box-shadow: var(--shadow-2);
 }
 
 .fab:active {
@@ -890,7 +888,7 @@
   display: flex;
   gap: var(--space-3);
   padding: var(--space-2) 0;
-  border-bottom: 1px solid var(--mail-border-subtle);
+  border-bottom: 1px solid var(--mail-separator);
 }
 
 .metaRow:last-child {
@@ -898,7 +896,7 @@
 }
 
 .metaLabel {
-  color: var(--mail-secondary);
+  color: var(--mail-text-3);
   font-size: 13px;
   font-weight: 600;
   min-width: 60px;

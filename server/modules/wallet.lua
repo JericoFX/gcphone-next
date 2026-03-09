@@ -492,7 +492,13 @@ lib.callback.register('gcphone:wallet:getPendingRequests', function(source)
     local identifier = RequirePlayerIdentifier(source)
     if not identifier then return { incoming = {}, outgoing = {} } end
 
-    MySQL.update.await('UPDATE phone_wallet_requests SET status = "expired", responded_at = NOW() WHERE status = "pending" AND expires_at < NOW()')
+    MySQL.update.await([[
+        UPDATE phone_wallet_requests
+        SET status = 'expired', responded_at = NOW()
+        WHERE status = 'pending'
+          AND expires_at < NOW()
+          AND (target_identifier = ? OR requester_identifier = ?)
+    ]], { identifier, identifier })
 
     local incoming = MySQL.query.await(
         'SELECT * FROM phone_wallet_requests WHERE target_identifier = ? AND status = "pending" AND expires_at >= NOW() ORDER BY created_at DESC LIMIT 30',

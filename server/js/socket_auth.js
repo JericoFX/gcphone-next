@@ -19,7 +19,12 @@ function sanitizeGroups(groups) {
     .slice(0, 50);
 }
 
-on('gcphone:socket:requestToken', (requestId, phone, name, groups) => {
+function sanitizeRole(value) {
+  const role = sanitize(value, 16).toLowerCase();
+  return role === 'owner' ? 'owner' : role === 'viewer' ? 'viewer' : '';
+}
+
+on('gcphone:socket:requestToken', (requestId, phone, name, groups, identifier, snapLiveId, snapRole, snapUsername, snapDisplay, snapAvatar) => {
   const id = Number(requestId) || 0;
   if (!jwt) {
     emit('gcphone:socket:tokenResponse', id, '', 'JWT_SDK_NOT_INSTALLED');
@@ -34,16 +39,32 @@ on('gcphone:socket:requestToken', (requestId, phone, name, groups) => {
 
   const safePhone = sanitize(phone, 20);
   const safeName = sanitize(name, 64);
+  const safeIdentifier = sanitize(identifier, 80);
   if (!safePhone) {
     emit('gcphone:socket:tokenResponse', id, '', 'INVALID_PHONE');
     return;
   }
 
   const safeGroups = sanitizeGroups(groups);
+  const safeSnapLiveId = String(snapLiveId || '').replace(/[^0-9]/g, '').slice(0, 16);
+  const safeSnapRole = sanitizeRole(snapRole);
+  const safeSnapUsername = sanitize(snapUsername, 32);
+  const safeSnapDisplay = sanitize(snapDisplay, 64);
+  const safeSnapAvatar = sanitize(snapAvatar, 255);
 
   try {
     const token = jwt.sign(
-      { phone: safePhone, name: safeName || safePhone, groups: safeGroups },
+      {
+        phone: safePhone,
+        name: safeName || safePhone,
+        groups: safeGroups,
+        identifier: safeIdentifier,
+        snapLiveId: safeSnapLiveId,
+        snapRole: safeSnapRole,
+        snapUsername: safeSnapUsername,
+        snapDisplay: safeSnapDisplay,
+        snapAvatar: safeSnapAvatar,
+      },
       secret,
       { expiresIn: '10m' }
     );

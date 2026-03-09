@@ -171,6 +171,24 @@ RegisterNUICallback('setRingtone', function(data, cb)
     end, data)
 end)
 
+RegisterNUICallback('setCallRingtone', function(data, cb)
+    lib.callback('gcphone:setCallRingtone', false, function(success)
+        cb(success)
+    end, data)
+end)
+
+RegisterNUICallback('setNotificationTone', function(data, cb)
+    lib.callback('gcphone:setNotificationTone', false, function(success)
+        cb(success)
+    end, data)
+end)
+
+RegisterNUICallback('setMessageTone', function(data, cb)
+    lib.callback('gcphone:setMessageTone', false, function(success)
+        cb(success)
+    end, data)
+end)
+
 RegisterNUICallback('setVolume', function(data, cb)
     lib.callback('gcphone:setVolume', false, function(success)
         cb(success)
@@ -785,6 +803,42 @@ RegisterNUICallback('newsMuteLiveUser', function(data, cb)
     end, data or {})
 end)
 
+RegisterNUICallback('snapJoinLive', function(data, cb)
+    lib.callback('gcphone:snap:joinLive', false, function(success, payload)
+        cb(cbSuccess(success, nil, payload))
+    end, data or {})
+end)
+
+RegisterNUICallback('snapLeaveLive', function(data, cb)
+    lib.callback('gcphone:snap:leaveLive', false, function(success)
+        cb(cbSuccess(success))
+    end, data or {})
+end)
+
+RegisterNUICallback('snapSendLiveMessage', function(data, cb)
+    lib.callback('gcphone:snap:sendLiveMessage', false, function(success, payload)
+        cb(cbSuccess(success, nil, payload))
+    end, data or {})
+end)
+
+RegisterNUICallback('snapSendLiveReaction', function(data, cb)
+    lib.callback('gcphone:snap:sendLiveReaction', false, function(success, payload)
+        cb(cbSuccess(success, nil, payload))
+    end, data or {})
+end)
+
+RegisterNUICallback('snapRemoveLiveMessage', function(data, cb)
+    lib.callback('gcphone:snap:removeLiveMessage', false, function(success, payload)
+        cb(cbSuccess(success, nil, payload))
+    end, data or {})
+end)
+
+RegisterNUICallback('snapMuteLiveUser', function(data, cb)
+    lib.callback('gcphone:snap:muteLiveUser', false, function(success, payload)
+        cb(cbSuccess(success, nil, payload))
+    end, data or {})
+end)
+
 RegisterNUICallback('newsSetScaleform', function(data, cb)
     lib.callback('gcphone:news:setScaleform', false, function(success)
         cb(cbSuccess(success))
@@ -1049,10 +1103,10 @@ RegisterNUICallback('livekitGetToken', function(data, cb)
     end, data)
 end)
 
-RegisterNUICallback('socketGetToken', function(_, cb)
+RegisterNUICallback('socketGetToken', function(data, cb)
     lib.callback('gcphone:socket:getToken', false, function(payload)
         cb(payload or { success = false, error = 'TOKEN_ERROR' })
-    end)
+    end, data or {})
 end)
 
 RegisterNetEvent('gcphone:contactsUpdated', function(contacts)
@@ -1088,6 +1142,74 @@ end)
 RegisterNetEvent('gcphone:bankTransferReceived', function(payload)
     SendNUIMessage({
         action = 'bankTransferReceived',
+        data = payload
+    })
+
+    SendNUIMessage({
+        action = 'bankInvoiceReceived',
+        data = payload
+    })
+end)
+
+RegisterNetEvent('gcphone:snap:newPost', function(post)
+    SendNUIMessage({
+        action = 'gcphone:snap:newPost',
+        data = post
+    })
+end)
+
+RegisterNetEvent('gcphone:snap:newStory', function(story)
+    SendNUIMessage({
+        action = 'gcphone:snap:newStory',
+        data = story
+    })
+end)
+
+RegisterNetEvent('gcphone:snap:liveStarted', function(live)
+    SendNUIMessage({
+        action = 'gcphone:snap:liveStarted',
+        data = live
+    })
+end)
+
+RegisterNetEvent('gcphone:snap:liveEnded', function(liveId)
+    SendNUIMessage({
+        action = 'gcphone:snap:liveEnded',
+        data = liveId
+    })
+end)
+
+RegisterNetEvent('gcphone:snap:liveViewersUpdated', function(payload)
+    SendNUIMessage({
+        action = 'gcphone:snap:liveViewersUpdated',
+        data = payload
+    })
+end)
+
+RegisterNetEvent('gcphone:snap:liveMessage', function(payload)
+    SendNUIMessage({
+        action = 'gcphone:snap:liveMessage',
+        data = payload
+    })
+end)
+
+RegisterNetEvent('gcphone:snap:liveReaction', function(payload)
+    SendNUIMessage({
+        action = 'gcphone:snap:liveReaction',
+        data = payload
+    })
+end)
+
+RegisterNetEvent('gcphone:snap:liveMessageRemoved', function(payload)
+    SendNUIMessage({
+        action = 'gcphone:snap:liveMessageRemoved',
+        data = payload
+    })
+end)
+
+RegisterNetEvent('gcphone:snap:liveUserMuted', function(payload)
+    SendNUIMessage({
+        action = 'gcphone:snap:liveUserMuted',
         data = payload
     })
 end)
@@ -1164,9 +1286,45 @@ RegisterNUICallback('wavechatGetGroups', function(_, cb)
     end)
 end)
 
+RegisterNUICallback('wavechatGetInvites', function(_, cb)
+    lib.callback('gcphone:wavechatGetInvites', false, function(invites)
+        cb(invites or {})
+    end)
+end)
+
+RegisterNUICallback('wavechatGetStatusMediaConfig', function(_, cb)
+    lib.callback('gcphone:wavechat:getStatusMediaConfig', false, function(payload)
+        cb(payload or { canUploadImage = false, canUploadVideo = false, maxVideoDurationSeconds = 10 })
+    end)
+end)
+
+RegisterNUICallback('wavechatGetStatuses', function(_, cb)
+    lib.callback('gcphone:wavechatGetStatuses', false, function(payload)
+        cb(payload or {})
+    end)
+end)
+
+RegisterNUICallback('wavechatCreateStatus', function(data, cb)
+    lib.callback('gcphone:wavechatCreateStatus', false, function(success, payload)
+        cb(cbSuccess(success, success and nil or payload))
+    end, data or {})
+end)
+
+RegisterNUICallback('wavechatMarkStatusViewed', function(data, cb)
+    lib.callback('gcphone:wavechatMarkStatusViewed', false, function(success)
+        cb(cbSuccess(success))
+    end, data)
+end)
+
 RegisterNUICallback('wavechatCreateGroup', function(data, cb)
     lib.callback('gcphone:wavechatCreateGroup', false, function(success, value)
         cb(cbSuccess(success, success and nil or value, success and { groupId = value } or nil))
+    end, data)
+end)
+
+RegisterNUICallback('wavechatRespondInvite', function(data, cb)
+    lib.callback('gcphone:wavechatRespondInvite', false, function(success, payload)
+        cb(cbSuccess(success, success and nil or payload, success and payload or nil))
     end, data)
 end)
 

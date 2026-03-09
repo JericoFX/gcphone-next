@@ -1,4 +1,4 @@
-import { For, Show, createEffect, createMemo, createSignal, onCleanup, onMount } from 'solid-js';
+import { Show, createEffect, createMemo, createSignal, onCleanup, onMount } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { fetchNui } from '../../../utils/fetchNui';
 import { getStoredLanguage, t } from '../../../i18n';
@@ -40,17 +40,14 @@ export function CameraApp() {
   const language = () => getStoredLanguage();
   const [effect, setEffect] = createSignal<CameraEffect>('normal');
   const [fov, setFov] = createSignal(52);
-  const [blur, setBlur] = createSignal(0);
+  const blur = () => 0;
   const [lastUrl, setLastUrl] = createSignal('');
   const [busy, setBusy] = createSignal(false);
   const [error, setError] = createSignal('');
   const [target, setTarget] = createSignal<CameraTarget>('');
   const [flash, setFlash] = createSignal(true);
   const [selfie, setSelfie] = createSignal(false);
-  const [frozen, setFrozen] = createSignal(false);
   const [landscape, setLandscape] = createSignal(false);
-  const [flashlight, setFlashlight] = createSignal(false);
-  const [flashlightSupported, setFlashlightSupported] = createSignal(false);
   const [quickZooms, setQuickZooms] = createSignal<number[]>([30, 52, 78]);
   const [videoSupported, setVideoSupported] = createSignal(false);
   const [sessionReady, setSessionReady] = createSignal(false);
@@ -98,8 +95,7 @@ export function CameraApp() {
   });
 
   onMount(async () => {
-    const capabilities = await fetchNui<{ flashlight?: boolean; quickZooms?: number[]; video?: boolean }>('cameraGetCapabilities', {}, { flashlight: false, quickZooms: [30, 52, 78], video: false });
-    setFlashlightSupported(capabilities?.flashlight === true);
+    const capabilities = await fetchNui<{ quickZooms?: number[]; video?: boolean }>('cameraGetCapabilities', {}, { quickZooms: [30, 52, 78], video: false });
     setQuickZooms((capabilities?.quickZooms || [30, 52, 78]).map((value) => Number(value)).filter((value) => Number.isFinite(value)));
     setVideoSupported(capabilities?.video === true);
 
@@ -109,7 +105,6 @@ export function CameraApp() {
       blur: blur(),
       flash: flash(),
       selfie: selfie(),
-      frozen: frozen(),
       landscape: landscape(),
     }, true);
     setSessionReady(true);
@@ -128,17 +123,9 @@ export function CameraApp() {
       blur: blur(),
       flash: flash(),
       selfie: selfie(),
-      frozen: frozen(),
       landscape: landscape(),
     }, true);
   });
-
-  const toggleFreeze = async () => {
-    const result = await fetchNui<{ success?: boolean; frozen?: boolean }>('cameraSetFreeze', { enabled: !frozen() }, { success: true, frozen: !frozen() });
-    if (result?.success) {
-      setFrozen(result.frozen === true);
-    }
-  };
 
   const toggleLandscape = async () => {
     const result = await fetchNui<{ success?: boolean; landscape?: boolean }>('cameraSetLandscape', { enabled: !landscape() }, { success: true, landscape: !landscape() });
@@ -154,14 +141,6 @@ export function CameraApp() {
     }
   };
 
-  const toggleFlashlight = async () => {
-    if (!flashlightSupported()) return;
-    const nextState = !flashlight();
-    const result = await fetchNui<{ success?: boolean; enabled?: boolean }>('cameraToggleFlashlight', { enabled: nextState }, { success: true, enabled: nextState });
-    if (result?.success) {
-      setFlashlight(result.enabled === true);
-    }
-  };
 
   const takePhoto = async () => {
     if (busy()) return;
@@ -307,17 +286,18 @@ export function CameraApp() {
 
   const publishClipFromRecording = async () => {
     setIsRecording(true);
-    const storage = await fetchNui<{ uploadUrl?: string; uploadField?: string; customUploadUrl?: string; customUploadField?: string }>('getStorageConfig', undefined, {
+    const storage = await fetchNui<{ uploadUrl?: string; uploadField?: string; customUploadUrl?: string; customUploadField?: string; maxVideoDurationSeconds?: number }>('getStorageConfig', undefined, {
       uploadUrl: '',
       uploadField: 'files[]',
       customUploadUrl: '',
       customUploadField: 'files[]',
     });
+    const maxDuration = Math.max(5, Math.min(30, Number(storage?.maxVideoDurationSeconds || 30)));
 
     const result = await fetchNui<{ url?: string; error?: string }>('captureCameraVideoSession', {
       url: storage?.uploadUrl || storage?.customUploadUrl || '',
       field: storage?.uploadField || storage?.customUploadField || 'files[]',
-      durationSeconds: 20,
+      durationSeconds: maxDuration,
     }, { url: '', error: 'video_not_supported' });
 
     setIsRecording(false);
@@ -351,51 +331,39 @@ export function CameraApp() {
     setError('No se pudo publicar');
   };
 
-  // Vertical slider handlers
-  const handleFovChange = (e: Event) => {
-    const target = e.target as HTMLInputElement;
-    const value = parseInt(target.value);
-    setFov(value);
+  const cycleEffect = () => {
+    const order: CameraEffect[] = ['normal', 'noir', 'vivid', 'warm'];
+    const current = order.indexOf(effect());
+    const next = order[(current + 1) % order.length];
+    setEffect(next);
   };
 
-  const handleBlurChange = (e: Event) => {
-    const target = e.target as HTMLInputElement;
-    const value = parseInt(target.value);
-    setBlur(value);
+  const currentZoomLabel = createMemo(() => {
+    const values = quickZooms();
+    if (!values.length) return '1x';
+    const nearest = values.reduce((acc, value) => Math.abs(value - fov()) < Math.abs(acc - fov()) ? value : acc, values[0]);
+    return `${(52 / nearest).toFixed(1).replace('.0', '')}x`;
+  });
+
+  const cycleZoom = async () => {
+    const values = quickZooms();
+    if (!values.length) return;
+    let nearestIndex = 0;
+    let nearestDelta = Number.POSITIVE_INFINITY;
+    for (let index = 0; index < values.length; index += 1) {
+      const delta = Math.abs(values[index] - fov());
+      if (delta < nearestDelta) {
+        nearestDelta = delta;
+        nearestIndex = index;
+      }
+    }
+    const nextIndex = (nearestIndex + 1) % values.length;
+    await applyQuickZoom(nextIndex + 1);
   };
 
   return (
     <div class={styles.app}>
-      {/* Left vertical slider - FOV */}
-      <div class={styles.leftSlider}>
-        <span class={styles.sliderLabel}>FOV</span>
-        <input
-          type="range"
-          min="25"
-          max="90"
-          value={fov()}
-          onInput={handleFovChange}
-          class={styles.verticalSlider}
-        />
-        <span class={styles.sliderValue}>{fov()}°</span>
-      </div>
-
-      {/* Right vertical slider - Blur */}
-      <div class={styles.rightSlider}>
-        <span class={styles.sliderLabel}>BLUR</span>
-        <input
-          type="range"
-          min="0"
-          max="70"
-          value={blur()}
-          onInput={handleBlurChange}
-          class={styles.verticalSlider}
-        />
-        <span class={styles.sliderValue}>{blur()}</span>
-      </div>
-
       <div class={styles.preview} classList={{ [styles.previewLandscapeShell]: landscape() }}>
-        {/* Feed layer with effects */}
         <div
           class={styles.feedLayer}
           classList={{
@@ -414,34 +382,14 @@ export function CameraApp() {
           </div>
         </Show>
 
-        {/* Top bar - compact */}
         <div class={styles.topBar}>
           <div class={styles.topLeft}>
             <button
               class={styles.iconBtn}
-              classList={{ [styles.iconBtnActive]: flash() }}
-              onClick={() => setFlash((v) => !v)}
-              title={t('camera.flash', language())}
+              onClick={() => void closeCamera()}
+              title="Cerrar"
             >
-              ⚡
-            </button>
-            <Show when={flashlightSupported()}>
-              <button
-                class={styles.iconBtn}
-                classList={{ [styles.iconBtnActive]: flashlight() }}
-                onClick={() => void toggleFlashlight()}
-                title="Linterna"
-              >
-                🔦
-              </button>
-            </Show>
-            <button
-              class={styles.iconBtn}
-              classList={{ [styles.iconBtnActive]: frozen() }}
-              onClick={() => void toggleFreeze()}
-              title="Congelar"
-            >
-              🧊
+              ✕
             </button>
           </div>
 
@@ -453,91 +401,43 @@ export function CameraApp() {
           <div class={styles.topRight}>
             <button
               class={styles.iconBtn}
-              classList={{ [styles.iconBtnActive]: selfie() }}
-              onClick={() => setSelfie((v) => !v)}
-              title="Selfie"
-            >
-              🔄
-            </button>
-            <button
-              class={styles.iconBtn}
-              classList={{ [styles.iconBtnActive]: landscape() }}
-              onClick={() => void toggleLandscape()}
-              title="Landscape"
-            >
-              ▭
-            </button>
-            <button
-              class={styles.iconBtn}
               onClick={() => router.navigate('gallery')}
               title={t('camera.gallery', language())}
             >
               🖼
             </button>
-            <button
-              class={styles.iconBtn}
-              onClick={() => void closeCamera()}
-              title="Cerrar"
-            >
-              ✕
-            </button>
           </div>
         </div>
 
-        {/* Compact filter row at top */}
-        <div class={styles.filterRow}>
-          <For each={EFFECTS}>
-            {(item) => (
-              <button
-                class={styles.filterChip}
-                classList={{ [styles.filterChipActive]: effect() === item.id }}
-                onClick={() => setEffect(item.id)}
-              >
-                <span class={styles.filterChipDot} classList={{ [item.className]: true }} />
-                <span class={styles.filterChipLabel}>{item.label}</span>
-              </button>
-            )}
-          </For>
+        <div class={styles.minimalRow}>
+          <button class={styles.minimalBtn} classList={{ [styles.minimalBtnActive]: flash() }} onClick={() => setFlash((v) => !v)}>
+            Flash
+          </button>
+          <button class={styles.minimalBtn} classList={{ [styles.minimalBtnActive]: selfie() }} onClick={() => setSelfie((v) => !v)}>
+            Selfie
+          </button>
+          <button class={styles.minimalBtn} onClick={() => void cycleZoom()}>{currentZoomLabel()}</button>
+          <button class={styles.minimalBtn} onClick={cycleEffect}>{EFFECTS.find((item) => item.id === effect())?.label || 'Normal'}</button>
         </div>
 
-        <div class={styles.quickZoomRow}>
-          <For each={quickZooms()}>
-            {(zoom, index) => {
-              const label = `${(52 / zoom).toFixed(1).replace('.0', '')}x`;
-              return (
-                <button
-                  class={styles.quickZoomBtn}
-                  classList={{ [styles.quickZoomBtnActive]: Math.abs(fov() - zoom) <= 2 }}
-                  onClick={() => void applyQuickZoom(index() + 1)}
-                >
-                  {label}
-                </button>
-              );
-            }}
-          </For>
-        </div>
-
-        {/* Clips row (conditional) */}
         <Show when={target() === 'clips'}>
           <div class={styles.clipsRow}>
-            <Show when={videoSupported()} fallback={<button class="ios-btn" disabled>Video no disponible</button>}>
-              <button class="ios-btn" onClick={() => void publishClipFromRecording()}>
+            <Show when={videoSupported()} fallback={<button class={styles.clipsBtn} disabled>Video no disponible</button>}>
+              <button class={`${styles.clipsBtn} ${styles.clipsBtnPrimary}`} onClick={() => void publishClipFromRecording()}>
                 {t('camera.record_clip', language())}
               </button>
             </Show>
-            <button class="ios-btn" onClick={() => void publishClipFromGallery()}>
+            <button class={styles.clipsBtn} onClick={() => void publishClipFromGallery()}>
               {t('camera.gallery_video', language())}
             </button>
-            <button class="ios-btn ios-btn-primary" onClick={() => void publishClipFromUrl()}>
+            <button class={styles.clipsBtn} onClick={() => void publishClipFromUrl()}>
               {t('camera.publish_clip', language())}
             </button>
           </div>
         </Show>
       </div>
 
-      {/* Bottom controls */}
       <div class={styles.bottomControls}>
-        {/* Shutter button */}
         <button
           class={styles.shutterBtn}
           onClick={() => void takePhoto()}
@@ -547,12 +447,10 @@ export function CameraApp() {
         </button>
       </div>
 
-      {/* Error display */}
       <Show when={error()}>
         <div class={styles.error}>{error()}</div>
       </Show>
 
-      {/* Last capture preview */}
       <Show when={lastUrl()}>
         <div class={styles.lastRow}>
           <img src={lastUrl()} alt="Última" />

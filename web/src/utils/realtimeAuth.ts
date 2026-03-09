@@ -25,10 +25,10 @@ export interface SocketTokenResponse {
   error?: string;
 }
 
-export function fetchSocketToken() {
+export function fetchSocketToken(payload?: Record<string, unknown>) {
   return fetchNui<SocketTokenResponse>(
     'socketGetToken',
-    {},
+    payload || {},
     { success: false, error: 'TOKEN_ERROR' }
   );
 }

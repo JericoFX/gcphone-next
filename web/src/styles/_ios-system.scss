@@ -259,6 +259,12 @@
   color: var(--tint);
 }
 
+.ios-icon-btn img {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+}
+
 .ios18-btn,
 .ios-btn {
   background: var(--surface-2);

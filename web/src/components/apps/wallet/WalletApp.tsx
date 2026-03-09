@@ -62,7 +62,6 @@ export function WalletApp() {
   const [lastNfcRouteKey, setLastNfcRouteKey] = createSignal('');
   const [cardLabelInput, setCardLabelInput] = createSignal('');
   const [cardLast4Input, setCardLast4Input] = createSignal('');
-  const [proximityMethod, setProximityMethod] = createSignal<'qr' | 'nfc'>('qr');
   const [proximityPhoneInput, setProximityPhoneInput] = createSignal('');
   const [proximityAmountInput, setProximityAmountInput] = createSignal('');
   const [proximityTitleInput, setProximityTitleInput] = createSignal('');
@@ -72,11 +71,6 @@ export function WalletApp() {
     { id: 'contact', label: 'Contacto', helper: 'Usa tu agenda guardada' },
     { id: 'phone', label: 'Numero', helper: 'Escribe un numero manualmente' },
     { id: 'identifier', label: 'ID', helper: 'Usa un identifier directo' },
-  ];
-
-  const proximityMethods: { id: 'qr' | 'nfc'; label: string; helper: string }[] = [
-    { id: 'qr', label: 'QR', helper: 'Pago cercano al instante' },
-    { id: 'nfc', label: 'NFC', helper: 'Toque rapido entre telefonos' },
   ];
 
   const sanitizedCardLast4 = createMemo(() => cardLast4Input().replace(/\D/g, '').slice(0, 4));
@@ -134,24 +128,22 @@ export function WalletApp() {
     }
   };
 
-  const openProximityModal = (method: 'qr' | 'nfc') => {
-    setProximityMethod(method);
+  const openProximityModal = () => {
     setProximityPhoneInput('');
     setProximityAmountInput('');
-    setProximityTitleInput(method === 'qr' ? 'Pago QR' : 'Pago NFC');
+    setProximityTitleInput('Pago NFC');
     setShowProximityModal(true);
   };
 
   const proximityTransfer = async () => {
-    const method = proximityMethod();
     const targetPhone = proximityPhoneInput().trim();
     const amount = Number(proximityAmountInput() || '0');
-    const title = proximityTitleInput().trim() || (method === 'qr' ? 'Pago QR' : 'Pago NFC');
+    const title = proximityTitleInput().trim() || 'Pago NFC';
     if (!targetPhone || !Number.isFinite(amount) || amount <= 0) return;
 
     const result = await fetchNui<{ success?: boolean; balance?: number; error?: string; distance?: number; maxDistance?: number }>(
       'walletProximityTransfer',
-      { targetPhone, amount, title, method },
+      { targetPhone, amount, title, method: 'nfc' },
       { success: false }
     );
 
@@ -168,7 +160,7 @@ export function WalletApp() {
     }
 
     if (result.error === 'TARGET_OFFLINE') {
-      uiAlert('La persona debe estar conectada y cerca para pago QR/NFC');
+      uiAlert('La persona debe estar conectada y cerca para pago NFC');
       return;
     }
 
@@ -320,8 +312,7 @@ export function WalletApp() {
             <button class={styles.actionBtn} onClick={openAddCardModal}>Agregar tarjeta</button>
           </div>
           <div class={styles.quickPayRow}>
-            <button class={styles.quickPayBtn} onClick={() => openProximityModal('qr')}>Pago QR</button>
-            <button class={styles.quickPayBtn} onClick={() => openProximityModal('nfc')}>Pago NFC</button>
+            <button class={styles.quickPayBtn} onClick={openProximityModal}>Pago NFC</button>
           </div>
         </div>
 
@@ -405,29 +396,9 @@ export function WalletApp() {
           </ModalActions>
         </Modal>
 
-        <Modal open={showProximityModal()} title={proximityMethod() === 'qr' ? 'Pago QR' : 'Pago NFC'} onClose={closeProximityModal} size="md">
+        <Modal open={showProximityModal()} title="Pago NFC" onClose={closeProximityModal} size="md">
           <div class={styles.modalBody}>
             <p class={styles.modalIntro}>Envia un pago cercano a otro numero y completa la transaccion desde Wallet.</p>
-
-            <FormSection label="Metodo">
-              <div class={styles.segmentedGrid}>
-                <For each={proximityMethods}>
-                  {(method) => (
-                    <button
-                      class={styles.segmentButton}
-                      classList={{ [styles.activeSegment]: proximityMethod() === method.id }}
-                      onClick={() => {
-                        setProximityMethod(method.id);
-                        setProximityTitleInput(method.id === 'qr' ? 'Pago QR' : 'Pago NFC');
-                      }}
-                    >
-                      <span>{method.label}</span>
-                      <small>{method.helper}</small>
-                    </button>
-                  )}
-                </For>
-              </div>
-            </FormSection>
 
             <FormField
               label="Numero destino"

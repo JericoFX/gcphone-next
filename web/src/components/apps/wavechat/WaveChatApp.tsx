@@ -11,7 +11,8 @@ import { parseSharedContactMessage } from '../../../utils/contactShare';
 import { fetchSocketToken } from '../../../utils/realtimeAuth';
 import { uiPrompt } from '../../../utils/uiDialog';
 import { uiAlert } from '../../../utils/uiAlert';
-import { connectWaveSocket, disconnectWaveSocket, getWaveRecent, isWaveSocketConnected, joinWaveRoom, leaveWaveRoom, sendWaveMessage, sendWaveTyping, type WaveSocketMessage } from '../../../utils/socket';
+import { connectWaveSocket, disconnectWaveSocket, isWaveSocketConnected, joinWaveRoom, sendWaveMessage, sendWaveTyping, type WaveSocketMessage } from '../../../utils/socket';
+import { usePhone } from '../../../store/phone';
 import { ActionSheet } from '../../shared/ui/ActionSheet';
 import { MediaLightbox } from '../../shared/ui/MediaLightbox';
 import { VirtualList } from '../../shared/ui/VirtualList';
@@ -35,6 +36,14 @@ interface WaveChatGroup {
   members?: number;
 }
 
+interface WaveChatInvite {
+  id: number;
+  group_id: number;
+  group_name: string;
+  inviter_number?: string;
+  created_at?: string;
+}
+
 interface WaveChatGroupMessage {
   id: number | string;
   group_id: number;
@@ -42,6 +51,32 @@ interface WaveChatGroupMessage {
   message: string;
   media_url?: string;
   created_at?: string;
+}
+
+interface WaveStatus {
+  id: number;
+  identifier?: string;
+  phone_number: string;
+  media_url: string;
+  media_type: 'image' | 'video';
+  caption?: string;
+  views?: number;
+  created_at?: string;
+  expires_at?: string;
+  contact_name?: string;
+}
+
+interface WaveStatusMediaConfig {
+  provider?: string;
+  canUploadImage?: boolean;
+  canUploadVideo?: boolean;
+  maxVideoDurationSeconds?: number;
+}
+
+interface WaveSocketAuth {
+  success?: boolean;
+  host?: string;
+  token?: string;
 }
 
 function extractCoords(text?: string): { x: number; y: number } | null {
@@ -56,6 +91,7 @@ function extractCoords(text?: string): { x: number; y: number } | null {
 
 export function WaveChatApp() {
   const router = useRouter();
+  const [phoneState] = usePhone();
   const [messagesState, messagesActions] = useMessages();
   const [contactsState, contactsActions] = useContacts();
   const [selectedConversation, setSelectedConversation] = createSignal<string | null>(null);
@@ -75,9 +111,16 @@ export function WaveChatApp() {
   const [uploadingVoice, setUploadingVoice] = createSignal(false);
   const [callHistory, setCallHistory] = createSignal<any[]>([]);
   const [groups, setGroups] = createSignal<WaveChatGroup[]>([]);
+  const [groupInvites, setGroupInvites] = createSignal<WaveChatInvite[]>([]);
+  const [statuses, setStatuses] = createSignal<WaveStatus[]>([]);
+  const [statusMediaConfig, setStatusMediaConfig] = createSignal<WaveStatusMediaConfig>({ canUploadImage: false, canUploadVideo: false, maxVideoDurationSeconds: 10 });
   const [selectedGroupId, setSelectedGroupId] = createSignal<number | null>(null);
   const [groupMessages, setGroupMessages] = createSignal<Record<number, WaveChatGroupMessage[]>>({});
   const [groupMessageInput, setGroupMessageInput] = createSignal('');
+  const [showCreateGroupModal, setShowCreateGroupModal] = createSignal(false);
+  const [groupNameDraft, setGroupNameDraft] = createSignal('');
+  const [groupContactSearch, setGroupContactSearch] = createSignal('');
+  const [groupMemberDraft, setGroupMemberDraft] = createSignal<string[]>([]);
   const [socketReady, setSocketReady] = createSignal(false);
   const [groupTyping, setGroupTyping] = createSignal<Record<number, string[]>>({});
 
@@ -102,6 +145,18 @@ export function WaveChatApp() {
     return set;
   });
 
+  const selectableContacts = createMemo(() => {
+    const search = sanitizeText(groupContactSearch(), 80).toLowerCase();
+    const ownNumber = sanitizePhone(phoneState.settings.phoneNumber || '');
+    return contactsState.contacts
+      .filter((contact) => sanitizePhone(contact.number) && sanitizePhone(contact.number) !== ownNumber)
+      .filter((contact) => {
+        if (!search) return true;
+        return contact.display.toLowerCase().includes(search) || contact.number.includes(search);
+      })
+      .sort((a, b) => a.display.localeCompare(b.display, 'es'));
+  });
+
   const getMediaUrl = (msg: any): string | undefined => sanitizeMediaUrl(msg.mediaUrl || msg.media_url) || undefined;
 
   const loadCallHistory = async () => {
@@ -114,26 +169,156 @@ export function WaveChatApp() {
     setGroups(list || []);
   };
 
+  const loadGroupInvites = async () => {
+    const list = await fetchNui<WaveChatInvite[]>('wavechatGetInvites', {}, []);
+    setGroupInvites(list || []);
+  };
+
+  const loadStatuses = async () => {
+    const [list, mediaConfig] = await Promise.all([
+      fetchNui<WaveStatus[]>('wavechatGetStatuses', {}, []),
+      fetchNui<WaveStatusMediaConfig>('wavechatGetStatusMediaConfig', {}, { canUploadImage: false, canUploadVideo: false, maxVideoDurationSeconds: 10 }),
+    ]);
+
+    setStatuses((list || []).map((entry) => ({
+      ...entry,
+      media_url: sanitizeMediaUrl(entry.media_url) || '',
+      caption: sanitizeText(entry.caption || '', 140),
+      contact_name: sanitizeText(entry.contact_name || '', 80),
+    })).filter((entry) => entry.media_url));
+    setStatusMediaConfig(mediaConfig || { canUploadImage: false, canUploadVideo: false, maxVideoDurationSeconds: 10 });
+  };
+
+  const reconnectWaveRealtime = async () => {
+    const auth = await fetchSocketToken() as WaveSocketAuth | undefined;
+    if (!auth?.success || !auth.host || !auth.token) {
+      setSocketReady(false);
+      return false;
+    }
+
+    connectWaveSocket(auth.host, auth.token, {
+      onMessage: (payload: WaveSocketMessage) => {
+        const groupId = Number(payload.roomId);
+        if (!Number.isFinite(groupId)) return;
+        const mapped: WaveChatGroupMessage = {
+          id: payload.id,
+          group_id: groupId,
+          sender_number: payload.senderPhone,
+          message: payload.content,
+          media_url: payload.mediaUrl,
+          created_at: new Date(payload.createdAt).toISOString(),
+        };
+
+        setGroupMessages((prev) => {
+          const current = prev[groupId] || [];
+          if (current.some((m) => m.id === mapped.id)) return prev;
+          return { ...prev, [groupId]: [...current, mapped] };
+        });
+      },
+      onTyping: (payload) => {
+        const groupId = Number(payload.roomId);
+        if (!Number.isFinite(groupId)) return;
+
+        setGroupTyping((prev) => {
+          const current = prev[groupId] || [];
+          if (payload.typing) {
+            if (current.includes(payload.phone)) return prev;
+            return { ...prev, [groupId]: [...current, payload.phone] };
+          }
+          return { ...prev, [groupId]: current.filter((x) => x !== payload.phone) };
+        });
+
+        const timerKey = `${groupId}:${payload.phone}`;
+        const prevTimer = typingTimers.get(timerKey);
+        if (prevTimer) window.clearTimeout(prevTimer);
+
+        if (payload.typing) {
+          const timer = window.setTimeout(() => {
+            setGroupTyping((prev) => {
+              const current = prev[groupId] || [];
+              return { ...prev, [groupId]: current.filter((x) => x !== payload.phone) };
+            });
+            typingTimers.delete(timerKey);
+          }, 1600);
+          typingTimers.set(timerKey, timer);
+        } else {
+          typingTimers.delete(timerKey);
+        }
+      },
+      onDisconnect: () => setSocketReady(false),
+      onReconnect: () => {
+        setSocketReady(true);
+        syncWaveRooms();
+      },
+      onReconnectFailed: () => {
+        setSocketReady(false);
+      },
+    });
+
+    setSocketReady(true);
+    syncWaveRooms();
+    return true;
+  };
+
+  const syncWaveRooms = () => {
+    if (!socketReady() || !isWaveSocketConnected()) return;
+    for (const group of groups()) {
+      if (group?.id) {
+        joinWaveRoom(String(group.id));
+      }
+    }
+  };
+
   const loadGroupMessages = async (groupId: number) => {
     const list = await fetchNui<WaveChatGroupMessage[]>('wavechatGetGroupMessages', { groupId }, []);
     setGroupMessages((prev) => ({ ...prev, [groupId]: list || [] }));
   };
 
+  const closeCreateGroupModal = () => {
+    setShowCreateGroupModal(false);
+    setGroupNameDraft('');
+    setGroupContactSearch('');
+    setGroupMemberDraft([]);
+  };
+
+  const toggleGroupMember = (number: string) => {
+    const safeNumber = sanitizePhone(number);
+    if (!safeNumber) return;
+    setGroupMemberDraft((prev) => (
+      prev.includes(safeNumber)
+        ? prev.filter((entry) => entry !== safeNumber)
+        : [...prev, safeNumber].slice(0, 24)
+    ));
+  };
+
   const createGroup = async () => {
-    const name = sanitizeText((await uiPrompt('Nombre del grupo', { title: 'Crear grupo' })) || '', 80);
+    const name = sanitizeText(groupNameDraft(), 80);
     if (!name) return;
-    const membersRaw = sanitizeText((await uiPrompt('Numeros (separados por coma)', { title: 'Crear grupo' })) || '', 200);
-    const members = membersRaw
-      .split(',')
-      .map((x) => sanitizeText(x, 20))
-      .filter(Boolean);
+    const members = groupMemberDraft().map((entry) => sanitizePhone(entry)).filter(Boolean);
     const result = await fetchNui<{ success?: boolean; groupId?: number }>('wavechatCreateGroup', { name, members }, { success: false });
     if (result?.success) {
       await loadGroups();
+      await loadGroupInvites();
+      await reconnectWaveRealtime();
       if (result.groupId) {
         setSelectedGroupId(result.groupId);
         await loadGroupMessages(result.groupId);
       }
+      closeCreateGroupModal();
+    }
+  };
+
+  const respondToInvite = async (inviteId: number, accept: boolean) => {
+    const result = await fetchNui<{ success?: boolean; payload?: { accepted?: boolean; groupId?: number } }>('wavechatRespondInvite', { inviteId, accept }, { success: false });
+    if (!result?.success) return;
+
+    await loadGroupInvites();
+    await loadGroups();
+    await reconnectWaveRealtime();
+
+    if (accept && result.payload?.groupId) {
+      setSelectedGroupId(result.payload.groupId);
+      await loadGroupMessages(result.payload.groupId);
     }
   };
 
@@ -142,7 +327,10 @@ export function WaveChatApp() {
     const content = sanitizeText(groupMessageInput(), 800);
     if (!groupId || !content) return;
 
-    const result = await fetchNui<{ success?: boolean; message?: WaveChatGroupMessage }>('wavechatSendGroupMessage', { groupId, message: content }, { success: false });
+    const result = socketReady() && isWaveSocketConnected()
+      ? await sendWaveMessage(String(groupId), content)
+      : await fetchNui<{ success?: boolean; message?: WaveChatGroupMessage }>('wavechatSendGroupMessage', { groupId, message: content }, { success: false });
+
     if (result?.success) {
       setGroupMessageInput('');
       sendWaveTyping(String(groupId), false);
@@ -199,6 +387,28 @@ export function WaveChatApp() {
     const groupId = selectedGroupId();
     if (!groupId) return [] as string[];
     return groupTyping()[groupId] || [];
+  });
+
+  const myNumber = createMemo(() => phoneState.settings.phoneNumber || '');
+
+  const statusRows = createMemo(() => {
+    const mine: WaveStatus[] = [];
+    const others: WaveStatus[] = [];
+    const seen = new Set<string>();
+
+    for (const status of statuses()) {
+      if (!status.phone_number) continue;
+      if (status.phone_number === myNumber()) {
+        mine.push(status);
+        continue;
+      }
+
+      if (seen.has(status.phone_number)) continue;
+      seen.add(status.phone_number);
+      others.push(status);
+    }
+
+    return { mine, others };
   });
 
   createEffect(() => {
@@ -279,88 +489,25 @@ export function WaveChatApp() {
   onMount(() => {
     void loadCallHistory();
     void loadGroups();
+    void loadGroupInvites();
+    void loadStatuses();
   });
 
   createEffect(() => {
     const groupId = selectedGroupId();
     if (!groupId) return;
     void loadGroupMessages(groupId);
-    if (socketReady() && isWaveSocketConnected()) {
-      joinWaveRoom(String(groupId));
-      onCleanup(() => leaveWaveRoom(String(groupId)));
-    }
+  });
+
+  createEffect(() => {
+    groups();
+    if (!socketReady() || !isWaveSocketConnected()) return;
+    syncWaveRooms();
   });
 
   onMount(() => {
     void (async () => {
-      const auth = await fetchSocketToken();
-      if (!auth?.success || !auth.host || !auth.token) {
-        setSocketReady(false);
-        return;
-      }
-
-      connectWaveSocket(auth.host, auth.token, {
-        onMessage: (payload: WaveSocketMessage) => {
-          const groupId = Number(payload.roomId);
-          if (!Number.isFinite(groupId)) return;
-          const mapped: WaveChatGroupMessage = {
-            id: payload.id,
-            group_id: groupId,
-            sender_number: payload.senderPhone,
-            message: payload.content,
-            created_at: new Date(payload.createdAt).toISOString(),
-          };
-
-          setGroupMessages((prev) => {
-            const current = prev[groupId] || [];
-            if (current.some((m) => m.id === mapped.id)) return prev;
-            return { ...prev, [groupId]: [...current, mapped] };
-          });
-        },
-        onTyping: (payload) => {
-          const groupId = Number(payload.roomId);
-          if (!Number.isFinite(groupId)) return;
-
-          setGroupTyping((prev) => {
-            const current = prev[groupId] || [];
-            if (payload.typing) {
-              if (current.includes(payload.phone)) return prev;
-              return { ...prev, [groupId]: [...current, payload.phone] };
-            }
-            return { ...prev, [groupId]: current.filter((x) => x !== payload.phone) };
-          });
-
-          const timerKey = `${groupId}:${payload.phone}`;
-          const prevTimer = typingTimers.get(timerKey);
-          if (prevTimer) window.clearTimeout(prevTimer);
-
-          if (payload.typing) {
-            const timer = window.setTimeout(() => {
-              setGroupTyping((prev) => {
-                const current = prev[groupId] || [];
-                return { ...prev, [groupId]: current.filter((x) => x !== payload.phone) };
-              });
-              typingTimers.delete(timerKey);
-            }, 1600);
-            typingTimers.set(timerKey, timer);
-          } else {
-            typingTimers.delete(timerKey);
-          }
-        },
-        onDisconnect: () => setSocketReady(false),
-        onReconnect: () => {
-          setSocketReady(true);
-          const groupId = selectedGroupId();
-          if (groupId) {
-            joinWaveRoom(String(groupId));
-          }
-        },
-        onReconnectFailed: () => {
-          setSocketReady(false);
-        },
-      });
-
-      setSocketReady(true);
+      await reconnectWaveRealtime();
     })();
   });
 
@@ -430,6 +577,105 @@ export function WaveChatApp() {
     setShowAttachSheet(false);
   };
 
+  const createStatusFromMedia = async (mediaUrl: string, mediaType: 'image' | 'video') => {
+    const safeUrl = sanitizeMediaUrl(mediaUrl);
+    if (!safeUrl) {
+      uiAlert('Media invalida para estado');
+      return;
+    }
+
+    if (mediaType === 'video' && !statusMediaConfig().canUploadVideo) {
+      uiAlert('El endpoint de video no esta disponible para estados');
+      return;
+    }
+
+    if (mediaType === 'image' && !statusMediaConfig().canUploadImage) {
+      uiAlert('No hay endpoint de imagen configurado para estados');
+      return;
+    }
+
+    const caption = sanitizeText((await uiPrompt('Texto del estado (opcional)', { title: 'Nuevo estado' })) || '', 140);
+    const result = await fetchNui<{ success?: boolean; error?: string }>('wavechatCreateStatus', {
+      mediaUrl: safeUrl,
+      mediaType,
+      caption,
+    }, { success: false });
+
+    if (!result?.success) {
+      uiAlert(result?.error || 'No se pudo publicar el estado');
+      return;
+    }
+
+    await loadStatuses();
+  };
+
+  const createPhotoStatus = async () => {
+    if (!statusMediaConfig().canUploadImage) {
+      uiAlert('No hay endpoint configurado para estados con foto');
+      return;
+    }
+
+    const shot = await fetchNui<{ url?: string }>('takePhoto', {} as any, { url: '' } as any);
+    if (!shot?.url) return;
+    await createStatusFromMedia(shot.url, 'image');
+  };
+
+  const createGalleryStatus = async () => {
+    if (!statusMediaConfig().canUploadImage) {
+      uiAlert('No hay endpoint configurado para estados con foto');
+      return;
+    }
+
+    const gallery = await fetchNui<any[]>('getGallery', undefined, []);
+    const image = gallery?.find((item: any) => {
+      const url = sanitizeMediaUrl(item?.url);
+      return url && resolveMediaType(url) === 'image';
+    });
+    if (!image?.url) {
+      uiAlert('No se encontraron fotos en la galeria');
+      return;
+    }
+
+    await createStatusFromMedia(image.url, 'image');
+  };
+
+  const createVideoStatus = async () => {
+    const mediaConfig = await fetchNui<WaveStatusMediaConfig>('wavechatGetStatusMediaConfig', {}, { canUploadVideo: false, maxVideoDurationSeconds: 10 });
+    setStatusMediaConfig(mediaConfig || { canUploadImage: false, canUploadVideo: false, maxVideoDurationSeconds: 10 });
+
+    if (!mediaConfig?.canUploadVideo) {
+      uiAlert('No hay endpoint de video disponible para estados');
+      return;
+    }
+
+    const storage = await fetchNui<{ uploadUrl?: string; uploadField?: string; customUploadUrl?: string; customUploadField?: string }>('getStorageConfig', undefined, {
+      uploadUrl: '',
+      uploadField: 'files[]',
+      customUploadUrl: '',
+      customUploadField: 'files[]',
+    });
+
+    const result = await fetchNui<{ url?: string; error?: string }>('captureCameraVideoSession', {
+      url: storage?.uploadUrl || storage?.customUploadUrl || '',
+      field: storage?.uploadField || storage?.customUploadField || 'files[]',
+      durationSeconds: Math.max(5, Math.min(10, Number(mediaConfig.maxVideoDurationSeconds || 10))),
+    }, { url: '', error: 'video_not_supported' });
+
+    if (!result?.url) {
+      uiAlert('No se pudo grabar el video del estado');
+      return;
+    }
+
+    await createStatusFromMedia(result.url, 'video');
+  };
+
+  const openStatus = async (status: WaveStatus) => {
+    setViewerUrl(status.media_url);
+    if (status.id) {
+      await fetchNui('wavechatMarkStatusViewed', status.id, { success: true });
+    }
+  };
+
   const attachAudioUrl = async () => {
     const input = await uiPrompt('Pega URL de audio (mp3, ogg, wav, m4a)', { title: 'Adjuntar' });
     const nextUrl = sanitizeMediaUrl(input);
@@ -461,6 +707,11 @@ export function WaveChatApp() {
     const shared = parseSharedContactMessage(message?.message);
     if (shared) return `Contacto: ${shared.display}`;
     return sanitizeText(message?.message || '', 80) || 'Mensaje';
+  };
+
+  const getStatusSummary = (status: WaveStatus) => {
+    if (status.caption) return status.caption;
+    return status.media_type === 'video' ? 'Video efimero de 10 segundos' : 'Foto efimera';
   };
 
   const sendLocationText = async () => {
@@ -649,20 +900,72 @@ export function WaveChatApp() {
           </Show>
 
           <Show when={activeTab() === 'status'}>
-            <VirtualList items={conversations} itemHeight={72} overscan={4}>
-              {(convo) => (
-                <div class={styles.statusItem}>
-                  <div class={styles.avatar} style={{ 'background-color': generateColorForString(convo.number) }}>
-                    {convo.display.charAt(0).toUpperCase()}
+            <div class={styles.statusPanel}>
+              <div class={styles.statusHero}>
+                <div class={styles.statusHeroHeader}>
+                  <div>
+                    <span class={styles.statusHeroEyebrow}>WaveChat Status</span>
+                    <h3>Estados efimeros</h3>
+                    <p>Se borran solos en 24 horas. Foto si hay endpoint; video solo si Lua confirma subida y hasta 10 segundos.</p>
                   </div>
-                  <div class={styles.info}>
-                    <div class={styles.name}>{convo.display}</div>
-                    <div class={styles.previewText}>Ultima actividad {timeAgo(convo.lastMessage.time)}</div>
+                  <div class={styles.statusHeroStats}>
+                    <strong>{statusRows().mine.length}</strong>
+                    <span>mios</span>
                   </div>
-                  <button class={styles.statusBtn}>Ver</button>
                 </div>
-              )}
-            </VirtualList>
+                <div class={styles.statusComposer}>
+                  <button class={styles.statusBtn} onClick={() => void createPhotoStatus()} disabled={!statusMediaConfig().canUploadImage}>Foto</button>
+                  <button class={styles.statusBtn} onClick={() => void createGalleryStatus()} disabled={!statusMediaConfig().canUploadImage}>Galeria</button>
+                  <button class={styles.statusBtn} onClick={() => void createVideoStatus()} disabled={!statusMediaConfig().canUploadVideo}>Video 10s</button>
+                </div>
+              </div>
+
+              <Show when={statusRows().mine.length > 0}>
+                <div class={styles.statusSectionTitle}>Mi estado</div>
+                <For each={statusRows().mine}>
+                  {(status) => (
+                    <div class={styles.statusItem} onClick={() => void openStatus(status)}>
+                      <div class={styles.statusRing}>
+                        <div class={styles.avatar} style={{ 'background-color': generateColorForString(status.phone_number) }}>
+                          {(status.contact_name || 'Yo').charAt(0).toUpperCase()}
+                        </div>
+                      </div>
+                      <div class={styles.info}>
+                        <div class={styles.name}>Mi estado</div>
+                        <div class={styles.previewText}>{getStatusSummary(status)}</div>
+                      </div>
+                      <div class={styles.statusMeta}>
+                        <span class={styles.time}>{timeAgo(status.created_at)}</span>
+                        <span class={styles.statusBadge}>{status.media_type === 'video' ? 'Video' : 'Foto'}</span>
+                      </div>
+                    </div>
+                  )}
+                </For>
+              </Show>
+
+              <div class={styles.statusSectionTitle}>Recientes</div>
+              <Show when={statusRows().others.length > 0} fallback={<div class={styles.statusEmpty}>Tus contactos aun no publicaron estados.</div>}>
+                <For each={statusRows().others}>
+                  {(status) => (
+                    <div class={styles.statusItem} onClick={() => void openStatus(status)}>
+                      <div class={styles.statusRing}>
+                        <div class={styles.avatar} style={{ 'background-color': generateColorForString(status.phone_number) }}>
+                          {(status.contact_name || getContactName(status.phone_number)).charAt(0).toUpperCase()}
+                        </div>
+                      </div>
+                      <div class={styles.info}>
+                        <div class={styles.name}>{status.contact_name || getContactName(status.phone_number)}</div>
+                        <div class={styles.previewText}>{getStatusSummary(status)}</div>
+                      </div>
+                      <div class={styles.statusMeta}>
+                        <span class={styles.time}>{timeAgo(status.created_at)}</span>
+                        <button class={styles.statusBtn} onClick={(e) => { e.stopPropagation(); void openStatus(status); }}>Ver</button>
+                      </div>
+                    </div>
+                  )}
+                </For>
+              </Show>
+            </div>
           </Show>
 
           <Show when={activeTab() === 'calls'}>
@@ -681,8 +984,27 @@ export function WaveChatApp() {
           </Show>
 
           <Show when={activeTab() === 'groups'}>
+            <Show when={groupInvites().length > 0}>
+              <div class={styles.groupInvitesPanel}>
+                <div class={styles.statusSectionTitle}>Invitaciones pendientes</div>
+                <For each={groupInvites()}>
+                  {(invite) => (
+                    <div class={styles.groupInviteItem}>
+                      <div class={styles.info}>
+                        <div class={styles.name}>{invite.group_name}</div>
+                        <div class={styles.previewText}>Te invito {invite.inviter_number ? getContactName(invite.inviter_number) : 'un contacto'}</div>
+                      </div>
+                      <div class={styles.groupInviteActions}>
+                        <button class={styles.groupSecondaryBtn} onClick={() => void respondToInvite(invite.id, false)}>Rechazar</button>
+                        <button class={styles.statusBtn} onClick={() => void respondToInvite(invite.id, true)}>Aceptar</button>
+                      </div>
+                    </div>
+                  )}
+                </For>
+              </div>
+            </Show>
             <div class={styles.groupsHeadRow}>
-              <button class={styles.statusBtn} onClick={() => void createGroup()}>Crear grupo</button>
+              <button class={styles.statusBtn} onClick={() => setShowCreateGroupModal(true)}>Crear grupo</button>
             </div>
             <VirtualList items={groups} itemHeight={74} overscan={4}>
               {(group) => (
@@ -710,6 +1032,13 @@ export function WaveChatApp() {
 
             <Show when={selectedGroupId()}>
               <div class={styles.groupThread}>
+                <div class={styles.groupThreadHeader}>
+                  <div>
+                    <h4>{groups().find((entry) => entry.id === selectedGroupId())?.name || 'Grupo'}</h4>
+                    <p>Persistencia batch por socket y maximo 30 mensajes guardados.</p>
+                  </div>
+                  <span>{selectedGroupMessages().length}/30</span>
+                </div>
                 <Show when={selectedGroupTypingList().length > 0}>
                   <div class={styles.groupTypingRow}>
                     {selectedGroupTypingList().join(', ')} escribiendo...
@@ -718,8 +1047,28 @@ export function WaveChatApp() {
                 <For each={selectedGroupMessages()}>
                   {(msg) => (
                     <div class={styles.groupMsgRow}>
-                      <strong>{msg.sender_number || 'usuario'}</strong>
-                      <span>{msg.message}</span>
+                      <div class={styles.groupMsgMeta}>
+                        <strong>{msg.sender_number ? getContactName(msg.sender_number) : 'usuario'}</strong>
+                        <span>{timeAgo(msg.created_at)}</span>
+                      </div>
+                      <Show when={msg.message}>
+                        <span>{msg.message}</span>
+                      </Show>
+                      <Show when={msg.media_url}>
+                        {(mediaUrl) => {
+                          const mediaType = resolveMediaType(mediaUrl());
+                          return (
+                            <>
+                              <Show when={mediaType === 'image'}>
+                                <img class={styles.groupMediaPreview} src={mediaUrl()} alt="Adjunto" onClick={() => setViewerUrl(mediaUrl())} />
+                              </Show>
+                              <Show when={mediaType === 'video'}>
+                                <video class={styles.groupMediaPreview} src={mediaUrl()} controls playsinline />
+                              </Show>
+                            </>
+                          );
+                        }}
+                      </Show>
                     </div>
                   )}
                 </For>
@@ -780,6 +1129,68 @@ export function WaveChatApp() {
                 </div>
               </Show>
             </Show>
+          </div>
+        </div>
+      </Show>
+      <Show when={showCreateGroupModal()}>
+        <div class={styles.groupModalOverlay}>
+          <div class={styles.groupModal}>
+            <div class={styles.groupModalHeader}>
+              <strong>Nuevo grupo</strong>
+              <button onClick={closeCreateGroupModal}>Cerrar</button>
+            </div>
+            <div class={styles.groupModalBody}>
+              <label class={styles.groupField}>
+                <span>Nombre del grupo</span>
+                <input
+                  value={groupNameDraft()}
+                  onInput={(e) => setGroupNameDraft(sanitizeText(e.currentTarget.value, 80))}
+                  placeholder="Ej. Familia, Trabajo, Amigos"
+                />
+              </label>
+
+              <label class={styles.groupField}>
+                <span>Buscar contactos</span>
+                <input
+                  value={groupContactSearch()}
+                  onInput={(e) => setGroupContactSearch(sanitizeText(e.currentTarget.value, 80))}
+                  placeholder="Buscar por nombre o numero"
+                />
+              </label>
+
+              <div class={styles.groupSelectionSummary}>
+                <strong>{groupMemberDraft().length}</strong>
+                <span>contactos seleccionados</span>
+              </div>
+
+              <div class={styles.groupChecklist}>
+                <For each={selectableContacts()}>
+                  {(contact) => {
+                    const safeNumber = sanitizePhone(contact.number);
+                    return (
+                      <label class={styles.groupChecklistItem}>
+                        <input
+                          type="checkbox"
+                          checked={groupMemberDraft().includes(safeNumber)}
+                          onChange={() => toggleGroupMember(safeNumber)}
+                        />
+                        <div class={styles.groupChecklistInfo}>
+                          <strong>{contact.display}</strong>
+                          <span>{contact.number}</span>
+                        </div>
+                      </label>
+                    );
+                  }}
+                </For>
+                <Show when={selectableContacts().length === 0}>
+                  <div class={styles.groupChecklistEmpty}>No hay contactos disponibles para agregar.</div>
+                </Show>
+              </div>
+            </div>
+            <div class={styles.groupModalFooter}>
+              <button class={styles.groupSecondaryBtn} onClick={closeCreateGroupModal}>Cancelar</button>
+              <button class={styles.statusBtn} onClick={() => void createGroup()} disabled={!groupNameDraft().trim()}>Crear</button>
+            </div>
           </div>
         </div>
       </Show>

@@ -25,6 +25,9 @@ interface PhoneContextValue {
     completeSetup: (payload: PhoneSetupPayload) => Promise<{ success: boolean; error?: string }>;
     setWallpaper: (url: string) => void;
     setRingtone: (ringtone: string) => void;
+    setCallRingtone: (ringtone: string) => void;
+    setNotificationTone: (tone: string) => void;
+    setMessageTone: (tone: string) => void;
     setVolume: (volume: number) => void;
     setTheme: (theme: 'auto' | 'light' | 'dark') => void;
     setLanguage: (language: 'es' | 'en' | 'pt' | 'fr') => void;
@@ -45,6 +48,9 @@ const defaultSettings: PhoneSettings = {
   phoneNumber: '',
   wallpaper: './img/background/back001.jpg',
   ringtone: 'ring.ogg',
+  callRingtone: 'ring.ogg',
+  notificationTone: 'soft-ping.ogg',
+  messageTone: 'pop.ogg',
   volume: 0.5,
   lockCode: '0000',
   theme: 'light',
@@ -273,7 +279,21 @@ export const PhoneProvider: ParentComponent = (props) => {
     },
     setRingtone: (ringtone: string) => {
       setState('settings', 'ringtone', ringtone);
+      setState('settings', 'callRingtone', ringtone);
       fetchNui('setRingtone', { ringtone });
+    },
+    setCallRingtone: (ringtone: string) => {
+      setState('settings', 'ringtone', ringtone);
+      setState('settings', 'callRingtone', ringtone);
+      fetchNui('setCallRingtone', { ringtone });
+    },
+    setNotificationTone: (tone: string) => {
+      setState('settings', 'notificationTone', tone);
+      fetchNui('setNotificationTone', { tone });
+    },
+    setMessageTone: (tone: string) => {
+      setState('settings', 'messageTone', tone);
+      fetchNui('setMessageTone', { tone });
     },
     setVolume: (volume: number) => {
       setState('settings', 'volume', volume);
@@ -349,6 +369,9 @@ export const PhoneProvider: ParentComponent = (props) => {
         phoneNumber: data.phoneNumber || '',
           wallpaper: data.wallpaper || defaultSettings.wallpaper,
           ringtone: data.ringtone || defaultSettings.ringtone,
+          callRingtone: data.callRingtone || data.ringtone || defaultSettings.callRingtone,
+          notificationTone: data.notificationTone || defaultSettings.notificationTone,
+          messageTone: data.messageTone || defaultSettings.messageTone,
           volume: data.volume ?? defaultSettings.volume,
           lockCode: '',
           theme: data.theme || defaultSettings.theme,
@@ -389,6 +412,9 @@ export const PhoneProvider: ParentComponent = (props) => {
           phoneNumber: data.phoneNumber || state.settings.phoneNumber,
             wallpaper: data.wallpaper || state.settings.wallpaper,
             ringtone: data.ringtone || state.settings.ringtone,
+            callRingtone: data.callRingtone || data.ringtone || state.settings.callRingtone,
+            notificationTone: data.notificationTone || state.settings.notificationTone,
+            messageTone: data.messageTone || state.settings.messageTone,
              volume: data.volume ?? state.settings.volume,
               lockCode: '',
              theme: data.theme || state.settings.theme,

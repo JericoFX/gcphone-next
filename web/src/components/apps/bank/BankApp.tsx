@@ -74,7 +74,7 @@ export function BankApp() {
 
   createEffect(() => {
     const onBankEvent = (event: MessageEvent) => {
-      if (event?.data?.action === 'bankInvoiceReceived' && event.data.data) {
+      if ((event?.data?.action === 'bankInvoiceReceived' || event?.data?.action === 'bankTransferReceived') && event.data.data) {
         setIncomingInvoice(event.data.data as BankInvoice);
       }
 

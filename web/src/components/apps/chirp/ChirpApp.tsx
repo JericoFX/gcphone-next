@@ -456,12 +456,7 @@ export function ChirpApp() {
   };
 
   const saveProfile = async () => {
-    const payload = {
-      displayName: sanitizeText(profileDisplayName(), 32),
-      avatar: sanitizeMediaUrl(profileAvatar()),
-      bio: sanitizeText(profileBio(), 180),
-      isPrivate: profilePrivate(),
-    };
+    const payload = { isPrivate: profilePrivate() };
 
     const ok = await fetchNui<boolean>('chirpUpdateAccount', payload, false);
     if (!ok) {
@@ -896,6 +891,7 @@ export function ChirpApp() {
         avatarHint={myAccount()?.avatar || ''}
         bioHint={myAccount()?.bio || ''}
         isPrivateHint={myAccount()?.is_private === 1 || myAccount()?.is_private === true}
+        displayNameReadOnly
         onCreate={createChirpAccount}
         onClose={() => setShowOnboarding(false)}
       />
@@ -964,20 +960,8 @@ export function ChirpApp() {
         onClose={() => setShowProfileModal(false)}
         size="md"
       >
-        <Show when={profileAvatar()}>
-          <MediaAttachmentPreview url={profileAvatar()} removable onRemove={() => setProfileAvatar('')} />
-        </Show>
-        <MediaActionButtons
-          actions={[
-            { icon: '📷', label: 'Camara', onClick: openAvatarCamera },
-            { icon: '🖼', label: 'Galeria', onClick: () => void attachAvatarFromGallery() },
-            ...(profileAvatar() ? [{ icon: '✕', label: 'Quitar', onClick: () => setProfileAvatar(''), tone: 'danger' as const }] : []),
-          ]}
-          variant="compact"
-        />
-        <FormField label="Nombre visible" value={profileDisplayName()} onChange={setProfileDisplayName} placeholder="Tu nombre" />
-        <FormField label="Avatar (URL opcional)" type="url" value={profileAvatar()} onChange={setProfileAvatar} placeholder="https://..." />
-        <FormTextarea label="Bio" value={profileBio()} onChange={setProfileBio} rows={3} placeholder="Cuenta algo sobre vos" />
+        <p style={{ margin: '0 0 10px', color: '#6b7280', 'font-size': '12px' }}>La identidad de Chirp queda ligada al inicio del telefono.</p>
+        <FormField label="Nombre visible" value={profileDisplayName()} onChange={setProfileDisplayName} placeholder="Tu nombre" disabled />
         <label class={styles.privateToggle}>
           <input
             type="checkbox"

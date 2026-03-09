@@ -16,6 +16,9 @@ local MIGRATIONS = {
                 `imei` VARCHAR(20) NOT NULL UNIQUE,
                 `wallpaper` VARCHAR(255) DEFAULT './img/background/back001.jpg',
                 `ringtone` VARCHAR(50) DEFAULT 'ring.ogg',
+                `call_ringtone` VARCHAR(64) DEFAULT 'ring.ogg',
+                `notification_tone` VARCHAR(64) DEFAULT 'soft-ping.ogg',
+                `message_tone` VARCHAR(64) DEFAULT 'pop.ogg',
                 `volume` FLOAT DEFAULT 0.5,
                 `lock_code` VARCHAR(10) DEFAULT '0000',
                 `theme` VARCHAR(10) DEFAULT 'light',
@@ -36,7 +39,8 @@ local MIGRATIONS = {
                 `favorite` TINYINT(1) DEFAULT 0,
                 `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 KEY `idx_identifier` (`identifier`),
-                KEY `idx_number` (`number`)
+                KEY `idx_number` (`number`),
+                KEY `idx_identifier_number` (`identifier`, `number`)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci]],
             
             [[CREATE TABLE IF NOT EXISTS `phone_messages` (
@@ -72,6 +76,20 @@ local MIGRATIONS = {
                 UNIQUE KEY `idx_group_member` (`group_id`, `identifier`),
                 KEY `idx_member_identifier` (`identifier`)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci]],
+
+            [[CREATE TABLE IF NOT EXISTS `phone_chat_group_invites` (
+                `id` INT AUTO_INCREMENT PRIMARY KEY,
+                `group_id` INT NOT NULL,
+                `inviter_identifier` VARCHAR(50) NOT NULL,
+                `target_identifier` VARCHAR(50) NOT NULL,
+                `status` ENUM('pending', 'accepted', 'declined') NOT NULL DEFAULT 'pending',
+                `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                `responded_at` TIMESTAMP NULL DEFAULT NULL,
+                FOREIGN KEY (`group_id`) REFERENCES `phone_chat_groups`(`id`) ON DELETE CASCADE,
+                UNIQUE KEY `uniq_group_target_pending` (`group_id`, `target_identifier`),
+                KEY `idx_group_invites_target` (`target_identifier`, `status`, `created_at`),
+                KEY `idx_group_invites_group` (`group_id`, `status`, `created_at`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci]],
             
             [[CREATE TABLE IF NOT EXISTS `phone_chat_group_messages` (
                 `id` INT AUTO_INCREMENT PRIMARY KEY,
@@ -84,6 +102,22 @@ local MIGRATIONS = {
                 FOREIGN KEY (`group_id`) REFERENCES `phone_chat_groups`(`id`) ON DELETE CASCADE,
                 KEY `idx_group_created` (`group_id`, `created_at`),
                 KEY `idx_created_at` (`created_at`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci]],
+
+            [[CREATE TABLE IF NOT EXISTS `phone_wavechat_statuses` (
+                `id` INT AUTO_INCREMENT PRIMARY KEY,
+                `identifier` VARCHAR(50) NOT NULL,
+                `phone_number` VARCHAR(15) NOT NULL,
+                `media_url` VARCHAR(500) NOT NULL,
+                `media_type` ENUM('image', 'video') NOT NULL DEFAULT 'image',
+                `caption` VARCHAR(140) DEFAULT NULL,
+                `views` INT NOT NULL DEFAULT 0,
+                `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                `expires_at` TIMESTAMP NOT NULL,
+                KEY `idx_wavechat_status_feed` (`expires_at`, `phone_number`, `created_at`),
+                KEY `idx_wavechat_status_owner` (`identifier`, `created_at`),
+                KEY `idx_wavechat_status_phone` (`phone_number`, `created_at`),
+                KEY `idx_wavechat_status_expires` (`expires_at`)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci]],
             
             [[CREATE TABLE IF NOT EXISTS `phone_calls` (
@@ -262,6 +296,7 @@ local MIGRATIONS = {
                 `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 KEY `idx_identifier` (`identifier`),
                 KEY `idx_category` (`category`),
+                KEY `idx_news_live_created` (`is_live`, `created_at`),
                 KEY `idx_created` (`created_at`)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci]],
             
@@ -582,11 +617,12 @@ local MIGRATIONS = {
                 CALL sp_gcphone_cleanup_add_rule('snap_stories_expired', 'delete', 'phone_snap_stories', NULL, 'expires_at < NOW() OR created_at < (NOW() - INTERVAL 7 DAY)', 5);
                 CALL sp_gcphone_cleanup_add_rule('retention_messages', 'delete', 'phone_messages', NULL, '`time` < (NOW() - INTERVAL 7 DAY)', 30);
                 CALL sp_gcphone_cleanup_add_rule('retention_group_messages', 'delete', 'phone_chat_group_messages', NULL, 'created_at < (NOW() - INTERVAL 7 DAY)', 30);
+                CALL sp_gcphone_cleanup_add_rule('wavechat_statuses_expired', 'delete', 'phone_wavechat_statuses', NULL, 'expires_at < NOW()', 15);
                 CALL sp_gcphone_cleanup_add_rule('retention_calls', 'delete', 'phone_calls', NULL, '`time` < (NOW() - INTERVAL 7 DAY)', 30);
                 CALL sp_gcphone_cleanup_add_rule('retention_chirp_tweets', 'delete', 'phone_chirp_tweets', NULL, 'created_at < (NOW() - INTERVAL 7 DAY)', 30);
                 CALL sp_gcphone_cleanup_add_rule('retention_snap_posts', 'delete', 'phone_snap_posts', NULL, 'created_at < (NOW() - INTERVAL 7 DAY)', 30);
                 CALL sp_gcphone_cleanup_add_rule('retention_clips_posts', 'delete', 'phone_clips_posts', NULL, 'created_at < (NOW() - INTERVAL 7 DAY)', 30);
-                CALL sp_gcphone_cleanup_add_rule('retention_news', 'delete', 'phone_news', NULL, 'created_at < (NOW() - INTERVAL 7 DAY)', 30);
+                CALL sp_gcphone_cleanup_add_rule('retention_news', 'delete', 'phone_news', NULL, 'is_live = 0 AND created_at < (NOW() - INTERVAL 10 DAY)', 30);
                 CALL sp_gcphone_cleanup_add_rule('retention_market', 'delete', 'phone_market', NULL, 'created_at < (NOW() - INTERVAL 7 DAY)', 30);
                 CALL sp_gcphone_cleanup_add_rule('retention_darkrooms_posts', 'delete', 'phone_darkrooms_posts', NULL, 'created_at < (NOW() - INTERVAL 7 DAY)', 30);
                 CALL sp_gcphone_cleanup_add_rule('retention_darkrooms_comments', 'delete', 'phone_darkrooms_comments', NULL, 'created_at < (NOW() - INTERVAL 7 DAY)', 30);
@@ -1117,7 +1153,10 @@ local MIGRATIONS = {
             [[ALTER TABLE `phone_numbers`
                 ADD COLUMN IF NOT EXISTS `pin_hash` CHAR(64) NULL AFTER `lock_code`,
                 ADD COLUMN IF NOT EXISTS `is_setup` TINYINT(1) NOT NULL DEFAULT 1 AFTER `pin_hash`,
-                ADD COLUMN IF NOT EXISTS `clips_username` VARCHAR(32) NULL AFTER `audio_profile`]],
+                ADD COLUMN IF NOT EXISTS `clips_username` VARCHAR(32) NULL AFTER `audio_profile`,
+                ADD COLUMN IF NOT EXISTS `call_ringtone` VARCHAR(64) DEFAULT 'ring.ogg' AFTER `ringtone`,
+                ADD COLUMN IF NOT EXISTS `notification_tone` VARCHAR(64) DEFAULT 'soft-ping.ogg' AFTER `call_ringtone`,
+                ADD COLUMN IF NOT EXISTS `message_tone` VARCHAR(64) DEFAULT 'pop.ogg' AFTER `notification_tone`]],
 
             [[CREATE UNIQUE INDEX IF NOT EXISTS `idx_phone_numbers_clips_username`
                 ON `phone_numbers` (`clips_username`)]],
@@ -1131,6 +1170,11 @@ local MIGRATIONS = {
             [[UPDATE `phone_numbers`
                 SET `is_setup` = 1
                 WHERE `is_setup` IS NULL]],
+
+            [[UPDATE `phone_numbers`
+                SET `call_ringtone` = COALESCE(NULLIF(`call_ringtone`, ''), `ringtone`, 'ring.ogg'),
+                    `notification_tone` = COALESCE(NULLIF(`notification_tone`, ''), 'soft-ping.ogg'),
+                    `message_tone` = COALESCE(NULLIF(`message_tone`, ''), 'pop.ogg')]],
 
             [[CREATE TABLE IF NOT EXISTS `phone_clips_accounts` (
                 `id` INT AUTO_INCREMENT PRIMARY KEY,
@@ -1199,6 +1243,53 @@ local MIGRATIONS = {
         statements = {
             [[ALTER TABLE `phone_numbers`
                 DROP COLUMN IF EXISTS `coque`]]
+        }
+    },
+
+    {
+        version = 14,
+        name = "separate_phone_tones",
+        description = "Store call, notification and message tones independently",
+        statements = {
+            [[ALTER TABLE `phone_numbers`
+                ADD COLUMN IF NOT EXISTS `call_ringtone` VARCHAR(64) DEFAULT 'ring.ogg' AFTER `ringtone`,
+                ADD COLUMN IF NOT EXISTS `notification_tone` VARCHAR(64) DEFAULT 'soft-ping.ogg' AFTER `call_ringtone`,
+                ADD COLUMN IF NOT EXISTS `message_tone` VARCHAR(64) DEFAULT 'pop.ogg' AFTER `notification_tone`]],
+
+            [[UPDATE `phone_numbers`
+                SET `call_ringtone` = COALESCE(NULLIF(`call_ringtone`, ''), `ringtone`, 'ring.ogg'),
+                    `notification_tone` = COALESCE(NULLIF(`notification_tone`, ''), 'soft-ping.ogg'),
+                    `message_tone` = COALESCE(NULLIF(`message_tone`, ''), 'pop.ogg')]]
+        }
+    },
+
+    {
+        version = 15,
+        name = "wavechat_group_invites",
+        description = "Add pending invitations for WaveChat groups",
+        statements = {
+            [[CREATE TABLE IF NOT EXISTS `phone_chat_group_invites` (
+                `id` INT AUTO_INCREMENT PRIMARY KEY,
+                `group_id` INT NOT NULL,
+                `inviter_identifier` VARCHAR(50) NOT NULL,
+                `target_identifier` VARCHAR(50) NOT NULL,
+                `status` ENUM('pending', 'accepted', 'declined') NOT NULL DEFAULT 'pending',
+                `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                `responded_at` TIMESTAMP NULL DEFAULT NULL,
+                FOREIGN KEY (`group_id`) REFERENCES `phone_chat_groups`(`id`) ON DELETE CASCADE,
+                UNIQUE KEY `uniq_group_target_pending` (`group_id`, `target_identifier`),
+                KEY `idx_group_invites_target` (`target_identifier`, `status`, `created_at`),
+                KEY `idx_group_invites_group` (`group_id`, `status`, `created_at`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci]],
+
+            [[CALL `sp_gcphone_cleanup_add_rule`(
+                'retention_group_invites',
+                'delete',
+                'phone_chat_group_invites',
+                NULL,
+                '(status != ''pending'' AND created_at < (NOW() - INTERVAL 14 DAY)) OR created_at < (NOW() - INTERVAL 30 DAY)',
+                120
+            )]]
         }
     }
 }
