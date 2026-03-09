@@ -522,23 +522,23 @@
   position: fixed;
   inset: 0;
   z-index: 1100;
-  background: #000000;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 10px;
+  padding: 16px;
+  background: linear-gradient(180deg, rgba(4, 10, 20, 0.96), rgba(7, 17, 31, 0.98));
 }
 
 .liveTopBar {
-  position: absolute;
-  top: 14px;
-  left: 14px;
-  right: 14px;
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
-  z-index: 5;
+  z-index: 6;
 }
 
 .liveTopBarRight {
-  position: relative;
-  display: flex;
+  display: grid;
+  grid-auto-flow: column;
   align-items: center;
   gap: 8px;
 }
@@ -592,13 +592,11 @@
 }
 
 .liveOwnerInfo {
-  padding: 8px 12px;
-  border-radius: 999px;
-  background: rgba(0, 0, 0, 0.55);
+  display: grid;
+  gap: 2px;
   color: #ffffff;
 
   strong {
-    display: block;
     font-size: 13px;
     font-weight: 700;
     line-height: 1.1;
@@ -611,19 +609,41 @@
 }
 
 .liveUtilityButton {
-  width: 38px;
-  height: 38px;
+  width: 42px;
+  height: 42px;
   border: none;
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.55);
-  color: #ffffff;
-  font-size: 18px;
+  border-radius: 14px;
+  background: rgba(224, 234, 247, 0.9);
+  color: #1a426f;
+  display: grid;
+  place-items: center;
+  font-size: 17px;
   cursor: pointer;
   transition: background-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
 
   &:hover {
-    background: rgba(0, 0, 0, 0.72);
+    background: rgba(210, 223, 243, 0.96);
   }
+}
+
+.liveViewerCount {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.liveStage {
+  position: relative;
+  overflow: hidden;
+  border-radius: 24px;
+  background: #071321;
+  min-height: 0;
 }
 
 .liveVideoCanvas {
@@ -672,20 +692,22 @@
 
 .liveFloatingLayer {
   position: absolute;
-  left: 12px;
-  right: 12px;
-  bottom: 112px;
+  left: 18px;
+  top: 18px;
+  width: min(62%, 240px);
   display: grid;
   gap: 6px;
   pointer-events: none;
+  z-index: 4;
 }
 
 .liveFloatingMessage {
-  width: min(70%, 250px);
-  border-radius: 12px;
-  padding: 8px 10px;
-  background: rgba(0, 0, 0, 0.52);
+  width: 100%;
+  border-radius: 16px;
+  padding: 10px 12px;
+  background: rgba(8, 17, 31, 0.74);
   color: #ffffff;
+  backdrop-filter: blur(10px);
   animation: fadeIn 200ms ease;
 
   strong {
@@ -707,75 +729,90 @@
 }
 
 .liveReactionBubble {
-  justify-self: end;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  justify-self: start;
+  width: 44px;
+  height: 44px;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
   font-size: 20px;
-  background: rgba(255, 255, 255, 0.16);
+  background: rgba(8, 17, 31, 0.74);
+  backdrop-filter: blur(10px);
 }
 
 .liveReactionRow {
   position: absolute;
-  left: 12px;
-  right: 12px;
-  bottom: 12px;
-  display: flex;
-  justify-content: center;
+  right: 18px;
+  bottom: 18px;
+  display: grid;
   gap: 8px;
-  z-index: 4;
+  z-index: 5;
 
   button {
     width: 42px;
     height: 42px;
-    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    border-radius: 14px;
     border: none;
-    background: rgba(0, 0, 0, 0.6);
-    color: #ffffff;
-    font-size: 21px;
+    background: rgba(224, 234, 247, 0.9);
+    color: #1a426f;
+    font-size: 18px;
     cursor: pointer;
   }
 }
 
 .liveChatPanel {
   position: absolute;
-  right: 0;
-  top: 0;
-  bottom: 0;
-  width: min(76%, 320px);
-  background: rgba(6, 6, 8, 0.86);
-  border-left: 1px solid rgba(255, 255, 255, 0.16);
+  right: 16px;
+  top: 68px;
+  bottom: 16px;
+  width: min(72vw, 300px);
+  padding: 16px;
+  background: rgba(6, 14, 27, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 22px;
+  backdrop-filter: blur(16px);
   z-index: 6;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  gap: 10px;
 }
 
 .liveChatHeader {
-  padding: 14px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  color: #ffffff;
-  font-size: 13px;
-  font-weight: 700;
+  display: grid;
+  gap: 2px;
+
+  strong,
+  span {
+    color: #eef5ff;
+  }
+
+  strong {
+    font-size: 14px;
+  }
+
+  span {
+    font-size: 12px;
+    opacity: 0.8;
+  }
 }
 
 .liveChatList {
-  flex: 1;
   overflow-y: auto;
-  padding: 10px;
   display: grid;
-  gap: 8px;
+  gap: 10px;
+  min-height: 0;
 }
 
 .liveChatItem {
   display: grid;
   grid-template-columns: 1fr auto;
   gap: 8px;
-  border-radius: 10px;
-  padding: 8px;
+  border-radius: 12px;
+  padding: 10px;
   background: rgba(255, 255, 255, 0.08);
+  align-items: end;
 }
 
 .liveChatBody {
@@ -809,7 +846,6 @@
 }
 
 .liveMutedBanner {
-  margin: 0 10px 8px;
   border-radius: 8px;
   padding: 8px 10px;
   background: rgba(255, 59, 48, 0.2);
@@ -819,8 +855,6 @@
 }
 
 .liveChatInputRow {
-  padding: 10px;
-  border-top: 1px solid rgba(255, 255, 255, 0.12);
   display: grid;
   grid-template-columns: auto 1fr auto;
   gap: 8px;
@@ -841,11 +875,12 @@
   }
 
   button {
-    min-height: 34px;
+    min-height: 38px;
+    min-width: 76px;
     border: none;
     border-radius: 999px;
-    padding: 0 12px;
-    background: #0a84ff;
+    padding: 0 14px;
+    background: linear-gradient(135deg, #1f7acb, #0f94a8);
     color: #ffffff;
     font-size: 12px;
     font-weight: 700;
@@ -854,7 +889,6 @@
 }
 
 .liveHostHint {
-  margin: 0 10px 10px;
   border-radius: 10px;
   padding: 10px 12px;
   background: rgba(0, 122, 255, 0.18);

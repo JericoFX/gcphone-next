@@ -439,8 +439,8 @@
   right: 16px;
   top: 68px;
   bottom: 16px;
-  width: min(84vw, 300px);
-  padding: 16px;
+  width: min(72vw, 280px);
+  padding: 14px;
   border-radius: 22px;
   background: rgba(6, 14, 27, 0.9);
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -469,6 +469,18 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 8px;
+  align-items: center;
+}
+
+.liveChatInputRow button,
+.liveScaleformPanel button {
+  min-height: 38px;
+  min-width: 76px;
+  padding: 0 14px;
+}
+
+.liveScaleformPanel button {
+  justify-self: start;
 }
 
 .fab {
