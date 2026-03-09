@@ -3,6 +3,28 @@
   gap: 10px;
 }
 
+.section {
+  display: grid;
+  gap: 8px;
+}
+
+.sectionHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: baseline;
+}
+
+.sectionHeader strong {
+  font-size: 14px;
+  color: #fff;
+}
+
+.sectionHeader span {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.56);
+}
+
 .topMeta {
   display: flex;
   justify-content: space-between;
@@ -17,6 +39,26 @@
   color: #fff;
   border-radius: 8px;
   padding: 6px 10px;
+}
+
+.quickBar {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.quickToggle {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+  border-radius: 999px;
+  padding: 7px 11px;
+  font-size: 11px;
+}
+
+.quickToggleActive {
+  border-color: rgba(88, 126, 255, 0.56);
+  background: rgba(88, 126, 255, 0.18);
 }
 
 .error {
@@ -42,11 +84,22 @@
   padding: 8px;
 }
 
+.localItem {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  padding: 8px;
+}
+
 .itemUnread {
   border-color: rgba(88, 126, 255, 0.65);
 }
 
-.itemMain {
+.itemMain,
+.localMain {
   text-align: left;
   background: transparent;
   border: 0;
@@ -69,18 +122,21 @@
   color: rgba(255, 255, 255, 0.58);
 }
 
-.itemMain p {
+.itemMain p,
+.localMain p {
   margin: 6px 0;
   font-size: 12px;
 }
 
-.itemMain span {
+.itemMain span,
+.localMain span {
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: rgba(255, 255, 255, 0.56);
 }
 
+.muteBtn,
 .deleteBtn {
   align-self: center;
   border: 1px solid rgba(255, 255, 255, 0.12);

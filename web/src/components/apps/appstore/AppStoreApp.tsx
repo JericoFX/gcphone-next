@@ -14,7 +14,6 @@ type StoreTab = 'all' | 'social' | 'utility' | 'core';
 const APP_CATEGORY: Record<string, StoreTab> = {
   chirp: 'social',
   snap: 'social',
-  market: 'social',
   news: 'social',
   darkrooms: 'social',
   clips: 'social',
@@ -29,8 +28,10 @@ const APP_CATEGORY: Record<string, StoreTab> = {
   documents: 'core',
   appstore: 'core',
   garage: 'utility',
+  clock: 'utility',
   notes: 'utility',
   maps: 'utility',
+  weather: 'utility',
 };
 
 export function AppStoreApp() {
@@ -61,6 +62,7 @@ export function AppStoreApp() {
   });
 
   const isInstalledOnHome = (id: string) => phoneState.appLayout.home.includes(id);
+  const isInstalledInMenu = (id: string) => phoneState.appLayout.menu.includes(id);
   const categoryLabel = (category: StoreTab) => t(`appstore.category.${category}`, language());
 
   const filteredApps = createMemo<AppDefinition[]>(() => {
@@ -99,49 +101,85 @@ export function AppStoreApp() {
     }, 180);
   };
 
+  const installedCount = createMemo(() => filteredApps().filter((app) => isInstalledOnHome(app.id)).length);
+  const availableCount = createMemo(() => filteredApps().filter((app) => !isInstalledOnHome(app.id)).length);
+  const featuredApps = createMemo(() => filteredApps().slice(0, 3));
+
   return (
     <AppScaffold title={appName('appstore', 'App Store', language())} onBack={() => router.goBack()}>
-        <SearchInput
-          class={styles.searchWrap}
-          value={query()}
-          onInput={setQuery}
-          placeholder={t('appstore.search_placeholder', language())}
-        />
-
-        <div class="ios-segment">
-          <button class="ios-segment-btn" classList={{ 'ios-segment-btn-active': tab() === 'all' }} onClick={() => setTab('all')}>{t('appstore.tab.all', language())}</button>
-          <button class="ios-segment-btn" classList={{ 'ios-segment-btn-active': tab() === 'social' }} onClick={() => setTab('social')}>{t('appstore.tab.social', language())}</button>
-          <button class="ios-segment-btn" classList={{ 'ios-segment-btn-active': tab() === 'utility' }} onClick={() => setTab('utility')}>{t('appstore.tab.utility', language())}</button>
-          <button class="ios-segment-btn" classList={{ 'ios-segment-btn-active': tab() === 'core' }} onClick={() => setTab('core')}>{t('appstore.tab.core', language())}</button>
+      <div class={styles.heroGrid}>
+        <div class={styles.heroCard}>
+          <strong>{installedCount()}</strong>
+          <span>En inicio</span>
         </div>
+        <div class={styles.heroCard}>
+          <strong>{availableCount()}</strong>
+          <span>Disponibles</span>
+        </div>
+      </div>
 
-        <ScreenState loading={loading()} error={error()} empty={filteredApps().length === 0} emptyTitle={t('appstore.empty_title', language())} emptyDescription={t('appstore.empty_description', language())}>
-          <div class="ios-section-title">{t('appstore.section.title', language())}</div>
-          <div class="ios-list">
-            <For each={filteredApps()}>
+      <SearchInput
+        class={styles.searchWrap}
+        value={query()}
+        onInput={setQuery}
+        placeholder={t('appstore.search_placeholder', language())}
+      />
+
+      <div class="ios-segment">
+        <button class="ios-segment-btn" classList={{ 'ios-segment-btn-active': tab() === 'all' }} onClick={() => setTab('all')}>{t('appstore.tab.all', language())}</button>
+        <button class="ios-segment-btn" classList={{ 'ios-segment-btn-active': tab() === 'social' }} onClick={() => setTab('social')}>{t('appstore.tab.social', language())}</button>
+        <button class="ios-segment-btn" classList={{ 'ios-segment-btn-active': tab() === 'utility' }} onClick={() => setTab('utility')}>{t('appstore.tab.utility', language())}</button>
+        <button class="ios-segment-btn" classList={{ 'ios-segment-btn-active': tab() === 'core' }} onClick={() => setTab('core')}>{t('appstore.tab.core', language())}</button>
+      </div>
+
+      <ScreenState loading={loading()} error={error()} empty={filteredApps().length === 0} emptyTitle={t('appstore.empty_title', language())} emptyDescription={t('appstore.empty_description', language())}>
+        <Show when={featuredApps().length > 0}>
+          <div class="ios-section-title">Destacadas</div>
+          <div class={styles.featuredRail}>
+            <For each={featuredApps()}>
               {(app) => (
-                <div class="ios-row">
-                  <div class={styles.appInfo}>
-                    <img src={app.icon} alt={appName(app.id, app.name, language())} />
-                    <div>
+                <button class={styles.featuredCard} onClick={() => router.navigate(app.route)}>
+                  <img src={app.icon} alt={appName(app.id, app.name, language())} />
+                  <strong>{appName(app.id, app.name, language())}</strong>
+                  <span>{categoryLabel(APP_CATEGORY[app.id] || 'utility')}</span>
+                </button>
+              )}
+            </For>
+          </div>
+        </Show>
+
+        <div class="ios-section-title">{t('appstore.section.title', language())}</div>
+        <div class="ios-list">
+          <For each={filteredApps()}>
+            {(app) => (
+              <div class="ios-row">
+                <div class={styles.appInfo}>
+                  <img src={app.icon} alt={appName(app.id, app.name, language())} />
+                  <div>
+                    <div class={styles.rowTitleLine}>
                       <div class="ios-label">{appName(app.id, app.name, language())}</div>
-                      <div class="ios-value">{categoryLabel(APP_CATEGORY[app.id] || 'utility')}</div>
+                      <span class={styles.statusChip}>{isInstalledOnHome(app.id) ? 'En inicio' : isInstalledInMenu(app.id) ? 'En menu' : 'Oculta'}</span>
                     </div>
+                    <div class="ios-value">{categoryLabel(APP_CATEGORY[app.id] || 'utility')}</div>
                   </div>
+                </div>
+                <div class={styles.rowActions}>
+                  <button class={styles.openBtn} onClick={() => router.navigate(app.route)}>Abrir</button>
                   <Show when={installingId() !== app.id} fallback={<div class={styles.progressText}>{progress()}%</div>}>
                     <button
                       class="ios-btn"
                       classList={{ 'ios-btn-success': !isInstalledOnHome(app.id), 'ios-btn-danger': isInstalledOnHome(app.id) }}
                       onClick={() => void toggleInstall(app.id)}
                     >
-                      {isInstalledOnHome(app.id) ? t('appstore.action.remove', language()) : t('appstore.action.install', language())}
+                      {isInstalledOnHome(app.id) ? 'Quitar' : 'Agregar'}
                     </button>
                   </Show>
                 </div>
-              )}
-            </For>
-          </div>
-        </ScreenState>
+              </div>
+            )}
+          </For>
+        </div>
+      </ScreenState>
     </AppScaffold>
   );
 }

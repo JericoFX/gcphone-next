@@ -2,6 +2,8 @@ import { For, Show, createEffect, createSignal } from 'solid-js';
 import { AppScaffold } from '../../shared/layout/AppScaffold';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { fetchNui } from '../../../utils/fetchNui';
+import { useNotifications } from '../../../store/notifications';
+import { appName } from '../../../i18n';
 import styles from './NotificationsApp.module.scss';
 
 interface InboxNotification {
@@ -17,10 +19,13 @@ interface InboxNotification {
 
 export function NotificationsApp() {
   const router = useRouter();
+  const [notificationsState, notificationsActions] = useNotifications();
   const [loading, setLoading] = createSignal(false);
   const [error, setError] = createSignal('');
   const [notifications, setNotifications] = createSignal<InboxNotification[]>([]);
   const [unread, setUnread] = createSignal(0);
+  const recentItems = () => notificationsState.history.slice(0, 8);
+  const localUnread = () => recentItems().reduce((count, entry) => count + notificationsActions.getUnreadCount(entry.appId), 0);
 
   const loadInbox = async () => {
     setLoading(true);
@@ -79,31 +84,80 @@ export function NotificationsApp() {
     >
       <div class={styles.root}>
         <div class={styles.topMeta}>
-          <span>No leidas: {unread()}</span>
+          <span>Inbox: {unread()} · Centro: {localUnread()}</span>
           <button onClick={() => void loadInbox()} disabled={loading()}>{loading() ? 'Cargando...' : 'Actualizar'}</button>
         </div>
+
+        <div class={styles.quickBar}>
+          <button class={styles.quickToggle} classList={{ [styles.quickToggleActive]: notificationsState.doNotDisturb }} onClick={() => notificationsActions.setDoNotDisturb(!notificationsState.doNotDisturb)}>
+            {notificationsState.doNotDisturb ? 'No molestar activo' : 'No molestar apagado'}
+          </button>
+          <button class={styles.quickToggle} classList={{ [styles.quickToggleActive]: notificationsState.silentMode }} onClick={() => notificationsActions.setSilentMode(!notificationsState.silentMode)}>
+            {notificationsState.silentMode ? 'Silencio activo' : 'Silencio apagado'}
+          </button>
+        </div>
+
+        <Show when={recentItems().length > 0}>
+          <section class={styles.section}>
+            <div class={styles.sectionHeader}>
+              <strong>Centro rapido</strong>
+              <span>Banner local y accesos rapidos por app</span>
+            </div>
+            <For each={recentItems()}>
+              {(entry) => (
+                <div class={styles.localItem}>
+                  <button
+                    class={styles.localMain}
+                    onClick={() => {
+                      notificationsActions.markAppAsRead(entry.appId);
+                      if (entry.route) {
+                        router.navigate(entry.route, entry.data as Record<string, unknown> | undefined);
+                      }
+                    }}
+                  >
+                    <div class={styles.itemHeader}>
+                      <strong>{entry.title}</strong>
+                      <small>{new Date(Number(entry.createdAt) || Date.now()).toLocaleString()}</small>
+                    </div>
+                    <p>{entry.message}</p>
+                    <span>{appName(entry.appId, entry.appId, 'es')}</span>
+                  </button>
+                  <button class={styles.muteBtn} onClick={() => notificationsActions.toggleMuteApp(entry.appId)}>
+                    {notificationsActions.isAppMuted(entry.appId) ? 'Activar' : 'Silenciar'}
+                  </button>
+                </div>
+              )}
+            </For>
+          </section>
+        </Show>
 
         <Show when={error()}>
           <p class={styles.error}>{error()}</p>
         </Show>
 
-        <Show when={notifications().length > 0} fallback={<p class={styles.empty}>Sin notificaciones guardadas</p>}>
-          <For each={notifications()}>
-            {(entry) => (
-              <div class={styles.item} classList={{ [styles.itemUnread]: Number(entry.is_read) === 0 }}>
-                <button class={styles.itemMain} onClick={() => void markRead(entry.id)}>
-                  <div class={styles.itemHeader}>
-                    <strong>{entry.title}</strong>
-                    <small>{new Date(Number(entry.createdAt) || Date.now()).toLocaleString()}</small>
-                  </div>
-                  <p>{entry.content}</p>
-                  <span>{entry.app_id}</span>
-                </button>
-                <button class={styles.deleteBtn} onClick={() => void deleteNotification(entry.id)}>Eliminar</button>
-              </div>
-            )}
-          </For>
-        </Show>
+        <section class={styles.section}>
+          <div class={styles.sectionHeader}>
+            <strong>Inbox persistente</strong>
+            <span>Historial guardado del servidor</span>
+          </div>
+          <Show when={notifications().length > 0} fallback={<p class={styles.empty}>Sin notificaciones guardadas</p>}>
+            <For each={notifications()}>
+              {(entry) => (
+                <div class={styles.item} classList={{ [styles.itemUnread]: Number(entry.is_read) === 0 }}>
+                  <button class={styles.itemMain} onClick={() => void markRead(entry.id)}>
+                    <div class={styles.itemHeader}>
+                      <strong>{entry.title}</strong>
+                      <small>{new Date(Number(entry.createdAt) || Date.now()).toLocaleString()}</small>
+                    </div>
+                    <p>{entry.content}</p>
+                    <span>{entry.app_id}</span>
+                  </button>
+                  <button class={styles.deleteBtn} onClick={() => void deleteNotification(entry.id)}>Eliminar</button>
+                </div>
+              )}
+            </For>
+          </Show>
+        </section>
       </div>
     </AppScaffold>
   );
