@@ -164,6 +164,20 @@ export function GalleryApp() {
     router.navigate('snap', { postMedia: mediaUrl, openComposer: '1' });
   };
 
+  const shareToMail = () => {
+    const mediaUrl = sanitizeMediaUrl(selectedPhoto()?.url);
+    if (!mediaUrl) return;
+    setShowActions(false);
+    setSelectedPhoto(null);
+    router.navigate('mail', {
+      compose: '1',
+      subject: 'Foto adjunta',
+      attachmentUrl: mediaUrl,
+      attachmentType: 'image',
+      attachmentName: 'Foto de galeria',
+    });
+  };
+
   const currentPhotoIndex = () => {
     const current = selectedPhoto();
     if (!current) return -1;
@@ -231,6 +245,7 @@ export function GalleryApp() {
         actions={[
           { label: 'Compartir en Mensajes', tone: 'primary', onClick: () => void shareToMessages('messages') },
           { label: 'Compartir en WaveChat', onClick: () => void shareToMessages('wavechat') },
+          { label: 'Compartir por Mail', onClick: shareToMail },
           { label: 'Compartir en Chirp', onClick: () => shareToFeedApp('chirp') },
           { label: 'Compartir en Snap', onClick: () => shareToFeedApp('snap') },
           { label: 'Usar como fondo', tone: 'primary', onClick: setAsWallpaper },
