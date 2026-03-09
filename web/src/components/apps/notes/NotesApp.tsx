@@ -74,6 +74,14 @@ export function NotesApp() {
     if (active()?.id === id) setActive(null);
   };
 
+  const shareNoteByMail = (note: Pick<NoteItem, 'title' | 'content'>) => {
+    router.navigate('mail', {
+      compose: '1',
+      subject: note.title || 'Nota compartida',
+      body: note.content || '',
+    });
+  };
+
   return (
     <AppScaffold
       title="Notas"
@@ -87,6 +95,7 @@ export function NotesApp() {
             <textarea class="ios-textarea" placeholder="Escribe una nota..." value={content()} onInput={(e) => setContent(e.currentTarget.value)} />
             <input class="ios-input" type="color" value={color()} onInput={(e) => setColor(e.currentTarget.value)} />
             <div class={styles.editorActions}>
+              <button class="ios-btn" onClick={() => shareNoteByMail({ title: title(), content: content() })}>Mail</button>
               <button class="ios-btn" onClick={() => setActive(null)}>Cancelar</button>
               <button class="ios-btn ios-btn-primary" onClick={save}>Guardar</button>
             </div>
@@ -99,6 +108,7 @@ export function NotesApp() {
                   <strong>{note.title || 'Sin titulo'}</strong>
                   <p>{note.content || 'Nota vacia'}</p>
                   <div class={styles.actions}>
+                    <button class="ios-btn" onClick={() => shareNoteByMail(note)}>Mail</button>
                     <button class="ios-btn" onClick={() => edit(note)}>Editar</button>
                     <button class="ios-btn ios-btn-danger" onClick={() => remove(note.id)}>Eliminar</button>
                   </div>
