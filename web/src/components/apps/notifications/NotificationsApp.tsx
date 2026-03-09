@@ -72,6 +72,9 @@ export function NotificationsApp() {
     await fetchNui<{ success?: boolean }>('notificationsMarkAllRead', {}, { success: false });
     setNotifications((prev) => prev.map((entry) => ({ ...entry, is_read: 1 })));
     setUnread(0);
+    for (const appId of Array.from(new Set(recentItems().map((entry) => entry.appId)))) {
+      notificationsActions.markAppAsRead(appId);
+    }
   };
 
   createEffect(() => {
