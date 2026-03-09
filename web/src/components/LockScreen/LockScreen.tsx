@@ -1,6 +1,7 @@
 import { For, Show, batch, createEffect, createMemo, createSignal, onCleanup, onMount } from 'solid-js';
 import { usePhone } from '../../store/phone';
 import { useNotifications } from '../../store/notifications';
+import { fetchNui } from '../../utils/fetchNui';
 import { formatDate, formatTime, t } from '../../i18n';
 import styles from './LockScreen.module.scss';
 
@@ -12,6 +13,9 @@ export function LockScreen() {
   const [attempts, setAttempts] = createSignal(0);
   const [currentTime, setCurrentTime] = createSignal(new Date());
   const [showPad, setShowPad] = createSignal(false);
+  const [flashlightSupported, setFlashlightSupported] = createSignal(false);
+  const [flashlightEnabled, setFlashlightEnabled] = createSignal(false);
+  const [pendingRoute, setPendingRoute] = createSignal<string | null>(null);
   const language = () => phoneState.settings.language || 'es';
 
   let timer: number | undefined;
@@ -20,6 +24,14 @@ export function LockScreen() {
 
   onMount(() => {
     timer = window.setInterval(() => setCurrentTime(new Date()), 1000);
+    void (async () => {
+      const capabilities = await fetchNui<{ flashlight?: boolean; flashlightEnabled?: boolean }>('cameraGetCapabilities', undefined, {
+        flashlight: false,
+        flashlightEnabled: false,
+      });
+      setFlashlightSupported(capabilities?.flashlight === true);
+      setFlashlightEnabled(capabilities?.flashlightEnabled === true);
+    })();
   });
 
   onCleanup(() => {
@@ -28,11 +40,18 @@ export function LockScreen() {
 
   const submitUnlock = async () => {
     if (await phoneActions.unlock(code())) {
+      const route = pendingRoute();
       batch(() => {
         setCode('');
         setAttempts(0);
         setShowPad(false);
+        setPendingRoute(null);
       });
+      if (route) {
+        window.setTimeout(() => {
+          window.dispatchEvent(new CustomEvent('phone:openRoute', { detail: { route } }));
+        }, 60);
+      }
       return;
     }
 
@@ -51,6 +70,21 @@ export function LockScreen() {
   const handleKeyPress = (num: string) => {
     if (code().length >= 4) return;
     setCode((prev) => prev + num);
+  };
+
+  const toggleFlashlight = async () => {
+    if (!flashlightSupported()) return;
+    const nextEnabled = !flashlightEnabled();
+    const result = await fetchNui<{ success?: boolean; enabled?: boolean }>('cameraToggleFlashlight', { enabled: nextEnabled }, { success: true, enabled: nextEnabled });
+    if (result?.success) {
+      setFlashlightEnabled(result.enabled === true);
+    }
+  };
+
+  const openCameraQuickAction = () => {
+    setPendingRoute('camera');
+    setShowPad(true);
+    setError(false);
   };
 
   const formatClockTime = (date: Date) => formatTime(date, language(), { hour: '2-digit', minute: '2-digit' });
@@ -130,8 +164,10 @@ export function LockScreen() {
       </Show>
 
       <div class={styles.bottomActions}>
-        <button class={styles.bottomBtn}>🔦</button>
-        <button class={styles.bottomBtn}>📷</button>
+        <button class={styles.bottomBtn} classList={{ [styles.bottomBtnActive]: flashlightEnabled() }} onClick={() => void toggleFlashlight()} disabled={!flashlightSupported()}>
+          🔦
+        </button>
+        <button class={styles.bottomBtn} onClick={openCameraQuickAction}>📷</button>
       </div>
     </div>
   );

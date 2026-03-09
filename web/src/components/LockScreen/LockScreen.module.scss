@@ -234,3 +234,13 @@
   color: #fff;
   font-size: 18px;
 }
+
+.bottom-btn:disabled {
+  opacity: 0.42;
+}
+
+.bottom-btn-active {
+  border-color: rgba(255, 212, 102, 0.74);
+  background: rgba(255, 198, 79, 0.26);
+  box-shadow: 0 0 22px rgba(255, 198, 79, 0.28);
+}

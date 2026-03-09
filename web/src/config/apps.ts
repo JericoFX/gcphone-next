@@ -31,8 +31,10 @@ export const APP_DEFINITIONS: AppDefinition[] = [
   // { id: 'market', name: 'Market', icon: './img/icons_ios/market.svg', route: 'market', defaultHome: true },
   { id: 'news', name: 'Noticias', icon: './img/icons_ios/news.svg', route: 'news', defaultHome: true },
   { id: 'garage', name: 'Garage', icon: './img/icons_ios/garage.svg', route: 'garage', defaultHome: true },
+  { id: 'clock', name: 'Reloj', icon: './img/icons_ios/clock.svg', route: 'clock', defaultHome: true },
   { id: 'notes', name: 'Notas', icon: './img/icons_ios/notes.svg', route: 'notes', defaultHome: true },
   { id: 'maps', name: 'Mapas', icon: './img/icons_ios/map.svg', route: 'maps', defaultHome: true },
+  { id: 'weather', name: 'Clima', icon: './img/icons_ios/weather.svg', route: 'weather', defaultHome: true },
 ];
 
 export const APP_IDS = APP_DEFINITIONS.map((app) => app.id);
