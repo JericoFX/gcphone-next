@@ -761,6 +761,18 @@ RegisterNUICallback('newsLeaveLive', function(data, cb)
     end, data or {})
 end)
 
+RegisterNUICallback('newsSendLiveMessage', function(data, cb)
+    lib.callback('gcphone:news:sendLiveMessage', false, function(success, payload)
+        cb(cbSuccess(success, nil, payload))
+    end, data or {})
+end)
+
+RegisterNUICallback('newsSendLiveReaction', function(data, cb)
+    lib.callback('gcphone:news:sendLiveReaction', false, function(success, payload)
+        cb(cbSuccess(success, nil, payload))
+    end, data or {})
+end)
+
 RegisterNUICallback('newsSetScaleform', function(data, cb)
     lib.callback('gcphone:news:setScaleform', false, function(success)
         cb(cbSuccess(success))
@@ -1102,6 +1114,20 @@ end)
 RegisterNetEvent('gcphone:news:viewersUpdated', function(payload)
     SendNUIMessage({
         action = 'gcphone:news:viewersUpdated',
+        data = payload
+    })
+end)
+
+RegisterNetEvent('gcphone:news:liveMessage', function(payload)
+    SendNUIMessage({
+        action = 'gcphone:news:liveMessage',
+        data = payload
+    })
+end)
+
+RegisterNetEvent('gcphone:news:liveReaction', function(payload)
+    SendNUIMessage({
+        action = 'gcphone:news:liveReaction',
         data = payload
     })
 end)

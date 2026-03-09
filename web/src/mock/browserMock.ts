@@ -762,6 +762,9 @@ const mockNewsScaleforms = new Map<number, Record<string, string>>([
   [2, { preset: 'breaking', headline: 'TRAFICO EN VIVO', subtitle: 'Cobertura desde la autopista', ticker: 'Desvios activos en este momento' }],
 ]);
 const mockJoinedNewsLives = new Set<number>();
+const mockNewsLiveMessages = new Map<number, Array<{ id: string; username: string; display: string; content: string; createdAt: number }>>([
+  [2, [{ id: '2:1', username: 'cronista', display: 'Cronista', content: 'Estamos saliendo en vivo desde la autopista.', createdAt: Date.now() }]],
+]);
 const mockWalletRequests: Array<{
   id: number;
   requesterIdentifier: string;
@@ -2277,7 +2280,7 @@ export async function handleBrowserNui<T = unknown>(eventName: string, data?: un
       article.live_viewers = Math.max(0, Number(article.live_viewers || 0)) + 1;
       emitMessage('gcphone:news:viewersUpdated', { articleId, viewers: article.live_viewers });
     }
-    return { success: true, articleId, viewers: Number(article.live_viewers || 0) } as T;
+    return { success: true, articleId, viewers: Number(article.live_viewers || 0), messages: mockNewsLiveMessages.get(articleId) || [] } as T;
   }
 
   if (eventName === 'newsLeaveLive') {
@@ -2304,6 +2307,43 @@ export async function handleBrowserNui<T = unknown>(eventName: string, data?: un
     return { success: true } as T;
   }
 
+  if (eventName === 'newsSendLiveMessage') {
+    const articleId = Number(payload?.articleId || 0);
+    const article = mockNewsArticles.find((entry) => Number(entry.id || 0) === articleId && Number(entry.is_live || 0) === 1);
+    if (!article) {
+      return { success: false, error: 'LIVE_UNAVAILABLE' } as T;
+    }
+
+    const current = mockNewsLiveMessages.get(articleId) || [];
+    const message = {
+      id: `${articleId}:${Date.now()}`,
+      username: 'mocknews',
+      display: 'Mock Newsroom',
+      content: String(payload?.content || '').trim(),
+      createdAt: Date.now(),
+    };
+    mockNewsLiveMessages.set(articleId, [...current.slice(-19), message]);
+    emitMessage('gcphone:news:liveMessage', { articleId, message });
+    return { success: true, message } as T;
+  }
+
+  if (eventName === 'newsSendLiveReaction') {
+    const articleId = Number(payload?.articleId || 0);
+    const article = mockNewsArticles.find((entry) => Number(entry.id || 0) === articleId && Number(entry.is_live || 0) === 1);
+    if (!article) {
+      return { success: false, error: 'LIVE_UNAVAILABLE' } as T;
+    }
+
+    const reaction = {
+      id: `${articleId}:${Date.now()}`,
+      reaction: String(payload?.reaction || '🔥').trim(),
+      username: 'mocknews',
+      createdAt: Date.now(),
+    };
+    emitMessage('gcphone:news:liveReaction', { articleId, reaction });
+    return { success: true, reaction } as T;
+  }
+
   if (eventName === 'newsStartLive') {
     const articleId = nextMockNewsId++;
     const scaleform = (payload?.scaleform as Record<string, unknown> | undefined) || {};
@@ -2319,6 +2359,7 @@ export async function handleBrowserNui<T = unknown>(eventName: string, data?: un
       live_viewers: 1,
     };
     mockNewsArticles.unshift(article);
+    mockNewsLiveMessages.set(articleId, []);
     mockNewsScaleforms.set(articleId, {
       preset: String(scaleform.preset || 'breaking'),
       headline: String(scaleform.headline || 'ULTIMO MOMENTO'),
@@ -2353,6 +2394,7 @@ export async function handleBrowserNui<T = unknown>(eventName: string, data?: un
     }
     mockJoinedNewsLives.delete(articleId);
     mockNewsScaleforms.delete(articleId);
+    mockNewsLiveMessages.delete(articleId);
     emitMessage('gcphone:news:liveEnded', articleId);
     return { success: true } as T;
   }
