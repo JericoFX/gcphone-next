@@ -226,6 +226,27 @@ export function DocumentsApp() {
     }
   };
 
+  const shareDocumentByMail = (doc: Document) => {
+    const typeInfo = getDocTypeInfo(doc.doc_type);
+    const lines = [
+      `${typeInfo.name}: ${doc.title}`,
+      `Titular: ${doc.holder_name || 'N/D'}`,
+      doc.holder_number ? `Numero: ${doc.holder_number}` : '',
+      doc.expires_at ? `Vencimiento: ${doc.expires_at}` : '',
+      `Codigo de verificacion: ${doc.verification_code}`,
+    ].filter(Boolean);
+
+    setSelectedDoc(null);
+    router.navigate('mail', {
+      compose: '1',
+      subject: `Documento: ${doc.title}`,
+      body: lines.join('\n'),
+      attachmentType: 'document',
+      attachmentUrl: `DOC:${doc.id}:${doc.verification_code}`,
+      attachmentName: doc.title,
+    });
+  };
+
   return (
     <AppScaffold title="Documentos" subtitle="Tus documentos digitales" onBack={() => router.goBack()} bodyClass={styles.body}>
       <div class={styles.documentsApp}>
@@ -401,11 +422,14 @@ export function DocumentsApp() {
                     </div>
                   </div>
                   
-                  <div class={styles.detailActions}>
-                    <button class={styles.deleteBtn} onClick={() => deleteDocument(doc.id)}>
-                      Eliminar Documento
-                    </button>
-                  </div>
+                   <div class={styles.detailActions}>
+                     <button class={styles.mailBtn} onClick={() => shareDocumentByMail(doc)}>
+                       Compartir por Mail
+                     </button>
+                     <button class={styles.deleteBtn} onClick={() => deleteDocument(doc.id)}>
+                       Eliminar Documento
+                     </button>
+                   </div>
                 </div>
               );
             })()}
