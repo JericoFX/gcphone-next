@@ -162,8 +162,7 @@ export function ControlCenter() {
   });
 
   const visibleItemsForGroup = (items: Array<{ id: string; title: string; message: string; route?: string; data?: Record<string, unknown>; createdAt?: number }>) => {
-    if (notifications.notificationCompactMode) return items.slice(0, 2);
-    return items;
+    return items.slice(0, 2);
   };
 
   const formatTime = (unix?: number) => {
@@ -304,13 +303,6 @@ export function ControlCenter() {
               <div class={styles.grabber} />
               <h3>{t('control.notifications', language())}</h3>
               <span class={styles.headerDate}>{dayLabel()}</span>
-              <button
-                class={styles.compactBtn}
-                onClick={() => notificationsActions.toggleNotificationCompactMode()}
-                data-testid="notification-compact-toggle"
-              >
-                 {notifications.notificationCompactMode ? 'Expandido' : t('control.preset.compact', language())}
-              </button>
             </div>
 
             <div class={styles.summaryRow}>
@@ -324,7 +316,7 @@ export function ControlCenter() {
               </article>
               <article class={styles.summaryCard}>
                 <span>Modo</span>
-                 <strong>{notifications.notificationCompactMode ? t('control.preset.compact', language()) : 'Expandido'}</strong>
+                <strong>{t('control.preset.compact', language())}</strong>
               </article>
             </div>
 
@@ -361,7 +353,7 @@ export function ControlCenter() {
                           </button>
                         )}
                       </For>
-                      <Show when={notifications.notificationCompactMode && items.length > 2}>
+                      <Show when={items.length > 2}>
                         <div class={styles.moreCount}>+{items.length - 2} mas</div>
                       </Show>
                     </div>
