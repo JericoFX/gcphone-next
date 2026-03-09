@@ -109,7 +109,7 @@ export function ClipsApp() {
   const loadClips = async () => {
     setLoading(true);
     
-    const account = await fetchNui<SharedSnapAccount | null>('snapGetAccount', {});
+    const account = await fetchNui<SharedSnapAccount | null>('clipsGetAccount', {});
     setMyAccount(account);
     setShowOnboarding(!account?.username);
     
@@ -261,7 +261,7 @@ export function ClipsApp() {
   };
 
   const openProfileEditor = async () => {
-    const account = await fetchNui<SharedSnapAccount | null>('snapGetAccount', {});
+    const account = await fetchNui<SharedSnapAccount | null>('clipsGetAccount', {});
     if (!account?.username) {
       setShowOnboarding(true);
       return;
@@ -275,7 +275,7 @@ export function ClipsApp() {
   };
 
   const saveProfile = async () => {
-    const ok = await fetchNui<{ success?: boolean }>('snapUpdateAccount', {
+    const ok = await fetchNui<{ success?: boolean }>('clipsUpdateAccount', {
       displayName: sanitizeText(profileDisplayName(), 50),
       avatar: sanitizeMediaUrl(profileAvatar()) || undefined,
       bio: sanitizeText(profileBio(), 180) || undefined,
@@ -305,21 +305,21 @@ export function ClipsApp() {
     router.navigate('camera', { target: 'clips-avatar' });
   };
 
-  const createSnapAccount = async (payload: SocialOnboardingPayload) => {
+  const createClipsAccount = async (payload: SocialOnboardingPayload) => {
     const avatar = sanitizeMediaUrl(payload.avatar) || '';
     const bio = sanitizeText(payload.bio, 180);
 
-    const response = await fetchNui<{ success?: boolean; error?: string }>('snapCreateAccount', {
+    const response = await fetchNui<{ success?: boolean; error?: string }>('clipsCreateAccount', {
       username: payload.username,
       displayName: payload.displayName,
       avatar,
     }, { success: false });
 
     if (!response?.success) {
-      return { ok: false, error: response?.error || 'No se pudo crear la cuenta de Snap.' };
+      return { ok: false, error: response?.error || 'No se pudo crear la cuenta de Clips.' };
     }
 
-    const updated = await fetchNui<{ success?: boolean }>('snapUpdateAccount', {
+    const updated = await fetchNui<{ success?: boolean }>('clipsUpdateAccount', {
       displayName: payload.displayName,
       avatar,
       bio,
@@ -391,13 +391,13 @@ export function ClipsApp() {
 
         <SocialOnboardingModal
           open={showOnboarding()}
-          appName="Snap/Clips"
+          appName="Clips"
           usernameHint={myAccount()?.username || ''}
           displayNameHint={myAccount()?.display_name || ''}
           avatarHint={myAccount()?.avatar || ''}
           bioHint={myAccount()?.bio || ''}
           isPrivateHint={myAccount()?.is_private === 1 || myAccount()?.is_private === true}
-          onCreate={createSnapAccount}
+          onCreate={createClipsAccount}
           onClose={() => setShowOnboarding(false)}
         />
 
