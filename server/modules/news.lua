@@ -131,6 +131,62 @@ local function RemoveViewerFromAllLives(source, identifier)
     end
 end
 
+local function BuildLiveParticipantProfile(identifier, source)
+    local display, _ = ResolveAuthorProfile(identifier, source)
+    local account = MySQL.single.await(
+        'SELECT username FROM phone_snap_accounts WHERE identifier = ? LIMIT 1',
+        { identifier }
+    )
+
+    return {
+        username = SanitizeText(account and account.username or '', 30),
+        display = display,
+    }
+end
+
+local function GetLiveChatMessages(liveData)
+    if type(liveData) ~= 'table' or type(liveData.messages) ~= 'table' then
+        return {}
+    end
+
+    return liveData.messages
+end
+
+local function PushLiveChatMessage(articleId, liveData, message)
+    if type(liveData.messages) ~= 'table' then
+        liveData.messages = {}
+    end
+
+    liveData.messages[#liveData.messages + 1] = message
+    while #liveData.messages > 20 do
+        table.remove(liveData.messages, 1)
+    end
+
+    TriggerClientEvent('gcphone:news:liveMessage', -1, {
+        articleId = articleId,
+        message = message,
+    })
+end
+
+local function BroadcastLiveReaction(articleId, reaction)
+    TriggerClientEvent('gcphone:news:liveReaction', -1, {
+        articleId = articleId,
+        reaction = reaction,
+    })
+end
+
+local function CanInteractWithLive(liveData, identifier)
+    if type(liveData) ~= 'table' or type(identifier) ~= 'string' or identifier == '' then
+        return false
+    end
+
+    if liveData.identifier == identifier then
+        return true
+    end
+
+    return type(liveData.viewers) == 'table' and liveData.viewers[identifier] ~= nil
+end
+
 local function HitRateLimit(source, key, windowMs, maxHits)
     return Utils.HitRateLimit(source, key, windowMs, maxHits)
 end
@@ -264,6 +320,8 @@ lib.callback.register('gcphone:news:startLive', function(source, data)
         startTime = os.time(),
         scaleform = scaleform,
         viewers = {},
+        messages = {},
+        sequence = 0,
     }
     
     local article = MySQL.single.await(
@@ -288,7 +346,7 @@ lib.callback.register('gcphone:news:joinLive', function(source, data)
     local liveData = ActiveLiveNews[articleId]
     if not liveData then return false, 'LIVE_UNAVAILABLE' end
     if liveData.identifier == identifier then
-        return true, { articleId = articleId, viewers = GetViewerCount(liveData) }
+        return true, { articleId = articleId, viewers = GetViewerCount(liveData), messages = GetLiveChatMessages(liveData) }
     end
 
     if not GetPlayerName(liveData.source) then
@@ -309,7 +367,7 @@ lib.callback.register('gcphone:news:joinLive', function(source, data)
     }
     BroadcastViewerCount(articleId)
 
-    return true, { articleId = articleId, viewers = GetViewerCount(liveData) }
+    return true, { articleId = articleId, viewers = GetViewerCount(liveData), messages = GetLiveChatMessages(liveData) }
 end)
 
 lib.callback.register('gcphone:news:leaveLive', function(source, data)
@@ -321,6 +379,66 @@ lib.callback.register('gcphone:news:leaveLive', function(source, data)
 
     RemoveViewerFromAllLives(source)
     return true
+end)
+
+lib.callback.register('gcphone:news:sendLiveMessage', function(source, data)
+    local identifier = GetIdentifier(source)
+    if not identifier then return false, 'MISSING_IDENTIFIER' end
+    if type(data) ~= 'table' then return false, 'INVALID_PAYLOAD' end
+    if HitRateLimit(source, 'news_live_message', 1200, 6) then return false, 'RATE_LIMITED' end
+
+    local articleId = tonumber(data.articleId)
+    if not articleId or articleId < 1 then return false, 'INVALID_LIVE' end
+
+    local liveData = ActiveLiveNews[articleId]
+    if not liveData or not CanInteractWithLive(liveData, identifier) then
+        return false, 'LIVE_UNAVAILABLE'
+    end
+
+    local content = SanitizeText(data.content, 180)
+    if content == '' then return false, 'INVALID_MESSAGE' end
+
+    liveData.sequence = tonumber(liveData.sequence or 0) + 1
+    local profile = BuildLiveParticipantProfile(identifier, source)
+    local message = {
+        id = string.format('%d:%d', articleId, liveData.sequence),
+        username = profile.username ~= '' and profile.username or profile.display,
+        display = profile.display,
+        content = content,
+        createdAt = os.time() * 1000,
+    }
+
+    PushLiveChatMessage(articleId, liveData, message)
+    return true, { message = message }
+end)
+
+lib.callback.register('gcphone:news:sendLiveReaction', function(source, data)
+    local identifier = GetIdentifier(source)
+    if not identifier then return false, 'MISSING_IDENTIFIER' end
+    if type(data) ~= 'table' then return false, 'INVALID_PAYLOAD' end
+    if HitRateLimit(source, 'news_live_reaction', 900, 8) then return false, 'RATE_LIMITED' end
+
+    local articleId = tonumber(data.articleId)
+    if not articleId or articleId < 1 then return false, 'INVALID_LIVE' end
+
+    local liveData = ActiveLiveNews[articleId]
+    if not liveData or not CanInteractWithLive(liveData, identifier) then
+        return false, 'LIVE_UNAVAILABLE'
+    end
+
+    local emoji = SanitizeText(data.reaction, 8)
+    if emoji == '' then return false, 'INVALID_REACTION' end
+
+    local profile = BuildLiveParticipantProfile(identifier, source)
+    local reaction = {
+        id = string.format('%d:%d:%d', articleId, os.time(), math.random(100, 999)),
+        reaction = emoji,
+        username = profile.username ~= '' and profile.username or profile.display,
+        createdAt = os.time() * 1000,
+    }
+
+    BroadcastLiveReaction(articleId, reaction)
+    return true, { reaction = reaction }
 end)
 
 lib.callback.register('gcphone:news:setScaleform', function(source, data)

@@ -46,6 +46,12 @@ interface MockLiveMessage {
   at: string;
 }
 
+interface LiveJoinResponse {
+  success?: boolean;
+  viewers?: number;
+  messages?: Array<{ id?: string; username?: string; display?: string; content?: string; createdAt?: number }>;
+}
+
 interface NewsProfile {
   username?: string;
   display_name?: string;
@@ -221,25 +227,50 @@ export function NewsApp() {
       await refreshScaleform(article.id);
 
       if (liveArticleId() !== article.id) {
-        const joinResult = await fetchNui<{ success?: boolean; viewers?: number }>('newsJoinLive', { articleId: article.id }, { success: false });
+        const joinResult = await fetchNui<LiveJoinResponse>('newsJoinLive', { articleId: article.id }, { success: false });
         if (joinResult?.success) {
           setJoinedLiveId(article.id);
           if (typeof joinResult.viewers === 'number') {
             syncLiveViewerCount(article.id, joinResult.viewers);
           }
+          setMockLiveMessages((joinResult.messages || []).map((message) => ({
+            id: Number(String(message.id || Date.now()).replace(/\D/g, '').slice(0, 9)) || Date.now(),
+            user: sanitizeText(message.display || message.username || '', 80) || 'Invitado',
+            text: sanitizeText(message.content || '', 180),
+            at: message.createdAt ? buildClockTime() : 'ahora',
+          })));
         }
       }
     }
   };
 
-  const sendViewerMessage = () => {
+  const sendViewerMessage = async () => {
     const text = sanitizeText(liveChatInput(), 180);
     if (!text) return;
-    pushMockMessage(myAccount()?.display_name || myAccount()?.username || 'Tu', text);
+
+    if (mockLiveEnabled()) {
+      pushMockMessage(myAccount()?.display_name || myAccount()?.username || 'Tu', text);
+      setLiveChatInput('');
+      return;
+    }
+
+    const articleId = Number(activeLive()?.id || 0);
+    if (articleId < 1) return;
+
+    const result = await fetchNui<{ success?: boolean }>('newsSendLiveMessage', { articleId, content: text }, { success: false });
+    if (!result?.success) return;
     setLiveChatInput('');
   };
 
-  const burstReaction = (emoji: string) => {
+  const burstReaction = async (emoji: string) => {
+    if (!mockLiveEnabled()) {
+      const articleId = Number(activeLive()?.id || 0);
+      if (articleId > 0) {
+        const result = await fetchNui<{ success?: boolean }>('newsSendLiveReaction', { articleId, reaction: emoji }, { success: false });
+        if (!result?.success) return;
+      }
+    }
+
     const id = Date.now() + Math.floor(Math.random() * 1000);
     setLiveReactions((prev) => [...prev.slice(-5), { id, emoji }]);
     window.setTimeout(() => {
@@ -320,6 +351,32 @@ export function NewsApp() {
     if (articleId > 0 && viewers >= 0) {
       syncLiveViewerCount(articleId, viewers);
     }
+  });
+
+  useNuiCustomEvent<{ articleId?: number; message?: { id?: string; username?: string; display?: string; content?: string; createdAt?: number } }>('gcphone:news:liveMessage', (payload) => {
+    const articleId = Number(payload?.articleId || 0);
+    if (articleId < 1 || activeLive()?.id !== articleId || !payload?.message) return;
+
+    const when = payload.message.createdAt ? new Date(payload.message.createdAt) : new Date();
+    const at = `${String(when.getHours()).padStart(2, '0')}:${String(when.getMinutes()).padStart(2, '0')}`;
+    setMockLiveMessages((prev) => [...prev.slice(-19), {
+      id: Number(String(payload.message?.id || Date.now()).replace(/\D/g, '').slice(0, 9)) || Date.now(),
+      user: sanitizeText(payload.message.display || payload.message.username || '', 80) || 'Invitado',
+      text: sanitizeText(payload.message.content || '', 180),
+      at,
+    }]);
+  });
+
+  useNuiCustomEvent<{ articleId?: number; reaction?: { reaction?: string } }>('gcphone:news:liveReaction', (payload) => {
+    const articleId = Number(payload?.articleId || 0);
+    const reaction = sanitizeText(payload?.reaction?.reaction || '', 8);
+    if (articleId < 1 || activeLive()?.id !== articleId || !reaction) return;
+
+    const id = Date.now() + Math.floor(Math.random() * 1000);
+    setLiveReactions((prev) => [...prev.slice(-5), { id, emoji: reaction }]);
+    window.setTimeout(() => {
+      setLiveReactions((prev) => prev.filter((entry) => entry.id !== id));
+    }, 1600);
   });
 
   createEffect(() => {
