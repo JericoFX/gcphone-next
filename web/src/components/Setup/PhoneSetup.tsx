@@ -12,8 +12,6 @@ const LANGUAGES = [
 
 const THEMES = [
   { value: 'light', label: 'Claro', meta: 'Siempre iluminado' },
-  { value: 'dark', label: 'Oscuro', meta: 'Mas cinematografico' },
-  { value: 'auto', label: 'Auto', meta: 'Se adapta al entorno' },
 ] as const;
 
 const AUDIO_PROFILES = [
@@ -69,7 +67,7 @@ export function PhoneSetup() {
   const [chirpUsername, setChirpUsername] = createSignal('');
   const [clipsUsername, setClipsUsername] = createSignal('');
   const [language, setLanguage] = createSignal<'es' | 'en' | 'pt' | 'fr'>(phoneState.settings.language || 'es');
-  const [theme, setTheme] = createSignal<'auto' | 'light' | 'dark'>(phoneState.settings.theme || 'light');
+  const [theme, setTheme] = createSignal<'light'>('light');
   const [audioProfile, setAudioProfile] = createSignal<'normal' | 'street' | 'vehicle' | 'silent'>(phoneState.settings.audioProfile || 'normal');
   const [error, setError] = createSignal('');
   const [loading, setLoading] = createSignal(false);
@@ -83,7 +81,7 @@ export function PhoneSetup() {
     clipsUsername: clipsUsername().trim(),
     mailAlias: mailEnabled() ? mailAlias().trim() : undefined,
     language: language(),
-    theme: theme(),
+    theme: 'light',
     audioProfile: audioProfile(),
   }));
 

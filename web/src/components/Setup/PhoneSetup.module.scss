@@ -1,47 +1,66 @@
 .setupRoot {
+  height: 100%;
   min-height: 100%;
-  display: grid;
-  place-items: center;
-  padding: 18px;
+  padding: 14px 14px calc(16px + var(--phone-bottom-ui-gap, 0px));
   background:
-    radial-gradient(circle at top, rgba(93, 127, 244, 0.28), transparent 42%),
-    radial-gradient(circle at bottom left, rgba(31, 160, 178, 0.14), transparent 34%),
-    linear-gradient(180deg, rgba(6, 11, 24, 0.98), rgba(8, 16, 34, 0.98));
+    radial-gradient(circle at top, rgba(59, 130, 246, 0.16), transparent 38%),
+    radial-gradient(circle at bottom left, rgba(16, 185, 129, 0.1), transparent 32%),
+    linear-gradient(180deg, #f8fbff 0%, #eef5ff 48%, #edf6f2 100%);
 }
 
 .card {
-  width: 100%;
-  max-width: 392px;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px 16px 100px;
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.86);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  box-shadow: 0 20px 45px rgba(15, 23, 42, 0.12);
+  overflow-y: auto;
+}
+
+.hero,
+.section,
+.preferenceStack,
+.preferenceGroup,
+.formGrid,
+.identityGrid,
+.sectionHeader,
+.preferenceHeader {
   display: grid;
-  gap: 16px;
-  padding: 18px;
-  border-radius: 24px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background:
-    linear-gradient(180deg, rgba(16, 24, 46, 0.94), rgba(9, 15, 30, 0.96)),
-    rgba(9, 13, 29, 0.86);
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.42);
+  gap: 10px;
+}
+
+.footer {
+  display: grid;
+  gap: 10px;
+  margin-top: auto;
+  padding-top: 8px;
+  position: sticky;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.86);
 }
 
 .hero {
-  display: grid;
-  gap: 8px;
+  gap: 6px;
 }
 
 .eyebrow {
   margin: 0;
   font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.18em;
+  font-weight: 800;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: rgba(150, 190, 255, 0.82);
+  color: #2563eb;
 }
 
 .hero h2 {
   margin: 0;
   font-size: 24px;
   line-height: 1.05;
-  color: #f7f9ff;
+  color: #0f172a;
 }
 
 .lead,
@@ -51,7 +70,7 @@
 .optionCard span,
 .preferenceHeader span {
   margin: 0;
-  color: rgba(219, 229, 255, 0.68);
+  color: #64748b;
 }
 
 .lead {
@@ -69,26 +88,30 @@
   display: grid;
   gap: 6px;
   justify-items: start;
+  min-width: 0;
   padding: 10px 12px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(148, 163, 184, 0.22);
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.03);
-  color: rgba(240, 245, 255, 0.68);
+  background: rgba(255, 255, 255, 0.72);
+  color: #64748b;
   font-size: 11px;
+  box-shadow: 0 8px 18px rgba(148, 163, 184, 0.08);
 }
 
 .progressStepActive,
 .progressStepDone {
-  color: #f7f9ff;
-  border-color: rgba(116, 158, 255, 0.48);
+  color: #0f172a;
+  border-color: rgba(37, 99, 235, 0.26);
 }
 
 .progressStepActive {
-  background: linear-gradient(180deg, rgba(81, 122, 255, 0.22), rgba(255, 255, 255, 0.04));
+  background: linear-gradient(180deg, rgba(219, 234, 254, 0.95), rgba(255, 255, 255, 0.92));
+  box-shadow: 0 12px 24px rgba(37, 99, 235, 0.12);
 }
 
 .progressStepDone {
-  background: rgba(73, 118, 233, 0.14);
+  background: rgba(220, 252, 231, 0.78);
+  border-color: rgba(16, 185, 129, 0.24);
 }
 
 .progressIndex {
@@ -97,30 +120,24 @@
   display: grid;
   place-items: center;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(37, 99, 235, 0.1);
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 800;
+  color: #1d4ed8;
 }
 
-.section,
-.preferenceStack,
-.preferenceGroup,
-.formGrid,
-.identityGrid,
-.footer {
-  display: grid;
-  gap: 12px;
-}
-
-.sectionHeader {
-  display: grid;
-  gap: 4px;
+.section {
+  padding: 14px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  flex-shrink: 0;
 }
 
 .sectionHeader h3,
 .preferenceHeader strong {
   margin: 0;
-  color: #f8fbff;
+  color: #0f172a;
 }
 
 .sectionHeader h3 {
@@ -149,12 +166,13 @@
 .optionCard {
   display: grid;
   gap: 4px;
+  min-width: 0;
   padding: 13px;
   text-align: left;
   border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  background: rgba(255, 255, 255, 0.04);
-  color: #f5f8ff;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(248, 250, 252, 0.92));
+  color: #0f172a;
 }
 
 .optionCard strong {
@@ -162,20 +180,20 @@
 }
 
 .optionCardActive {
-  border-color: rgba(132, 173, 255, 0.62);
-  background: linear-gradient(180deg, rgba(84, 126, 255, 0.24), rgba(16, 22, 40, 0.74));
-  box-shadow: inset 0 0 0 1px rgba(161, 196, 255, 0.16);
+  border-color: rgba(37, 99, 235, 0.34);
+  background: linear-gradient(180deg, rgba(219, 234, 254, 0.98), rgba(239, 246, 255, 0.94));
+  box-shadow: inset 0 0 0 1px rgba(96, 165, 250, 0.18);
 }
 
 .field {
   display: grid;
   gap: 6px;
   font-size: 12px;
-  color: rgba(241, 246, 255, 0.9);
+  color: #334155;
 }
 
 .field span {
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .field input {
@@ -183,13 +201,13 @@
   min-width: 0;
   padding: 12px 13px;
   border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(3, 8, 18, 0.42);
-  color: #fff;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  background: rgba(255, 255, 255, 0.9);
+  color: #0f172a;
 }
 
 .field input::placeholder {
-  color: rgba(214, 223, 248, 0.34);
+  color: #94a3b8;
 }
 
 .inputWrap {
@@ -202,25 +220,20 @@
 .domainBadge {
   padding: 11px 12px;
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  color: rgba(221, 230, 255, 0.76);
+  background: rgba(241, 245, 249, 0.95);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  color: #475569;
   font-size: 12px;
   white-space: nowrap;
-}
-
-.preferenceHeader {
-  display: grid;
-  gap: 3px;
 }
 
 .error {
   margin: 0;
   padding: 11px 13px;
   border-radius: 14px;
-  background: rgba(255, 108, 108, 0.12);
-  border: 1px solid rgba(255, 141, 141, 0.24);
-  color: #ffd1d1;
+  background: rgba(254, 226, 226, 0.92);
+  border: 1px solid rgba(248, 113, 113, 0.24);
+  color: #b91c1c;
   font-size: 12px;
 }
 
@@ -237,23 +250,46 @@
 .secondaryButton,
 .primaryButton {
   border: 0;
-  border-radius: 15px;
+  border-radius: 16px;
   padding: 12px 14px;
-  font-weight: 700;
-  color: #fff;
+  font-weight: 800;
 }
 
 .secondaryButton {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(226, 232, 240, 0.9);
+  color: #334155;
 }
 
 .primaryButton {
-  background: linear-gradient(135deg, #5b80ff, #1d9bc1);
-  box-shadow: 0 16px 32px rgba(34, 111, 210, 0.32);
+  background: linear-gradient(135deg, #2563eb, #0ea5e9);
+  color: #fff;
+  box-shadow: 0 16px 28px rgba(37, 99, 235, 0.2);
 }
 
 .secondaryButton:disabled,
 .primaryButton:disabled,
 .progressStep:disabled {
   opacity: 0.55;
+}
+
+@media (max-width: 360px) {
+  .setupRoot {
+    padding: 10px 10px calc(14px + var(--phone-bottom-ui-gap, 0px));
+  }
+
+  .card {
+    padding: 12px;
+    border-radius: 22px;
+  }
+
+  .progress,
+  .optionGrid,
+  .buttonRow,
+  .inputWrap {
+    grid-template-columns: 1fr;
+  }
+
+  .domainBadge {
+    text-align: center;
+  }
 }
