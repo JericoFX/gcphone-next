@@ -66,7 +66,6 @@ local AllowedApps = {
     clips = true,
     darkrooms = true,
     yellowpages = true,
-    market = true,
     news = true,
     garage = true,
     clock = true,
@@ -76,7 +75,7 @@ local AllowedApps = {
 }
 
 local DefaultLayout = {
-    home = { 'contacts', 'messages', 'mail', 'notifications', 'calls', 'settings', 'gallery', 'camera', 'bank', 'wallet', 'documents', 'wavechat', 'music', 'chirp', 'snap', 'clips', 'darkrooms', 'yellowpages', 'market', 'news', 'garage', 'clock', 'notes', 'maps', 'weather' },
+    home = { 'contacts', 'messages', 'mail', 'notifications', 'calls', 'settings', 'gallery', 'camera', 'bank', 'wallet', 'documents', 'wavechat', 'music', 'chirp', 'snap', 'clips', 'darkrooms', 'yellowpages', 'news', 'garage', 'clock', 'notes', 'maps', 'weather' },
     menu = { 'appstore' }
 }
 
