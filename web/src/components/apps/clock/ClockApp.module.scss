@@ -1,3 +1,31 @@
+.hero-alarm {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 12px;
+  padding: 14px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #f9fafc, #edf3ff);
+  border: 1px solid rgba(58, 91, 176, 0.12);
+}
+
+.hero-alarm span {
+  font-size: 11px;
+  color: var(--text-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.hero-alarm strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 26px;
+  color: var(--text);
+}
+
+.hero-alarm small {
+  color: var(--text-soft);
+}
+
 .timer-card {
   padding: 12px;
   display: grid;
@@ -6,6 +34,12 @@
   border-radius: var(--r-lg);
   background: var(--surface);
   box-shadow: var(--shadow-1);
+}
+
+.preset-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
 }
 
 .big-clock {
