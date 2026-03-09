@@ -14,6 +14,12 @@ interface AlarmItem {
   enabled: boolean;
 }
 
+interface WorldClock {
+  city: string;
+  offsetLabel: string;
+  time: string;
+}
+
 export function ClockApp() {
   const router = useRouter();
   const [tab, setTab] = createSignal<Tab>('alarm');
@@ -25,6 +31,11 @@ export function ClockApp() {
   const [timerSec, setTimerSec] = createSignal(0);
   const [stopwatchSec, setStopwatchSec] = createSignal(0);
   const [loading, setLoading] = createSignal(true);
+  const [worldClocks] = createSignal<WorldClock[]>([
+    { city: 'Los Santos', offsetLabel: 'Local', time: '08:24' },
+    { city: 'Liberty City', offsetLabel: '+3 h', time: '11:24' },
+    { city: 'Vice City', offsetLabel: '+1 h', time: '09:24' },
+  ]);
 
   let timerHandle: number | undefined;
   let stopwatchHandle: number | undefined;
@@ -79,6 +90,11 @@ export function ClockApp() {
 
   const resetStopwatch = () => setStopwatchSec(0);
 
+  const applyPreset = (seconds: number) => {
+    setTimerInput(String(seconds));
+    setTimerSec(seconds);
+  };
+
   const fmt = (seconds: number) => {
     const h = Math.floor(seconds / 3600)
       .toString()
@@ -91,7 +107,7 @@ export function ClockApp() {
   };
 
   return (
-    <AppScaffold title="Reloj" onBack={() => router.goBack()}>
+    <AppScaffold title="Reloj" subtitle="Alarmas y tiempo" onBack={() => router.goBack()}>
       <div class="ios-segment">
         <button class="ios-segment-btn" classList={{ 'ios-segment-btn-active': tab() === 'alarm' }} onClick={() => setTab('alarm')}>
           Alarmas
@@ -110,6 +126,13 @@ export function ClockApp() {
 
       <ScreenState loading={loading()} empty={false}>
         <Show when={tab() === 'alarm'}>
+          <div class={styles.heroAlarm}>
+            <div>
+              <span>Proxima alarma</span>
+              <strong>{alarms().find((alarm) => alarm.enabled)?.time || 'Sin alarmas activas'}</strong>
+            </div>
+            <small>{alarms().find((alarm) => alarm.enabled)?.label || 'Activa una para verla aqui'}</small>
+          </div>
           <div class="ios-section-title">Mis alarmas</div>
           <div class="ios-list">
             <For each={alarms()}>
@@ -126,12 +149,31 @@ export function ClockApp() {
               )}
             </For>
           </div>
+          <div class="ios-section-title">Relojes mundiales</div>
+          <div class="ios-list">
+            <For each={worldClocks()}>
+              {(clock) => (
+                <div class="ios-row">
+                  <div>
+                    <div class="ios-label">{clock.city}</div>
+                    <div class="ios-value">{clock.offsetLabel}</div>
+                  </div>
+                  <div class="ios-value">{clock.time}</div>
+                </div>
+              )}
+            </For>
+          </div>
         </Show>
 
         <Show when={tab() === 'timer'}>
           <div class="ios-section-title">Temporizador</div>
           <div class={`ios-card ${styles.timerCard}`}>
             <input class="ios-input" type="number" placeholder="Segundos" value={timerInput()} onInput={(e) => setTimerInput(e.currentTarget.value)} />
+            <div class={styles.presetRow}>
+              <button class="ios-btn" onClick={() => applyPreset(60)}>1 min</button>
+              <button class="ios-btn" onClick={() => applyPreset(300)}>5 min</button>
+              <button class="ios-btn" onClick={() => applyPreset(900)}>15 min</button>
+            </div>
             <button class="ios-btn ios-btn-primary" onClick={startTimer}>
               Iniciar
             </button>

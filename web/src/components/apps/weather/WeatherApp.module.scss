@@ -8,6 +8,17 @@
   box-shadow: var(--shadow-2);
 }
 
+.hero-top-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.hero-icon {
+  font-size: 28px;
+}
+
 .city {
   font-size: 16px;
   font-weight: 700;
@@ -24,4 +35,55 @@
   margin-top: 6px;
   font-size: 14px;
   font-weight: 600;
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.metric-card {
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.metric-card span {
+  font-size: 11px;
+  opacity: 0.8;
+}
+
+.metric-card strong {
+  font-size: 14px;
+}
+
+.hourly-rail {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.hour-card {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  padding: 10px 8px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: var(--shadow-1);
+}
+
+.hour-card span,
+.hour-card small {
+  font-size: 11px;
+  color: var(--text-soft);
+}
+
+.hour-card strong {
+  font-size: 20px;
 }
