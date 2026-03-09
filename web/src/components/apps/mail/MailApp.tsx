@@ -1,7 +1,12 @@
 import { For, Show, createMemo, createSelector, createSignal, onMount } from 'solid-js';
 import { AppScaffold } from '../../shared/layout/AppScaffold';
+import { MediaActionButtons } from '../../shared/ui/MediaActionButtons';
+import { MediaAttachmentPreview } from '../../shared/ui/MediaAttachmentPreview';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { fetchNui } from '../../../utils/fetchNui';
+import { resolveMediaType, sanitizeMediaUrl } from '../../../utils/sanitize';
+import { uiAlert } from '../../../utils/uiAlert';
+import { uiPrompt } from '../../../utils/uiDialog';
 import styles from './MailApp.module.scss';
 
 interface MailAccount {
@@ -208,7 +213,7 @@ export function MailApp() {
   };
 
   const addAttachment = () => {
-    const url = attachmentUrl().trim();
+    const url = attachmentType() === 'document' ? attachmentUrl().trim() : sanitizeMediaUrl(attachmentUrl().trim()) || attachmentUrl().trim();
     if (!url) {
       setError('El adjunto requiere URL');
       return;
@@ -224,6 +229,57 @@ export function MailApp() {
     ]);
     setAttachmentUrl('');
     setAttachmentName('');
+  };
+
+  const attachFromGallery = async () => {
+    const gallery = await fetchNui<Array<{ url?: string }>>('getGallery', undefined, []);
+    const media = gallery?.find((entry) => entry?.url && ['image', 'video'].includes(resolveMediaType(entry.url)));
+    const url = sanitizeMediaUrl(media?.url || '');
+    if (!url) {
+      uiAlert('No se encontro una imagen o video para adjuntar');
+      return;
+    }
+
+    setAttachments((prev) => [
+      ...prev,
+      {
+        type: resolveMediaType(url) === 'video' ? 'video' : 'image',
+        url,
+        name: 'Adjunto de galeria',
+      },
+    ]);
+  };
+
+  const attachFromCamera = async () => {
+    const shot = await fetchNui<{ url?: string }>('takePhoto', {}, { url: '' });
+    const url = sanitizeMediaUrl(shot?.url || '');
+    if (!url) {
+      await attachFromGallery();
+      return;
+    }
+
+    setAttachments((prev) => [
+      ...prev,
+      {
+        type: resolveMediaType(url) === 'video' ? 'video' : 'image',
+        url,
+        name: 'Captura de camara',
+      },
+    ]);
+  };
+
+  const attachLinkByPrompt = async () => {
+    const result = await uiPrompt('Pega la URL para adjuntarla al mail', { title: 'Adjuntar enlace' });
+    const url = (result || '').trim();
+    if (!url) return;
+    setAttachments((prev) => [
+      ...prev,
+      {
+        type: 'link',
+        url,
+        name: 'Enlace',
+      },
+    ]);
   };
 
   const removeAttachment = (index: number) => {
@@ -558,6 +614,15 @@ export function MailApp() {
 
                     <div class={styles.attachmentsBox}>
                       <h5>Adjuntos (opcional)</h5>
+                      <MediaActionButtons
+                        actions={[
+                          { icon: '🖼', label: 'Galeria', onClick: attachFromGallery },
+                          { icon: '📷', label: 'Camara', onClick: attachFromCamera },
+                          { icon: '🔗', label: 'Link', onClick: () => void attachLinkByPrompt() },
+                        ]}
+                        variant='compact'
+                        class={styles.composeMediaButtons}
+                      />
                       <div class={styles.attachRow}>
                         <select
                           class={styles.select}
@@ -580,6 +645,10 @@ export function MailApp() {
                           placeholder='URL interna'
                         />
                       </div>
+                      <MediaAttachmentPreview
+                        url={attachmentUrl()}
+                        mediaClass={styles.composePreviewMedia}
+                      />
                       <div class={styles.attachRow}>
                         <input
                           class={styles.inputInline}
