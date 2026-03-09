@@ -116,6 +116,17 @@ export function MapsApp() {
     addManualMarker(x, y, 'Punto compartido');
   });
 
+  createEffect(() => {
+    const params = routeParams();
+    const action = typeof params.action === 'string' ? params.action : '';
+    if (action !== 'my-location') return;
+
+    const key = `action:${action}`;
+    if (key === lastRouteKey) return;
+    lastRouteKey = key;
+    void getMyLocation();
+  });
+
   const addManualMarker = (x: number, y: number, label?: string) => {
     const id = `marker-${++markerIdCounter}`;
     const marker: ManualMarker = {

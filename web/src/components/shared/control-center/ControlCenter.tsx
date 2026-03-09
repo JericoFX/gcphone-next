@@ -87,7 +87,7 @@ export function ControlCenter() {
       gps: {
         label: 'GPS',
         glyph: '⌖',
-        onClick: () => fetchNui('setGPS', { x: 0, y: 0 }),
+        onClick: () => openRoute('maps', { action: 'my-location' }),
       },
       preview: {
         label: 'Probar noti',
