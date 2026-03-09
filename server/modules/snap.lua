@@ -164,6 +164,20 @@ lib.callback.register('gcphone:snap:getAccount', function(source)
     return GetAccount(identifier)
 end)
 
+lib.callback.register('gcphone:clips:getAccount', function(source)
+    local identifier = GetIdentifier(source)
+    if not identifier then return nil end
+
+    return GetAccount(identifier)
+end)
+
+lib.callback.register('gcphone:news:getAccount', function(source)
+    local identifier = GetIdentifier(source)
+    if not identifier then return nil end
+
+    return GetAccount(identifier)
+end)
+
 lib.callback.register('gcphone:snap:getDiscoverAccounts', function(source, data)
     local identifier = GetIdentifier(source)
     if not identifier then return {} end
@@ -358,6 +372,64 @@ lib.callback.register('gcphone:snap:createAccount', function(source, data)
     return created ~= nil, created
 end)
 
+lib.callback.register('gcphone:clips:createAccount', function(source, data)
+    local identifier = GetIdentifier(source)
+    if not identifier then return false, 'INVALID_PLAYER' end
+    if type(data) ~= 'table' then return false, 'INVALID_PAYLOAD' end
+
+    local username = SanitizeText(tostring(data.username or ''), 32):lower()
+    username = username:gsub('[^a-z0-9._-]', '')
+    if username == '' or #username < 3 then
+        return false, 'INVALID_USERNAME'
+    end
+
+    local existing = GetAccount(identifier)
+    if existing then
+        return true, existing
+    end
+
+    local occupied = MySQL.scalar.await(
+        'SELECT 1 FROM phone_snap_accounts WHERE username = ? LIMIT 1',
+        { username }
+    )
+    if occupied then
+        return false, 'USERNAME_TAKEN'
+    end
+
+    local name = GetName(source) or 'User'
+    local created = CreateAccount(identifier, username, name, nil)
+    return created ~= nil, created
+end)
+
+lib.callback.register('gcphone:news:createAccount', function(source, data)
+    local identifier = GetIdentifier(source)
+    if not identifier then return false, 'INVALID_PLAYER' end
+    if type(data) ~= 'table' then return false, 'INVALID_PAYLOAD' end
+
+    local username = SanitizeText(tostring(data.username or ''), 32):lower()
+    username = username:gsub('[^a-z0-9._-]', '')
+    if username == '' or #username < 3 then
+        return false, 'INVALID_USERNAME'
+    end
+
+    local existing = GetAccount(identifier)
+    if existing then
+        return true, existing
+    end
+
+    local occupied = MySQL.scalar.await(
+        'SELECT 1 FROM phone_snap_accounts WHERE username = ? LIMIT 1',
+        { username }
+    )
+    if occupied then
+        return false, 'USERNAME_TAKEN'
+    end
+
+    local name = GetName(source) or 'User'
+    local created = CreateAccount(identifier, username, name, nil)
+    return created ~= nil, created
+end)
+
 lib.callback.register('gcphone:snap:updateAccount', function(source, data)
     local identifier = GetIdentifier(source)
     if not identifier then return false end
@@ -374,6 +446,44 @@ lib.callback.register('gcphone:snap:updateAccount', function(source, data)
         { displayName, avatar, bio, data.isPrivate and 1 or 0, identifier }
     )
     
+    return true
+end)
+
+lib.callback.register('gcphone:clips:updateAccount', function(source, data)
+    local identifier = GetIdentifier(source)
+    if not identifier then return false end
+
+    if type(data) ~= 'table' then return false end
+
+    local displayName = SanitizeText(data.displayName, 50)
+    local avatar = SanitizeMediaUrl(data.avatar)
+    local bio = SanitizeText(data.bio, 160)
+    if displayName == '' then return false end
+
+    MySQL.update.await(
+        'UPDATE phone_snap_accounts SET display_name = ?, avatar = ?, bio = ?, is_private = ? WHERE identifier = ?',
+        { displayName, avatar, bio, data.isPrivate and 1 or 0, identifier }
+    )
+
+    return true
+end)
+
+lib.callback.register('gcphone:news:updateAccount', function(source, data)
+    local identifier = GetIdentifier(source)
+    if not identifier then return false end
+
+    if type(data) ~= 'table' then return false end
+
+    local displayName = SanitizeText(data.displayName, 50)
+    local avatar = SanitizeMediaUrl(data.avatar)
+    local bio = SanitizeText(data.bio, 160)
+    if displayName == '' then return false end
+
+    MySQL.update.await(
+        'UPDATE phone_snap_accounts SET display_name = ?, avatar = ?, bio = ?, is_private = ? WHERE identifier = ?',
+        { displayName, avatar, bio, data.isPrivate and 1 or 0, identifier }
+    )
+
     return true
 end)
 
