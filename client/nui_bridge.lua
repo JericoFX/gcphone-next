@@ -508,6 +508,12 @@ RegisterNUICallback('clipsGetAccount', function(_, cb)
     end)
 end)
 
+RegisterNUICallback('newsGetAccount', function(_, cb)
+    lib.callback('gcphone:snap:getAccount', false, function(account)
+        cb(account)
+    end)
+end)
+
 RegisterNUICallback('snapCreateAccount', function(data, cb)
     lib.callback('gcphone:snap:createAccount', false, function(success, payload)
         if success then
@@ -521,6 +527,18 @@ RegisterNUICallback('snapCreateAccount', function(data, cb)
 end)
 
 RegisterNUICallback('clipsCreateAccount', function(data, cb)
+    lib.callback('gcphone:snap:createAccount', false, function(success, payload)
+        if success then
+            cb(cbSuccess(true, nil, { account = payload }))
+            return
+        end
+
+        local errorMessage = type(payload) == 'string' and payload or 'No se pudo crear la cuenta'
+        cb(cbSuccess(false, errorMessage))
+    end, data or {})
+end)
+
+RegisterNUICallback('newsCreateAccount', function(data, cb)
     lib.callback('gcphone:snap:createAccount', false, function(success, payload)
         if success then
             cb(cbSuccess(true, nil, { account = payload }))
@@ -551,6 +569,12 @@ RegisterNUICallback('snapUpdateAccount', function(data, cb)
 end)
 
 RegisterNUICallback('clipsUpdateAccount', function(data, cb)
+    lib.callback('gcphone:snap:updateAccount', false, function(success)
+        cb(cbSuccess(success))
+    end, data or {})
+end)
+
+RegisterNUICallback('newsUpdateAccount', function(data, cb)
     lib.callback('gcphone:snap:updateAccount', false, function(success)
         cb(cbSuccess(success))
     end, data or {})

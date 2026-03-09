@@ -46,7 +46,7 @@ interface MockLiveMessage {
   at: string;
 }
 
-interface SharedSnapAccount {
+interface NewsProfile {
   username?: string;
   display_name?: string;
   avatar?: string;
@@ -105,7 +105,7 @@ export function NewsApp() {
   const [liveChatInput, setLiveChatInput] = createSignal('');
   const [liveReactions, setLiveReactions] = createSignal<LiveReaction[]>([]);
   const [viewerUrl, setViewerUrl] = createSignal<string | null>(null);
-  const [myAccount, setMyAccount] = createSignal<SharedSnapAccount | null>(null);
+  const [myAccount, setMyAccount] = createSignal<NewsProfile | null>(null);
   const [showOnboarding, setShowOnboarding] = createSignal(false);
   const [query, setQuery] = createSignal('');
   const [mockLiveEnabled, setMockLiveEnabled] = createSignal(false);
@@ -160,7 +160,7 @@ export function NewsApp() {
   };
 
   const loadAccount = async () => {
-    const account = await fetchNui<SharedSnapAccount | null>('snapGetAccount', {}, null);
+    const account = await fetchNui<NewsProfile | null>('newsGetAccount', {}, null);
     setMyAccount(account);
     setShowOnboarding(!account?.username);
   };
@@ -510,14 +510,14 @@ export function NewsApp() {
   };
 
   const editProfile = async () => {
-    const account = myAccount() || await fetchNui<SharedSnapAccount | null>('snapGetAccount', {}, null);
+    const account = myAccount() || await fetchNui<NewsProfile | null>('newsGetAccount', {}, null);
     if (!account?.username) {
       setShowOnboarding(true);
       return;
     }
     if (!account) return;
 
-    const nextNameInput = await uiPrompt('Nombre visible para Snap/Clips/Noticias', {
+    const nextNameInput = await uiPrompt('Nombre visible para Noticias', {
       title: 'Perfil',
       defaultValue: account.display_name || '',
       placeholder: 'Tu nombre',
@@ -527,7 +527,7 @@ export function NewsApp() {
     const nextName = sanitizeText(nextNameInput, 50);
     if (!nextName) return;
 
-    const ok = await fetchNui<{ success?: boolean }>('snapUpdateAccount', {
+    const ok = await fetchNui<{ success?: boolean }>('newsUpdateAccount', {
       displayName: nextName,
       avatar: account.avatar || undefined,
       bio: account.bio || undefined,
@@ -539,21 +539,21 @@ export function NewsApp() {
     }
   };
 
-  const createSnapAccount = async (payload: SocialOnboardingPayload) => {
+  const createNewsAccount = async (payload: SocialOnboardingPayload) => {
     const avatar = sanitizeMediaUrl(payload.avatar) || '';
     const bio = sanitizeText(payload.bio, 180);
 
-    const response = await fetchNui<{ success?: boolean; error?: string }>('snapCreateAccount', {
+    const response = await fetchNui<{ success?: boolean; error?: string }>('newsCreateAccount', {
       username: payload.username,
       displayName: payload.displayName,
       avatar,
     }, { success: false });
 
     if (!response?.success) {
-      return { ok: false, error: response?.error || 'No se pudo crear la cuenta de Snap.' };
+      return { ok: false, error: response?.error || 'No se pudo crear el perfil de Noticias.' };
     }
 
-    const updated = await fetchNui<{ success?: boolean }>('snapUpdateAccount', {
+    const updated = await fetchNui<{ success?: boolean }>('newsUpdateAccount', {
       displayName: payload.displayName,
       avatar,
       bio,
@@ -643,7 +643,7 @@ export function NewsApp() {
           <section class={styles.liveRail}>
             <div class={styles.liveRailHeader}>
               <strong>En vivo</strong>
-              <span>Abre la cobertura activa como en Snap y vuelve al feed cuando quieras.</span>
+              <span>Sigue coberturas activas, entra al directo y vuelve al feed cuando quieras.</span>
             </div>
             <div class={styles.liveRailList}>
               <For each={featuredLives()}>
@@ -862,13 +862,13 @@ export function NewsApp() {
         <MediaLightbox url={viewerUrl()} onClose={() => setViewerUrl(null)} />
         <SocialOnboardingModal
           open={showOnboarding()}
-          appName="Snap/Noticias"
+          appName="Noticias"
           usernameHint={myAccount()?.username || ''}
           displayNameHint={myAccount()?.display_name || ''}
           avatarHint={myAccount()?.avatar || ''}
           bioHint={myAccount()?.bio || ''}
           isPrivateHint={myAccount()?.is_private === 1 || myAccount()?.is_private === true}
-          onCreate={createSnapAccount}
+          onCreate={createNewsAccount}
           onClose={() => setShowOnboarding(false)}
         />
       </div>
