@@ -263,7 +263,7 @@ export function CameraApp() {
       if (input && input.trim()) {
         setError('URL invalida');
       }
-      return;
+      return false;
     }
 
     await fetchNui('storeMediaUrl', { url: videoUrl }, { success: false });
@@ -273,10 +273,11 @@ export function CameraApp() {
 
     if (result?.success) {
       router.navigate('clips');
-      return;
+      return true;
     }
 
     setError('No se pudo publicar');
+    return false;
   };
 
   const publishClipFromGallery = async () => {
@@ -288,8 +289,7 @@ export function CameraApp() {
 
     const videoUrl = sanitizeMediaUrl(picked?.url);
     if (!videoUrl || resolveMediaType(videoUrl) !== 'video') {
-      setError('No hay videos');
-      return;
+      return false;
     }
 
     const result = await fetchNui<{ success?: boolean }>('clipsPublish', {
@@ -298,10 +298,11 @@ export function CameraApp() {
 
     if (result?.success) {
       router.navigate('clips');
-      return;
+      return true;
     }
 
     setError('No se pudo publicar');
+    return false;
   };
 
   const publishClipFromRecording = async () => {
@@ -324,7 +325,13 @@ export function CameraApp() {
     const videoUrl = sanitizeMediaUrl(result?.url);
     if (!videoUrl || resolveMediaType(videoUrl) !== 'video') {
       if (result?.error === 'video_not_supported') {
-        setError('Video no disponible');
+        const galleryOk = await publishClipFromGallery();
+        if (!galleryOk) {
+          const urlOk = await publishClipFromUrl();
+          if (!urlOk) {
+            setError('Grabacion no disponible; usa galeria o URL');
+          }
+        }
       } else {
         setError('Error al grabar');
       }
