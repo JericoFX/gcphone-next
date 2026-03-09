@@ -12,8 +12,6 @@ interface NotificationsState {
   doNotDisturb: boolean;
   airplaneMode: boolean;
   silentMode: boolean;
-  mobileData: boolean;
-  rotationLock: boolean;
   brightness: number;
   controlCenterOpen: boolean;
   notificationCenterOpen: boolean;
@@ -31,8 +29,6 @@ interface NotificationsActions {
   setDoNotDisturb: (value: boolean) => void;
   setAirplaneMode: (value: boolean) => void;
   setSilentMode: (value: boolean) => void;
-  setMobileData: (value: boolean) => void;
-  setRotationLock: (value: boolean) => void;
   setBrightness: (value: number) => void;
   toggleControlCenter: () => void;
   setControlCenterOpen: (value: boolean) => void;
@@ -112,7 +108,6 @@ function normalizeMutedApps(value: unknown) {
 }
 
 export const NotificationsProvider: ParentComponent = (props) => {
-  const persistedTilePreset = sanitizeText(window.localStorage.getItem('gcphone:controlTilePreset') || '', 12);
   const persistedCompactMode = window.localStorage.getItem('gcphone:notificationCompact') === '1';
   const persistedOrderRaw = window.localStorage.getItem('gcphone:controlTileOrder');
   const persistedOrder = normalizeTileOrder(persistedOrderRaw ? safeJsonParse(persistedOrderRaw) : null);
@@ -126,13 +121,11 @@ export const NotificationsProvider: ParentComponent = (props) => {
     doNotDisturb: false,
     airplaneMode: false,
     silentMode: false,
-    mobileData: true,
-    rotationLock: true,
     brightness: 1,
     controlCenterOpen: false,
     notificationCenterOpen: false,
     notificationCompactMode: persistedCompactMode,
-    controlTilePreset: persistedTilePreset === 'compact' || persistedTilePreset === 'large' ? persistedTilePreset : 'default',
+    controlTilePreset: 'compact',
     controlTileOrder: persistedOrder,
     readAtByApp: {},
     mutedApps: persistedMutedApps,
@@ -188,22 +181,10 @@ export const NotificationsProvider: ParentComponent = (props) => {
     setAirplaneMode: (value) => {
       const next = !!value;
       setState('airplaneMode', next);
-      if (next) setState('mobileData', false);
       void fetchNui('setAirplaneMode', { enabled: next }, true);
     },
     setSilentMode: (value) => {
       setState('silentMode', !!value);
-    },
-    setMobileData: (value) => {
-      const next = !!value;
-      setState('mobileData', next);
-      if (next && state.airplaneMode) {
-        setState('airplaneMode', false);
-        void fetchNui('setAirplaneMode', { enabled: false }, true);
-      }
-    },
-    setRotationLock: (value) => {
-      setState('rotationLock', !!value);
     },
     setBrightness: (value) => {
       const next = Math.max(0.4, Math.min(1.2, Number(value) || 1));
@@ -224,9 +205,8 @@ export const NotificationsProvider: ParentComponent = (props) => {
     toggleNotificationCompactMode: () => {
       setState('notificationCompactMode', (prev) => !prev);
     },
-    setControlTilePreset: (value) => {
-      const next = value === 'compact' || value === 'large' ? value : 'default';
-      setState('controlTilePreset', next);
+    setControlTilePreset: () => {
+      setState('controlTilePreset', 'compact');
     },
     applyControlTileOrderPreset: (value) => {
       if (value === 'commute') {

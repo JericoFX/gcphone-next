@@ -6,7 +6,7 @@ import { APP_BY_ID } from '../../../config/apps';
 import { appName, formatDate, t } from '../../../i18n';
 import styles from './ControlCenter.module.scss';
 
-type TileId = 'airplane' | 'dnd' | 'data' | 'silent' | 'gps' | 'preview';
+type TileId = 'airplane' | 'dnd' | 'silent' | 'gps' | 'preview';
 
 
 export function ControlCenter() {
@@ -15,6 +15,7 @@ export function ControlCenter() {
   const language = () => phoneState.settings.language || 'es';
   const [dragSurface, setDragSurface] = createSignal<'notifications' | 'control' | null>(null);
   const [dragProgress, setDragProgress] = createSignal(0);
+  const [liveLocationEnabled, setLiveLocationEnabled] = createSignal(false);
   
   let sheetGestureStartX = 0;
   let sheetGestureStartY = 0;
@@ -58,6 +59,69 @@ export function ControlCenter() {
     });
   }
 
+  async function syncLiveLocationState() {
+    const result = await fetchNui<{ success?: boolean; active?: boolean }>('getLiveLocationState', {}, { success: false, active: false });
+    setLiveLocationEnabled(result?.success === true && result.active === true);
+  }
+
+  async function toggleGpsQuickAction() {
+    if (liveLocationEnabled()) {
+      const stopResult = await fetchNui<{ success?: boolean }>('stopLiveLocation', {}, { success: false });
+      if (stopResult?.success) {
+        setLiveLocationEnabled(false);
+        notificationsActions.receive({
+          appId: 'maps',
+          title: 'GPS',
+          message: 'Ubicacion en tiempo real desactivada',
+          priority: 'normal',
+        });
+      }
+      return;
+    }
+
+    const contacts = await fetchNui<Array<{ number: string }>>('getContacts', {}, []);
+    const recipients = (contacts || [])
+      .map((row) => String(row?.number || '').trim())
+      .filter((value) => value.length > 0);
+
+    if (recipients.length === 0) {
+      notificationsActions.receive({
+        appId: 'maps',
+        title: 'GPS',
+        message: 'Necesitas al menos un contacto para compartir ubicacion',
+        priority: 'normal',
+      });
+      return;
+    }
+
+    await fetchNui('setLiveLocationInterval', { seconds: 10 }, { success: true });
+    const startResult = await fetchNui<{ success?: boolean; error?: string }>('startLiveLocation', {
+      recipients,
+      durationMinutes: 15,
+      updateIntervalSeconds: 10,
+    }, { success: false });
+
+    if (startResult?.success) {
+      setLiveLocationEnabled(true);
+      notificationsActions.receive({
+        appId: 'maps',
+        title: 'GPS',
+        message: 'Ubicacion en tiempo real activada cada 10s',
+        priority: 'normal',
+        route: 'maps',
+        data: { action: 'my-location' },
+      });
+      return;
+    }
+
+    notificationsActions.receive({
+      appId: 'maps',
+      title: 'GPS',
+      message: startResult?.error || 'No se pudo activar el GPS',
+      priority: 'normal',
+    });
+  }
+
   const controlTiles = createMemo(() => {
     const handlers: Record<TileId, { label: string; glyph: string; active?: boolean; onClick: () => void; testId?: string }> = {
       airplane: {
@@ -72,12 +136,6 @@ export function ControlCenter() {
         active: notifications.doNotDisturb,
         onClick: () => notificationsActions.setDoNotDisturb(!notifications.doNotDisturb),
       },
-      data: {
-        label: 'Datos moviles',
-        glyph: '◉',
-        active: notifications.mobileData,
-        onClick: () => notificationsActions.setMobileData(!notifications.mobileData),
-      },
       silent: {
         label: 'Silencio',
         glyph: '🔕',
@@ -87,7 +145,8 @@ export function ControlCenter() {
       gps: {
         label: 'GPS',
         glyph: '⌖',
-        onClick: () => openRoute('maps', { action: 'my-location' }),
+        active: liveLocationEnabled(),
+        onClick: () => void toggleGpsQuickAction(),
       },
       preview: {
         label: 'Probar noti',
@@ -196,6 +255,8 @@ export function ControlCenter() {
   );
 
   createEffect(() => {
+    void syncLiveLocationState();
+
     const onOpenControl = () => notificationsActions.setControlCenterOpen(true);
     const onOpenNotifications = () => notificationsActions.setNotificationCenterOpen(true);
 
@@ -331,22 +392,15 @@ export function ControlCenter() {
             </div>
 
             <div class={styles.presetRow}>
-               <button class={styles.presetBtn} classList={{ [styles.activePreset]: notifications.controlTilePreset === 'compact' }} onClick={() => notificationsActions.setControlTilePreset('compact')}>{t('control.preset.compact', language())}</button>
-               <button class={styles.presetBtn} classList={{ [styles.activePreset]: notifications.controlTilePreset === 'default' }} onClick={() => notificationsActions.setControlTilePreset('default')}>{t('control.preset.normal', language())}</button>
-               <button class={styles.presetBtn} classList={{ [styles.activePreset]: notifications.controlTilePreset === 'large' }} onClick={() => notificationsActions.setControlTilePreset('large')}>{t('control.preset.large', language())}</button>
-            </div>
-
-            <div class={styles.presetRow}>
-               <button class={styles.presetBtn} onClick={() => notificationsActions.applyControlTileOrderPreset('default')}>{t('control.order.base', language())}</button>
-               <button class={styles.presetBtn} onClick={() => notificationsActions.applyControlTileOrderPreset('commute')}>{t('control.order.commute', language())}</button>
+                <button class={styles.presetBtn} onClick={() => notificationsActions.applyControlTileOrderPreset('default')}>{t('control.order.base', language())}</button>
+                <button class={styles.presetBtn} onClick={() => notificationsActions.applyControlTileOrderPreset('commute')}>{t('control.order.commute', language())}</button>
                <button class={styles.presetBtn} onClick={() => notificationsActions.applyControlTileOrderPreset('focus')}>{t('control.order.focus', language())}</button>
             </div>
 
             <div
               class={styles.systemGrid}
               classList={{
-                [styles.systemGridCompact]: notifications.controlTilePreset === 'compact',
-                [styles.systemGridLarge]: notifications.controlTilePreset === 'large',
+                [styles.systemGridCompact]: true,
               }}
             >
               <For each={controlTiles()}>
@@ -360,7 +414,6 @@ export function ControlCenter() {
             </div>
 
             <div class={styles.switchCard}>
-              <ControlToggle label={t('control.rotation_lock', language())} active={notifications.rotationLock} onChange={notificationsActions.setRotationLock} />
               <ControlToggle label={t('control.dnd', language())} active={notifications.doNotDisturb} onChange={notificationsActions.setDoNotDisturb} />
               <ControlToggle label={t('control.airplane', language())} active={notifications.airplaneMode} onChange={notificationsActions.setAirplaneMode} />
             </div>
