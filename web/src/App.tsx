@@ -109,14 +109,16 @@ function PhoneContent() {
     <div class="gcphone-app" classList={{ [themeClass()]: true }}>
       <Show when={phoneState.visible}>
         <Show when={phoneState.locked} fallback={
-          <Show when={phoneState.requiresSetup} fallback={
-            <PhoneFrame>
-              <PhoneFrame.Router />
-              <ContactRequestNotification />
-            </PhoneFrame>
-          }>
-            <PhoneSetup />
-          </Show>
+          <PhoneFrame>
+            <Show when={phoneState.requiresSetup} fallback={
+              <>
+                <PhoneFrame.Router />
+                <ContactRequestNotification />
+              </>
+            }>
+              <PhoneSetup />
+            </Show>
+          </PhoneFrame>
         }>
           <LockScreen />
         </Show>

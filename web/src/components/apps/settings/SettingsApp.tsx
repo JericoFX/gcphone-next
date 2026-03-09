@@ -648,12 +648,14 @@ export function SettingsApp() {
       bodyClass={`${styles.app} ${styles.settingsCanvas}`}
       bodyPadding='none'
     >
+      <div class={styles.settingsContent}>
         {renderNav()}
 
         <Show when={tab() === 'appearance'}>{renderAppearance()}</Show>
         <Show when={tab() === 'sound'}>{renderSound()}</Show>
         <Show when={tab() === 'security'}>{renderSecurity()}</Show>
         <Show when={tab() === 'advanced'}>{renderAdvanced()}</Show>
+      </div>
     </AppScaffold>
   );
 }
