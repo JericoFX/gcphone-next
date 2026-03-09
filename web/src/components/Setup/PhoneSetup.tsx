@@ -10,10 +10,6 @@ const LANGUAGES = [
   { code: 'fr', label: 'Francais', meta: 'Telephone et apps en francais' },
 ] as const;
 
-const THEMES = [
-  { value: 'light', label: 'Claro', meta: 'Siempre iluminado' },
-] as const;
-
 const AUDIO_PROFILES = [
   { value: 'normal', label: 'Normal', meta: 'Uso general' },
   { value: 'street', label: 'Calle', meta: 'Exterior ruidoso' },
@@ -67,7 +63,6 @@ export function PhoneSetup() {
   const [chirpUsername, setChirpUsername] = createSignal('');
   const [clipsUsername, setClipsUsername] = createSignal('');
   const [language, setLanguage] = createSignal<'es' | 'en' | 'pt' | 'fr'>(phoneState.settings.language || 'es');
-  const [theme, setTheme] = createSignal<'light'>('light');
   const [audioProfile, setAudioProfile] = createSignal<'normal' | 'street' | 'vehicle' | 'silent'>(phoneState.settings.audioProfile || 'normal');
   const [error, setError] = createSignal('');
   const [loading, setLoading] = createSignal(false);
@@ -81,7 +76,6 @@ export function PhoneSetup() {
     clipsUsername: clipsUsername().trim(),
     mailAlias: mailEnabled() ? mailAlias().trim() : undefined,
     language: language(),
-    theme: 'light',
     audioProfile: audioProfile(),
   }));
 
@@ -260,26 +254,6 @@ export function PhoneSetup() {
             </div>
 
             <div class={styles.preferenceStack}>
-              <div class={styles.preferenceGroup}>
-                <div class={styles.preferenceHeader}>
-                  <strong>Apariencia</strong>
-                  <span>Elige como quieres ver el sistema.</span>
-                </div>
-                <div class={styles.optionGrid}>
-                  {THEMES.map((option) => (
-                    <button
-                      type='button'
-                      class={styles.optionCard}
-                      classList={{ [styles.optionCardActive]: theme() === option.value }}
-                      onClick={() => setTheme(option.value)}
-                    >
-                      <strong>{option.label}</strong>
-                      <span>{option.meta}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
               <div class={styles.preferenceGroup}>
                 <div class={styles.preferenceHeader}>
                   <strong>Perfil de audio</strong>
