@@ -2,6 +2,40 @@
 
 local MySQL = exports.oxmysql
 local USE_SQL_CLEANUP_EVENTS = GetConvar('gcphone_sql_cleanup_events', '0') == '1'
+local ActiveLocationRecipients = {}
+local LastLiveLocationCleanupAt = 0
+local LIVE_LOCATION_CLEANUP_MS = 60000
+
+local function RebuildRecipientCache()
+    local rows = MySQL.query_async(
+        'SELECT sender_phone, recipient_phone FROM phone_live_locations WHERE expires_at > NOW()'
+    ) or {}
+
+    ActiveLocationRecipients = {}
+    for _, row in ipairs(rows) do
+        local senderPhone = type(row.sender_phone) == 'string' and row.sender_phone or nil
+        local recipientPhone = type(row.recipient_phone) == 'string' and row.recipient_phone or nil
+        if senderPhone and recipientPhone then
+            local recipients = ActiveLocationRecipients[senderPhone]
+            if not recipients then
+                recipients = {}
+                ActiveLocationRecipients[senderPhone] = recipients
+            end
+
+            recipients[#recipients + 1] = recipientPhone
+        end
+    end
+end
+
+local function SetRecipientsForSender(senderPhone, recipients)
+    if not senderPhone then return end
+    ActiveLocationRecipients[senderPhone] = recipients or {}
+end
+
+local function ClearRecipientsForSender(senderPhone)
+    if not senderPhone then return end
+    ActiveLocationRecipients[senderPhone] = nil
+end
 
 local function GetPlayerByPhone(phoneNumber)
     if not phoneNumber then return nil end
@@ -23,7 +57,24 @@ end
 
 local function CleanExpiredLocations()
     MySQL.query_async('DELETE FROM phone_live_locations WHERE expires_at < NOW()')
+    RebuildRecipientCache()
+    LastLiveLocationCleanupAt = GetGameTimer()
 end
+
+local function CleanupExpiredLocationsIfNeeded()
+    if USE_SQL_CLEANUP_EVENTS then
+        return
+    end
+
+    local now = GetGameTimer()
+    if now - LastLiveLocationCleanupAt < LIVE_LOCATION_CLEANUP_MS then
+        return
+    end
+
+    CleanExpiredLocations()
+end
+
+RebuildRecipientCache()
 
 if not USE_SQL_CLEANUP_EVENTS then
     CreateThread(function()
@@ -59,27 +110,42 @@ lib.callback.register('gcphone:liveLocation:start', function(source, data)
     local coords = GetEntityCoords(GetPlayerPed(source))
     local x, y = coords.x, coords.y
 
-    local inserted = 0
+    local uniqueRecipients = {}
+    local recipientList = {}
     for _, recipientPhone in ipairs(recipients) do
-        if type(recipientPhone) == 'string' and recipientPhone ~= '' then
-            MySQL.insert_async(
-                'INSERT INTO phone_live_locations (sender_phone, sender_name, recipient_phone, x, y, expires_at) VALUES (?, ?, ?, ?, ?, ?)',
-                { senderPhone, senderName, recipientPhone, x, y, expiresAt }
-            )
-            inserted = inserted + 1
-
-            local recipientSrc = GetPlayerByPhone(recipientPhone)
-            if recipientSrc then
-                TriggerClientEvent('gcphone:liveLocation:started', recipientSrc, {
-                    senderPhone = senderPhone,
-                    senderName = senderName,
-                    x = x,
-                    y = y,
-                    expiresAt = expiresAt,
-                })
-            end
+        if type(recipientPhone) == 'string' and recipientPhone ~= '' and recipientPhone ~= senderPhone and not uniqueRecipients[recipientPhone] then
+            uniqueRecipients[recipientPhone] = true
+            recipientList[#recipientList + 1] = recipientPhone
         end
     end
+
+    if #recipientList == 0 then
+        return { success = false, error = 'NO_RECIPIENTS' }
+    end
+
+    MySQL.query_async('DELETE FROM phone_live_locations WHERE sender_phone = ?', { senderPhone })
+
+    local inserted = 0
+    for _, recipientPhone in ipairs(recipientList) do
+        MySQL.insert_async(
+            'INSERT INTO phone_live_locations (sender_phone, sender_name, recipient_phone, x, y, expires_at) VALUES (?, ?, ?, ?, ?, ?)',
+            { senderPhone, senderName, recipientPhone, x, y, expiresAt }
+        )
+        inserted = inserted + 1
+
+        local recipientSrc = GetPlayerByPhone(recipientPhone)
+        if recipientSrc then
+            TriggerClientEvent('gcphone:liveLocation:started', recipientSrc, {
+                senderPhone = senderPhone,
+                senderName = senderName,
+                x = x,
+                y = y,
+                expiresAt = expiresAt,
+            })
+        end
+    end
+
+    SetRecipientsForSender(senderPhone, recipientList)
 
     return {
         success = true,
@@ -100,6 +166,7 @@ lib.callback.register('gcphone:liveLocation:stop', function(source)
     end
 
     MySQL.query_async('DELETE FROM phone_live_locations WHERE sender_phone = ?', { senderPhone })
+    ClearRecipientsForSender(senderPhone)
 
     return { success = true }
 end)
@@ -115,7 +182,7 @@ lib.callback.register('gcphone:liveLocation:getActive', function(source)
         return { success = false, locations = {} }
     end
 
-    CleanExpiredLocations()
+    CleanupExpiredLocationsIfNeeded()
 
     local locations = MySQL.query_async(
         'SELECT sender_phone, sender_name, x, y, expires_at FROM phone_live_locations WHERE recipient_phone = ? AND expires_at > NOW()',
@@ -141,13 +208,10 @@ RegisterNetEvent('gcphone:liveLocation:updatePosition', function()
         { x, y, senderPhone }
     )
 
-    local activeShares = MySQL.query_async(
-        'SELECT recipient_phone FROM phone_live_locations WHERE sender_phone = ? AND expires_at > NOW()',
-        { senderPhone }
-    ) or {}
+    local activeShares = ActiveLocationRecipients[senderPhone] or {}
 
-    for _, share in ipairs(activeShares) do
-        local recipientSrc = GetPlayerByPhone(share.recipient_phone)
+    for _, recipientPhone in ipairs(activeShares) do
+        local recipientSrc = GetPlayerByPhone(recipientPhone)
         if recipientSrc then
             TriggerClientEvent('gcphone:liveLocation:updated', recipientSrc, {
                 senderPhone = senderPhone,

@@ -146,15 +146,11 @@ lib.callback.register('gcphone:chirp:updateAccount', function(source, data)
 
     if type(data) ~= 'table' then return false end
 
-    local displayName = SanitizeText(data.displayName, 50)
-    local avatar = SanitizeMediaUrl(data.avatar)
-    local bio = SanitizeText(data.bio, 160)
     local isPrivate = data.isPrivate == true and 1 or 0
-    if displayName == '' then return false end
     
     MySQL.update.await(
-        'UPDATE phone_chirp_accounts SET display_name = ?, avatar = ?, bio = ?, is_private = ? WHERE identifier = ?',
-        { displayName, avatar, bio, isPrivate, identifier }
+        'UPDATE phone_chirp_accounts SET is_private = ? WHERE identifier = ?',
+        { isPrivate, identifier }
     )
     
     return true

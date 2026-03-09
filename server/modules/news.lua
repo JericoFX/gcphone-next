@@ -77,6 +77,30 @@ end
 
 local ActiveLiveNews = {}
 
+local function DeleteLiveArticle(articleId, identifier)
+    local id = tonumber(articleId)
+    if not id or id < 1 then return false end
+
+    if type(identifier) == 'string' and identifier ~= '' then
+        local deleted = MySQL.update.await(
+            'DELETE FROM phone_news WHERE id = ? AND identifier = ? AND is_live = 1',
+            { id, identifier }
+        ) or 0
+        if deleted < 1 then
+            return false
+        end
+    else
+        MySQL.execute.await(
+            'DELETE FROM phone_news WHERE id = ? AND is_live = 1',
+            { id }
+        )
+    end
+
+    ActiveLiveNews[id] = nil
+    TriggerClientEvent('gcphone:news:liveEnded', -1, id)
+    return true
+end
+
 local function GetViewerCount(liveData)
     if type(liveData) ~= 'table' or type(liveData.viewers) ~= 'table' then
         return 0
@@ -95,11 +119,6 @@ local function BroadcastViewerCount(articleId)
 
     local liveData = ActiveLiveNews[id]
     local viewers = GetViewerCount(liveData)
-
-    MySQL.update.await(
-        'UPDATE phone_news SET live_viewers = ? WHERE id = ? AND is_live = 1',
-        { viewers, id }
-    )
 
     TriggerClientEvent('gcphone:news:viewersUpdated', -1, {
         articleId = id,
@@ -223,12 +242,12 @@ lib.callback.register('gcphone:news:getArticles', function(source, data)
     
     if category == 'all' then
         articles = MySQL.query.await(
-            'SELECT * FROM phone_news ORDER BY created_at DESC LIMIT ? OFFSET ?',
+            'SELECT * FROM phone_news WHERE is_live = 0 ORDER BY created_at DESC LIMIT ? OFFSET ?',
             { limit, offset }
         )
     else
         articles = MySQL.query.await(
-            'SELECT * FROM phone_news WHERE category = ? ORDER BY created_at DESC LIMIT ? OFFSET ?',
+            'SELECT * FROM phone_news WHERE category = ? AND is_live = 0 ORDER BY created_at DESC LIMIT ? OFFSET ?',
             { category, limit, offset }
         )
     end
@@ -237,9 +256,19 @@ lib.callback.register('gcphone:news:getArticles', function(source, data)
 end)
 
 lib.callback.register('gcphone:news:getLiveNews', function(source)
-    return MySQL.query.await(
-        'SELECT * FROM phone_news WHERE is_live = 1 ORDER BY live_viewers DESC'
+    local rows = MySQL.query.await(
+        'SELECT * FROM phone_news WHERE is_live = 1 ORDER BY created_at DESC'
     ) or {}
+
+    local active = {}
+    for _, row in ipairs(rows) do
+        local id = tonumber(row.id)
+        if id and ActiveLiveNews[id] then
+            active[#active + 1] = row
+        end
+    end
+
+    return active
 end)
 
 lib.callback.register('gcphone:news:publishArticle', function(source, data)
@@ -546,17 +575,8 @@ lib.callback.register('gcphone:news:endLive', function(source, articleId)
 
     local id = tonumber(articleId)
     if not id or id < 1 then return false end
-    
-    MySQL.execute.await(
-        'UPDATE phone_news SET is_live = 0 WHERE id = ? AND identifier = ?',
-        { id, identifier }
-    )
-    
-    ActiveLiveNews[id] = nil
-    
-    TriggerClientEvent('gcphone:news:liveEnded', -1, id)
-    
-    return true
+
+    return DeleteLiveArticle(id, identifier)
 end)
 
 lib.callback.register('gcphone:news:deleteArticle', function(source, articleId)
@@ -575,7 +595,16 @@ lib.callback.register('gcphone:news:deleteArticle', function(source, articleId)
 end)
 
 AddEventHandler('playerDropped', function()
-    RemoveViewerFromAllLives(source)
+    local src = source
+    local identifier = GetIdentifier(src)
+
+    for articleId, liveData in pairs(ActiveLiveNews) do
+        if type(liveData) == 'table' and liveData.source == src then
+            DeleteLiveArticle(articleId, identifier)
+        end
+    end
+
+    RemoveViewerFromAllLives(src, identifier)
 end)
 
 lib.callback.register('gcphone:news:viewArticle', function(source, articleId)
@@ -595,20 +624,15 @@ lib.callback.register('gcphone:news:getCategories', function(source)
 end)
 
 CreateThread(function()
+    MySQL.execute.await('DELETE FROM phone_news WHERE is_live = 1')
+
     while true do
         Wait(60000)
         
         for articleId, liveData in pairs(ActiveLiveNews) do
             local currentTime = os.time()
             if currentTime - liveData.startTime > Config.News.MaxLiveDuration then
-                MySQL.execute.await(
-                    'UPDATE phone_news SET is_live = 0 WHERE id = ?',
-                    { articleId }
-                )
-                
-                TriggerClientEvent('gcphone:news:liveEnded', -1, articleId)
-                
-                ActiveLiveNews[articleId] = nil
+                DeleteLiveArticle(articleId)
             end
         end
     end

@@ -19,6 +19,8 @@ interface SocialOnboardingModalProps {
   avatarHint?: string;
   bioHint?: string;
   isPrivateHint?: boolean;
+  usernameReadOnly?: boolean;
+  displayNameReadOnly?: boolean;
   onCreate: (payload: SocialOnboardingPayload) => Promise<boolean | { ok: boolean; error?: string }>;
   onClose?: () => void;
 }
@@ -103,7 +105,7 @@ export function SocialOnboardingModal(props: SocialOnboardingModalProps) {
         value={username()}
         onChange={(value) => setUsername(normalizeUsername(value))}
         placeholder="usuario"
-        disabled={submitting()}
+        disabled={submitting() || props.usernameReadOnly === true}
       />
 
       <FormField
@@ -111,7 +113,7 @@ export function SocialOnboardingModal(props: SocialOnboardingModalProps) {
         value={displayName()}
         onChange={setDisplayName}
         placeholder="Tu nombre"
-        disabled={submitting()}
+        disabled={submitting() || props.displayNameReadOnly === true}
       />
 
       <FormField
@@ -143,6 +145,9 @@ export function SocialOnboardingModal(props: SocialOnboardingModalProps) {
       </label>
 
       <p class={styles.hint}>Solo letras, numeros, punto, guion y guion bajo para el usuario.</p>
+      {(props.usernameReadOnly === true || props.displayNameReadOnly === true) && (
+        <p class={styles.hint}>La identidad principal viene del inicio del telefono y aqui solo se completa el perfil.</p>
+      )}
 
       {error() && <div class={styles.error}>{error()}</div>}
 

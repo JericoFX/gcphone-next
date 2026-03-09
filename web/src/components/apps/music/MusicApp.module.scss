@@ -1,34 +1,29 @@
-.nav {
-  background: linear-gradient(180deg, rgba(255, 250, 241, 0.96), rgba(251, 243, 230, 0.9));
-  border-bottom: 1px solid rgba(132, 88, 34, 0.16);
-}
-
 .content {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding-bottom: 14px;
+  gap: 10px;
+  padding: 10px 12px calc(24px + var(--phone-bottom-ui-gap, 0px));
   background:
-    radial-gradient(120% 80% at 0% -15%, rgba(255, 184, 107, 0.24), transparent 48%),
-    radial-gradient(120% 90% at 100% 0%, rgba(98, 220, 190, 0.18), transparent 52%),
-    linear-gradient(180deg, #fff8ec, #f7efdf 68%, #efe3ce);
+    radial-gradient(120% 80% at 0% -20%, rgba(10, 132, 255, 0.18), transparent 52%),
+    radial-gradient(120% 90% at 100% 0%, rgba(100, 210, 255, 0.16), transparent 56%),
+    var(--bg, #f2f2f7);
 }
 
 .hero {
   position: relative;
-  border-radius: 18px;
   overflow: hidden;
-  border: 1px solid rgba(132, 88, 34, 0.18);
-  background: linear-gradient(135deg, #ff9d4f, #3dbf9d);
-  box-shadow: 0 12px 24px rgba(136, 98, 45, 0.24);
+  border-radius: 18px;
+  border: 1px solid color-mix(in srgb, var(--tint, #007aff) 18%, var(--border, rgba(0, 0, 0, 0.12)));
+  background: linear-gradient(135deg, #0a84ff, #64d2ff);
+  box-shadow: 0 10px 22px rgba(10, 132, 255, 0.26);
 }
 
 .heroBackdrop {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(50% 40% at 100% 0%, rgba(255, 255, 255, 0.45), transparent 85%),
-    radial-gradient(40% 40% at 0% 100%, rgba(255, 255, 255, 0.25), transparent 85%);
+    radial-gradient(55% 45% at 100% 0%, rgba(255, 255, 255, 0.46), transparent 85%),
+    radial-gradient(45% 45% at 0% 100%, rgba(255, 255, 255, 0.2), transparent 85%);
 }
 
 .heroText {
@@ -39,24 +34,25 @@
   h2 {
     margin: 0;
     color: #fff;
-    font-size: 17px;
+    font-size: var(--fs-headline, 1.0625rem);
     line-height: 1.2;
     letter-spacing: -0.01em;
+    text-wrap: balance;
   }
 
   p {
     margin: 6px 0 0;
-    font-size: 12px;
-    color: rgba(255, 248, 236, 0.96);
+    font-size: var(--fs-footnote, 0.8125rem);
+    color: rgba(245, 251, 255, 0.96);
   }
 }
 
 .kicker {
   margin-bottom: 6px;
-  font-size: 10px;
+  font-size: var(--fs-caption2, 0.6875rem);
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: rgba(255, 247, 234, 0.94);
+  color: rgba(246, 252, 255, 0.92);
 }
 
 .searchRow {
@@ -69,36 +65,35 @@
   :global(.ios-secondary-btn),
   :global(.ios-danger-btn) {
     min-height: 36px;
-    border: none;
     border-radius: 11px;
     padding: 0 12px;
-    font-size: 12px;
-    font-weight: 760;
+    font-size: var(--fs-footnote, 0.8125rem);
+    font-weight: 700;
+    border: 1px solid transparent;
   }
 
   :global(.ios-primary-btn) {
-    background: linear-gradient(135deg, #ff9d4f, #ef7d3e);
+    background: var(--tint, #007aff);
     color: #fff;
-    box-shadow: 0 8px 16px rgba(220, 119, 48, 0.3);
   }
 
   :global(.ios-secondary-btn) {
-    background: rgba(132, 88, 34, 0.12);
-    border: 1px solid rgba(132, 88, 34, 0.22);
-    color: #805125;
+    background: color-mix(in srgb, var(--surface-2, #f7f7fa) 82%, var(--bg, #f2f2f7));
+    color: var(--text, #111111);
+    border-color: var(--border, rgba(0, 0, 0, 0.12));
   }
 
   :global(.ios-danger-btn) {
-    background: rgba(206, 67, 93, 0.12);
-    border: 1px solid rgba(186, 55, 79, 0.26);
-    color: #af2d49;
+    background: color-mix(in srgb, var(--danger, #ff3b30) 12%, var(--surface, #ffffff));
+    color: var(--danger, #ff3b30);
+    border-color: color-mix(in srgb, var(--danger, #ff3b30) 35%, var(--border, rgba(0, 0, 0, 0.12)));
   }
 }
 
 .searchInput {
-  background: rgba(255, 255, 255, 0.92);
-  border-color: rgba(132, 88, 34, 0.18);
-  color: #523419;
+  background: var(--surface, #ffffff);
+  border: 1px solid var(--border, rgba(0, 0, 0, 0.12));
+  color: var(--text, #111111);
 }
 
 .results {
@@ -109,27 +104,27 @@
 
 .track {
   display: grid;
-  grid-template-columns: 56px 1fr auto;
+  grid-template-columns: 54px 1fr auto;
   align-items: center;
   gap: 10px;
   padding: 8px;
-  border-radius: 16px;
-  border: 1px solid rgba(148, 102, 46, 0.16);
-  background: rgba(255, 255, 255, 0.88);
-  color: #4e3217;
+  border-radius: 14px;
+  border: 1px solid var(--border, rgba(0, 0, 0, 0.12));
+  background: var(--surface, #ffffff);
+  color: var(--text, #111111);
   text-align: left;
-  box-shadow: 0 6px 14px rgba(132, 88, 34, 0.1);
+  box-shadow: var(--shadow-1, 0 1px 2px rgba(0, 0, 0, 0.08));
 
   &:disabled {
     opacity: 0.6;
   }
 
   img {
-    width: 56px;
-    height: 56px;
+    width: 54px;
+    height: 54px;
     object-fit: cover;
-    border-radius: 12px;
-    background: rgba(132, 88, 34, 0.08);
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--surface-2, #f7f7fa) 80%, var(--bg, #f2f2f7));
   }
 }
 
@@ -138,8 +133,8 @@
 }
 
 .trackTitle {
-  font-size: 13px;
-  color: #4e3217;
+  font-size: var(--fs-footnote, 0.8125rem);
+  color: var(--text, #111111);
   line-height: 1.25;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -148,8 +143,8 @@
 
 .trackChannel {
   margin-top: 3px;
-  font-size: 11px;
-  color: #886447;
+  font-size: var(--fs-caption1, 0.75rem);
+  color: var(--text-3, rgba(17, 17, 17, 0.52));
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -158,11 +153,11 @@
 .trackAction {
   padding: 6px 10px;
   border-radius: 999px;
-  border: 1px solid rgba(241, 132, 65, 0.42);
-  background: rgba(241, 132, 65, 0.14);
-  color: #b85a1d;
-  font-size: 11px;
-  font-weight: 760;
+  border: 1px solid color-mix(in srgb, var(--tint, #007aff) 28%, var(--border, rgba(0, 0, 0, 0.12)));
+  background: color-mix(in srgb, var(--tint, #007aff) 12%, var(--surface, #ffffff));
+  color: var(--tint, #007aff);
+  font-size: var(--fs-caption1, 0.75rem);
+  font-weight: 700;
 }
 
 .controls {
@@ -175,28 +170,10 @@
   :global(.ios-secondary-btn),
   :global(.ios-danger-btn) {
     min-height: 34px;
-    border: none;
     border-radius: 10px;
-    font-size: 12px;
-    font-weight: 760;
+    font-size: var(--fs-footnote, 0.8125rem);
+    font-weight: 700;
     padding: 0 8px;
-  }
-
-  :global(.ios-primary-btn) {
-    background: linear-gradient(135deg, #ff9d4f, #ef7d3e);
-    color: #fff;
-  }
-
-  :global(.ios-secondary-btn) {
-    background: rgba(132, 88, 34, 0.12);
-    border: 1px solid rgba(132, 88, 34, 0.22);
-    color: #805125;
-  }
-
-  :global(.ios-danger-btn) {
-    background: rgba(206, 67, 93, 0.12);
-    border: 1px solid rgba(186, 55, 79, 0.26);
-    color: #af2d49;
   }
 }
 
@@ -207,19 +184,30 @@
 .sliderLabel {
   display: flex;
   justify-content: space-between;
-  font-size: 12px;
-  color: #81592d;
+  font-size: var(--fs-footnote, 0.8125rem);
+  color: var(--text-2, rgba(17, 17, 17, 0.72));
   margin-bottom: 6px;
 
   strong {
-    color: #4e3217;
-    font-size: 12px;
+    color: var(--tint, #007aff);
+    font-size: var(--fs-footnote, 0.8125rem);
   }
 }
 
 .error {
   padding: 0 12px 12px;
-  color: #cb3055;
-  font-size: 12px;
-  font-weight: 760;
+  color: var(--danger, #ff3b30);
+  font-size: var(--fs-footnote, 0.8125rem);
+  font-weight: 700;
+}
+
+@media (max-width: 360px) {
+  .content {
+    padding: 8px 10px calc(24px + var(--phone-bottom-ui-gap, 0px));
+    gap: 8px;
+  }
+
+  .controls {
+    grid-template-columns: 1fr;
+  }
 }

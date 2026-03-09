@@ -17,8 +17,6 @@ import {
   muteSnapLiveUser,
   sendSnapLiveMessage,
   sendSnapLiveReaction,
-  type SnapLiveReaction,
-  type SnapLiveSocketMessage,
 } from '../../../utils/socket';
 import { AppFAB, AppScaffold } from '../../shared/layout';
 import { useAppCache } from '../../../hooks';
@@ -66,6 +64,27 @@ interface SnapLive {
   display_name?: string;
   avatar?: string;
   live_viewers?: number;
+}
+
+interface SnapLiveSocketMessage {
+  id: string;
+  liveId: string;
+  authorId?: string;
+  username: string;
+  display?: string;
+  avatar?: string;
+  content: string;
+  isMention: boolean;
+  createdAt: number;
+}
+
+interface SnapLiveReaction {
+  id: string;
+  liveId: string;
+  username: string;
+  avatar?: string;
+  reaction: string;
+  createdAt: number;
 }
 
 type TrackKind = 'audio' | 'video';
@@ -179,7 +198,9 @@ function normalizeLiveMessage(input: unknown): SnapLiveSocketMessage | null {
   return {
     id,
     liveId,
+    authorId: cleanLiveText(source.authorId, 80) || undefined,
     username,
+    display: cleanLiveText(source.display, 80) || undefined,
     content,
     isMention: source.isMention === true,
     createdAt,
@@ -568,6 +589,67 @@ export function SnapApp() {
     }
   });
 
+  useNuiEvent<{ liveId?: number; viewers?: number }>('gcphone:snap:liveViewersUpdated', (payload) => {
+    const liveId = Number(payload?.liveId || 0);
+    const viewers = Number(payload?.viewers ?? -1);
+    if (liveId < 1 || viewers < 0) return;
+
+    setLiveStreams((prev) => prev.map((entry) => (
+      Number(entry.id) === liveId ? { ...entry, live_viewers: viewers } : entry
+    )));
+    setActiveLive((prev) => (
+      prev && Number(prev.id) === liveId ? { ...prev, live_viewers: viewers } : prev
+    ));
+  });
+
+  useNuiEvent<{ liveId?: number; message?: SnapLiveSocketMessage }>('gcphone:snap:liveMessage', (payload) => {
+    const liveId = Number(payload?.liveId || 0);
+    if (liveId < 1 || activeLive()?.id !== liveId || !payload?.message) return;
+
+    const safeMessage = normalizeLiveMessage(payload.message);
+    if (!safeMessage) return;
+
+    setLiveMessages((prev) => [...prev.slice(-19), safeMessage]);
+    setLiveFloating((prev) => [...prev.slice(-3), safeMessage]);
+    const timer = window.setTimeout(() => {
+      setLiveFloating((prev) => prev.filter((entry) => entry.id !== safeMessage.id));
+      floatingTimers.delete(safeMessage.id);
+    }, 4200);
+    floatingTimers.set(safeMessage.id, timer);
+  });
+
+  useNuiEvent<{ liveId?: number; reaction?: SnapLiveReaction }>('gcphone:snap:liveReaction', (payload) => {
+    const liveId = Number(payload?.liveId || 0);
+    if (liveId < 1 || activeLive()?.id !== liveId || !payload?.reaction) return;
+
+    setLiveReactions((prev) => [...prev.slice(-10), payload.reaction as SnapLiveReaction]);
+    window.setTimeout(() => {
+      setLiveReactions((prev) => prev.filter((entry) => entry.id !== payload.reaction?.id));
+    }, 2600);
+  });
+
+  useNuiEvent<{ liveId?: number; messageId?: string }>('gcphone:snap:liveMessageRemoved', (payload) => {
+    const liveId = Number(payload?.liveId || 0);
+    const messageId = String(payload?.messageId || '');
+    if (liveId < 1 || activeLive()?.id !== liveId || !messageId) return;
+
+    setLiveMessages((prev) => prev.filter((entry) => entry.id !== messageId));
+    setLiveFloating((prev) => prev.filter((entry) => entry.id !== messageId));
+  });
+
+  useNuiEvent<{ liveId?: number; username?: string }>('gcphone:snap:liveUserMuted', (payload) => {
+    const liveId = Number(payload?.liveId || 0);
+    const username = sanitizeText(payload?.username || '', 40).toLowerCase();
+    if (liveId < 1 || activeLive()?.id !== liveId || !username) return;
+
+    setMutedUsers((prev) => (prev.includes(username) ? prev : [...prev, username]));
+    if (sanitizeText(myAccount()?.username || '', 40).toLowerCase() === username) {
+      setViewerMuted(true);
+      setStatusMessage('Estas silenciado en este live');
+      setLiveKitRemoteAudioVolume(0);
+    }
+  });
+
   useNuiEvent<SnapLiveProximityState>('gcphone:snap:proximityState', (payload) => {
     const live = activeLive();
     if (!live) return;
@@ -668,7 +750,6 @@ export function SnapApp() {
       liveAudioRetryTimer = undefined;
     }
     void stopLiveAudioProximity();
-    disconnectSnapLiveSocket();
     disconnectLiveKit();
     if (liveAudioWatchdogTimer) {
       window.clearInterval(liveAudioWatchdogTimer);
@@ -740,10 +821,19 @@ export function SnapApp() {
 
   const toggleLike = async (e: Event, postId: number) => {
     e.stopPropagation();
-    await fetchNui('snapToggleLike', { postId });
-    setPosts(prev => prev.map(p => 
-      p.id === postId ? { ...p, liked: !p.liked, likes: (p.likes || 0) + (p.liked ? -1 : 1) } : p
-    ));
+    const response = await fetchNui<{ success?: boolean; payload?: { liked?: boolean; likes?: number } }>('snapToggleLike', { postId }, { success: false });
+    if (!response?.success) return;
+
+    const nextLiked = response.payload?.liked === true;
+    const nextLikes = Number(response.payload?.likes ?? 0);
+    const patchPost = <T extends { id: number; liked?: boolean; likes?: number }>(entry: T): T => (
+      entry.id === postId
+        ? { ...entry, liked: nextLiked, likes: nextLikes }
+        : entry
+    );
+
+    setPosts((prev) => prev.map(patchPost));
+    setDiscoverRows((prev) => prev.map(patchPost));
   };
 
   const deletePost = async (e: Event, postId: number) => {
@@ -762,9 +852,6 @@ export function SnapApp() {
 
   const saveProfile = async () => {
     const res = await fetchNui<{ success?: boolean }>('snapUpdateAccount', {
-      displayName: profileDisplayName().trim(),
-      avatar: profileAvatar().trim(),
-      bio: profileBio().trim(),
       isPrivate: profilePrivate(),
     });
 
@@ -974,6 +1061,111 @@ export function SnapApp() {
     }
 
     try {
+      const auth = await fetchSocketToken({ liveId: live.id });
+      if (!auth?.success || !auth.host || !auth.token) {
+        setStatusMessage('No se pudo abrir el chat del live');
+        setActiveLive(null);
+        return;
+      }
+
+      connectSnapLiveSocket(auth.host, auth.token, {
+        onMessage: (message) => {
+          const safeMessage = normalizeLiveMessage(message);
+          if (!safeMessage) return;
+          setLiveMessages((prev) => [...prev.slice(-19), safeMessage]);
+          setLiveFloating((prev) => [...prev.slice(-3), safeMessage]);
+          const timer = window.setTimeout(() => {
+            setLiveFloating((prev) => prev.filter((entry) => entry.id !== safeMessage.id));
+            floatingTimers.delete(safeMessage.id);
+          }, 4200);
+          floatingTimers.set(safeMessage.id, timer);
+        },
+        onReaction: (reaction) => {
+          setLiveReactions((prev) => [...prev.slice(-10), reaction]);
+          window.setTimeout(() => {
+            setLiveReactions((prev) => prev.filter((entry) => entry.id !== reaction.id));
+          }, 2600);
+        },
+        onViewersUpdated: ({ liveId, viewers }) => {
+          const nextId = Number(liveId || 0);
+          const nextViewers = Number(viewers ?? -1);
+          if (nextId < 1 || nextViewers < 0) return;
+          setActiveLive((prev) => (prev && Number(prev.id) === nextId ? { ...prev, live_viewers: nextViewers } : prev));
+          setLiveStreams((prev) => prev.map((entry) => (
+            Number(entry.id) === nextId ? { ...entry, live_viewers: nextViewers } : entry
+          )));
+        },
+        onMessageDeleted: ({ messageId }) => {
+          setLiveMessages((prev) => prev.filter((entry) => entry.id !== messageId));
+          setLiveFloating((prev) => prev.filter((entry) => entry.id !== messageId));
+        },
+        onUserMuted: ({ username }) => {
+          const normalized = sanitizeText(username, 40).toLowerCase();
+          setMutedUsers((prev) => (prev.includes(normalized) ? prev : [...prev, normalized]));
+          if (normalized === sanitizeText(myAccount()?.username || '', 40).toLowerCase()) {
+            setViewerMuted(true);
+            setStatusMessage('Estas silenciado en este live');
+            setLiveKitRemoteAudioVolume(0);
+          }
+        },
+        onDisconnect: () => {
+          setStatusMessage('Reconectando chat del live...');
+        },
+        onReconnect: async () => {
+          const joinResult = await joinSnapLiveRoom(String(live.id));
+          if (!joinResult?.success) {
+            setStatusMessage('Sin conexion de chat live');
+            return;
+          }
+
+          const initialMessages = Array.isArray(joinResult.messages)
+            ? joinResult.messages.map((entry) => normalizeLiveMessage(entry)).filter((entry): entry is SnapLiveSocketMessage => Boolean(entry))
+            : [];
+          setLiveMessages(initialMessages.slice(-20));
+
+          const nextViewers = Number(joinResult.viewers ?? -1);
+          if (nextViewers >= 0) {
+            setActiveLive((prev) => (prev ? { ...prev, live_viewers: nextViewers } : prev));
+          }
+
+          setStatusMessage('');
+          if (!liveAudioProximityEnabled() && !owner) {
+            void startLiveAudioProximity(Number(live.id), false);
+            return;
+          }
+
+          if (liveAudioProximityEnabled()) {
+            void syncLiveAudioFromClientStatus();
+          }
+        },
+        onReconnectFailed: () => {
+          setStatusMessage('Sin conexion de chat live');
+        },
+      });
+
+      const joinResult = await joinSnapLiveRoom(String(live.id));
+      if (!joinResult?.success) {
+        setStatusMessage('No se pudo abrir el chat del live');
+        disconnectSnapLiveSocket();
+        setActiveLive(null);
+        return;
+      }
+
+      const initialViewers = Number(joinResult.viewers ?? -1);
+      if (initialViewers >= 0) {
+        setActiveLive((prev) => (prev ? { ...prev, live_viewers: initialViewers } : prev));
+        setLiveStreams((prev) => prev.map((entry) => (
+          Number(entry.id) === Number(live.id) ? { ...entry, live_viewers: initialViewers } : entry
+        )));
+      }
+
+      const initialMessages = Array.isArray(joinResult.messages)
+        ? joinResult.messages.map((entry) => normalizeLiveMessage(entry)).filter((entry): entry is SnapLiveSocketMessage => Boolean(entry))
+        : [];
+      if (initialMessages.length > 0) {
+        setLiveMessages(initialMessages.slice(-20));
+      }
+
       setLiveLocalIdentity(tokenPayload.identity || '');
       await connectLiveKit(tokenPayload.url, tokenPayload.token, tokenPayload.maxDuration || 1800, {
         onParticipantDisconnected: (identity) => {
@@ -992,89 +1184,19 @@ export function SnapApp() {
           removeLiveTrack(participantIdentity, trackSid);
         },
       });
-      if (owner) {
-        await setLiveKitCameraEnabled(true);
-        await setLiveKitMicrophoneEnabled(true);
-      }
-
-      const auth = await fetchSocketToken();
-      if (auth?.success && auth.host && auth.token) {
-        connectSnapLiveSocket(auth.host, auth.token, {
-          onMessage: (message) => {
-            const safeMessage = normalizeLiveMessage(message);
-            if (!safeMessage) return;
-            setLiveMessages((prev) => [...prev.slice(-19), safeMessage]);
-            setLiveFloating((prev) => [...prev.slice(-3), safeMessage]);
-            const timer = window.setTimeout(() => {
-              setLiveFloating((prev) => prev.filter((entry) => entry.id !== safeMessage.id));
-              floatingTimers.delete(safeMessage.id);
-            }, 4200);
-            floatingTimers.set(safeMessage.id, timer);
-          },
-          onReaction: (reaction) => {
-            setLiveReactions((prev) => [...prev.slice(-10), reaction]);
-            window.setTimeout(() => {
-              setLiveReactions((prev) => prev.filter((entry) => entry.id !== reaction.id));
-            }, 2600);
-          },
-          onMessageDeleted: ({ messageId }) => {
-            setLiveMessages((prev) => prev.filter((entry) => entry.id !== messageId));
-            setLiveFloating((prev) => prev.filter((entry) => entry.id !== messageId));
-          },
-          onUserMuted: ({ username }) => {
-            setMutedUsers((prev) => (prev.includes(username) ? prev : [...prev, username]));
-            if (username === myAccount()?.username) {
-              setViewerMuted(true);
-              if (liveAudioProximityEnabled()) {
-                setStatusMessage('Estas silenciado en este live');
-                setLiveKitRemoteAudioVolume(0);
-              }
-            }
-          },
-          onUserUnmuted: ({ username }) => {
-            setMutedUsers((prev) => prev.filter((entry) => entry !== username));
-            if (username === myAccount()?.username) {
-              setViewerMuted(false);
-              if (liveAudioProximityEnabled()) {
-                setStatusMessage('');
-                void syncLiveAudioFromClientStatus();
-              }
-            }
-          },
-          onUserKicked: ({ username }) => {
-            if (username !== myAccount()?.username) return;
-            setStatusMessage('Te expulsaron del live');
-            void closeLiveViewer();
-          },
-          onDisconnect: () => {
-            setStatusMessage('Reconectando chat del live...');
-          },
-          onReconnect: () => {
-            setStatusMessage('');
-            if (!liveAudioProximityEnabled() && !owner) {
-              void startLiveAudioProximity(Number(live.id), false);
-              return;
-            }
-
-            if (liveAudioProximityEnabled()) {
-              void syncLiveAudioFromClientStatus();
-            }
-          },
-          onReconnectFailed: () => {
-            setStatusMessage('Sin conexion de chat live');
-          },
-        });
-        joinSnapLiveRoom(String(live.id));
-      }
+        if (owner) {
+          await setLiveKitCameraEnabled(true);
+          await setLiveKitMicrophoneEnabled(true);
+        }
 
       setLiveConnected(true);
       await startLiveAudioProximity(Number(live.id), owner);
     } catch (_err) {
       setStatusMessage('No se pudo conectar al live');
+      disconnectSnapLiveSocket();
       setActiveLive(null);
       await stopLiveAudioProximity();
       disconnectLiveKit();
-      disconnectSnapLiveSocket();
     }
   };
 
@@ -1102,8 +1224,8 @@ export function SnapApp() {
     }
     floatingTimers.clear();
 
-    disconnectSnapLiveSocket();
     await stopLiveAudioProximity();
+    disconnectSnapLiveSocket();
     disconnectLiveKit();
     clearLiveVideoStage();
     setActiveLive(null);
@@ -1193,13 +1315,14 @@ export function SnapApp() {
       return;
     }
     const response = await sendSnapLiveMessage(String(stream.id), content);
-    if (response?.success) {
-      setLiveMessageInput('');
+    if (response?.error === 'MUTED') {
+      setViewerMuted(true);
+      setStatusMessage('Estas silenciado en este live');
       return;
     }
 
-    if (response?.error === 'SOCKET_OFFLINE') {
-      setStatusMessage('Chat live desconectado');
+    if (response?.success) {
+      setLiveMessageInput('');
       return;
     }
 
@@ -1226,10 +1349,6 @@ export function SnapApp() {
     }
     const response = await sendSnapLiveReaction(String(stream.id), reaction);
     if (response?.success) return;
-    if (response?.error === 'SOCKET_OFFLINE') {
-      setStatusMessage('Live desconectado temporalmente');
-      return;
-    }
     setStatusMessage('No se pudo enviar reaccion');
   };
 
@@ -1250,7 +1369,8 @@ export function SnapApp() {
     const stream = activeLive();
     if (!stream || !isLiveOwner()) return;
     if (Number(stream.id) < 0) {
-      setMutedUsers((prev) => (prev.includes(username) ? prev : [...prev, username]));
+      const normalized = sanitizeText(username, 40).toLowerCase();
+      setMutedUsers((prev) => (prev.includes(normalized) ? prev : [...prev, normalized]));
       return;
     }
     const response = await muteSnapLiveUser(String(stream.id), username);
@@ -1323,7 +1443,7 @@ export function SnapApp() {
       lines: SNAP_MOCK_LINES,
       mentionTarget,
       onMessage: (entry) => {
-        if (mutedUsers().includes(entry.user)) return;
+        if (mutedUsers().includes(entry.user.toLowerCase())) return;
         const message: SnapLiveSocketMessage = {
           id: entry.id,
           liveId: String(stream.id),
@@ -1686,40 +1806,16 @@ export function SnapApp() {
           <div class={styles.profileTab}>
             <h4 class={styles.sectionTitle}>Perfil</h4>
 
-            <div class={styles.profileHeaderRow}>
-              <div class={styles.profileAvatarPreview}>
-                <Show when={profileAvatar()} fallback={<span>{(profileDisplayName() || myAccount()?.username || 'U').charAt(0).toUpperCase()}</span>}>
-                  <img src={profileAvatar()} alt="Avatar" />
-                </Show>
-              </div>
-
-              <div class={styles.profileAvatarActions}>
-                <button class={styles.socialActionBtn} onClick={openAvatarCamera}>Camara</button>
-                <button class={styles.socialActionBtn} onClick={() => void attachAvatarFromGallery()}>Galeria</button>
-              </div>
-            </div>
+            <p style={{ margin: '0 0 10px', color: 'var(--ios-secondary-label, #6b7280)', 'font-size': '12px' }}>
+              El nombre principal de Snap queda fijo desde la configuracion inicial del telefono.
+            </p>
 
             <FormField
               label="Nombre visible"
               value={profileDisplayName()}
               onChange={(value) => setProfileDisplayName(sanitizeText(value, 50))}
               placeholder="Tu nombre"
-            />
-
-            <FormField
-              label="Avatar (URL opcional)"
-              type="url"
-              value={profileAvatar()}
-              onChange={(value) => setProfileAvatar(sanitizeText(value, 255))}
-              placeholder="https://..."
-            />
-
-            <FormTextarea
-              label="Bio"
-              rows={3}
-              value={profileBio()}
-              onChange={(value) => setProfileBio(sanitizeText(value, 160))}
-              placeholder="Conta algo sobre vos"
+              disabled
             />
 
             <label class={styles.privacyRow}>
@@ -2050,6 +2146,7 @@ export function SnapApp() {
         avatarHint={profileAvatar() || myAccount()?.avatar || ''}
         bioHint={profileBio() || myAccount()?.bio || ''}
         isPrivateHint={profilePrivate() || myAccount()?.is_private === 1 || myAccount()?.is_private === true}
+        displayNameReadOnly
         onCreate={createSnapAccount}
         onClose={() => setShowOnboarding(false)}
       />

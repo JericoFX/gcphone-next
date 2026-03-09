@@ -24,7 +24,18 @@ function safeBool(value, fallback) {
   return fallback;
 }
 
-on('gcphone:livekit:requestToken', async (src, requestId, roomName, identity, participantName, grants) => {
+function clampDuration(value) {
+  const configured = Number.isFinite(livekitMaxCallDuration) ? livekitMaxCallDuration : 300;
+  const upper = Math.max(30, Math.min(3600, Math.floor(configured)));
+  const requested = Number(value);
+  if (!Number.isFinite(requested)) {
+    return upper;
+  }
+
+  return Math.max(30, Math.min(upper, Math.floor(requested)));
+}
+
+on('gcphone:livekit:requestToken', async (src, requestId, roomName, identity, participantName, grants, maxDuration) => {
     const responseId = Number(requestId) || 1;
 
     if (!AccessToken) {
@@ -46,11 +57,14 @@ on('gcphone:livekit:requestToken', async (src, requestId, roomName, identity, pa
         return;
     }
 
+    const durationSeconds = clampDuration(maxDuration);
+
     try {
         const at = new AccessToken(livekitApiKey, livekitApiSecret, {
             identity: safeIdentity,
             name: safeName || safeIdentity,
-            ttl: '10m',
+            // Verified: livekit/node-sdks AccessToken accepts string TTL values like '30m'
+            ttl: `${durationSeconds}s`,
         });
 
         at.addGrant({

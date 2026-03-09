@@ -7,6 +7,7 @@ import { AppScaffold } from '../../shared/layout';
 import { useAppCache } from '../../../hooks';
 import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { Modal, ModalActions, ModalButton } from '../../shared/ui/Modal';
+import { SearchInput } from '../../shared/ui/SearchInput';
 import styles from './GarageApp.module.scss';
 
 interface Vehicle {
@@ -54,7 +55,6 @@ export function GarageApp() {
   // UI State
   const [loading, setLoading] = createSignal(false);
   const [showShareModal, setShowShareModal] = createSignal(false);
-  const [showLocationModal, setShowLocationModal] = createSignal(false);
   const [sharePhone, setSharePhone] = createSignal('');
 
   const loadVehicles = async () => {
@@ -75,10 +75,6 @@ export function GarageApp() {
     Backspace: () => {
       if (showShareModal()) {
         setShowShareModal(false);
-        return;
-      }
-      if (showLocationModal()) {
-        setShowLocationModal(false);
         return;
       }
       if (selectedVehicle()) {
@@ -174,14 +170,13 @@ export function GarageApp() {
     >
       <div class={styles.garageApp}>
         <div class={styles.searchSection}>
-          <div class={styles.searchBar}>
-            <input
-              type='text'
-              placeholder='Buscar por placa o modelo...'
-              value={searchQuery()}
-              onInput={(e) => setSearchQuery(e.currentTarget.value)}
-            />
-          </div>
+          <SearchInput
+            class={styles.searchWrap}
+            inputClass={styles.searchInput}
+            value={searchQuery()}
+            onInput={setSearchQuery}
+            placeholder='Buscar por placa o modelo'
+          />
         </div>
 
         <div class={styles.filters}>

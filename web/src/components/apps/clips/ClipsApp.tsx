@@ -6,6 +6,7 @@ import { sanitizeMediaUrl, sanitizeText } from '../../../utils/sanitize';
 import { AppScaffold } from '../../shared/layout';
 import { useAppCache } from '../../../hooks';
 import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
+import { usePhone } from '../../../store/phone';
 import { MediaLightbox } from '../../shared/ui/MediaLightbox';
 import { MediaAttachmentPreview } from '../../shared/ui/MediaAttachmentPreview';
 import { MediaActionButtons } from '../../shared/ui/MediaActionButtons';
@@ -47,6 +48,7 @@ interface SharedSnapAccount {
 export function ClipsApp() {
   const router = useRouter();
   const cache = useAppCache('clips');
+  const [phoneState] = usePhone();
 
   // Data
   const [clips, setClips] = createSignal<Clip[]>([]);
@@ -77,6 +79,8 @@ export function ClipsApp() {
   const [showUpload, setShowUpload] = createSignal(false);
   const [uploadMedia, setUploadMedia] = createSignal('');
   const [uploadCaption, setUploadCaption] = createSignal('');
+  const [storageReady, setStorageReady] = createSignal(false);
+  const [storageProvider, setStorageProvider] = createSignal('');
 
   // Chat
   const [commentText, setCommentText] = createSignal('');
@@ -108,6 +112,19 @@ export function ClipsApp() {
 
   const loadClips = async () => {
     setLoading(true);
+
+    const storage = await fetchNui<{
+      provider?: string;
+      uploadUrl?: string;
+      customUploadUrl?: string;
+      serverFolderPublicUrl?: string;
+    }>('getStorageConfig', undefined, {});
+    const provider = String(storage?.provider || 'custom');
+    const hasStorage = provider === 'server_folder'
+      ? Boolean(storage?.serverFolderPublicUrl)
+      : Boolean(storage?.uploadUrl || storage?.customUploadUrl);
+    setStorageReady(hasStorage);
+    setStorageProvider(provider);
     
     const account = await fetchNui<SharedSnapAccount | null>('clipsGetAccount', {});
     setMyAccount(account);
@@ -223,6 +240,11 @@ export function ClipsApp() {
   };
 
   const publishClip = async () => {
+    if (!storageReady()) {
+      setStatusMessage('Clips necesita un proveedor de video activo para publicar.');
+      return;
+    }
+
     const media = sanitizeMediaUrl(uploadMedia());
     if (!media) {
       setStatusMessage('Selecciona un video para subir.');
@@ -257,6 +279,11 @@ export function ClipsApp() {
   };
 
   const openCamera = () => {
+    if (!storageReady()) {
+      setStatusMessage('Configura almacenamiento de video antes de grabar clips.');
+      return;
+    }
+
     router.navigate('camera', { target: 'clips' });
   };
 
@@ -276,9 +303,6 @@ export function ClipsApp() {
 
   const saveProfile = async () => {
     const ok = await fetchNui<{ success?: boolean }>('clipsUpdateAccount', {
-      displayName: sanitizeText(profileDisplayName(), 50),
-      avatar: sanitizeMediaUrl(profileAvatar()) || undefined,
-      bio: sanitizeText(profileBio(), 180) || undefined,
       isPrivate: profilePrivate(),
     });
 
@@ -364,8 +388,14 @@ export function ClipsApp() {
       <div class={styles.clipsApp}>
         {/* Tabs */}
         <Show when={statusMessage()}>
-          <div style={{ padding: '8px 12px', margin: '8px 12px', 'background-color': 'rgba(255, 159, 10, 0.14)', color: '#7a4a00', 'font-size': '12px', 'border-radius': '10px' }}>
+          <div class={styles.statusBanner}>
             {statusMessage()}
+          </div>
+        </Show>
+
+        <Show when={!storageReady()}>
+          <div class={styles.statusBanner}>
+            Clips necesita almacenamiento de video activo. Usa `local`, `fivemanage` o `server_folder` con salida publica. Limite: 30 segundos.
           </div>
         </Show>
 
@@ -397,6 +427,7 @@ export function ClipsApp() {
           avatarHint={myAccount()?.avatar || ''}
           bioHint={myAccount()?.bio || ''}
           isPrivateHint={myAccount()?.is_private === 1 || myAccount()?.is_private === true}
+          displayNameReadOnly
           onCreate={createClipsAccount}
           onClose={() => setShowOnboarding(false)}
         />
@@ -494,7 +525,12 @@ export function ClipsApp() {
                         </div>
                         <span class={styles.authorName}>@{clip.username || 'user'}</span>
                       </div>
-                      
+
+                      <div class={styles.clipMetaRow}>
+                        <span class={styles.clipMetaPill}>{clip.display_name || clip.username || 'Creador'}</span>
+                        <span class={styles.clipMetaPill}>{phoneState.featureFlags.clips ? 'Clip iOS' : 'Solo lectura'}</span>
+                      </div>
+                       
                       <Show when={clip.caption}>
                         <p class={styles.caption}>{clip.caption}</p>
                       </Show>
@@ -518,20 +554,22 @@ export function ClipsApp() {
         </div>
 
         {/* FAB */}
-        <div class={styles.fabContainer}>
-          <Show when={fabTooltipVisible()}>
-            <div class={styles.fabTooltip}>Subir video</div>
-          </Show>
-          <button 
-            class={styles.fab}
-            onClick={() => setShowUpload(true)}
-            onPointerDown={showFabTooltip}
-            onPointerUp={hideFabTooltip}
-            onPointerLeave={hideFabTooltip}
-          >
-            +
-          </button>
-        </div>
+        <Show when={storageReady()}>
+          <div class={styles.fabContainer}>
+            <Show when={fabTooltipVisible()}>
+              <div class={styles.fabTooltip}>Subir video</div>
+            </Show>
+            <button 
+              class={styles.fab}
+              onClick={() => setShowUpload(true)}
+              onPointerDown={showFabTooltip}
+              onPointerUp={hideFabTooltip}
+              onPointerLeave={hideFabTooltip}
+            >
+              +
+            </button>
+          </div>
+        </Show>
 
         {/* Comments Modal */}
         <Show when={showComments()}>
@@ -594,16 +632,19 @@ export function ClipsApp() {
         >
           <div class={styles.uploadContent}>
             <Show when={!uploadMedia()}>
-              <div class={styles.uploadOptions}>
-                <button class={styles.uploadBtn} onClick={openCamera}>
-                  <span class={styles.uploadIcon}>📷</span>
-                  <span>Grabar video</span>
-                </button>
-                <button class={styles.uploadBtn} onClick={attachFromGallery}>
-                  <span class={styles.uploadIcon}>🎬</span>
-                  <span>Elegir de galeria</span>
-                </button>
-              </div>
+              <>
+                <div class={styles.uploadOptions}>
+                  <button class={styles.uploadBtn} onClick={openCamera}>
+                    <span class={styles.uploadIcon}>📷</span>
+                    <span>Grabar video</span>
+                  </button>
+                  <button class={styles.uploadBtn} onClick={attachFromGallery}>
+                    <span class={styles.uploadIcon}>🎬</span>
+                    <span>Elegir de galeria</span>
+                  </button>
+                </div>
+                <div class={styles.uploadHint}>Publica videos verticales de hasta 30 segundos usando {storageProvider() || 'tu proveedor actual'}.</div>
+              </>
             </Show>
             
             <Show when={uploadMedia()}>
@@ -639,20 +680,13 @@ export function ClipsApp() {
           onClose={() => setShowProfileModal(false)}
           size="md"
         >
-          <Show when={profileAvatar()}>
-            <MediaAttachmentPreview url={profileAvatar()} removable onRemove={() => setProfileAvatar('')} />
-          </Show>
-          <MediaActionButtons
-            actions={[
-              { icon: '📷', label: 'Camara', onClick: openAvatarCamera },
-              { icon: '🖼', label: 'Galeria', onClick: () => void attachAvatarFromGallery() },
-              ...(profileAvatar() ? [{ icon: '✕', label: 'Quitar', onClick: () => setProfileAvatar(''), tone: 'danger' as const }] : []),
-            ]}
-            variant="compact"
-          />
-          <FormField label="Nombre visible" value={profileDisplayName()} onChange={setProfileDisplayName} placeholder="Tu nombre" />
-          <FormField label="Avatar (URL opcional)" type="url" value={profileAvatar()} onChange={setProfileAvatar} placeholder="https://..." />
-          <FormTextarea label="Bio" value={profileBio()} onChange={setProfileBio} rows={3} placeholder="Cuenta algo sobre vos" />
+          <div class={styles.identityCard}>
+            <span class={styles.identityLabel}>Identidad</span>
+            <strong>{profileDisplayName() || myAccount()?.display_name || 'Usuario'}</strong>
+            <span class={styles.identityHandle}>@{myAccount()?.username || 'clips'}</span>
+            <p>Usuario y nombre principal quedan definidos desde el inicio del telefono.</p>
+          </div>
+          <FormField label="Nombre visible" value={profileDisplayName()} onChange={setProfileDisplayName} placeholder="Tu nombre" disabled />
           <label class={styles.profileToggle}>
             <input type="checkbox" checked={profilePrivate()} onChange={(e) => setProfilePrivate(e.currentTarget.checked)} />
             <span>Cuenta privada</span>

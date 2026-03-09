@@ -75,7 +75,17 @@ export const AppHeader: ParentComponent<AppHeaderProps> = (props) => {
       </div>
       <Show when={props.action}>
         <button class="ios-icon-btn" onClick={props.action!.onClick}>
-          {props.action!.icon}
+          <Show
+            when={
+              typeof props.action!.icon === 'string' &&
+              (props.action!.icon.endsWith('.svg') ||
+                props.action!.icon.endsWith('.png') ||
+                props.action!.icon.endsWith('.webp'))
+            }
+            fallback={props.action!.icon}
+          >
+            <img src={props.action!.icon as string} alt={props.action!.label || 'action'} />
+          </Show>
         </button>
       </Show>
       <Show when={!props.action && props.children}>

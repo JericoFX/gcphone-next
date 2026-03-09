@@ -198,6 +198,30 @@ lib.callback.register('gcphone:getStorageConfig', function(source)
     }
 end)
 
+lib.callback.register('gcphone:wavechat:getStatusMediaConfig', function(source)
+    local provider, uploadUrl, _uploadField = ResolveUploadTarget()
+    local serverFolder = GetServerFolderConfig()
+    local providerName = tostring(provider or 'custom')
+    local imageReady = false
+
+    if providerName == 'server_folder' then
+        imageReady = type(serverFolder.publicBaseUrl) == 'string' and serverFolder.publicBaseUrl ~= ''
+    else
+        imageReady = type(uploadUrl) == 'string' and uploadUrl ~= ''
+    end
+
+    local maxVideo = tonumber((Config.Storage and Config.Storage.MaxVideoDurationSeconds) or 10) or 10
+    if maxVideo > 10 then maxVideo = 10 end
+    if maxVideo < 5 then maxVideo = 5 end
+
+    return {
+        provider = providerName,
+        canUploadImage = imageReady,
+        canUploadVideo = imageReady,
+        maxVideoDurationSeconds = maxVideo,
+    }
+end)
+
 lib.callback.register('gcphone:storeMediaUrl', function(source, data)
     local identifier = GetIdentifier(source)
     if not identifier then return false, 'INVALID_SOURCE' end

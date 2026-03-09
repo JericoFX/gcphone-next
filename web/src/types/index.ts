@@ -43,6 +43,9 @@ export interface PhoneSettings {
   phoneNumber: string;
   wallpaper: string;
   ringtone: string;
+  callRingtone?: string;
+  notificationTone?: string;
+  messageTone?: string;
   volume: number;
   lockCode: string;
   theme: 'auto' | 'light' | 'dark';
