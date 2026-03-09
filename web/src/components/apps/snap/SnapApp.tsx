@@ -1890,9 +1890,8 @@ export function SnapApp() {
       {/* Live Viewer */}
       <Show when={activeLive()}>
         <div class={styles.liveViewer}>
-          <button class={styles.storyClose} onClick={() => void closeLiveViewer()}>✕</button>
-
           <div class={styles.liveTopBar}>
+            <button class={styles.liveUtilityButton} onClick={() => void closeLiveViewer()}>✕</button>
             <div class={styles.liveOwnerInfo}>
               <strong>{activeLive()?.display_name || activeLive()?.username || 'Live'}</strong>
               <span>
@@ -1900,6 +1899,7 @@ export function SnapApp() {
               </span>
             </div>
             <div class={styles.liveTopBarRight}>
+              <span class={styles.liveViewerCount}>{Math.max(Number(activeLive()?.live_viewers || 0), isLiveOwner() ? 1 : 0)} viendo</span>
               <Show when={liveAudioProximityEnabled() && !isLiveOwner()}>
                 <div
                   class={styles.liveAudioBadge}
@@ -1950,90 +1950,95 @@ export function SnapApp() {
             </div>
           </div>
 
-          <div class={styles.liveVideoCanvas}>
-            <div
-              ref={setLiveVideoStageHost}
-              class={styles.liveVideoHost}
-              classList={{ [styles.liveVideoHostReady]: liveVideoReady() }}
-            />
-            <Show when={!liveVideoReady()}>
-              <div class={styles.livePlaceholder}>
-                {isMockLive() ? 'Vista previa mock del live' : (liveConnected() ? 'Esperando video del live...' : 'Conectando video...')}
-              </div>
-            </Show>
-          </div>
-
-          <div class={styles.liveFloatingLayer}>
-            <For each={liveFloating()}>
-              {(message) => (
-                <div class={styles.liveFloatingMessage} classList={{ [styles.liveMention]: message.isMention }}>
-                  <strong>@{message.username}</strong>
-                  <p>{message.content}</p>
-                </div>
-              )}
-            </For>
-
-            <For each={liveReactions()}>
-              {(reaction) => (
-                <div class={styles.liveReactionBubble}>{reaction.reaction}</div>
-              )}
-            </For>
-          </div>
-
-          <div class={styles.liveReactionRow}>
-            <button onClick={() => void sendReaction('👍')}>👍</button>
-            <button onClick={() => void sendReaction('❤️')}>❤️</button>
-            <button onClick={() => void sendReaction('😂')}>😂</button>
-            <button onClick={() => void sendReaction('🔥')}>🔥</button>
-            <button onClick={() => void sendReaction('👏')}>👏</button>
-          </div>
-
-          <Show when={liveChatOpen()}>
-            <div class={styles.liveChatPanel}>
-              <div class={styles.liveChatHeader}>Chat en vivo (max 20)</div>
-              <div class={styles.liveChatList}>
-                <For each={liveMessages()}>
-                  {(message) => (
-                    <div class={styles.liveChatItem} classList={{ [styles.liveMention]: message.isMention }}>
-                      <div class={styles.liveChatBody}>
-                        <strong>@{message.username}</strong>
-                        <p>{message.content}</p>
-                      </div>
-                      <Show when={isLiveOwner() && message.username !== myAccount()?.username}>
-                        <div class={styles.liveModerationCol}>
-                          <button onClick={() => void removeLiveMessage(message.id)}>🗑</button>
-                          <button onClick={() => void muteLiveUser(message.username)}>🚫</button>
-                        </div>
-                      </Show>
-                    </div>
-                  )}
-                </For>
-              </div>
-
-              <Show when={viewerMuted()}>
-                <div class={styles.liveMutedBanner}>Estas silenciado en este live</div>
-              </Show>
-
-              <Show
-                when={!isLiveOwner()}
-                fallback={<div class={styles.liveHostHint}>Sos host: hablas en vivo, moderas el chat.</div>}
-              >
-                <div class={styles.liveChatInputRow}>
-                  <EmojiPickerButton value={liveMessageInput()} onChange={setLiveMessageInput} maxLength={300} />
-                  <input
-                    value={liveMessageInput()}
-                    onInput={(e) => setLiveMessageInput(sanitizeText(e.currentTarget.value, 300))}
-                    onKeyDown={(e) => e.key === 'Enter' && void sendLiveMessage()}
-                    placeholder="Escribe en el live..."
-                    disabled={viewerMuted()}
-                  />
-                  <button onClick={() => void sendLiveMessage()} disabled={viewerMuted() || !liveMessageInput().trim()}>
-                    Enviar
-                  </button>
+          <div class={styles.liveStage}>
+            <div class={styles.liveVideoCanvas}>
+              <div
+                ref={setLiveVideoStageHost}
+                class={styles.liveVideoHost}
+                classList={{ [styles.liveVideoHostReady]: liveVideoReady() }}
+              />
+              <Show when={!liveVideoReady()}>
+                <div class={styles.livePlaceholder}>
+                  {isMockLive() ? 'Vista previa mock del live' : (liveConnected() ? 'Esperando video del live...' : 'Conectando video...')}
                 </div>
               </Show>
             </div>
-          </Show>
+
+            <div class={styles.liveFloatingLayer}>
+              <For each={liveFloating()}>
+                {(message) => (
+                  <div class={styles.liveFloatingMessage} classList={{ [styles.liveMention]: message.isMention }}>
+                    <strong>@{message.username}</strong>
+                    <p>{message.content}</p>
+                  </div>
+                )}
+              </For>
+
+              <For each={liveReactions()}>
+                {(reaction) => (
+                  <div class={styles.liveReactionBubble}>{reaction.reaction}</div>
+                )}
+              </For>
+            </div>
+
+            <div class={styles.liveReactionRow}>
+              <button onClick={() => void sendReaction('👍')}>👍</button>
+              <button onClick={() => void sendReaction('❤️')}>❤️</button>
+              <button onClick={() => void sendReaction('😂')}>😂</button>
+              <button onClick={() => void sendReaction('🔥')}>🔥</button>
+              <button onClick={() => void sendReaction('👏')}>👏</button>
+            </div>
+
+            <Show when={liveChatOpen()}>
+              <div class={styles.liveChatPanel}>
+                <div class={styles.liveChatHeader}>
+                  <strong>Chat en vivo</strong>
+                  <span>{activeLive()?.display_name || activeLive()?.username || 'Live'} · max 20</span>
+                </div>
+                <div class={styles.liveChatList}>
+                  <For each={liveMessages()}>
+                    {(message) => (
+                      <div class={styles.liveChatItem} classList={{ [styles.liveMention]: message.isMention }}>
+                        <div class={styles.liveChatBody}>
+                          <strong>@{message.username}</strong>
+                          <p>{message.content}</p>
+                        </div>
+                        <Show when={isLiveOwner() && message.username !== myAccount()?.username}>
+                          <div class={styles.liveModerationCol}>
+                            <button onClick={() => void removeLiveMessage(message.id)}>🗑</button>
+                            <button onClick={() => void muteLiveUser(message.username)}>🚫</button>
+                          </div>
+                        </Show>
+                      </div>
+                    )}
+                  </For>
+                </div>
+
+                <Show when={viewerMuted()}>
+                  <div class={styles.liveMutedBanner}>Estas silenciado en este live</div>
+                </Show>
+
+                <Show
+                  when={!isLiveOwner()}
+                  fallback={<div class={styles.liveHostHint}>Sos host: hablas en vivo, moderas el chat.</div>}
+                >
+                  <div class={styles.liveChatInputRow}>
+                    <EmojiPickerButton value={liveMessageInput()} onChange={setLiveMessageInput} maxLength={300} />
+                    <input
+                      value={liveMessageInput()}
+                      onInput={(e) => setLiveMessageInput(sanitizeText(e.currentTarget.value, 300))}
+                      onKeyDown={(e) => e.key === 'Enter' && void sendLiveMessage()}
+                      placeholder="Escribe en el live..."
+                      disabled={viewerMuted()}
+                    />
+                    <button onClick={() => void sendLiveMessage()} disabled={viewerMuted() || !liveMessageInput().trim()}>
+                      Enviar
+                    </button>
+                  </div>
+                </Show>
+              </div>
+            </Show>
+          </div>
         </div>
       </Show>
 
