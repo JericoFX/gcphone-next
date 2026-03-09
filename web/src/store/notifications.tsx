@@ -16,7 +16,7 @@ interface NotificationsState {
   controlCenterOpen: boolean;
   notificationCenterOpen: boolean;
   notificationCompactMode: boolean;
-  controlTilePreset: 'compact' | 'default' | 'large';
+  controlTilePreset: 'compact';
   controlTileOrder: string[];
   readAtByApp: Record<string, number>;
   mutedApps: string[];
@@ -35,7 +35,7 @@ interface NotificationsActions {
   toggleNotificationCenter: () => void;
   setNotificationCenterOpen: (value: boolean) => void;
   toggleNotificationCompactMode: () => void;
-  setControlTilePreset: (value: 'compact' | 'default' | 'large') => void;
+  setControlTilePreset: (value: 'compact') => void;
   applyControlTileOrderPreset: (value: 'default' | 'commute' | 'focus') => void;
   markAppAsRead: (appId: string) => void;
   getUnreadCount: (appId: string) => number;
@@ -49,7 +49,7 @@ const NotificationsContext = createContext<NotificationsStore>();
 
 const MAX_QUEUE = 20;
 const MAX_HISTORY = 40;
-const DEFAULT_TILE_ORDER = ['airplane', 'dnd', 'data', 'silent', 'gps', 'preview'];
+const DEFAULT_TILE_ORDER = ['airplane', 'dnd', 'silent', 'gps', 'preview'];
 const MAX_MUTED_APPS = 40;
 
 function safeJsonParse(value: string) {
@@ -108,7 +108,6 @@ function normalizeMutedApps(value: unknown) {
 }
 
 export const NotificationsProvider: ParentComponent = (props) => {
-  const persistedCompactMode = window.localStorage.getItem('gcphone:notificationCompact') === '1';
   const persistedOrderRaw = window.localStorage.getItem('gcphone:controlTileOrder');
   const persistedOrder = normalizeTileOrder(persistedOrderRaw ? safeJsonParse(persistedOrderRaw) : null);
   const persistedMutedAppsRaw = window.localStorage.getItem('gcphone:mutedApps');
@@ -124,7 +123,7 @@ export const NotificationsProvider: ParentComponent = (props) => {
     brightness: 1,
     controlCenterOpen: false,
     notificationCenterOpen: false,
-    notificationCompactMode: persistedCompactMode,
+    notificationCompactMode: true,
     controlTilePreset: 'compact',
     controlTileOrder: persistedOrder,
     readAtByApp: {},
@@ -203,18 +202,18 @@ export const NotificationsProvider: ParentComponent = (props) => {
       setState('notificationCenterOpen', !!value);
     },
     toggleNotificationCompactMode: () => {
-      setState('notificationCompactMode', (prev) => !prev);
+      setState('notificationCompactMode', true);
     },
     setControlTilePreset: () => {
       setState('controlTilePreset', 'compact');
     },
     applyControlTileOrderPreset: (value) => {
       if (value === 'commute') {
-        setState('controlTileOrder', ['data', 'gps', 'silent', 'dnd', 'airplane', 'preview']);
+        setState('controlTileOrder', ['gps', 'silent', 'dnd', 'airplane', 'preview']);
         return;
       }
       if (value === 'focus') {
-        setState('controlTileOrder', ['dnd', 'silent', 'airplane', 'data', 'gps', 'preview']);
+        setState('controlTileOrder', ['dnd', 'silent', 'airplane', 'gps', 'preview']);
         return;
       }
       setState('controlTileOrder', [...DEFAULT_TILE_ORDER]);
