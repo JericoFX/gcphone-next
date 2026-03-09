@@ -280,6 +280,16 @@
   color: var(--mail-text-2);
 }
 
+.composeMediaButtons {
+  margin-bottom: var(--space-3);
+}
+
+.composePreviewMedia {
+  max-height: 160px;
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-3);
+}
+
 .attachRow {
   display: grid;
   grid-template-columns: 1fr 1fr;
