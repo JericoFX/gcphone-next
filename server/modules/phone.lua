@@ -1,11 +1,31 @@
 -- Creado/Modificado por JericoFX
 
+local PhoneExists
+
 local function GenerateIMEI()
     local imei = ''
     for i = 1, 15 do
         imei = imei .. math.random(0, 9)
     end
     return imei
+end
+
+local function GeneratePhoneNumber()
+    local prefixes = Config.Phone and Config.Phone.NumberPrefix or { 555 }
+    local prefix = prefixes[math.random(1, #prefixes)] or 555
+    local suffix = math.random(1000, 9999)
+    return string.format('%03d-%04d', prefix, suffix)
+end
+
+local function GenerateUniquePhoneNumber()
+    for _ = 1, 40 do
+        local phoneNumber = GeneratePhoneNumber()
+        if not PhoneExists(phoneNumber) and not GetIdentifierByPhone(phoneNumber) then
+            return phoneNumber
+        end
+    end
+
+    return nil
 end
 
 local function GenerateUniqueIMEI()
@@ -376,7 +396,7 @@ local function NormalizeLayout(layout, enabledApps)
     return result
 end
 
-local function PhoneExists(phoneNumber)
+PhoneExists = function(phoneNumber)
     return MySQL.scalar.await(
         'SELECT 1 FROM phone_numbers WHERE phone_number = ?',
         { phoneNumber }
@@ -392,9 +412,15 @@ local function GetOrCreatePhone(source)
         { identifier }
     )
 
+    local framework = GetFramework and GetFramework() or nil
     local frameworkPhoneNumber = GetFrameworkPhoneNumber and GetFrameworkPhoneNumber(source, identifier) or nil
     
     if phone then
+        if framework == 'esx' and (not frameworkPhoneNumber or frameworkPhoneNumber == '') and phone.phone_number and SetFrameworkPhoneNumber then
+            SetFrameworkPhoneNumber(source, identifier, phone.phone_number)
+            frameworkPhoneNumber = phone.phone_number
+        end
+
         if frameworkPhoneNumber and frameworkPhoneNumber ~= '' and phone.phone_number ~= frameworkPhoneNumber then
             MySQL.update.await(
                 'UPDATE phone_numbers SET phone_number = ? WHERE identifier = ?',
@@ -418,6 +444,13 @@ local function GetOrCreatePhone(source)
     end
 
     local phoneNumber = frameworkPhoneNumber
+    if (type(phoneNumber) ~= 'string' or phoneNumber == '') and framework == 'esx' then
+        phoneNumber = GenerateUniquePhoneNumber()
+        if phoneNumber and SetFrameworkPhoneNumber then
+            SetFrameworkPhoneNumber(source, identifier, phoneNumber)
+        end
+    end
+
     if type(phoneNumber) ~= 'string' or phoneNumber == '' then
         return nil
     end

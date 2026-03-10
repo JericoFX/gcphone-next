@@ -11,6 +11,23 @@ local function safeScalar(query, values)
     return nil
 end
 
+local function safeQuery(query, values)
+    local ok, result = pcall(function()
+        return MySQL.query.await(query, values)
+    end)
+    if ok then
+        return result
+    end
+    return nil
+end
+
+local function ensureESXPhoneColumn()
+    if Framework ~= 'esx' then return end
+
+    -- Verified: ESX Legacy centers character data in `users`, but phone storage is not standardized in core docs.
+    safeQuery('ALTER TABLE `users` ADD COLUMN IF NOT EXISTS `phone_number` VARCHAR(10) NULL', {})
+end
+
 local function detectFramework()
     if GetResourceState('qb-core') == 'started' then
         Core = exports['qb-core']:GetCoreObject()
@@ -28,6 +45,7 @@ local function detectFramework()
         -- Verified: /esx-framework/esx-legacy-documentation server imports use exports["es_extended"]:getSharedObject().
         Core = exports['es_extended']:getSharedObject()
         Framework = 'esx'
+        ensureESXPhoneColumn()
         return true
     end
 
@@ -321,6 +339,27 @@ function GetPhoneNumber(identifier)
         'SELECT phone_number FROM phone_numbers WHERE identifier = ? LIMIT 1',
         { identifier }
     )
+end
+
+function SetFrameworkPhoneNumber(source, identifier, phoneNumber)
+    if type(phoneNumber) ~= 'string' or phoneNumber == '' then
+        return false
+    end
+
+    if Framework == 'esx' then
+        ensureESXPhoneColumn()
+        local targetIdentifier = identifier
+        if (not targetIdentifier or targetIdentifier == '') and source then
+            targetIdentifier = GetIdentifier(source)
+        end
+        if not targetIdentifier then
+            return false
+        end
+
+        return safeQuery('UPDATE `users` SET `phone_number` = ? WHERE `identifier` = ?', { phoneNumber, targetIdentifier }) ~= nil
+    end
+
+    return false
 end
 
 function GetIdentifierByPhone(phoneNumber)
