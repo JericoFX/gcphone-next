@@ -47,6 +47,7 @@ server_scripts {
     'server/modules/database.lua',
     'server/main.lua',
     'server/bridge/qbcore.lua',
+    'server/bridge/esx.lua',
     'server/modules/phone.lua',
     'server/modules/contacts.lua',
     'server/modules/security.lua',
