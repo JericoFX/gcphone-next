@@ -104,6 +104,9 @@ CreateThread(function()
             PhoneState.phoneNumber = data.phoneNumber
             PhoneState.wallpaper = data.wallpaper
             PhoneState.ringtone = data.ringtone
+            PhoneState.callRingtone = data.callRingtone or data.ringtone
+            PhoneState.notificationTone = data.notificationTone
+            PhoneState.messageTone = data.messageTone
             PhoneState.volume = data.volume
             PhoneState.lockCode = data.lockCode
             PhoneState.language = data.language
@@ -122,6 +125,9 @@ RegisterNetEvent('gcphone:init', function(data)
     PhoneState.phoneNumber = data.phoneNumber
     PhoneState.wallpaper = data.wallpaper
     PhoneState.ringtone = data.ringtone
+    PhoneState.callRingtone = data.callRingtone or data.ringtone
+    PhoneState.notificationTone = data.notificationTone
+    PhoneState.messageTone = data.messageTone
     PhoneState.volume = data.volume
     PhoneState.lockCode = data.lockCode
     PhoneState.language = data.language

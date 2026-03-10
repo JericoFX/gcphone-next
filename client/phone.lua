@@ -94,28 +94,40 @@ local KeyControls = {
     { code = 177, event = 'Backspace' }
 }
 
+local function ShowPhonePayload(data)
+    if not data then return end
+
+    menuIsOpen = true
+    PhoneState.isOpen = true
+    TriggerServerEvent('gcphone:stateChanged', true)
+    EnsurePhoneProp()
+
+    data.nuiAuthToken = RotateNuiAuthToken()
+    SendNUIMessage({
+        action = 'showPhone',
+        data = data
+    })
+
+    PlayPhoneAnimation('in')
+end
+
+function OpenPhoneUsingServerData()
+    lib.callback('gcphone:getPhoneData', false, function(data)
+        if data then
+            ShowPhonePayload(data)
+        end
+    end)
+end
+
 function TogglePhone()
     menuIsOpen = not menuIsOpen
     
     if menuIsOpen then
-        PhoneState.isOpen = true
-        TriggerServerEvent('gcphone:stateChanged', true)
-        EnsurePhoneProp()
-        
-        lib.callback('gcphone:getPhoneData', false, function(data)
-            if data then
-                data.nuiAuthToken = RotateNuiAuthToken()
-                SendNUIMessage({
-                    action = 'showPhone',
-                    data = data
-                })
-            end
-        end)
-        
-        PlayPhoneAnimation('in')
+        OpenPhoneUsingServerData()
     else
         PhoneState.isOpen = false
         TriggerServerEvent('gcphone:stateChanged', false)
+        TriggerServerEvent('gcphone:clearPhoneAccessContext')
         RemovePhoneProp()
         phoneVisualMode = 'text'
         phoneVisualOptions = {}

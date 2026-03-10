@@ -2,6 +2,7 @@ import { createMemo, createSelector, createSignal, For, Show, createEffect, onMo
 import { useRouter } from '../../Phone/PhoneFrame';
 import { useMessages } from '../../../store/messages';
 import { useContacts } from '../../../store/contacts';
+import { usePhoneState } from '../../../store/phone';
 import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { fetchNui } from '../../../utils/fetchNui';
 import { generateColorForString, timeAgo } from '../../../utils/misc';
@@ -10,6 +11,7 @@ import { parseSharedContactMessage } from '../../../utils/contactShare';
 import { uiPrompt } from '../../../utils/uiDialog';
 import { uiAlert } from '../../../utils/uiAlert';
 import { ActionSheet } from '../../shared/ui/ActionSheet';
+import { InlineNotice } from '../../shared/ui/InlineNotice';
 import { MediaLightbox } from '../../shared/ui/MediaLightbox';
 import { SkeletonList } from '../../shared/ui/SkeletonList';
 import { VirtualList } from '../../shared/ui/VirtualList';
@@ -29,6 +31,7 @@ function extractCoords(text?: string): { x: number; y: number } | null {
 
 export function MessagesApp() {
   const router = useRouter();
+  const phoneState = usePhoneState();
   const [messagesState, messagesActions] = useMessages();
   const [contactsState, contactsActions] = useContacts();
   const [selectedConversation, setSelectedConversation] = createSignal<string | null>(null);
@@ -41,6 +44,7 @@ export function MessagesApp() {
   const [routeConversationName, setRouteConversationName] = createSignal('');
 
   const getMediaUrl = (msg: any): string | undefined => sanitizeMediaUrl(msg.mediaUrl || msg.media_url) || undefined;
+  const isReadOnly = createMemo(() => phoneState.accessMode === 'foreign-readonly');
   
   const conversations = createMemo(() => {
     const convos: Map<string, { number: string; display: string; lastMessage: any; unread: number }> = new Map();
@@ -147,6 +151,7 @@ export function MessagesApp() {
   };
 
   const deleteConversation = async (number: string) => {
+    if (isReadOnly()) return;
     const ok = await messagesActions.deleteConversation(number);
     if (ok && selectedConversation() === number) {
       setSelectedConversation(null);
@@ -161,6 +166,7 @@ export function MessagesApp() {
   };
   
   const sendMessage = async () => {
+    if (isReadOnly()) return;
     const number = selectedConversation();
     const content = sanitizeText(messageInput(), 800);
     const media = sanitizeMediaUrl(attachmentUrl());
@@ -172,6 +178,7 @@ export function MessagesApp() {
   };
 
   const attachFromGallery = async () => {
+    if (isReadOnly()) return;
     const gallery = await fetchNui<any[]>('getGallery', undefined, []);
     if (gallery && gallery.length > 0) {
       const nextUrl = sanitizeMediaUrl(gallery[0].url);
@@ -180,6 +187,7 @@ export function MessagesApp() {
   };
 
   const attachFromCamera = async () => {
+    if (isReadOnly()) return;
     const shot = await fetchNui<{ url?: string }>('takePhoto', {} as any, { url: '' } as any);
     if (shot?.url) {
       const nextUrl = sanitizeMediaUrl(shot.url);
@@ -197,6 +205,7 @@ export function MessagesApp() {
   };
 
   const attachByUrl = async () => {
+    if (isReadOnly()) return;
     const input = await uiPrompt('Pega URL de imagen, video o audio', { title: 'Adjuntar' });
     const nextUrl = sanitizeMediaUrl(input);
     if (nextUrl) {
@@ -214,6 +223,7 @@ export function MessagesApp() {
   const isKnownContact = (number: string) => contactsState.contacts.some((contact) => contact.number === number);
 
   const addContactFromMessage = async (display: string, number: string) => {
+    if (isReadOnly()) return;
     if (isKnownContact(number)) {
       uiAlert('El contacto ya existe');
       return;
@@ -230,6 +240,7 @@ export function MessagesApp() {
   };
 
   const openNewChat = async () => {
+    if (isReadOnly()) return;
     const input = await uiPrompt('Numero para iniciar chat', { title: 'Nuevo chat' });
     const number = sanitizePhone(input);
     if (!number) return;
@@ -238,6 +249,7 @@ export function MessagesApp() {
   };
 
   const sendLocationText = async () => {
+    if (isReadOnly()) return;
     const number = selectedConversation();
     if (!number) return;
     const x = Number(await uiPrompt('Coordenada X', { title: 'Compartir ubicacion' }));
@@ -272,10 +284,15 @@ export function MessagesApp() {
           setRouteConversationName('');
         }}
         onDeleteConversation={() => void deleteConversation(selectedConversation()!)}
+        readOnly={isReadOnly()}
+        readOnlyOwnerName={phoneState.accessOwnerName}
       />
     }>
         <AppScaffold title="Mensajes" subtitle="Tus conversaciones" onBack={() => router.goBack()} bodyPadding="none">
           <div class={styles.messagesApp}>
+            <Show when={isReadOnly()}>
+              <InlineNotice title="Solo lectura" message={`Estas viendo los mensajes de ${phoneState.accessOwnerName || 'otra persona'}.`} />
+            </Show>
             <div class={styles.conversationList}>
               <Show
                 when={messagesState.loading}
@@ -302,9 +319,11 @@ export function MessagesApp() {
                             <span class={styles.message}>{getPreviewText(convo.lastMessage)}</span>
                           </div>
                         </div>
-                        <button class={styles.deleteConversationBtn} onClick={(e) => { e.stopPropagation(); void deleteConversation(convo.number); }}>
-                          Borrar
-                        </button>
+                        <Show when={!isReadOnly()}>
+                          <button class={styles.deleteConversationBtn} onClick={(e) => { e.stopPropagation(); void deleteConversation(convo.number); }}>
+                            Borrar
+                          </button>
+                        </Show>
                       </div>
                     )}
                   </VirtualList>
@@ -313,7 +332,9 @@ export function MessagesApp() {
                 <SkeletonList rows={6} avatar />
               </Show>
             </div>
-            <AppFAB class={styles.fab} icon="+" onClick={openNewChat} />
+            <Show when={!isReadOnly()}>
+              <AppFAB class={styles.fab} icon="+" onClick={openNewChat} />
+            </Show>
           </div>
         </AppScaffold>
       </Show>
@@ -342,6 +363,8 @@ function ConversationView(props: {
   onAddContact: (display: string, number: string) => void;
   onBack: () => void;
   onDeleteConversation: () => void;
+  readOnly?: boolean;
+  readOnlyOwnerName?: string;
 }) {
   let messagesEnd: HTMLDivElement | undefined;
   const [showAttachSheet, setShowAttachSheet] = createSignal(false);
@@ -363,8 +386,11 @@ function ConversationView(props: {
       onBack={props.onBack}
       bodyClass={styles.conversationView}
       bodyPadding="none"
-      headerRight={<button class={styles.deleteConversationBtn} onClick={props.onDeleteConversation}>Borrar</button>}
+      headerRight={props.readOnly ? undefined : <button class={styles.deleteConversationBtn} onClick={props.onDeleteConversation}>Borrar</button>}
     >
+      <Show when={props.readOnly}>
+        <InlineNotice title="Solo lectura" message={`No puedes responder ni borrar la conversación de ${props.readOnlyOwnerName || 'este telefono'}.`} />
+      </Show>
       <div class={styles.messagesList}>
         <For each={props.messages}>
           {(msg) => (
@@ -392,13 +418,15 @@ function ConversationView(props: {
                     <div class={styles.contactCardLabel}>Contacto compartido</div>
                     <div class={styles.contactCardName}>{shared().display}</div>
                     <div class={styles.contactCardNumber}>{shared().number}</div>
-                    <button
-                      class={styles.contactCardBtn}
-                      disabled={props.isKnownContact(shared().number)}
-                      onClick={() => props.onAddContact(shared().display, shared().number)}
-                    >
-                      {props.isKnownContact(shared().number) ? 'Ya agregado' : 'Agregar contacto'}
-                    </button>
+                    <Show when={!props.readOnly}>
+                      <button
+                        class={styles.contactCardBtn}
+                        disabled={props.isKnownContact(shared().number)}
+                        onClick={() => props.onAddContact(shared().display, shared().number)}
+                      >
+                        {props.isKnownContact(shared().number) ? 'Ya agregado' : 'Agregar contacto'}
+                      </button>
+                    </Show>
                   </div>
                 )}
               </Show>
@@ -420,7 +448,7 @@ function ConversationView(props: {
         <div ref={messagesEnd} />
       </div>
 
-      <Show when={props.attachmentUrl}>
+      <Show when={props.attachmentUrl && !props.readOnly}>
         <div class={styles.attachmentPreview}>
           <Show when={resolveMediaType(props.attachmentUrl || undefined) === 'image'}>
             <img src={props.attachmentUrl!} alt="adjunto" onClick={() => props.onOpenViewer(props.attachmentUrl)} />
@@ -435,23 +463,25 @@ function ConversationView(props: {
         </div>
       </Show>
 
-      <div class={styles.inputContainer}>
-        <EmojiPickerButton value={props.messageInput} onChange={props.onInput} maxLength={800} />
-        <button class={styles.attachBtn} onClick={() => setShowAttachSheet(true)}>＋</button>
-        <input
-          type="text"
-          placeholder="Mensaje"
-          value={props.messageInput}
-          onInput={(e) => props.onInput(e.currentTarget.value)}
-          onKeyPress={(e) => e.key === 'Enter' && props.onSend()}
-        />
-        <button class={styles.sendBtn} onClick={props.onSend}>
-          ➤
-        </button>
-      </div>
+      <Show when={!props.readOnly}>
+        <div class={styles.inputContainer}>
+          <EmojiPickerButton value={props.messageInput} onChange={props.onInput} maxLength={800} />
+          <button class={styles.attachBtn} onClick={() => setShowAttachSheet(true)}>＋</button>
+          <input
+            type="text"
+            placeholder="Mensaje"
+            value={props.messageInput}
+            onInput={(e) => props.onInput(e.currentTarget.value)}
+            onKeyPress={(e) => e.key === 'Enter' && props.onSend()}
+          />
+          <button class={styles.sendBtn} onClick={props.onSend}>
+            ➤
+          </button>
+        </div>
+      </Show>
 
       <ActionSheet
-        open={showAttachSheet()}
+        open={!props.readOnly && showAttachSheet()}
         title="Adjuntar"
         onClose={() => setShowAttachSheet(false)}
         actions={[

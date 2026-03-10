@@ -117,6 +117,35 @@ export function LockScreen() {
         <div class={styles.date}>{formatClockDate(currentTime())}</div>
       </div>
 
+      <Show when={phoneState.imei || phoneState.deviceOwnerName || phoneState.settings.phoneNumber}>
+        <div class={styles.deviceIdentity}>
+          <div class={styles.deviceIdentityTop}>
+            <span class={styles.deviceIdentityLabel}>Device Info</span>
+            <Show when={phoneState.isStolen}>
+              <span class={styles.deviceIdentityFlag}>Reportado</span>
+            </Show>
+          </div>
+          <Show when={phoneState.deviceOwnerName}>
+            <div class={styles.deviceIdentityRow}>
+              <span>Propietario</span>
+              <strong>{phoneState.deviceOwnerName}</strong>
+            </div>
+          </Show>
+          <Show when={phoneState.settings.phoneNumber}>
+            <div class={styles.deviceIdentityRow}>
+              <span>Numero</span>
+              <strong>{phoneState.settings.phoneNumber}</strong>
+            </div>
+          </Show>
+          <Show when={phoneState.imei}>
+            <div class={styles.deviceIdentityRow}>
+              <span>IMEI</span>
+              <strong>{phoneState.imei}</strong>
+            </div>
+          </Show>
+        </div>
+      </Show>
+
       <div class={styles.widgetsRow}>
         <button class={styles.widget} onClick={() => notificationsActions.setDoNotDisturb(!notifications.doNotDisturb)}>
           <span class={styles.widgetLabel}>Focus</span>

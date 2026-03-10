@@ -59,6 +59,72 @@ local function IsAirplaneModeEnabled(source)
     return AirplaneModeBySource[source] == true
 end
 
+local function NativeAudioCatalog()
+    return (Config.NativeAudio and Config.NativeAudio.Catalog) or {}
+end
+
+local function NativeAudioDefaults()
+    return (Config.NativeAudio and Config.NativeAudio.DefaultByCategory) or {}
+end
+
+local function NativeAudioLegacyMap()
+    return (Config.NativeAudio and Config.NativeAudio.LegacyMap) or {}
+end
+
+local function IncomingCallStateBagName()
+    return (Config.NativeAudio and Config.NativeAudio.IncomingCallStateBag) or 'gcphoneIncomingCall'
+end
+
+local function ResolveToneId(value)
+    if type(value) ~= 'string' then
+        return NativeAudioDefaults().ringtone or 'call_main_01'
+    end
+
+    local toneId = value:gsub('[^%w%._%-]', ''):sub(1, 64)
+    local catalog = NativeAudioCatalog()
+    local legacy = NativeAudioLegacyMap()
+    if toneId ~= '' and catalog[toneId] then
+        return toneId
+    end
+
+    local mapped = legacy[toneId]
+    if mapped and catalog[mapped] then
+        return mapped
+    end
+
+    return NativeAudioDefaults().ringtone or 'call_main_01'
+end
+
+local function BuildIncomingCallAudioState(targetSource, callId, fromNumber)
+    local identifier = GetIdentifier(targetSource)
+    local settings = identifier and MySQL.single.await(
+        'SELECT call_ringtone, audio_profile FROM phone_numbers WHERE identifier = ? LIMIT 1',
+        { identifier }
+    ) or nil
+
+    return {
+        callId = callId,
+        toneId = ResolveToneId(settings and settings.call_ringtone or nil),
+        fromNumber = fromNumber,
+        audioProfile = settings and settings.audio_profile or (Config.Phone and Config.Phone.DefaultSettings and Config.Phone.DefaultSettings.audioProfile) or 'normal',
+        startedAt = os.time(),
+    }
+end
+
+local function SetIncomingCallState(targetSource, callData)
+    if not targetSource or targetSource <= 0 then return end
+    local player = Player(targetSource)
+    if not player or not player.state then return end
+    player.state:set(IncomingCallStateBagName(), BuildIncomingCallAudioState(targetSource, callData.id, callData.hidden and '###-####' or callData.transmitterNum), true)
+end
+
+local function ClearIncomingCallState(targetSource)
+    if not targetSource or targetSource <= 0 then return end
+    local player = Player(targetSource)
+    if not player or not player.state then return end
+    player.state:set(IncomingCallStateBagName(), false, true)
+end
+
 local function GetCallHistory(identifier)
     if not identifier then return {} end
     
@@ -104,11 +170,12 @@ local function SaveCall(callData)
 end
 
 lib.callback.register('gcphone:getCallHistory', function(source)
-    local identifier = GetIdentifier(source)
+    local identifier = GetPhoneOwnerIdentifier(source, true)
     return GetCallHistory(identifier)
 end)
 
 lib.callback.register('gcphone:deleteCallHistory', function(source, phoneNumber)
+    if IsPhoneReadOnly(source) then return false end
     local identifier = GetIdentifier(source)
     if not identifier then return false end
     
@@ -124,6 +191,7 @@ lib.callback.register('gcphone:deleteCallHistory', function(source, phoneNumber)
 end)
 
 lib.callback.register('gcphone:clearCallHistory', function(source)
+    if IsPhoneReadOnly(source) then return false end
     local identifier = GetIdentifier(source)
     if not identifier then return false end
     
@@ -139,6 +207,11 @@ lib.callback.register('gcphone:clearCallHistory', function(source)
 end)
 
 lib.callback.register('gcphone:startCall', function(source, data)
+    if IsPhoneReadOnly(source) then
+        return {
+            error = 'READ_ONLY'
+        }
+    end
     local identifier = GetIdentifier(source)
     if not identifier then return nil end
     if type(data) ~= 'table' then return nil end
@@ -231,6 +304,7 @@ lib.callback.register('gcphone:startCall', function(source, data)
             
             ActiveCalls[callId] = callData
             SyncActiveCallsToGlobalState()
+            SetIncomingCallState(targetSource, callData)
             
             TriggerClientEvent('gcphone:incomingCall', targetSource, {
                 id = callId,
@@ -277,6 +351,7 @@ lib.callback.register('gcphone:acceptCall', function(source, data)
     SyncActiveCallsToGlobalState()
     SetPlayerCallChannel(callData.transmitterSrc, callId)
     SetPlayerCallChannel(callData.receiverSrc, callId)
+    ClearIncomingCallState(callData.receiverSrc)
     
     TriggerClientEvent('gcphone:callAccepted', callData.transmitterSrc, {
         id = callId,
@@ -310,7 +385,12 @@ AddEventHandler('playerDropped', function()
                 TriggerClientEvent('gcphone:callEnded', callData.transmitterSrc, callId)
             end
             if callData.receiverSrc and callData.receiverSrc ~= source then
+                ClearIncomingCallState(callData.receiverSrc)
                 TriggerClientEvent('gcphone:callEnded', callData.receiverSrc, callId)
+            end
+
+            if callData.receiverSrc == source then
+                ClearIncomingCallState(source)
             end
 
             ActiveCalls[callId] = nil
@@ -334,6 +414,7 @@ RegisterNetEvent('gcphone:rejectCall', function(callId)
     callData.duration = duration
     ResetCallChannelForCall(callData)
     SaveCall(callData)
+    ClearIncomingCallState(callData.receiverSrc)
     
     if callData.transmitterSrc then
         TriggerClientEvent('gcphone:callRejected', callData.transmitterSrc, callId)
@@ -360,6 +441,7 @@ RegisterNetEvent('gcphone:endCall', function(callId)
     callData.duration = duration
     ResetCallChannelForCall(callData)
     SaveCall(callData)
+    ClearIncomingCallState(callData.receiverSrc)
     
     if callData.transmitterSrc then
         TriggerClientEvent('gcphone:callEnded', callData.transmitterSrc, callId)

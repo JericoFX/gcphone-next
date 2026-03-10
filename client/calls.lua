@@ -65,9 +65,7 @@ RegisterNetEvent('gcphone:incomingCall', function(callData)
         action = 'incomingCall',
         data = callData
     })
-    
-    PlaySoundJS('Phone_Call_Sound_Effect.ogg', 0.5)
-    
+
     if not IsPhoneOpenSafe() then
         TogglePhone()
     end
@@ -76,8 +74,8 @@ end)
 RegisterNetEvent('gcphone:callAccepted', function(callData)
     inCall = true
     currentCallId = callData.id
-    
-    StopSoundJS('Phone_Call_Sound_Effect.ogg')
+
+    TriggerEvent('gcphone:stopIncomingCallTone')
     
     if not useRTC then SetCallVoice(currentCallId) end
     
@@ -96,8 +94,8 @@ end)
 RegisterNetEvent('gcphone:callRejected', function(callId)
     inCall = false
     currentCallId = nil
-    
-    StopSoundJS('Phone_Call_Sound_Effect.ogg')
+
+    TriggerEvent('gcphone:stopIncomingCallTone')
     
     if not useRTC then ResetCallVoice() end
     
@@ -112,8 +110,8 @@ end)
 RegisterNetEvent('gcphone:callEnded', function(callId)
     inCall = false
     currentCallId = nil
-    
-    StopSoundJS('Phone_Call_Sound_Effect.ogg')
+
+    TriggerEvent('gcphone:stopIncomingCallTone')
     
     if not useRTC then ResetCallVoice() end
     

@@ -35,6 +35,54 @@
   margin-top: 8px;
 }
 
+.device-identity {
+  display: grid;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 16px;
+  background: rgba(9, 15, 26, 0.52);
+}
+
+.device-identity-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.device-identity-label {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(213, 231, 255, 0.9);
+}
+
+.device-identity-flag {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(255, 107, 107, 0.2);
+  color: #ffd1d1;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.device-identity-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  color: rgba(228, 239, 255, 0.88);
+}
+
+.device-identity-row strong {
+  font-size: 12px;
+  color: #fff;
+  text-align: right;
+  word-break: break-all;
+}
+
 .time {
   font-size: 72px;
   line-height: 1;

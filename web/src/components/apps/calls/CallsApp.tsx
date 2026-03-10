@@ -1,5 +1,6 @@
 import { createSignal, For, Show, createEffect, onCleanup, batch, untrack } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
+import { usePhoneState } from '../../../store/phone';
 import { fetchNui } from '../../../utils/fetchNui';
 import { useNuiEvent } from '../../../utils/useNui';
 import { generateColorForString, timeAgo } from '../../../utils/misc';
@@ -8,6 +9,7 @@ import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { ScreenState } from '../../shared/ui/ScreenState';
 import { SkeletonList } from '../../shared/ui/SkeletonList';
 import { ActionSheet } from '../../shared/ui/ActionSheet';
+import { InlineNotice } from '../../shared/ui/InlineNotice';
 import { AppFAB, AppScaffold, AppTabs } from '../../shared/layout';
 import { useNotifications } from '../../../store/notifications';
 import { fetchLiveKitToken } from '../../../utils/realtimeAuth';
@@ -27,6 +29,7 @@ interface MediaTrackEntry {
 
 export function CallsApp() {
   const router = useRouter();
+  const phoneState = usePhoneState();
   const [notifications, notificationsActions] = useNotifications();
   const [activeTab, setActiveTab] = createSignal<TabType>('recents');
   const [callHistory, setCallHistory] = createSignal<Call[]>([]);
@@ -42,6 +45,7 @@ export function CallsApp() {
   const [localVideoIdentity, setLocalVideoIdentity] = createSignal('');
   const mediaHosts = new Map<string, HTMLDivElement>();
   const participantTracks = new Map<string, MediaTrackEntry[]>();
+  const isReadOnly = () => phoneState.accessMode === 'foreign-readonly';
 
   const renderParticipantMedia = (identity: string) => {
     const host = mediaHosts.get(identity);
@@ -177,6 +181,11 @@ export function CallsApp() {
         icon: '📵',
         durationMs: 2800,
       });
+      return;
+    }
+
+    if (isReadOnly()) {
+      notificationsActions.receive({ appId: 'calls', title: 'Solo lectura', message: 'No puedes llamar desde un telefono ajeno', icon: '🔒', durationMs: 2200 });
       return;
     }
 
@@ -392,6 +401,9 @@ export function CallsApp() {
           footerFixed
         >
           <div class={styles.content}>
+            <Show when={isReadOnly()}>
+              <InlineNotice title="Solo lectura" message={`Estas viendo el historial de llamadas de ${phoneState.accessOwnerName || 'otra persona'}.`} />
+            </Show>
             <Show when={activeTab() === 'keypad'}>
               <div class={styles.keypadView}>
                 <div class={styles.dialDisplay}>
@@ -414,8 +426,8 @@ export function CallsApp() {
                 <button 
                   class={styles.callBtn}
                   onClick={() => dialNumber() && startCall(dialNumber())}
-                  disabled={!dialNumber()}
-                >
+                   disabled={!dialNumber() || isReadOnly()}
+                 >
                   <img src="./img/icons_ios/phone-solid.svg" alt="Llamar" />
                 </button>
               </div>
@@ -442,16 +454,18 @@ export function CallsApp() {
                         </span>
                         <span class={styles.time}>{timeAgo(call.time)}</span>
                       </div>
-                      <button 
-                        class={styles.callBtn}
-                        onClick={() => startCall(call.num)}
-                      >
+                        <button 
+                          class={styles.callBtn}
+                          onClick={() => startCall(call.num)}
+                          disabled={isReadOnly()}
+                        >
                         <img src="./img/icons_ios/phone-solid.svg" alt="Llamar" />
                       </button>
-                      <button
-                        class={styles.callbackBtn}
-                        onClick={() => startCall(call.num)}
-                      >
+                        <button
+                          class={styles.callbackBtn}
+                          onClick={() => startCall(call.num)}
+                          disabled={isReadOnly()}
+                        >
                         Devolver
                       </button>
                     </div>
@@ -482,9 +496,9 @@ export function CallsApp() {
                           <span class={styles.number}>{contact.display}</span>
                           <span class={styles.time}>{contact.number}</span>
                         </div>
-                        <button class={styles.callBtn} onClick={() => startCall(contact.number, contact.display)}>
-                          📞
-                        </button>
+                         <button class={styles.callBtn} onClick={() => startCall(contact.number, contact.display)} disabled={isReadOnly()}>
+                           📞
+                         </button>
                       </div>
                     )}
                   </For>
@@ -495,10 +509,12 @@ export function CallsApp() {
             </Show>
           </div>
 
-          <AppFAB class={styles.fab} icon="+" onClick={() => setShowQuickActions(true)} />
+          <Show when={!isReadOnly()}>
+            <AppFAB class={styles.fab} icon="+" onClick={() => setShowQuickActions(true)} />
+          </Show>
 
           <ActionSheet
-            open={showQuickActions()}
+            open={!isReadOnly() && showQuickActions()}
             title="Nueva accion"
             onClose={() => setShowQuickActions(false)}
             actions={[

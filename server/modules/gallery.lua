@@ -1,7 +1,7 @@
 -- Creado/Modificado por JericoFX
 
 lib.callback.register('gcphone:getGallery', function(source)
-    local identifier = GetIdentifier(source)
+    local identifier = GetPhoneOwnerIdentifier(source, true)
     if not identifier then return {} end
     
     return MySQL.query.await(
@@ -11,6 +11,7 @@ lib.callback.register('gcphone:getGallery', function(source)
 end)
 
 lib.callback.register('gcphone:savePhoto', function(source, data)
+    if IsPhoneReadOnly(source) then return false end
     local identifier = GetIdentifier(source)
     if not identifier then return false end
     
@@ -27,6 +28,7 @@ lib.callback.register('gcphone:savePhoto', function(source, data)
 end)
 
 lib.callback.register('gcphone:deletePhoto', function(source, photoId)
+    if IsPhoneReadOnly(source) then return false end
     local identifier = GetIdentifier(source)
     if not identifier then return false end
     
@@ -39,6 +41,7 @@ lib.callback.register('gcphone:deletePhoto', function(source, photoId)
 end)
 
 lib.callback.register('gcphone:setPhotoAsWallpaper', function(source, data)
+    if IsPhoneReadOnly(source) then return false end
     local identifier = GetIdentifier(source)
     if not identifier then return false end
     
