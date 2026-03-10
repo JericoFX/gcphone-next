@@ -1194,3 +1194,44 @@ exports('MarkPhoneAsStolenByIMEI', function(imei, reason, reporter)
         phone = result,
     }
 end)
+
+exports('GetPhoneOwnerByIMEI', function(imei)
+    local safeImei = SafeString(imei, 32)
+    if not safeImei then
+        return {
+            success = false,
+            error = 'INVALID_IMEI',
+        }
+    end
+
+    local phone = MySQL.single.await(
+        [[
+            SELECT identifier, phone_number, imei, is_stolen, stolen_at, stolen_reason, stolen_reporter
+            FROM phone_numbers
+            WHERE imei = ?
+            LIMIT 1
+        ]],
+        { safeImei }
+    )
+
+    if not phone then
+        return {
+            success = false,
+            error = 'PHONE_NOT_FOUND',
+        }
+    end
+
+    return {
+        success = true,
+        owner = {
+            identifier = phone.identifier,
+            name = ResolvePhoneOwnerName(nil, phone.identifier),
+            phoneNumber = phone.phone_number,
+            imei = phone.imei,
+            isStolen = tonumber(phone.is_stolen) == 1,
+            stolenAt = phone.stolen_at,
+            stolenReason = phone.stolen_reason,
+            stolenReporter = phone.stolen_reporter,
+        }
+    }
+end)
