@@ -1244,13 +1244,10 @@ local function BuildOwnerLookupResponse(phone)
     }
 end
 
-exports('GetPhoneOwnerByIMEI', function(imei)
+local function GetPhoneLookupRecordByIMEI(imei)
     local safeImei = SafeString(imei, 32)
     if not safeImei then
-        return {
-            success = false,
-            error = 'INVALID_IMEI',
-        }
+        return nil, 'INVALID_IMEI'
     end
 
     local phone = MySQL.single.await(
@@ -1263,46 +1260,17 @@ exports('GetPhoneOwnerByIMEI', function(imei)
         { safeImei }
     )
 
-    return BuildOwnerLookupResponse(phone)
-end)
-
-exports('GetPhoneOwnerByNumber', function(phoneNumber)
-    local safePhone = SafeString(phoneNumber, 20)
-    if not safePhone then
-        return {
-            success = false,
-            error = 'INVALID_PHONE_NUMBER',
-        }
+    if not phone then
+        return nil, 'PHONE_NOT_FOUND'
     end
 
-    local identifier = GetIdentifierByPhone and GetIdentifierByPhone(safePhone) or nil
-    if not identifier then
-        return {
-            success = false,
-            error = 'PHONE_NOT_FOUND',
-        }
-    end
+    return phone, nil
+end
 
-    local phone = MySQL.single.await(
-        [[
-            SELECT identifier, phone_number, imei, is_stolen, stolen_at, stolen_reason, stolen_reporter
-            FROM phone_numbers
-            WHERE identifier = ?
-            LIMIT 1
-        ]],
-        { identifier }
-    )
-
-    return BuildOwnerLookupResponse(phone)
-end)
-
-exports('GetPhoneByIdentifier', function(identifier)
+local function GetPhoneLookupRecordByIdentifier(identifier)
     local safeIdentifier = SafeString(identifier, 80)
     if not safeIdentifier then
-        return {
-            success = false,
-            error = 'INVALID_IDENTIFIER',
-        }
+        return nil, 'INVALID_IDENTIFIER'
     end
 
     local phone = MySQL.single.await(
@@ -1315,45 +1283,113 @@ exports('GetPhoneByIdentifier', function(identifier)
         { safeIdentifier }
     )
 
+    if not phone then
+        return nil, 'PHONE_NOT_FOUND'
+    end
+
+    return phone, nil
+end
+
+local function GetPhoneLookupRecordByNumber(phoneNumber)
+    local safePhone = SafeString(phoneNumber, 20)
+    if not safePhone then
+        return nil, 'INVALID_PHONE_NUMBER'
+    end
+
+    local identifier = GetIdentifierByPhone and GetIdentifierByPhone(safePhone) or nil
+    if not identifier then
+        return nil, 'PHONE_NOT_FOUND'
+    end
+
+    return GetPhoneLookupRecordByIdentifier(identifier)
+end
+
+exports('GetPhoneOwnerByIMEI', function(imei)
+    local phone, err = GetPhoneLookupRecordByIMEI(imei)
+    if err then
+        return {
+            success = false,
+            error = err,
+        }
+    end
+
+    return BuildOwnerLookupResponse(phone)
+end)
+
+exports('GetPhoneOwnerByNumber', function(phoneNumber)
+    local phone, err = GetPhoneLookupRecordByNumber(phoneNumber)
+    if err then
+        return {
+            success = false,
+            error = err,
+        }
+    end
+
+    return BuildOwnerLookupResponse(phone)
+end)
+
+exports('GetPhoneByIdentifier', function(identifier)
+    local phone, err = GetPhoneLookupRecordByIdentifier(identifier)
+    if err then
+        return {
+            success = false,
+            error = err,
+        }
+    end
+
     return BuildOwnerLookupResponse(phone)
 end)
 
 exports('MarkPhoneAsStolenByNumber', function(phoneNumber, reason, reporter)
-    local safePhone = SafeString(phoneNumber, 20)
-    if not safePhone then
+    local phone, err = GetPhoneLookupRecordByNumber(phoneNumber)
+    if err then
         return {
             success = false,
-            error = 'INVALID_PHONE_NUMBER',
+            error = err,
         }
     end
 
-    local owner = exports[GetCurrentResourceName()]:GetPhoneOwnerByNumber(safePhone)
-    if not owner or not owner.success or not owner.owner or not owner.owner.imei then
+    local success, result = SetPhoneStolenStateByIMEI(phone.imei, {
+        isStolen = true,
+        reason = reason,
+        reporter = reporter,
+    })
+
+    if not success then
         return {
             success = false,
-            error = owner and owner.error or 'PHONE_NOT_FOUND',
+            error = result,
         }
     end
 
-    return exports[GetCurrentResourceName()]:MarkPhoneAsStolenByIMEI(owner.owner.imei, reason, reporter)
+    return {
+        success = true,
+        phone = result,
+    }
 end)
 
 exports('ClearPhoneStolenByNumber', function(phoneNumber)
-    local safePhone = SafeString(phoneNumber, 20)
-    if not safePhone then
+    local phone, err = GetPhoneLookupRecordByNumber(phoneNumber)
+    if err then
         return {
             success = false,
-            error = 'INVALID_PHONE_NUMBER',
+            error = err,
         }
     end
 
-    local owner = exports[GetCurrentResourceName()]:GetPhoneOwnerByNumber(safePhone)
-    if not owner or not owner.success or not owner.owner or not owner.owner.imei then
+    local success, result = SetPhoneStolenStateByIMEI(phone.imei, {
+        isStolen = false,
+    })
+
+    if not success then
         return {
             success = false,
-            error = owner and owner.error or 'PHONE_NOT_FOUND',
+            error = result,
         }
     end
 
-    return exports[GetCurrentResourceName()]:ClearPhoneStolenByIMEI(owner.owner.imei)
+    return {
+        success = true,
+        phone = result,
+    }
 end)
