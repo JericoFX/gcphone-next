@@ -1221,25 +1221,7 @@ exports('ClearPhoneStolenByIMEI', function(imei)
     }
 end)
 
-exports('GetPhoneOwnerByIMEI', function(imei)
-    local safeImei = SafeString(imei, 32)
-    if not safeImei then
-        return {
-            success = false,
-            error = 'INVALID_IMEI',
-        }
-    end
-
-    local phone = MySQL.single.await(
-        [[
-            SELECT identifier, phone_number, imei, is_stolen, stolen_at, stolen_reason, stolen_reporter
-            FROM phone_numbers
-            WHERE imei = ?
-            LIMIT 1
-        ]],
-        { safeImei }
-    )
-
+local function BuildOwnerLookupResponse(phone)
     if not phone then
         return {
             success = false,
@@ -1260,6 +1242,28 @@ exports('GetPhoneOwnerByIMEI', function(imei)
             stolenReporter = phone.stolen_reporter,
         }
     }
+end
+
+exports('GetPhoneOwnerByIMEI', function(imei)
+    local safeImei = SafeString(imei, 32)
+    if not safeImei then
+        return {
+            success = false,
+            error = 'INVALID_IMEI',
+        }
+    end
+
+    local phone = MySQL.single.await(
+        [[
+            SELECT identifier, phone_number, imei, is_stolen, stolen_at, stolen_reason, stolen_reporter
+            FROM phone_numbers
+            WHERE imei = ?
+            LIMIT 1
+        ]],
+        { safeImei }
+    )
+
+    return BuildOwnerLookupResponse(phone)
 end)
 
 exports('GetPhoneOwnerByNumber', function(phoneNumber)
@@ -1289,24 +1293,67 @@ exports('GetPhoneOwnerByNumber', function(phoneNumber)
         { identifier }
     )
 
-    if not phone then
+    return BuildOwnerLookupResponse(phone)
+end)
+
+exports('GetPhoneByIdentifier', function(identifier)
+    local safeIdentifier = SafeString(identifier, 80)
+    if not safeIdentifier then
         return {
             success = false,
-            error = 'PHONE_NOT_FOUND',
+            error = 'INVALID_IDENTIFIER',
         }
     end
 
-    return {
-        success = true,
-        owner = {
-            identifier = phone.identifier,
-            name = ResolvePhoneOwnerName(nil, phone.identifier),
-            phoneNumber = phone.phone_number,
-            imei = phone.imei,
-            isStolen = tonumber(phone.is_stolen) == 1,
-            stolenAt = phone.stolen_at,
-            stolenReason = phone.stolen_reason,
-            stolenReporter = phone.stolen_reporter,
+    local phone = MySQL.single.await(
+        [[
+            SELECT identifier, phone_number, imei, is_stolen, stolen_at, stolen_reason, stolen_reporter
+            FROM phone_numbers
+            WHERE identifier = ?
+            LIMIT 1
+        ]],
+        { safeIdentifier }
+    )
+
+    return BuildOwnerLookupResponse(phone)
+end)
+
+exports('MarkPhoneAsStolenByNumber', function(phoneNumber, reason, reporter)
+    local safePhone = SafeString(phoneNumber, 20)
+    if not safePhone then
+        return {
+            success = false,
+            error = 'INVALID_PHONE_NUMBER',
         }
-    }
+    end
+
+    local owner = exports[GetCurrentResourceName()]:GetPhoneOwnerByNumber(safePhone)
+    if not owner or not owner.success or not owner.owner or not owner.owner.imei then
+        return {
+            success = false,
+            error = owner and owner.error or 'PHONE_NOT_FOUND',
+        }
+    end
+
+    return exports[GetCurrentResourceName()]:MarkPhoneAsStolenByIMEI(owner.owner.imei, reason, reporter)
+end)
+
+exports('ClearPhoneStolenByNumber', function(phoneNumber)
+    local safePhone = SafeString(phoneNumber, 20)
+    if not safePhone then
+        return {
+            success = false,
+            error = 'INVALID_PHONE_NUMBER',
+        }
+    end
+
+    local owner = exports[GetCurrentResourceName()]:GetPhoneOwnerByNumber(safePhone)
+    if not owner or not owner.success or not owner.owner or not owner.owner.imei then
+        return {
+            success = false,
+            error = owner and owner.error or 'PHONE_NOT_FOUND',
+        }
+    end
+
+    return exports[GetCurrentResourceName()]:ClearPhoneStolenByIMEI(owner.owner.imei)
 end)
