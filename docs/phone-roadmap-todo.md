@@ -3,6 +3,7 @@
 ## Framework bridge
 
 - Revisar en QBCore donde conviene delegar la generacion del numero de telefono para evitar un paso extra en `gcphone`.
+- En ESX dejar `users.phone_number` como punto de compatibilidad cuando el core/servidor no exponga telefono de otra forma.
 - Objetivo futuro: mover esta responsabilidad a funciones por framework/core para que luego ESX u otros puedan enchufarse facil.
 - Idea base:
   - `server/bridge/qbcore.lua` expone helpers del core
