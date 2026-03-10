@@ -70,7 +70,7 @@ end
 CreateThread(function()
     Wait(500)
     
-    while GetResourceState('qb-core') ~= 'started' and GetResourceState('qbx_core') ~= 'started' do
+    while GetResourceState('qb-core') ~= 'started' and GetResourceState('qbx_core') ~= 'started' and GetResourceState('es_extended') ~= 'started' do
         Wait(100)
     end
     
@@ -83,6 +83,7 @@ CreateThread(function()
         AddMoney = function(source, amount, accountType, reason) return bridgeCall('AddMoney', source, amount, accountType, reason) end,
         RemoveMoney = function(source, amount, accountType, reason) return bridgeCall('RemoveMoney', source, amount, accountType, reason) end,
         GetJob = function(source) return bridgeCall('GetJob', source) end,
+        GetFramework = function() return bridgeCall('GetFramework') end,
         GetSourceFromIdentifier = function(identifier) return bridgeCall('GetSourceFromIdentifier', identifier) end,
         IsPlayerActionAllowed = function(source) return bridgeCall('IsPlayerActionAllowed', source) end,
     }
@@ -120,6 +121,10 @@ end)
 
 exports('GetJob', function(source)
     return bridgeCall('GetJob', source)
+end)
+
+exports('GetFramework', function()
+    return bridgeCall('GetFramework')
 end)
 
 exports('GetSourceFromIdentifier', function(identifier)
