@@ -86,5 +86,4 @@ dependencies {
     '/onesync',
     'ox_lib',
     'oxmysql',
-    'qb-core',
 }

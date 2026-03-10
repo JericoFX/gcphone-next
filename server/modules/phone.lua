@@ -1098,16 +1098,30 @@ RegisterNetEvent('gcphone:clearPhoneAccessContext', function()
 end)
 
 RegisterNetEvent('QBCore:Server:PlayerLoaded', function(Player)
-    if not Player then return end
-    
+    if not Player or not Player.PlayerData or not Player.PlayerData.source then return end
+
     local phone = GetOrCreatePhone(Player.PlayerData.source)
     if phone then
         TriggerClientEvent('gcphone:init', Player.PlayerData.source, BuildPhonePayload(phone, Player.PlayerData.source))
     end
 end)
 
+AddEventHandler('esx:playerLoaded', function(playerId)
+    local source = tonumber(playerId)
+    if not source or source <= 0 then return end
+
+    local phone = GetOrCreatePhone(source)
+    if phone then
+        TriggerClientEvent('gcphone:init', source, BuildPhonePayload(phone, source))
+    end
+end)
+
 RegisterNetEvent('QBCore:Server:OnPlayerUnload', function(source)
     ClearPhoneAccessContext(source)
+end)
+
+AddEventHandler('esx:playerDropped', function(playerId)
+    ClearPhoneAccessContext(playerId)
 end)
 
 AddEventHandler('playerDropped', function()
