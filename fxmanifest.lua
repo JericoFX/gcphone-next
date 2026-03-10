@@ -28,6 +28,7 @@ client_scripts {
     'client/phone_animation.lua',
     'client/phone.lua',
     'client/nui_bridge.lua',
+    'client/native_audio.lua',
     'client/flashlight.lua',
     'client/camera_walk.lua',
     'client/camera.lua',

@@ -8,7 +8,9 @@ import { useNuiEvent } from '../../../utils/useNui';
 import { AppScaffold } from '../../shared/layout';
 import { useAppCache } from '../../../hooks';
 import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
+import { usePhoneState } from '../../../store/phone';
 import { FormCheckbox, FormSection, Modal, ModalActions, ModalButton } from '../../shared/ui/Modal';
+import { InlineNotice } from '../../shared/ui/InlineNotice';
 import styles from './DocumentsApp.module.scss';
 
 interface Document {
@@ -62,6 +64,7 @@ function TabToggle(props: {
 
 export function DocumentsApp() {
   const router = useRouter();
+  const phoneState = usePhoneState();
   const cache = useAppCache('documents');
   const [documents, setDocuments] = createSignal<Document[]>([]);
   const [docTypes, setDocTypes] = createSignal<DocType[]>([]);
@@ -80,6 +83,7 @@ export function DocumentsApp() {
   const [composerHolderNumber, setComposerHolderNumber] = createSignal('');
   const [composerExpires, setComposerExpires] = createSignal('');
   const [composerNFC, setComposerNFC] = createSignal(true);
+  const isReadOnly = createMemo(() => phoneState.accessMode === 'foreign-readonly');
 
   const loadData = async () => {
     setLoading(true);
@@ -165,6 +169,7 @@ export function DocumentsApp() {
   };
 
   const createDocument = async () => {
+    if (isReadOnly()) return;
     if (!composerTitle().trim()) {
       uiAlert('El titulo es obligatorio');
       return;
@@ -194,6 +199,7 @@ export function DocumentsApp() {
   };
 
   const deleteDocument = async (id: number) => {
+    if (isReadOnly()) return;
     if (!(await uiConfirm('¿Eliminar este documento?', { title: 'Eliminar documento' }))) return;
     
     await fetchNui('documentsDelete', { documentId: id });
@@ -202,6 +208,7 @@ export function DocumentsApp() {
   };
 
   const toggleNFC = async (doc: Document) => {
+    if (isReadOnly()) return;
     const newValue = !doc.nfc_enabled;
     await fetchNui('documentsToggleNFC', { documentId: doc.id, enabled: newValue });
     
@@ -211,6 +218,7 @@ export function DocumentsApp() {
   };
 
   const shareDocument = async (docId: number) => {
+    if (isReadOnly()) return;
     if (!docPickerTarget()) return;
     
     const result = await fetchNui<{ success?: boolean; error?: string }>('shareDocument', {
@@ -227,6 +235,7 @@ export function DocumentsApp() {
   };
 
   const shareDocumentByMail = (doc: Document) => {
+    if (isReadOnly()) return;
     const typeInfo = getDocTypeInfo(doc.doc_type);
     const lines = [
       `${typeInfo.name}: ${doc.title}`,
@@ -250,6 +259,9 @@ export function DocumentsApp() {
   return (
     <AppScaffold title="Documentos" subtitle="Tus documentos digitales" onBack={() => router.goBack()} bodyClass={styles.body}>
       <div class={styles.documentsApp}>
+        <Show when={isReadOnly()}>
+          <InlineNotice title="Solo lectura" message={`Estas viendo los documentos de ${phoneState.accessOwnerName || 'otra persona'}.`} />
+        </Show>
         <div class={styles.tabs}>
           <TabToggle active={activeTab() === 'my'} label="Mis Docs" onClick={() => setActiveTab('my')} />
           <TabToggle active={activeTab() === 'nfc'} label="NFC" onClick={() => setActiveTab('nfc')} />
@@ -302,9 +314,11 @@ export function DocumentsApp() {
             </Show>
           </div>
 
-            <button class={styles.fab} onClick={() => setShowComposer(true)}>
-            <span>+</span>
-          </button>
+            <Show when={!isReadOnly()}>
+              <button class={styles.fab} onClick={() => setShowComposer(true)}>
+                <span>+</span>
+              </button>
+            </Show>
         </Show>
 
         <Show when={activeTab() === 'nfc'}>
@@ -415,6 +429,7 @@ export function DocumentsApp() {
                           type="checkbox"
                           checked={doc.nfc_enabled === 1}
                           onChange={() => toggleNFC(doc)}
+                          disabled={isReadOnly()}
                         />
                         <span>NFC Habilitado</span>
                       </label>
@@ -422,14 +437,16 @@ export function DocumentsApp() {
                     </div>
                   </div>
                   
-                   <div class={styles.detailActions}>
-                     <button class={styles.mailBtn} onClick={() => shareDocumentByMail(doc)}>
-                       Compartir por Mail
-                     </button>
-                     <button class={styles.deleteBtn} onClick={() => deleteDocument(doc.id)}>
-                       Eliminar Documento
-                     </button>
-                   </div>
+                    <Show when={!isReadOnly()}>
+                      <div class={styles.detailActions}>
+                        <button class={styles.mailBtn} onClick={() => shareDocumentByMail(doc)}>
+                          Compartir por Mail
+                        </button>
+                        <button class={styles.deleteBtn} onClick={() => deleteDocument(doc.id)}>
+                          Eliminar Documento
+                        </button>
+                      </div>
+                    </Show>
                 </div>
               );
             })()}
@@ -437,7 +454,7 @@ export function DocumentsApp() {
         </Show>
 
         <Modal
-          open={showComposer()}
+          open={!isReadOnly() && showComposer()}
           title="Nuevo Documento"
           onClose={() => setShowComposer(false)}
           size="md"
@@ -518,7 +535,7 @@ export function DocumentsApp() {
         </Modal>
 
         <Modal
-          open={showDocPicker()}
+          open={!isReadOnly() && showDocPicker()}
           title="Seleccionar Documento"
           onClose={() => { setShowDocPicker(false); setDocPickerTarget(null); }}
           size="md"

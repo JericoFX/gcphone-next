@@ -116,6 +116,23 @@ local function BuildForensicReport(ownerIdentifier, phoneNumber, imei)
     return table.concat(lines, '\n')
 end
 
+local function ResolveOwnerName(ownerIdentifier)
+    local ownerName = 'Desconocido'
+    local playerResult = MySQL.single.await(
+        'SELECT charinfo FROM players WHERE citizenid = ?',
+        { ownerIdentifier }
+    )
+
+    if playerResult and playerResult.charinfo then
+        local charinfo = json.decode(playerResult.charinfo)
+        if charinfo and charinfo.firstname and charinfo.lastname then
+            ownerName = charinfo.firstname .. ' ' .. charinfo.lastname
+        end
+    end
+
+    return ownerName
+end
+
 lib.callback.register('gcphone:dropPhone', function(source)
     local identifier = GetIdentifier(source)
     if not identifier then
@@ -227,19 +244,7 @@ lib.callback.register('gcphone:getPhoneInfo', function(source, data)
     end
 
     local ownerIdentifier = droppedPhone.owner_identifier
-    local ownerName = 'Desconocido'
-
-    local playerResult = MySQL.single.await(
-        'SELECT charinfo FROM players WHERE citizenid = ?',
-        { ownerIdentifier }
-    )
-
-    if playerResult and playerResult.charinfo then
-        local charinfo = json.decode(playerResult.charinfo)
-        if charinfo and charinfo.firstname and charinfo.lastname then
-            ownerName = charinfo.firstname .. ' ' .. charinfo.lastname
-        end
-    end
+    local ownerName = ResolveOwnerName(ownerIdentifier)
 
     return {
         success = true,
@@ -272,32 +277,30 @@ lib.callback.register('gcphone:unlockDroppedPhone', function(source, data)
         return { success = false, error = 'PHONE_NOT_FOUND' }
     end
 
-    local ownerPhone = MySQL.single.await(
-        'SELECT lock_code FROM phone_numbers WHERE identifier = ? LIMIT 1',
-        { droppedPhone.owner_identifier }
-    )
-
-    if not ownerPhone then
+    local unlocked, err = VerifyPhonePinForIdentifier(droppedPhone.owner_identifier, pin)
+    if err == 'PHONE_NOT_FOUND' then
         return { success = false, error = 'PHONE_OWNER_NOT_FOUND' }
     end
 
-    if tostring(ownerPhone.lock_code or '') ~= pin then
+    if not unlocked then
         return { success = false, error = 'INVALID_PIN' }
     end
 
-    local ownerName = 'Desconocido'
-    local playerResult = MySQL.single.await(
-        'SELECT charinfo FROM players WHERE citizenid = ?',
-        { droppedPhone.owner_identifier }
-    )
+    local ownerName = ResolveOwnerName(droppedPhone.owner_identifier)
+    SetPhoneAccessContext(source, {
+        mode = 'foreign-readonly',
+        ownerIdentifier = droppedPhone.owner_identifier,
+        phoneId = phoneId,
+        ownerName = ownerName,
+        readOnly = true,
+    })
 
-    if playerResult and playerResult.charinfo then
-        local charinfo = json.decode(playerResult.charinfo)
-        if charinfo and charinfo.firstname and charinfo.lastname then
-            ownerName = charinfo.firstname .. ' ' .. charinfo.lastname
-        end
+    local phone = GetPhoneRecordByIdentifier(droppedPhone.owner_identifier)
+    local payload = phone and BuildPhonePayloadForSource(phone, source) or nil
+    if payload then
+        payload.useLockScreen = false
+        payload.forceLockScreen = false
     end
-
     local report = BuildForensicReport(droppedPhone.owner_identifier, droppedPhone.phone_number, droppedPhone.imei)
 
     return {
@@ -309,6 +312,7 @@ lib.callback.register('gcphone:unlockDroppedPhone', function(source, data)
             imei = droppedPhone.imei,
             droppedAt = droppedPhone.dropped_at,
         },
+        payload = payload,
         report = report,
     }
 end)

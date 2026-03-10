@@ -115,6 +115,19 @@ end
 
 function GetPhoneNumber(identifier)
     if not identifier then return nil end
+
+    if QBCore then
+        local source = GetSourceFromIdentifier(identifier)
+        if source then
+            local player = QBCore.Functions.GetPlayer(source)
+            local charinfo = player and player.PlayerData and player.PlayerData.charinfo or nil
+            -- Verified: QBCore PlayerData docs list charinfo.phone as the generated player phone number.
+            local phone = charinfo and charinfo.phone or nil
+            if type(phone) == 'string' and phone ~= '' then
+                return phone
+            end
+        end
+    end
     
     return MySQL.scalar.await(
         'SELECT phone_number FROM phone_numbers WHERE identifier = ?',
@@ -122,8 +135,39 @@ function GetPhoneNumber(identifier)
     )
 end
 
+function GetFrameworkPhoneNumber(source, identifier)
+    local player = source and GetPlayer(source) or nil
+    if not player and identifier then
+        local onlineSource = GetSourceFromIdentifier(identifier)
+        if onlineSource then
+            player = GetPlayer(onlineSource)
+        end
+    end
+
+    local charinfo = player and player.PlayerData and player.PlayerData.charinfo or nil
+    -- Verified: QBCore PlayerData docs list charinfo.phone as the generated player phone number.
+    local phone = charinfo and charinfo.phone or nil
+    if type(phone) == 'string' and phone ~= '' then
+        return phone
+    end
+
+    return nil
+end
+
 function GetIdentifierByPhone(phoneNumber)
     if not phoneNumber then return nil end
+
+    if QBCore then
+        local players = QBCore.Functions.GetPlayers()
+        for _, src in pairs(players) do
+            local player = QBCore.Functions.GetPlayer(src)
+            local charinfo = player and player.PlayerData and player.PlayerData.charinfo or nil
+            local currentPhone = charinfo and charinfo.phone or nil
+            if type(currentPhone) == 'string' and currentPhone == phoneNumber then
+                return player.PlayerData.citizenid
+            end
+        end
+    end
     
     return MySQL.scalar.await(
         'SELECT identifier FROM phone_numbers WHERE phone_number = ?',

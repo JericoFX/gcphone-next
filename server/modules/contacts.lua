@@ -27,11 +27,12 @@ local function SafePhone(value)
 end
 
 lib.callback.register('gcphone:getContacts', function(source)
-    local identifier = GetIdentifier(source)
+    local identifier = GetPhoneOwnerIdentifier(source, true)
     return GetContacts(identifier)
 end)
 
 lib.callback.register('gcphone:addContact', function(source, data)
+    if IsPhoneReadOnly(source) then return false, 'READ_ONLY' end
     local identifier = GetIdentifier(source)
     if not identifier then return false end
 
@@ -63,6 +64,7 @@ lib.callback.register('gcphone:addContact', function(source, data)
 end)
 
 lib.callback.register('gcphone:updateContact', function(source, data)
+    if IsPhoneReadOnly(source) then return false, 'READ_ONLY' end
     local identifier = GetIdentifier(source)
     if not identifier then return false end
 
@@ -86,6 +88,7 @@ lib.callback.register('gcphone:updateContact', function(source, data)
 end)
 
 lib.callback.register('gcphone:deleteContact', function(source, contactId)
+    if IsPhoneReadOnly(source) then return false end
     local identifier = GetIdentifier(source)
     if not identifier then return false end
 
@@ -103,6 +106,7 @@ lib.callback.register('gcphone:deleteContact', function(source, contactId)
 end)
 
 lib.callback.register('gcphone:toggleFavorite', function(source, contactId)
+    if IsPhoneReadOnly(source) then return false end
     local identifier = GetIdentifier(source)
     if not identifier then return false end
 
@@ -127,6 +131,7 @@ lib.callback.register('gcphone:toggleFavorite', function(source, contactId)
 end)
 
 lib.callback.register('gcphone:shareContact', function(source, data)
+    if IsPhoneReadOnly(source) then return false, 'READ_ONLY' end
     local identifier = GetIdentifier(source)
     if not identifier then return false, 'Invalid source' end
 

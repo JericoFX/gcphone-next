@@ -1,4 +1,4 @@
-import { For, Show, createSignal, onMount, Switch, Match } from 'solid-js';
+import { For, Show, createSignal, onCleanup, onMount, Switch, Match } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { usePhone } from '../../../store/phone';
 import { useNotifications } from '../../../store/notifications';
@@ -6,17 +6,22 @@ import { fetchNui } from '../../../utils/fetchNui';
 import { APP_DEFINITIONS } from '../../../config/apps';
 import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { AppScaffold } from '../../shared/layout';
+import { InlineNotice } from '../../shared/ui/InlineNotice';
+import { SectionGroup, SectionHeader } from '../../shared/ui/SectionBlock';
 import { appName, t } from '../../../i18n';
+import { uiConfirm } from '../../../utils/uiDialog';
 import styles from './SettingsApp.module.scss';
-
-// Audio player for ringtone preview
-let currentAudio: HTMLAudioElement | null = null;
-let currentRingtoneId: string | null = null;
 
 interface ToneItem {
   id: string;
   name: string;
-  file: string;
+  category?: string;
+  sourceMp3?: string;
+  native?: {
+    soundName?: string;
+    bank?: string;
+    soundSet?: string;
+  };
 }
 
 interface ToneCatalog {
@@ -58,19 +63,14 @@ const fallbackCatalog: ToneCatalog = {
   },
   categories: {
     ringtones: [
-      { id: 'ring.ogg', name: 'Classic Ring', file: '/audio/ringtones/ring.ogg' },
-      { id: 'ring2.ogg', name: 'Tone Two', file: '/audio/ringtones/ring2.ogg' },
-      { id: 'iphone11.ogg', name: 'iPhone Style', file: '/audio/ringtones/iphone11.ogg' },
+      { id: 'call_main_01', name: 'Call Main 01', category: 'ringtone', sourceMp3: 'audio_sources/ringtones/call_main_01.mp3', native: { soundName: 'call_main_01', bank: '', soundSet: '' } },
+      { id: 'call_alt_01', name: 'Call Alt 01', category: 'ringtone', sourceMp3: 'audio_sources/ringtones/call_alt_01.mp3', native: { soundName: 'call_alt_01', bank: '', soundSet: '' } },
     ],
     notifications: [
-      { id: 'soft-ping.ogg', name: 'Soft Ping', file: '/audio/notifications/soft-ping.ogg' },
-      { id: 'glass.ogg', name: 'Glass', file: '/audio/notifications/glass.ogg' },
-      { id: 'orbit.ogg', name: 'Orbit', file: '/audio/notifications/orbit.ogg' },
+      { id: 'notif_soft_01', name: 'Notif Soft 01', category: 'notification', sourceMp3: 'audio_sources/notifications/notif_soft_01.mp3', native: { soundName: 'notif_soft_01', bank: '', soundSet: '' } },
     ],
     messages: [
-      { id: 'pop.ogg', name: 'Pop', file: '/audio/messages/pop.ogg' },
-      { id: 'bubble.ogg', name: 'Bubble', file: '/audio/messages/bubble.ogg' },
-      { id: 'tap.ogg', name: 'Tap', file: '/audio/messages/tap.ogg' },
+      { id: 'msg_soft_01', name: 'Msg Soft 01', category: 'message', sourceMp3: 'audio_sources/messages/msg_soft_01.mp3', native: { soundName: 'msg_soft_01', bank: '', soundSet: '' } },
     ],
   },
 };
@@ -101,9 +101,12 @@ export function SettingsApp() {
   const [pinConfirm, setPinConfirm] = createSignal('');
   const [status, setStatus] = createSignal<{ type: 'ok' | 'error'; text: string } | null>(null);
   const [toneCatalog, setToneCatalog] = createSignal<ToneCatalog>(fallbackCatalog);
+  const [previewToneId, setPreviewToneId] = createSignal<string | null>(null);
   const [liveLocationEnabled, setLiveLocationEnabled] = createSignal(false);
   const [liveLocationInterval, setLiveLocationInterval] = createSignal<10>(10);
   const [liveLocationStatus, setLiveLocationStatus] = createSignal('');
+  const [resettingPhone, setResettingPhone] = createSignal(false);
+  const [resetStatus, setResetStatus] = createSignal<{ type: 'ok' | 'error'; text: string } | null>(null);
   const language = () => phoneState.settings.language || 'es';
 
   usePhoneKeyHandler({
@@ -142,6 +145,10 @@ export function SettingsApp() {
       setLiveLocationEnabled(Boolean(state.active));
       setLiveLocationInterval(10);
     }
+  });
+
+  onCleanup(() => {
+    void fetchNui('stopNativeTonePreview', {}, true);
   });
 
   const updateLiveLocationInterval = async (seconds: 10) => {
@@ -184,6 +191,23 @@ export function SettingsApp() {
     }
 
     setLiveLocationStatus(response?.error || 'No se pudo activar ubicación');
+  };
+
+  const handleFactoryReset = async () => {
+    if (resettingPhone()) return;
+
+    const confirmed = await uiConfirm('Esto borrará la configuración y los datos del teléfono para empezar desde cero. ¿Continuar?', {
+      title: 'Restablecer teléfono',
+    });
+    if (!confirmed) return;
+
+    setResettingPhone(true);
+    setResetStatus(null);
+    const success = await phoneActions.factoryReset();
+    setResettingPhone(false);
+    setResetStatus(success
+      ? { type: 'ok', text: 'Teléfono restablecido. Completa el setup inicial otra vez.' }
+      : { type: 'error', text: 'No se pudo restablecer el teléfono.' });
   };
 
   const randomWallpaper = () => {
@@ -252,41 +276,18 @@ export function SettingsApp() {
 
   const getCurrentPin = () => pinStep() === 1 ? pinCode() : pinConfirm();
 
-  const playRingtonePreview = (ringtoneId: string) => {
-    const catalog = toneCatalog();
-    const items = [
-      ...(catalog.categories?.ringtones || []),
-      ...(catalog.categories?.notifications || []),
-      ...(catalog.categories?.messages || []),
-    ];
-    const selected = items.find((entry) => entry.id === ringtoneId);
-    if (!selected) return;
-
-    if (currentAudio) {
-      currentAudio.pause();
-      currentAudio.currentTime = 0;
-      currentAudio = null;
-    }
-    
-    if (currentRingtoneId === ringtoneId) {
-      currentRingtoneId = null;
+  const playRingtonePreview = async (ringtoneId: string) => {
+    if (previewToneId() === ringtoneId) {
+      setPreviewToneId(null);
+      await fetchNui('stopNativeTonePreview', {}, true);
       return;
     }
-    
-    const audio = new Audio(selected.file);
-    audio.volume = phoneState.settings.volume;
-    audio.play().catch(() => {});
-    
-    currentAudio = audio;
-    currentRingtoneId = ringtoneId;
-    
-    setTimeout(() => {
-      if (currentAudio === audio) {
-        audio.pause();
-        currentAudio = null;
-        currentRingtoneId = null;
-      }
-    }, 5000);
+
+    setPreviewToneId(ringtoneId);
+    const result = await fetchNui<{ success?: boolean }>('previewNativeTone', { toneId: ringtoneId }, { success: false });
+    if (!result?.success) {
+      setPreviewToneId(null);
+    }
   };
 
   // Cell component helper
@@ -339,15 +340,7 @@ export function SettingsApp() {
     </button>
   );
 
-  // Section header component
-  const SectionHeader = (props: { title: string }) => (
-    <div class={styles.sectionHeader}>{props.title}</div>
-  );
-
-  // Group container
-  const Group = (props: { children: any }) => (
-    <div class={styles.group}>{props.children}</div>
-  );
+  const Group = (props: { children: any }) => <SectionGroup class={styles.group}>{props.children}</SectionGroup>;
 
   // MAIN VIEW
   const renderMain = () => (
@@ -562,7 +555,7 @@ export function SettingsApp() {
             Biblioteca publica
           </div>
           <div style={{ 'font-size': '12px', color: '#6b7280', 'line-height': '1.45' }}>
-            Fuente recomendada: {toneCatalog().source?.name || 'Pixabay Sound Effects'} - licencia {toneCatalog().source?.license || 'royalty-free'}.
+            Fuente recomendada: {toneCatalog().source?.name || 'Pixabay Sound Effects'} - licencia {toneCatalog().source?.license || 'royalty-free'}. El preview usa placeholders nativos hasta convertir los bancos finales.
           </div>
         </div>
         <button onClick={() => window.open(toneCatalog().source?.downloadPage || 'https://pixabay.com/sound-effects/', '_blank')}>Descargar</button>
@@ -583,7 +576,7 @@ export function SettingsApp() {
                   onClick={() => playRingtonePreview(ringtone.id)}
                   title="Escuchar"
                 >
-                  {currentRingtoneId === ringtone.id ? '⏹️' : '▶️'}
+                  {previewToneId() === ringtone.id ? '⏹️' : '▶️'}
                 </button>
                 <button
                   class={`${styles.selectBtn} ${(phoneState.settings.callRingtone || phoneState.settings.ringtone) === ringtone.id ? styles.selected : ''}`}
@@ -608,7 +601,7 @@ export function SettingsApp() {
               </div>
               <div class={styles.ringtoneActions}>
                 <button class={styles.previewBtn} onClick={() => playRingtonePreview(tone.id)} title="Escuchar">
-                  {currentRingtoneId === tone.id ? '⏹️' : '▶️'}
+                  {previewToneId() === tone.id ? '⏹️' : '▶️'}
                 </button>
                 <button
                   class={`${styles.selectBtn} ${phoneState.settings.notificationTone === tone.id ? styles.selected : ''}`}
@@ -633,7 +626,7 @@ export function SettingsApp() {
               </div>
               <div class={styles.ringtoneActions}>
                 <button class={styles.previewBtn} onClick={() => playRingtonePreview(tone.id)} title="Escuchar">
-                  {currentRingtoneId === tone.id ? '⏹️' : '▶️'}
+                  {previewToneId() === tone.id ? '⏹️' : '▶️'}
                 </button>
                 <button
                   class={`${styles.selectBtn} ${phoneState.settings.messageTone === tone.id ? styles.selected : ''}`}
@@ -772,6 +765,28 @@ export function SettingsApp() {
           {liveLocationStatus()}
         </div>
       </Show>
+
+      <SectionHeader title="RESTABLECER" />
+      <Group>
+        <Cell
+          icon="🧹"
+          iconBg="iconRed"
+          title="Borrar teléfono"
+          subtitle="Limpia datos, cuentas y vuelve al setup inicial"
+        />
+      </Group>
+
+      <button class={styles.clearBtn} onClick={() => void handleFactoryReset()} disabled={resettingPhone()}>
+        {resettingPhone() ? 'Restableciendo...' : 'Restablecer teléfono'}
+      </button>
+
+      <Show when={resetStatus()}>
+        {(msg) => (
+          <div class={`${styles.statusMsg} ${msg().type === 'ok' ? styles.success : styles.error}`}>
+            {msg().text}
+          </div>
+        )}
+      </Show>
     </div>
   );
 
@@ -821,6 +836,14 @@ export function SettingsApp() {
       bodyClass={`${styles.app} ${styles.settingsCanvas}`}
       bodyPadding="none"
     >
+      <Show when={phoneState.accessMode === 'foreign-readonly'}>
+        <div class={styles.content}>
+          <InlineNotice
+            title="Telefono ajeno"
+            message={`Estas viendo el telefono de ${phoneState.accessOwnerName || 'otra persona'} en modo solo lectura.`}
+          />
+        </div>
+      </Show>
       <Switch>
         <Match when={section() === 'main'}>{renderMain()}</Match>
         <Match when={section() === 'appearance'}>{renderAppearance()}</Match>

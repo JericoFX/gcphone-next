@@ -45,7 +45,7 @@ local function RequirePlayerIdentifier(source)
         end
     end
 
-    return GetIdentifier(src)
+    return GetPhoneOwnerIdentifier(src, true)
 end
 
 lib.callback.register('gcphone:documents:getList', function(source)
@@ -59,6 +59,7 @@ lib.callback.register('gcphone:documents:getList', function(source)
 end)
 
 lib.callback.register('gcphone:documents:create', function(source, data)
+    if IsPhoneReadOnly(source) then return { success = false, error = 'READ_ONLY' } end
     local identifier = RequirePlayerIdentifier(source)
     if not identifier then return { success = false, error = 'INVALID_SOURCE' } end
     if type(data) ~= 'table' then return { success = false, error = 'INVALID_DATA' } end
@@ -90,6 +91,7 @@ lib.callback.register('gcphone:documents:create', function(source, data)
 end)
 
 lib.callback.register('gcphone:documents:delete', function(source, data)
+    if IsPhoneReadOnly(source) then return { success = false, error = 'READ_ONLY' } end
     local identifier = RequirePlayerIdentifier(source)
     if not identifier then return { success = false, error = 'INVALID_SOURCE' } end
     local id = tonumber(type(data) == 'table' and data.documentId or nil)
@@ -100,6 +102,7 @@ lib.callback.register('gcphone:documents:delete', function(source, data)
 end)
 
 lib.callback.register('gcphone:documents:toggleNFC', function(source, data)
+    if IsPhoneReadOnly(source) then return { success = false, error = 'READ_ONLY' } end
     local identifier = RequirePlayerIdentifier(source)
     if not identifier then return { success = false, error = 'INVALID_SOURCE' } end
     
@@ -139,6 +142,7 @@ lib.callback.register('gcphone:documents:getScanHistory', function(source)
 end)
 
 lib.callback.register('gcphone:documents:share', function(source, data)
+    if IsPhoneReadOnly(source) then return { success = false, error = 'READ_ONLY' } end
     if type(data) ~= 'table' then return { success = false, error = 'INVALID_DATA' } end
     
     local identifier = RequirePlayerIdentifier(source)

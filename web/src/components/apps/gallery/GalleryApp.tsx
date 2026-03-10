@@ -1,6 +1,7 @@
 import { createSignal, For, Show, createMemo, onMount } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { usePhoneActions } from '../../../store/phone';
+import { usePhoneState } from '../../../store/phone';
 import { useContacts } from '../../../store/contacts';
 import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { fetchNui } from '../../../utils/fetchNui';
@@ -8,6 +9,7 @@ import { sanitizeMediaUrl, sanitizePhone } from '../../../utils/sanitize';
 import { uiPrompt } from '../../../utils/uiDialog';
 import { SearchInput } from '../../shared/ui/SearchInput';
 import { ActionSheet } from '../../shared/ui/ActionSheet';
+import { InlineNotice } from '../../shared/ui/InlineNotice';
 import { ScreenState } from '../../shared/ui/ScreenState';
 import { SkeletonList } from '../../shared/ui/SkeletonList';
 import { AppScaffold } from '../../shared/layout';
@@ -28,6 +30,7 @@ function PlainIconButton(props: {
 
 export function GalleryApp() {
   const router = useRouter();
+  const phoneState = usePhoneState();
   const phoneActions = usePhoneActions();
   const [contactsState] = useContacts();
   const [photos, setPhotos] = createSignal<any[]>([]);
@@ -65,6 +68,7 @@ export function GalleryApp() {
       a.display.localeCompare(b.display, undefined, { sensitivity: 'base' })
     )
   );
+  const isReadOnly = createMemo(() => phoneState.accessMode === 'foreign-readonly');
   
   const loadPhotos = async () => {
     const result = await fetchNui('getGallery', undefined, []);
@@ -109,17 +113,20 @@ export function GalleryApp() {
   });
   
   const takePhoto = async () => {
+    if (isReadOnly()) return;
     await fetchNui('takePhoto', { url: '', field: '' });
     loadPhotos();
   };
   
   const setAsWallpaper = async () => {
+    if (isReadOnly()) return;
     if (!selectedPhoto()) return;
     phoneActions.setWallpaper(selectedPhoto().url);
     setSelectedPhoto(null);
   };
   
   const deletePhoto = async () => {
+    if (isReadOnly()) return;
     if (!selectedPhoto()) return;
     await fetchNui('deletePhoto', { photoId: selectedPhoto().id });
     setSelectedPhoto(null);
@@ -127,6 +134,7 @@ export function GalleryApp() {
   };
 
   const shareToMessages = async (app: 'messages' | 'wavechat') => {
+    if (isReadOnly()) return;
     const mediaUrl = sanitizeMediaUrl(selectedPhoto()?.url);
     if (!mediaUrl) return;
     setShareChatApp(app);
@@ -144,6 +152,7 @@ export function GalleryApp() {
   };
 
   const shareToChatManual = async () => {
+    if (isReadOnly()) return;
     const app = shareChatApp();
     if (!app) return;
     const input = await uiPrompt('Numero para compartir', {
@@ -153,6 +162,7 @@ export function GalleryApp() {
   };
 
   const shareToFeedApp = (app: 'chirp' | 'snap') => {
+    if (isReadOnly()) return;
     const mediaUrl = sanitizeMediaUrl(selectedPhoto()?.url);
     if (!mediaUrl) return;
     setShowActions(false);
@@ -165,6 +175,7 @@ export function GalleryApp() {
   };
 
   const shareToMail = () => {
+    if (isReadOnly()) return;
     const mediaUrl = sanitizeMediaUrl(selectedPhoto()?.url);
     if (!mediaUrl) return;
     setShowActions(false);
@@ -189,9 +200,12 @@ export function GalleryApp() {
       title="Galeria"
       subtitle="Fotos y videos"
       onBack={() => router.goBack()}
-      action={{ onClick: takePhoto, label: 'Camara', icon: './img/icons_ios/camera.svg' }}
+      action={isReadOnly() ? undefined : { onClick: takePhoto, label: 'Camara', icon: './img/icons_ios/camera.svg' }}
     >
       <div class={styles.page}>
+        <Show when={isReadOnly()}>
+          <InlineNotice title="Solo lectura" message={`Estas viendo la galeria de ${phoneState.accessOwnerName || 'otra persona'}.`} />
+        </Show>
         <div class={styles.toolbar}>
           <SearchInput
             class={styles.searchWrap}
@@ -239,7 +253,7 @@ export function GalleryApp() {
       </Show>
 
       <ActionSheet
-        open={showActions()}
+        open={!isReadOnly() && showActions()}
         title="Foto"
         onClose={() => setShowActions(false)}
         actions={[

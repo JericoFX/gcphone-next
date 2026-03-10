@@ -3,6 +3,7 @@ import { useRouter } from '../../Phone/PhoneFrame';
 import { fetchNui } from '../../../utils/fetchNui';
 import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { AppScaffold } from '../../shared/layout';
+import { EmptyState } from '../../shared/ui/EmptyState';
 import { ScreenState } from '../../shared/ui/ScreenState';
 import { SkeletonList } from '../../shared/ui/SkeletonList';
 import styles from './BankApp.module.scss';
@@ -150,10 +151,7 @@ export function BankApp() {
           <div class={styles.sectionTitle}>Movimientos</div>
           <Show when={loading()} fallback={
             <Show when={transactions().length > 0} fallback={
-              <div class={styles.emptyState}>
-                <p>Sin movimientos</p>
-                <p>Tus transferencias apareceran aqui</p>
-              </div>
+              <EmptyState class={styles.emptyState} title="Sin movimientos" description="Tus transferencias apareceran aqui" />
             }>
               <div class={styles.transactionsList}>
                 <For each={transactions()}>

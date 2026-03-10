@@ -4,6 +4,7 @@ import { fetchNui } from '../../../utils/fetchNui';
 import { uiAlert } from '../../../utils/uiAlert';
 import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { AppScaffold } from '../../shared/layout';
+import { EmptyState } from '../../shared/ui/EmptyState';
 import { FormField, FormSection, Modal, ModalActions, ModalButton } from '../../shared/ui/Modal';
 import styles from './WalletApp.module.scss';
 
@@ -320,8 +321,8 @@ export function WalletApp() {
 
         <div class={styles.section}>
           <div class={styles.sectionTitle}>Tarjetas</div>
-          <Show when={!loading()} fallback={<div class={styles.emptyState}>Cargando...</div>}>
-            <Show when={cards().length > 0} fallback={<div class={styles.emptyState}><p>Sin tarjetas</p><p>Agrega una tarjeta para verla aqui</p></div>}>
+          <Show when={!loading()} fallback={<EmptyState class={styles.emptyState} title="Cargando..." />}>
+            <Show when={cards().length > 0} fallback={<EmptyState class={styles.emptyState} title="Sin tarjetas" description="Agrega una tarjeta para verla aqui" />}>
               <div class={styles.cardsList}>
                 <For each={cards()}>
                   {(card) => (
@@ -346,7 +347,7 @@ export function WalletApp() {
 
         <div class={styles.section}>
           <div class={styles.sectionTitle}>Actividad reciente</div>
-          <Show when={tx().length > 0} fallback={<div class={styles.emptyState}><p>Sin movimientos</p><p>Tus transacciones apareceran aqui</p></div>}>
+          <Show when={tx().length > 0} fallback={<EmptyState class={styles.emptyState} title="Sin movimientos" description="Tus transacciones apareceran aqui" />}>
             <div class={styles.transactionsList}>
               <For each={tx()}>
                 {(item) => (

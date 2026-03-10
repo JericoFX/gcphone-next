@@ -57,7 +57,7 @@ local function ParseMeta(raw)
 end
 
 lib.callback.register('gcphone:notifications:get', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = GetPhoneOwnerIdentifier(source, true)
     if not identifier then
         return { success = false, error = 'MISSING_IDENTIFIER' }
     end
@@ -98,6 +98,7 @@ lib.callback.register('gcphone:notifications:get', function(source, data)
 end)
 
 lib.callback.register('gcphone:notifications:markRead', function(source, data)
+    if IsPhoneReadOnly(source) then return false end
     local identifier = GetIdentifier(source)
     if not identifier then return false end
 
@@ -114,6 +115,7 @@ lib.callback.register('gcphone:notifications:markRead', function(source, data)
 end)
 
 lib.callback.register('gcphone:notifications:markAllRead', function(source)
+    if IsPhoneReadOnly(source) then return false end
     local identifier = GetIdentifier(source)
     if not identifier then return false end
 
@@ -126,6 +128,7 @@ lib.callback.register('gcphone:notifications:markAllRead', function(source)
 end)
 
 lib.callback.register('gcphone:notifications:delete', function(source, data)
+    if IsPhoneReadOnly(source) then return false end
     local identifier = GetIdentifier(source)
     if not identifier then return false end
 

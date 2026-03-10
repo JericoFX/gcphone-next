@@ -1,4 +1,76 @@
 Config = Config or {}
+
+Config.NativeAudio = {
+    Enabled = true,
+    PlaceholderMode = true,
+    IncomingCallStateBag = 'gcphoneIncomingCall',
+    PreviewDurationMs = 5000,
+    DefaultByCategory = {
+        ringtone = 'call_main_01',
+        notification = 'notif_soft_01',
+        message = 'msg_soft_01',
+        vibrate = 'buzz_short_01',
+    },
+    LegacyMap = {
+        ['ring.ogg'] = 'call_main_01',
+        ['ring2.ogg'] = 'call_alt_01',
+        ['iphone11.ogg'] = 'call_alt_01',
+        ['soft-ping.ogg'] = 'notif_soft_01',
+        ['glass.ogg'] = 'notif_soft_01',
+        ['orbit.ogg'] = 'notif_soft_01',
+        ['pop.ogg'] = 'msg_soft_01',
+        ['bubble.ogg'] = 'msg_soft_01',
+        ['tap.ogg'] = 'msg_soft_01',
+    },
+    Catalog = {
+        call_main_01 = {
+            label = 'Call Main 01',
+            category = 'ringtone',
+            sourceMp3 = 'audio_sources/ringtones/call_main_01.mp3',
+            soundName = 'call_main_01',
+            bank = '',
+            soundSet = '',
+            playback = 'frontend',
+        },
+        call_alt_01 = {
+            label = 'Call Alt 01',
+            category = 'ringtone',
+            sourceMp3 = 'audio_sources/ringtones/call_alt_01.mp3',
+            soundName = 'call_alt_01',
+            bank = '',
+            soundSet = '',
+            playback = 'frontend',
+        },
+        buzz_short_01 = {
+            label = 'Buzz Short 01',
+            category = 'vibrate',
+            sourceMp3 = 'audio_sources/vibrate/buzz_short_01.mp3',
+            soundName = 'buzz_short_01',
+            bank = '',
+            soundSet = '',
+            playback = 'frontend',
+        },
+        notif_soft_01 = {
+            label = 'Notif Soft 01',
+            category = 'notification',
+            sourceMp3 = 'audio_sources/notifications/notif_soft_01.mp3',
+            soundName = 'notif_soft_01',
+            bank = '',
+            soundSet = '',
+            playback = 'frontend',
+        },
+        msg_soft_01 = {
+            label = 'Msg Soft 01',
+            category = 'message',
+            sourceMp3 = 'audio_sources/messages/msg_soft_01.mp3',
+            soundName = 'msg_soft_01',
+            bank = '',
+            soundSet = '',
+            playback = 'frontend',
+        },
+    },
+}
+
 Config.Phone = {
     KeyOpen = 288,
     KeyTakeCall = 38,
@@ -8,10 +80,10 @@ Config.Phone = {
 
     DefaultSettings = {
         wallpaper = './img/background/back001.jpg',
-        ringtone = 'ring.ogg',
-        callRingtone = 'ring.ogg',
-        notificationTone = 'soft-ping.ogg',
-        messageTone = 'pop.ogg',
+        ringtone = Config.NativeAudio.DefaultByCategory.ringtone,
+        callRingtone = Config.NativeAudio.DefaultByCategory.ringtone,
+        notificationTone = Config.NativeAudio.DefaultByCategory.notification,
+        messageTone = Config.NativeAudio.DefaultByCategory.message,
         volume = 0.5,
         lockCode = '0000',
         theme = 'light',
@@ -349,7 +421,7 @@ Config.FixePhone = {
 }
 
 Config.Sounds = {
-    Ringtones = { 'ring.ogg', 'ring2.ogg', 'iphone11.ogg', 'casa_papel.ogg', 'bella_ciao.ogg' },
+    Ringtones = { 'call_main_01', 'call_alt_01' },
     MessageSound = 'Menu_Accept',
     MessageSoundSet = 'Phone_SoundSet_Default',
 }

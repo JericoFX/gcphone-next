@@ -89,12 +89,20 @@ export interface PhoneState {
   visible: boolean;
   locked: boolean;
   initialized: boolean;
+  imei?: string;
+  deviceOwnerName?: string;
+  isStolen?: boolean;
+  stolenAt?: string | null;
+  stolenReason?: string | null;
   settings: PhoneSettings;
   appLayout: AppLayout;
   enabledApps: string[];
   featureFlags: PhoneFeatureFlags;
   requiresSetup: boolean;
   setup: PhoneSetupState;
+  accessMode?: 'own' | 'foreign-readonly' | 'foreign-full';
+  accessOwnerName?: string;
+  accessPhoneId?: string;
 }
 
 export interface PhoneNotification {

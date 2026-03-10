@@ -9,6 +9,7 @@ import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { AppScaffold } from '../../shared/layout';
 import { useAppCache } from '../../../hooks';
 import { MediaLightbox } from '../../shared/ui/MediaLightbox';
+import { EmptyState } from '../../shared/ui/EmptyState';
 import { FormRow, FormSection, Modal, ModalActions, ModalButton } from '../../shared/ui/Modal';
 import styles from './YellowPagesApp.module.scss';
 
@@ -349,10 +350,7 @@ export function YellowPagesApp() {
           </For>
           
           <Show when={!loading() && listings().length === 0}>
-            <div class={styles.emptyState}>
-              <p>No hay anuncios</p>
-              <p class={styles.emptyHint}>¡Sé el primero en publicar!</p>
-            </div>
+            <EmptyState class={styles.emptyState} title="No hay anuncios" description="Se el primero en publicar" />
           </Show>
         </div>
 

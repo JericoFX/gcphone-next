@@ -47,14 +47,14 @@ local function HandlePhoneInteraction(phoneId)
     local action = lib.inputDialog('Telefono encontrado', {
         {
             type = 'select',
-            label = 'Accion',
-            required = true,
-            options = {
-                { value = 'inspect', label = 'Ver metadata' },
-                { value = 'unlock', label = 'Intentar PIN (pericia)' },
+                label = 'Accion',
+                required = true,
+                options = {
+                    { value = 'inspect', label = 'Ver metadata' },
+                    { value = 'unlock', label = 'Abrir solo lectura' },
+                }
             }
-        }
-    })
+        })
 
     if not action or not action[1] then
         interactionBusy = false
@@ -100,11 +100,15 @@ local function HandlePhoneInteraction(phoneId)
 
         lib.callback('gcphone:unlockDroppedPhone', false, function(result)
             if result and result.success then
-                lib.alertDialog({
-                    header = 'Pericia completada',
-                    content = ('Propietario: %s\n\n%s'):format(result.phone.owner or 'N/A', result.report or 'Sin datos'),
-                    centered = true,
-                    size = 'lg'
+                if result.payload then
+                    ShowPhonePayload(result.payload)
+                else
+                    OpenPhoneUsingServerData()
+                end
+                lib.notify({
+                    title = 'Telefono desbloqueado',
+                    description = ('Acceso de solo lectura a %s'):format(result.phone.owner or 'N/A'),
+                    type = 'success'
                 })
             else
                 lib.notify({

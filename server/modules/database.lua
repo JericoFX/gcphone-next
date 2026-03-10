@@ -15,10 +15,10 @@ local MIGRATIONS = {
                 `phone_number` VARCHAR(15) NOT NULL UNIQUE,
                 `imei` VARCHAR(20) NOT NULL UNIQUE,
                 `wallpaper` VARCHAR(255) DEFAULT './img/background/back001.jpg',
-                `ringtone` VARCHAR(50) DEFAULT 'ring.ogg',
-                `call_ringtone` VARCHAR(64) DEFAULT 'ring.ogg',
-                `notification_tone` VARCHAR(64) DEFAULT 'soft-ping.ogg',
-                `message_tone` VARCHAR(64) DEFAULT 'pop.ogg',
+                `ringtone` VARCHAR(50) DEFAULT 'call_main_01',
+                `call_ringtone` VARCHAR(64) DEFAULT 'call_main_01',
+                `notification_tone` VARCHAR(64) DEFAULT 'notif_soft_01',
+                `message_tone` VARCHAR(64) DEFAULT 'msg_soft_01',
                 `volume` FLOAT DEFAULT 0.5,
                 `lock_code` VARCHAR(10) DEFAULT '0000',
                 `theme` VARCHAR(10) DEFAULT 'light',
@@ -1154,9 +1154,9 @@ local MIGRATIONS = {
                 ADD COLUMN IF NOT EXISTS `pin_hash` CHAR(64) NULL AFTER `lock_code`,
                 ADD COLUMN IF NOT EXISTS `is_setup` TINYINT(1) NOT NULL DEFAULT 1 AFTER `pin_hash`,
                 ADD COLUMN IF NOT EXISTS `clips_username` VARCHAR(32) NULL AFTER `audio_profile`,
-                ADD COLUMN IF NOT EXISTS `call_ringtone` VARCHAR(64) DEFAULT 'ring.ogg' AFTER `ringtone`,
-                ADD COLUMN IF NOT EXISTS `notification_tone` VARCHAR(64) DEFAULT 'soft-ping.ogg' AFTER `call_ringtone`,
-                ADD COLUMN IF NOT EXISTS `message_tone` VARCHAR(64) DEFAULT 'pop.ogg' AFTER `notification_tone`]],
+                ADD COLUMN IF NOT EXISTS `call_ringtone` VARCHAR(64) DEFAULT 'call_main_01' AFTER `ringtone`,
+                ADD COLUMN IF NOT EXISTS `notification_tone` VARCHAR(64) DEFAULT 'notif_soft_01' AFTER `call_ringtone`,
+                ADD COLUMN IF NOT EXISTS `message_tone` VARCHAR(64) DEFAULT 'msg_soft_01' AFTER `notification_tone`]],
 
             [[CREATE UNIQUE INDEX IF NOT EXISTS `idx_phone_numbers_clips_username`
                 ON `phone_numbers` (`clips_username`)]],
@@ -1172,9 +1172,9 @@ local MIGRATIONS = {
                 WHERE `is_setup` IS NULL]],
 
             [[UPDATE `phone_numbers`
-                SET `call_ringtone` = COALESCE(NULLIF(`call_ringtone`, ''), `ringtone`, 'ring.ogg'),
-                    `notification_tone` = COALESCE(NULLIF(`notification_tone`, ''), 'soft-ping.ogg'),
-                    `message_tone` = COALESCE(NULLIF(`message_tone`, ''), 'pop.ogg')]],
+                SET `call_ringtone` = COALESCE(NULLIF(`call_ringtone`, ''), `ringtone`, 'call_main_01'),
+                    `notification_tone` = COALESCE(NULLIF(`notification_tone`, ''), 'notif_soft_01'),
+                    `message_tone` = COALESCE(NULLIF(`message_tone`, ''), 'msg_soft_01')]],
 
             [[CREATE TABLE IF NOT EXISTS `phone_clips_accounts` (
                 `id` INT AUTO_INCREMENT PRIMARY KEY,
@@ -1252,14 +1252,14 @@ local MIGRATIONS = {
         description = "Store call, notification and message tones independently",
         statements = {
             [[ALTER TABLE `phone_numbers`
-                ADD COLUMN IF NOT EXISTS `call_ringtone` VARCHAR(64) DEFAULT 'ring.ogg' AFTER `ringtone`,
-                ADD COLUMN IF NOT EXISTS `notification_tone` VARCHAR(64) DEFAULT 'soft-ping.ogg' AFTER `call_ringtone`,
-                ADD COLUMN IF NOT EXISTS `message_tone` VARCHAR(64) DEFAULT 'pop.ogg' AFTER `notification_tone`]],
+                ADD COLUMN IF NOT EXISTS `call_ringtone` VARCHAR(64) DEFAULT 'call_main_01' AFTER `ringtone`,
+                ADD COLUMN IF NOT EXISTS `notification_tone` VARCHAR(64) DEFAULT 'notif_soft_01' AFTER `call_ringtone`,
+                ADD COLUMN IF NOT EXISTS `message_tone` VARCHAR(64) DEFAULT 'msg_soft_01' AFTER `notification_tone`]],
 
             [[UPDATE `phone_numbers`
-                SET `call_ringtone` = COALESCE(NULLIF(`call_ringtone`, ''), `ringtone`, 'ring.ogg'),
-                    `notification_tone` = COALESCE(NULLIF(`notification_tone`, ''), 'soft-ping.ogg'),
-                    `message_tone` = COALESCE(NULLIF(`message_tone`, ''), 'pop.ogg')]]
+                SET `call_ringtone` = COALESCE(NULLIF(`call_ringtone`, ''), `ringtone`, 'call_main_01'),
+                    `notification_tone` = COALESCE(NULLIF(`notification_tone`, ''), 'notif_soft_01'),
+                    `message_tone` = COALESCE(NULLIF(`message_tone`, ''), 'msg_soft_01')]]
         }
     },
 
@@ -1290,6 +1290,25 @@ local MIGRATIONS = {
                 '(status != ''pending'' AND created_at < (NOW() - INTERVAL 14 DAY)) OR created_at < (NOW() - INTERVAL 30 DAY)',
                 120
             )]]
+        }
+    },
+
+    {
+        version = 16,
+        name = "phone_stolen_registry",
+        description = "Track stolen status directly on phone records",
+        statements = {
+            [[ALTER TABLE `phone_numbers`
+                ADD COLUMN IF NOT EXISTS `is_stolen` TINYINT(1) NOT NULL DEFAULT 0 AFTER `audio_profile`,
+                ADD COLUMN IF NOT EXISTS `stolen_at` TIMESTAMP NULL DEFAULT NULL AFTER `is_stolen`,
+                ADD COLUMN IF NOT EXISTS `stolen_reason` VARCHAR(255) DEFAULT NULL AFTER `stolen_at`,
+                ADD COLUMN IF NOT EXISTS `stolen_reporter` VARCHAR(80) DEFAULT NULL AFTER `stolen_reason`]],
+
+            [[CREATE INDEX IF NOT EXISTS `idx_phone_numbers_stolen_imei`
+                ON `phone_numbers` (`imei`, `is_stolen`)]],
+
+            [[CREATE INDEX IF NOT EXISTS `idx_phone_numbers_stolen_number`
+                ON `phone_numbers` (`phone_number`, `is_stolen`)]]
         }
     }
 }

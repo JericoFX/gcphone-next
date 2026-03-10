@@ -33,6 +33,7 @@ interface PhoneContextValue {
     setLanguage: (language: 'es' | 'en' | 'pt' | 'fr') => void;
     setAudioProfile: (audioProfile: 'normal' | 'street' | 'vehicle' | 'silent') => void;
     setLockCode: (code: string) => void;
+    factoryReset: () => Promise<boolean>;
     loadAppLayout: () => Promise<void>;
     saveAppLayout: () => Promise<void>;
     reorderApp: (target: 'home' | 'menu', appId: string, targetIndex: number) => void;
@@ -47,10 +48,10 @@ const PhoneActionsContext = createContext<PhoneContextValue['actions']>();
 const defaultSettings: PhoneSettings = {
   phoneNumber: '',
   wallpaper: './img/background/back001.jpg',
-  ringtone: 'ring.ogg',
-  callRingtone: 'ring.ogg',
-  notificationTone: 'soft-ping.ogg',
-  messageTone: 'pop.ogg',
+  ringtone: 'call_main_01',
+  callRingtone: 'call_main_01',
+  notificationTone: 'notif_soft_01',
+  messageTone: 'msg_soft_01',
   volume: 0.5,
   lockCode: '0000',
   theme: 'light',
@@ -85,6 +86,11 @@ const defaultLayout: AppLayout = {
 };
 
 type PhonePayload = PhoneSettings & {
+  imei?: string;
+  deviceOwnerName?: string;
+  isStolen?: boolean;
+  stolenAt?: string | null;
+  stolenReason?: string | null;
   appLayout?: AppLayout;
   enabledApps?: string[];
   featureFlags?: Partial<PhoneFeatureFlags>;
@@ -92,6 +98,9 @@ type PhonePayload = PhoneSettings & {
   setup?: PhoneSetupState;
   useLockScreen?: boolean;
   forceLockScreen?: boolean;
+  accessMode?: 'own' | 'foreign-readonly' | 'foreign-full';
+  accessOwnerName?: string;
+  accessPhoneId?: string;
 };
 
 const PINNED_HOME_APPS = ['contacts', 'messages', 'mail'] as const;
@@ -198,17 +207,27 @@ export const PhoneProvider: ParentComponent = (props) => {
     visible: false,
     locked: true,
     initialized: false,
+    imei: undefined,
+    deviceOwnerName: undefined,
+    isStolen: false,
+    stolenAt: undefined,
+    stolenReason: undefined,
     settings: { ...defaultSettings },
     appLayout: { ...defaultLayout },
     enabledApps: [...APP_IDS],
     featureFlags: { ...defaultFeatureFlags },
     requiresSetup: false,
     setup: { ...defaultSetupState },
+    accessMode: 'own',
+    accessOwnerName: undefined,
+    accessPhoneId: undefined,
   });
 
   const setLayout = (layout?: Partial<AppLayout> | null, enabledApps = state.enabledApps) => {
     setState('appLayout', normalizeLayout(layout, enabledApps));
   };
+
+  const isReadOnly = () => state.accessMode === 'foreign-readonly';
   
   const actions = {
     show: () => {
@@ -247,6 +266,7 @@ export const PhoneProvider: ParentComponent = (props) => {
       });
     },
     completeSetup: async (payload) => {
+      if (isReadOnly()) return { success: false, error: 'READ_ONLY' };
       const response = await fetchNui<{ success?: boolean; error?: string; requiresSetup?: boolean; setup?: PhoneSetupState }>(
         'phoneCompleteSetup',
         payload,
@@ -274,53 +294,112 @@ export const PhoneProvider: ParentComponent = (props) => {
       };
     },
     setWallpaper: (url: string) => {
+      if (isReadOnly()) return;
       setState('settings', 'wallpaper', url);
       fetchNui('setWallpaper', { url });
     },
     setRingtone: (ringtone: string) => {
+      if (isReadOnly()) return;
       setState('settings', 'ringtone', ringtone);
       setState('settings', 'callRingtone', ringtone);
       fetchNui('setRingtone', { ringtone });
     },
     setCallRingtone: (ringtone: string) => {
+      if (isReadOnly()) return;
       setState('settings', 'ringtone', ringtone);
       setState('settings', 'callRingtone', ringtone);
       fetchNui('setCallRingtone', { ringtone });
     },
     setNotificationTone: (tone: string) => {
+      if (isReadOnly()) return;
       setState('settings', 'notificationTone', tone);
       fetchNui('setNotificationTone', { tone });
     },
     setMessageTone: (tone: string) => {
+      if (isReadOnly()) return;
       setState('settings', 'messageTone', tone);
       fetchNui('setMessageTone', { tone });
     },
     setVolume: (volume: number) => {
+      if (isReadOnly()) return;
       setState('settings', 'volume', volume);
       fetchNui('setVolume', { volume });
     },
     setTheme: (theme: 'auto' | 'light' | 'dark') => {
+      if (isReadOnly()) return;
       setState('settings', 'theme', theme);
       fetchNui('setTheme', { theme });
     },
     setLanguage: (language: 'es' | 'en' | 'pt' | 'fr') => {
+      if (isReadOnly()) return;
       setState('settings', 'language', language);
       window.localStorage.setItem('gcphone:language', language);
       fetchNui('setLanguage', { language });
     },
     setAudioProfile: (audioProfile: 'normal' | 'street' | 'vehicle' | 'silent') => {
+      if (isReadOnly()) return;
       setState('settings', 'audioProfile', audioProfile);
       fetchNui('setAudioProfile', { audioProfile });
     },
     setLockCode: (code: string) => {
+      if (isReadOnly()) return;
       setState('settings', 'lockCode', code);
       fetchNui('setLockCode', { code });
+    },
+    factoryReset: async () => {
+      if (isReadOnly()) return false;
+      const response = await fetchNui<PhonePayload & { success?: boolean }>('factoryResetPhone', {}, { success: false } as PhonePayload & { success?: boolean });
+      if (!response?.success) return false;
+
+      window.localStorage.removeItem('gcphone:liveLocationInterval');
+
+      const flags = normalizeFeatureFlags(response.featureFlags);
+      const enabledApps = ensureRequiredEnabledApps(Array.isArray(response.enabledApps) && response.enabledApps.length > 0
+        ? response.enabledApps.filter((id): id is string => typeof id === 'string' && APP_IDS.includes(id))
+        : enabledAppsFromFlags(flags));
+
+      batch(() => {
+        setState('featureFlags', flags);
+        setState('enabledApps', enabledApps);
+        setState('settings', {
+          phoneNumber: response.phoneNumber || state.settings.phoneNumber,
+          wallpaper: response.wallpaper || defaultSettings.wallpaper,
+          ringtone: response.ringtone || defaultSettings.ringtone,
+          callRingtone: response.callRingtone || response.ringtone || defaultSettings.callRingtone,
+          notificationTone: response.notificationTone || defaultSettings.notificationTone,
+          messageTone: response.messageTone || defaultSettings.messageTone,
+          volume: response.volume ?? defaultSettings.volume,
+          lockCode: '',
+          theme: response.theme || defaultSettings.theme,
+          language: normalizeLanguage(response.language || defaultSettings.language),
+          audioProfile: response.audioProfile || defaultSettings.audioProfile,
+        });
+        setLayout(response.appLayout || defaultLayout, enabledApps);
+        setState('imei', response.imei);
+        setState('deviceOwnerName', response.deviceOwnerName);
+        setState('isStolen', response.isStolen === true);
+        setState('stolenAt', response.stolenAt);
+        setState('stolenReason', response.stolenReason);
+        setState('requiresSetup', response.requiresSetup === true);
+        setState('setup', {
+          ...defaultSetupState,
+          ...(response.setup || {}),
+          requiresSetup: response.requiresSetup === true,
+        });
+        setState('accessMode', response.accessMode || 'own');
+        setState('accessOwnerName', response.accessOwnerName);
+        setState('accessPhoneId', response.accessPhoneId);
+        setState('locked', false);
+      });
+
+      return true;
     },
     loadAppLayout: async () => {
       const layout = await fetchNui<AppLayout | null>('getAppLayout', {});
       setLayout(layout, state.enabledApps);
     },
     saveAppLayout: async () => {
+      if (isReadOnly()) return;
       await fetchNui('setAppLayout', { layout: state.appLayout });
     },
     reorderApp: (target: 'home' | 'menu', appId: string, targetIndex: number) => {
@@ -379,12 +458,20 @@ export const PhoneProvider: ParentComponent = (props) => {
           audioProfile: data.audioProfile || defaultSettings.audioProfile,
         });
       setLayout(data?.appLayout || defaultLayout, enabledApps);
+      setState('imei', data?.imei);
+      setState('deviceOwnerName', data?.deviceOwnerName);
+      setState('isStolen', data?.isStolen === true);
+      setState('stolenAt', data?.stolenAt);
+      setState('stolenReason', data?.stolenReason);
       setState('requiresSetup', data?.requiresSetup === true);
       setState('setup', {
         ...defaultSetupState,
         ...(data?.setup || {}),
         requiresSetup: data?.requiresSetup === true,
       });
+      setState('accessMode', data?.accessMode || 'own');
+      setState('accessOwnerName', data?.accessOwnerName);
+      setState('accessPhoneId', data?.accessPhoneId);
       if (data?.requiresSetup === true) {
         setState('locked', false);
       }
@@ -422,12 +509,20 @@ export const PhoneProvider: ParentComponent = (props) => {
              audioProfile: data.audioProfile || state.settings.audioProfile,
           });
         setLayout(data.appLayout || state.appLayout, enabledApps);
+        setState('imei', data.imei);
+        setState('deviceOwnerName', data.deviceOwnerName);
+        setState('isStolen', data.isStolen === true);
+        setState('stolenAt', data.stolenAt);
+        setState('stolenReason', data.stolenReason);
         setState('requiresSetup', data?.requiresSetup === true);
         setState('setup', {
           ...defaultSetupState,
           ...(data?.setup || state.setup || {}),
           requiresSetup: data?.requiresSetup === true,
         });
+        setState('accessMode', data?.accessMode || 'own');
+        setState('accessOwnerName', data?.accessOwnerName);
+        setState('accessPhoneId', data?.accessPhoneId);
         }
      });
   });
@@ -436,6 +531,14 @@ export const PhoneProvider: ParentComponent = (props) => {
     batch(() => {
       setState('visible', false);
       setState('locked', true);
+      setState('imei', undefined);
+      setState('deviceOwnerName', undefined);
+      setState('isStolen', false);
+      setState('stolenAt', undefined);
+      setState('stolenReason', undefined);
+      setState('accessMode', 'own');
+      setState('accessOwnerName', undefined);
+      setState('accessPhoneId', undefined);
     });
   });
   

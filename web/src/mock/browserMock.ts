@@ -575,10 +575,10 @@ const openRealtimePanel = () => {
 const state: BrowserMockState = {
   phoneNumber: '555-1234',
   wallpaper: './img/background/back001.jpg',
-  ringtone: 'ring.ogg',
-  callRingtone: 'ring.ogg',
-  notificationTone: 'soft-ping.ogg',
-  messageTone: 'pop.ogg',
+  ringtone: 'call_main_01',
+  callRingtone: 'call_main_01',
+  notificationTone: 'notif_soft_01',
+  messageTone: 'msg_soft_01',
   volume: 0.5,
   lockCode: '1234',
   theme: 'light',
@@ -676,6 +676,11 @@ const emitMessage = (action: string, data?: unknown) => {
 
 const phonePayload = () => ({
   phoneNumber: state.phoneNumber,
+  imei: state.imei,
+  deviceOwnerName: 'Jerico Mock',
+  isStolen: false,
+  stolenAt: null,
+  stolenReason: null,
   wallpaper: state.wallpaper,
   ringtone: state.ringtone,
   callRingtone: state.callRingtone,
@@ -708,7 +713,34 @@ const phonePayload = () => ({
     hasMail: !state.requiresSetup || Boolean(state.mailAccount),
     mailDomain: state.mailDomain,
   },
+  accessMode: 'own',
+  accessOwnerName: undefined,
+  accessPhoneId: undefined,
 });
+
+const resetMockPhoneData = () => {
+  state.wallpaper = './img/background/back001.jpg';
+  state.ringtone = 'call_main_01';
+  state.callRingtone = 'call_main_01';
+  state.notificationTone = 'notif_soft_01';
+  state.messageTone = 'msg_soft_01';
+  state.volume = 0.5;
+  state.lockCode = '0000';
+  state.theme = 'light';
+  state.language = 'es';
+  state.audioProfile = 'normal';
+  state.requiresSetup = true;
+  state.contacts = [];
+  state.messages = [];
+  state.calls = [];
+  state.gallery = [];
+  state.transactions = [];
+  state.mailAccount = null;
+  state.mailInbox = [];
+  state.mailSent = [];
+  state.airplaneMode = false;
+  state.flashlightEnabled = false;
+};
 
 const showMockPhone = (overrides: AnyRecord = {}) => {
   emitMessage('showPhone', {
@@ -1170,6 +1202,7 @@ export function setupBrowserMock() {
 
   (window as Window & { gcphoneMock?: AnyRecord }).gcphoneMock = {
     reset: () => {
+      resetMockPhoneData();
       emitMessage('hidePhone');
       setTimeout(() => showMockPhone(), 100);
     },
@@ -1640,6 +1673,14 @@ export async function handleBrowserNui<T = unknown>(eventName: string, data?: un
     return true as T;
   }
 
+  if (eventName === 'previewNativeTone') {
+    return { success: true, placeholder: true } as T;
+  }
+
+  if (eventName === 'stopNativeTonePreview') {
+    return true as T;
+  }
+
   if (eventName === 'setVolume') {
     state.volume = Number(payload.volume ?? state.volume);
     return true as T;
@@ -1648,6 +1689,11 @@ export async function handleBrowserNui<T = unknown>(eventName: string, data?: un
   if (eventName === 'setLockCode') {
     state.lockCode = String(payload.code || state.lockCode);
     return true as T;
+  }
+
+  if (eventName === 'factoryResetPhone') {
+    resetMockPhoneData();
+    return { success: true, ...phonePayload() } as T;
   }
 
   if (eventName === 'setAirplaneMode') {

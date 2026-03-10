@@ -236,16 +236,17 @@ local function GetConversation(identifier, phoneNumber)
 end
 
 lib.callback.register('gcphone:getMessages', function(source)
-    local identifier = GetIdentifier(source)
+    local identifier = GetPhoneOwnerIdentifier(source, true)
     return GetMessages(identifier)
 end)
 
 lib.callback.register('gcphone:getConversation', function(source, phoneNumber)
-    local identifier = GetIdentifier(source)
+    local identifier = GetPhoneOwnerIdentifier(source, true)
     return GetConversation(identifier, phoneNumber)
 end)
 
 lib.callback.register('gcphone:sendMessage', function(source, data)
+    if IsPhoneReadOnly(source) then return false, 'READ_ONLY' end
     local identifier = GetIdentifier(source)
     if not identifier then return false end
     
@@ -321,6 +322,7 @@ lib.callback.register('gcphone:sendMessage', function(source, data)
 end)
 
 lib.callback.register('gcphone:deleteMessage', function(source, messageId)
+    if IsPhoneReadOnly(source) then return false end
     local identifier = GetIdentifier(source)
     if not identifier then return false end
     
@@ -339,6 +341,7 @@ lib.callback.register('gcphone:deleteMessage', function(source, messageId)
 end)
 
 lib.callback.register('gcphone:deleteConversation', function(source, phoneNumber)
+    if IsPhoneReadOnly(source) then return false end
     local identifier = GetIdentifier(source)
     if not identifier then return false end
     
@@ -357,7 +360,7 @@ lib.callback.register('gcphone:deleteConversation', function(source, phoneNumber
 end)
 
 lib.callback.register('gcphone:markAsRead', function(source, phoneNumber)
-    local identifier = GetIdentifier(source)
+    local identifier = GetPhoneOwnerIdentifier(source, true)
     if not identifier then return false end
     
     local myNumber = GetPhoneNumber(identifier)
@@ -375,7 +378,7 @@ lib.callback.register('gcphone:markAsRead', function(source, phoneNumber)
 end)
 
 lib.callback.register('gcphone:getUnreadCount', function(source)
-    local identifier = GetIdentifier(source)
+    local identifier = GetPhoneOwnerIdentifier(source, true)
     if not identifier then return 0 end
     
     local myNumber = GetPhoneNumber(identifier)

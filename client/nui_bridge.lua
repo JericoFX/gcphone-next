@@ -219,6 +219,12 @@ RegisterNUICallback('setLockCode', function(data, cb)
     end, data)
 end)
 
+RegisterNUICallback('factoryResetPhone', function(_, cb)
+    lib.callback('gcphone:factoryResetPhone', false, function(payload)
+        cb(payload or { success = false })
+    end)
+end)
+
 RegisterNUICallback('setAirplaneMode', function(data, cb)
     local enabled = data and data.enabled and true or false
     PhoneState.airplaneMode = enabled

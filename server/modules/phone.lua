@@ -1,17 +1,26 @@
 -- Creado/Modificado por JericoFX
 
-local function GeneratePhoneNumber()
-    local prefix = Config.Phone.NumberPrefix[math.random(1, #Config.Phone.NumberPrefix)]
-    local suffix = math.random(1000, 9999)
-    return string.format('%03d-%04d', prefix, suffix)
-end
-
 local function GenerateIMEI()
     local imei = ''
-    for i = 1, 20 do
+    for i = 1, 15 do
         imei = imei .. math.random(0, 9)
     end
     return imei
+end
+
+local function GenerateUniqueIMEI()
+    for _ = 1, 25 do
+        local imei = GenerateIMEI()
+        local exists = MySQL.scalar.await(
+            'SELECT 1 FROM phone_numbers WHERE imei = ? LIMIT 1',
+            { imei }
+        )
+        if not exists then
+            return imei
+        end
+    end
+
+    return nil
 end
 
 local function SafeString(value, maxLen)
@@ -53,6 +62,52 @@ local function SafeToneId(value)
     return tone:sub(1, 64)
 end
 
+local function NativeAudioDefaults()
+    return (Config.NativeAudio and Config.NativeAudio.DefaultByCategory) or {}
+end
+
+local function NativeAudioCatalog()
+    return (Config.NativeAudio and Config.NativeAudio.Catalog) or {}
+end
+
+local function NativeAudioLegacyMap()
+    return (Config.NativeAudio and Config.NativeAudio.LegacyMap) or {}
+end
+
+local function DefaultToneId(category)
+    local defaults = NativeAudioDefaults()
+    if category == 'ringtone' then
+        return defaults.ringtone or 'call_main_01'
+    end
+    if category == 'notification' then
+        return defaults.notification or 'notif_soft_01'
+    end
+    if category == 'message' then
+        return defaults.message or 'msg_soft_01'
+    end
+    if category == 'vibrate' then
+        return defaults.vibrate or 'buzz_short_01'
+    end
+    return defaults.ringtone or 'call_main_01'
+end
+
+local function ResolveToneId(value, category)
+    local tone = SafeToneId(value)
+    local catalog = NativeAudioCatalog()
+    local legacy = NativeAudioLegacyMap()
+    local defaultTone = DefaultToneId(category)
+
+    if not tone then return defaultTone end
+    if catalog[tone] then return tone end
+
+    local mapped = legacy[tone]
+    if mapped and catalog[mapped] then
+        return mapped
+    end
+
+    return defaultTone
+end
+
 local AllowedApps = {
     contacts = true,
     messages = true,
@@ -85,6 +140,18 @@ local DefaultLayout = {
     home = { 'contacts', 'messages', 'mail', 'notifications', 'calls', 'settings', 'gallery', 'camera', 'bank', 'wallet', 'documents', 'wavechat', 'music', 'chirp', 'snap', 'clips', 'darkrooms', 'yellowpages', 'news', 'garage', 'clock', 'notes', 'maps', 'weather' },
     menu = { 'appstore' }
 }
+
+local ForeignReadOnlyApps = {
+    contacts = true,
+    messages = true,
+    notifications = true,
+    calls = true,
+    settings = true,
+    gallery = true,
+    documents = true,
+}
+
+local ActivePhoneContexts = {}
 
 local function GetFeatureFlags()
     local defaults = Config.Features or {}
@@ -324,17 +391,41 @@ local function GetOrCreatePhone(source)
         'SELECT * FROM phone_numbers WHERE identifier = ?',
         { identifier }
     )
+
+    local frameworkPhoneNumber = GetFrameworkPhoneNumber and GetFrameworkPhoneNumber(source, identifier) or nil
     
     if phone then
+        if frameworkPhoneNumber and frameworkPhoneNumber ~= '' and phone.phone_number ~= frameworkPhoneNumber then
+            MySQL.update.await(
+                'UPDATE phone_numbers SET phone_number = ? WHERE identifier = ?',
+                { frameworkPhoneNumber, identifier }
+            )
+            phone.phone_number = frameworkPhoneNumber
+        end
+
+        if type(phone.imei) ~= 'string' or not phone.imei:match('^%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d$') then
+            local nextImei = GenerateUniqueIMEI()
+            if nextImei then
+                MySQL.update.await(
+                    'UPDATE phone_numbers SET imei = ? WHERE identifier = ?',
+                    { nextImei, identifier }
+                )
+                phone.imei = nextImei
+            end
+        end
+
         return phone
     end
-    
-    local phoneNumber
-    repeat
-        phoneNumber = GeneratePhoneNumber()
-    until not PhoneExists(phoneNumber)
-    
-    local imei = GenerateIMEI()
+
+    local phoneNumber = frameworkPhoneNumber
+    if type(phoneNumber) ~= 'string' or phoneNumber == '' then
+        return nil
+    end
+
+    local imei = GenerateUniqueIMEI()
+    if not imei then
+        return nil
+    end
     
     MySQL.insert.await(
         'INSERT INTO phone_numbers (identifier, phone_number, imei, wallpaper, ringtone, call_ringtone, notification_tone, message_tone, volume, lock_code, pin_hash, is_setup, theme, language, audio_profile, clips_username) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, NULL)',
@@ -343,10 +434,10 @@ local function GetOrCreatePhone(source)
             phoneNumber, 
             imei,
             Config.Phone.DefaultSettings.wallpaper,
-            Config.Phone.DefaultSettings.ringtone,
-            Config.Phone.DefaultSettings.callRingtone or Config.Phone.DefaultSettings.ringtone,
-            Config.Phone.DefaultSettings.notificationTone or 'soft-ping.ogg',
-            Config.Phone.DefaultSettings.messageTone or 'pop.ogg',
+            ResolveToneId(Config.Phone.DefaultSettings.ringtone, 'ringtone'),
+            ResolveToneId(Config.Phone.DefaultSettings.callRingtone or Config.Phone.DefaultSettings.ringtone, 'ringtone'),
+            ResolveToneId(Config.Phone.DefaultSettings.notificationTone, 'notification'),
+            ResolveToneId(Config.Phone.DefaultSettings.messageTone, 'message'),
             Config.Phone.DefaultSettings.volume,
             Config.Phone.DefaultSettings.lockCode,
             (Config.Phone and Config.Phone.Setup and Config.Phone.Setup.RequireOnFirstUse ~= false) and 0 or 1,
@@ -362,29 +453,147 @@ local function GetOrCreatePhone(source)
     )
 end
 
-lib.callback.register('gcphone:getPhoneData', function(source)
-    local phone = GetOrCreatePhone(source)
+local function GetPhoneByIdentifier(identifier)
+    if not identifier then return nil end
+    return MySQL.single.await(
+        'SELECT * FROM phone_numbers WHERE identifier = ?',
+        { identifier }
+    )
+end
+
+function GetPhoneRecordByIdentifier(identifier)
+    return GetPhoneByIdentifier(identifier)
+end
+
+local function ResolvePhoneOwnerName(source, identifier)
+    if source then
+        local name = GetName(source)
+        if type(name) == 'string' and name ~= '' then
+            return name
+        end
+    end
+
+    if not identifier then return nil end
+
+    local playerResult = MySQL.single.await(
+        'SELECT charinfo FROM players WHERE citizenid = ? LIMIT 1',
+        { identifier }
+    )
+    if playerResult and playerResult.charinfo then
+        local ok, charinfo = pcall(json.decode, playerResult.charinfo)
+        if ok and charinfo and charinfo.firstname and charinfo.lastname then
+            return (charinfo.firstname .. ' ' .. charinfo.lastname)
+        end
+    end
+
+    return nil
+end
+
+local function VerifyPinForIdentifier(identifier, pin)
+    if not identifier or not pin then return false, 'MISSING_IDENTIFIER' end
+
+    local phone = MySQL.single.await(
+        'SELECT lock_code, pin_hash FROM phone_numbers WHERE identifier = ? LIMIT 1',
+        { identifier }
+    )
+    if not phone then
+        return false, 'PHONE_NOT_FOUND'
+    end
+
+    if type(phone.pin_hash) == 'string' and phone.pin_hash ~= '' then
+        local unlocked = MySQL.scalar.await(
+            'SELECT 1 WHERE SHA2(?, 256) = ?',
+            { pin, phone.pin_hash }
+        ) ~= nil
+        return unlocked, nil
+    end
+
+    return tostring(phone.lock_code or '') == pin, nil
+end
+
+function VerifyPhonePinForIdentifier(identifier, pin)
+    return VerifyPinForIdentifier(identifier, pin)
+end
+
+local function BuildReadOnlyEnabledApps()
+    local enabled = {}
+    for appId, active in pairs(ForeignReadOnlyApps) do
+        if active then
+            enabled[appId] = true
+        end
+    end
+    return enabled
+end
+
+function GetPhoneAccessContext(source)
+    return ActivePhoneContexts[tonumber(source) or -1]
+end
+
+function ClearPhoneAccessContext(source)
+    ActivePhoneContexts[tonumber(source) or -1] = nil
+end
+
+function SetPhoneAccessContext(source, context)
+    local src = tonumber(source)
+    if not src or src <= 0 then return end
+
+    if type(context) ~= 'table' then
+        ActivePhoneContexts[src] = nil
+        return
+    end
+
+    ActivePhoneContexts[src] = {
+        mode = context.mode,
+        ownerIdentifier = context.ownerIdentifier,
+        phoneId = context.phoneId,
+        ownerName = context.ownerName,
+        readOnly = context.readOnly == true,
+        openedAt = os.time(),
+    }
+end
+
+function GetPhoneOwnerIdentifier(source, allowForeign)
+    local context = GetPhoneAccessContext(source)
+    if allowForeign and context and type(context.ownerIdentifier) == 'string' and context.ownerIdentifier ~= '' then
+        return context.ownerIdentifier
+    end
+
+    return GetIdentifier(source)
+end
+
+function IsPhoneReadOnly(source)
+    local context = GetPhoneAccessContext(source)
+    return context and context.readOnly == true or false
+end
+
+local function BuildPhonePayload(phone, source)
     if not phone then return nil end
 
+    local context = source and GetPhoneAccessContext(source) or nil
+    local isForeignReadOnly = context and context.mode == 'foreign-readonly'
     local featureFlags = GetFeatureFlags()
-    local enabledApps = BuildEnabledApps(featureFlags)
+    local enabledApps = isForeignReadOnly and BuildReadOnlyEnabledApps() or BuildEnabledApps(featureFlags)
     local layoutRaw = MySQL.scalar.await(
         'SELECT layout_json FROM phone_layouts WHERE identifier = ?',
         { phone.identifier }
     )
     local savedLayout = layoutRaw and layoutRaw ~= '' and json.decode(layoutRaw) or nil
-    local appLayout = NormalizeLayout(savedLayout, enabledApps)
-    
+    local appLayout = NormalizeLayout(isForeignReadOnly and nil or savedLayout, enabledApps)
     local setup = ResolveSetupState(phone.identifier)
+    local ownerName = isForeignReadOnly and context.ownerName or ResolvePhoneOwnerName(source, phone.identifier)
 
     return {
         phoneNumber = phone.phone_number,
         imei = phone.imei,
+        deviceOwnerName = ownerName,
+        isStolen = tonumber(phone.is_stolen) == 1,
+        stolenAt = phone.stolen_at,
+        stolenReason = phone.stolen_reason,
         wallpaper = phone.wallpaper,
-        ringtone = phone.ringtone,
-        callRingtone = phone.call_ringtone or phone.ringtone,
-        notificationTone = phone.notification_tone or (Config.Phone.DefaultSettings.notificationTone or 'soft-ping.ogg'),
-        messageTone = phone.message_tone or (Config.Phone.DefaultSettings.messageTone or 'pop.ogg'),
+        ringtone = ResolveToneId(phone.ringtone, 'ringtone'),
+        callRingtone = ResolveToneId(phone.call_ringtone or phone.ringtone, 'ringtone'),
+        notificationTone = ResolveToneId(phone.notification_tone, 'notification'),
+        messageTone = ResolveToneId(phone.message_tone, 'message'),
         volume = phone.volume,
         lockCode = '',
         theme = phone.theme or 'light',
@@ -395,7 +604,136 @@ lib.callback.register('gcphone:getPhoneData', function(source)
         featureFlags = featureFlags,
         requiresSetup = setup.requiresSetup,
         setup = setup,
+        accessMode = isForeignReadOnly and 'foreign-readonly' or 'own',
+        accessOwnerName = isForeignReadOnly and context.ownerName or nil,
+        accessPhoneId = isForeignReadOnly and context.phoneId or nil,
     }
+end
+
+function BuildPhonePayloadForSource(phone, source)
+    return BuildPhonePayload(phone, source)
+end
+
+local function SetPhoneStolenStateByIMEI(imei, data)
+    local safeImei = SafeString(imei, 32)
+    if not safeImei then
+        return false, 'INVALID_IMEI'
+    end
+
+    local isStolen = not not (type(data) == 'table' and data.isStolen ~= false)
+    local reason = SafeString(type(data) == 'table' and data.reason or nil, 255)
+    local reporter = SafeString(type(data) == 'table' and data.reporter or nil, 80)
+
+    local changed = MySQL.update.await(
+        [[
+            UPDATE phone_numbers
+            SET is_stolen = ?,
+                stolen_at = CASE WHEN ? = 1 THEN NOW() ELSE NULL END,
+                stolen_reason = CASE WHEN ? = 1 THEN ? ELSE NULL END,
+                stolen_reporter = CASE WHEN ? = 1 THEN ? ELSE NULL END
+            WHERE imei = ?
+        ]],
+        {
+            isStolen and 1 or 0,
+            isStolen and 1 or 0,
+            isStolen and 1 or 0,
+            reason,
+            isStolen and 1 or 0,
+            reporter,
+            safeImei,
+        }
+    )
+
+    if not changed or changed < 1 then
+        return false, 'PHONE_NOT_FOUND'
+    end
+
+    local phone = MySQL.single.await(
+        'SELECT identifier, phone_number, imei, is_stolen, stolen_at, stolen_reason, stolen_reporter FROM phone_numbers WHERE imei = ? LIMIT 1',
+        { safeImei }
+    )
+
+    return true, {
+        identifier = phone and phone.identifier or nil,
+        phoneNumber = phone and phone.phone_number or nil,
+        imei = phone and phone.imei or safeImei,
+        isStolen = phone and tonumber(phone.is_stolen) == 1 or isStolen,
+        stolenAt = phone and phone.stolen_at or nil,
+        stolenReason = phone and phone.stolen_reason or reason,
+        stolenReporter = phone and phone.stolen_reporter or reporter,
+    }
+end
+
+local function ResetPhone(identifier)
+    if not identifier then return nil end
+
+    local phone = MySQL.single.await(
+        'SELECT phone_number, imei FROM phone_numbers WHERE identifier = ? LIMIT 1',
+        { identifier }
+    )
+    if not phone then return nil end
+
+    local initialBalance = tonumber(Config.Wallet and Config.Wallet.InitialBalance) or 2500
+
+    MySQL.transaction.await({
+        { query = 'DELETE FROM phone_contacts WHERE identifier = ?', values = { identifier } },
+        { query = 'DELETE FROM phone_gallery WHERE identifier = ?', values = { identifier } },
+        { query = 'DELETE FROM phone_layouts WHERE identifier = ?', values = { identifier } },
+        { query = 'DELETE FROM phone_calls WHERE owner = ?', values = { phone.phone_number } },
+        { query = 'DELETE FROM phone_messages WHERE transmitter = ? OR receiver = ?', values = { phone.phone_number, phone.phone_number } },
+        { query = 'DELETE FROM phone_chat_group_members WHERE identifier = ?', values = { identifier } },
+        { query = 'DELETE FROM phone_chat_group_invites WHERE inviter_identifier = ? OR target_identifier = ?', values = { identifier, identifier } },
+        { query = 'DELETE FROM phone_chat_groups WHERE owner_identifier = ?', values = { identifier } },
+        { query = 'DELETE FROM phone_wavechat_statuses WHERE identifier = ? OR phone_number = ?', values = { identifier, phone.phone_number } },
+        { query = 'DELETE FROM phone_market WHERE identifier = ? OR phone_number = ?', values = { identifier, phone.phone_number } },
+        { query = 'DELETE FROM phone_news WHERE identifier = ?', values = { identifier } },
+        { query = 'DELETE FROM phone_friend_requests WHERE from_identifier = ? OR to_identifier = ?', values = { identifier, identifier } },
+        { query = 'DELETE FROM phone_shared_locations WHERE from_identifier = ? OR to_identifier = ?', values = { identifier, identifier } },
+        { query = 'DELETE FROM phone_live_locations WHERE sender_phone = ? OR recipient_phone = ?', values = { phone.phone_number, phone.phone_number } },
+        { query = 'DELETE FROM phone_dropped WHERE owner_identifier = ? OR phone_number = ? OR imei = ?', values = { identifier, phone.phone_number, phone.imei } },
+        { query = 'DELETE FROM phone_notes WHERE identifier = ?', values = { identifier } },
+        { query = 'DELETE FROM phone_alarms WHERE identifier = ?', values = { identifier } },
+        { query = 'DELETE FROM phone_garage WHERE identifier = ?', values = { identifier } },
+        { query = 'DELETE FROM phone_wallet_cards WHERE identifier = ?', values = { identifier } },
+        { query = 'DELETE FROM phone_wallet_transactions WHERE identifier = ?', values = { identifier } },
+        { query = 'UPDATE phone_wallets SET balance = ? WHERE identifier = ?', values = { initialBalance, identifier } },
+        { query = 'DELETE FROM phone_documents WHERE identifier = ?', values = { identifier } },
+        { query = 'DELETE FROM phone_documents_nfc_scans WHERE scanner_identifier = ? OR target_identifier = ?', values = { identifier, identifier } },
+        { query = 'DELETE FROM phone_notifications WHERE identifier = ?', values = { identifier } },
+        { query = 'DELETE FROM phone_social_notifications WHERE account_identifier = ? OR from_identifier = ?', values = { identifier, identifier } },
+        { query = 'DELETE FROM phone_mail_accounts WHERE identifier = ?', values = { identifier } },
+        { query = 'DELETE FROM phone_chirp_accounts WHERE identifier = ?', values = { identifier } },
+        { query = 'DELETE FROM phone_snap_accounts WHERE identifier = ?', values = { identifier } },
+        { query = 'DELETE FROM phone_clips_accounts WHERE identifier = ?', values = { identifier } },
+        {
+            query = 'UPDATE phone_numbers SET wallpaper = ?, ringtone = ?, call_ringtone = ?, notification_tone = ?, message_tone = ?, volume = ?, lock_code = ?, pin_hash = NULL, is_setup = 0, clips_username = NULL, theme = ?, language = ?, audio_profile = ? WHERE identifier = ?',
+            values = {
+                Config.Phone.DefaultSettings.wallpaper,
+                ResolveToneId(Config.Phone.DefaultSettings.ringtone, 'ringtone'),
+                ResolveToneId(Config.Phone.DefaultSettings.callRingtone or Config.Phone.DefaultSettings.ringtone, 'ringtone'),
+                ResolveToneId(Config.Phone.DefaultSettings.notificationTone, 'notification'),
+                ResolveToneId(Config.Phone.DefaultSettings.messageTone, 'message'),
+                Config.Phone.DefaultSettings.volume,
+                Config.Phone.DefaultSettings.lockCode,
+                Config.Phone.DefaultSettings.theme,
+                Config.Phone.DefaultSettings.language or 'es',
+                Config.Phone.DefaultSettings.audioProfile or 'normal',
+                identifier,
+            }
+        },
+    })
+
+    return MySQL.single.await(
+        'SELECT * FROM phone_numbers WHERE identifier = ? LIMIT 1',
+        { identifier }
+    )
+end
+
+lib.callback.register('gcphone:getPhoneData', function(source)
+    local identifier = GetPhoneOwnerIdentifier(source, true)
+    local phone = identifier == GetIdentifier(source) and GetOrCreatePhone(source) or GetPhoneByIdentifier(identifier)
+    if not phone then return nil end
+    return BuildPhonePayload(phone, source)
 end)
 
 lib.callback.register('gcphone:phone:getSetupState', function(source)
@@ -515,7 +853,7 @@ lib.callback.register('gcphone:phone:completeSetup', function(source, data)
 end)
 
 lib.callback.register('gcphone:phone:verifyPin', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = GetPhoneOwnerIdentifier(source, true)
     if not identifier then
         return { success = false, unlocked = false, error = 'MISSING_IDENTIFIER' }
     end
@@ -525,22 +863,9 @@ lib.callback.register('gcphone:phone:verifyPin', function(source, data)
         return { success = false, unlocked = false, error = 'INVALID_PIN' }
     end
 
-    local phone = MySQL.single.await(
-        'SELECT lock_code, pin_hash FROM phone_numbers WHERE identifier = ? LIMIT 1',
-        { identifier }
-    )
-    if not phone then
-        return { success = false, unlocked = false, error = 'PHONE_NOT_FOUND' }
-    end
-
-    local unlocked = false
-    if type(phone.pin_hash) == 'string' and phone.pin_hash ~= '' then
-        unlocked = MySQL.scalar.await(
-            'SELECT 1 WHERE SHA2(?, 256) = ?',
-            { pin, phone.pin_hash }
-        ) ~= nil
-    else
-        unlocked = tostring(phone.lock_code or '') == pin
+    local unlocked, err = VerifyPinForIdentifier(identifier, pin)
+    if err then
+        return { success = false, unlocked = false, error = err }
     end
 
     return {
@@ -550,6 +875,7 @@ lib.callback.register('gcphone:phone:verifyPin', function(source, data)
 end)
 
 lib.callback.register('gcphone:setWallpaper', function(source, data)
+    if IsPhoneReadOnly(source) then return false end
     local identifier = GetIdentifier(source)
     if not identifier then return false end
     local url = SafeString(type(data) == 'table' and data.url or nil, 500)
@@ -564,9 +890,10 @@ lib.callback.register('gcphone:setWallpaper', function(source, data)
 end)
 
 lib.callback.register('gcphone:setRingtone', function(source, data)
+    if IsPhoneReadOnly(source) then return false end
     local identifier = GetIdentifier(source)
     if not identifier then return false end
-    local ringtone = SafeString(type(data) == 'table' and data.ringtone or nil, 64)
+    local ringtone = ResolveToneId(type(data) == 'table' and data.ringtone or nil, 'ringtone')
     if not ringtone then return false end
     
     MySQL.update.await(
@@ -578,9 +905,10 @@ lib.callback.register('gcphone:setRingtone', function(source, data)
 end)
 
 lib.callback.register('gcphone:setCallRingtone', function(source, data)
+    if IsPhoneReadOnly(source) then return false end
     local identifier = GetIdentifier(source)
     if not identifier then return false end
-    local ringtone = SafeToneId(type(data) == 'table' and data.ringtone or nil)
+    local ringtone = ResolveToneId(type(data) == 'table' and data.ringtone or nil, 'ringtone')
     if not ringtone then return false end
 
     MySQL.update.await(
@@ -592,9 +920,10 @@ lib.callback.register('gcphone:setCallRingtone', function(source, data)
 end)
 
 lib.callback.register('gcphone:setNotificationTone', function(source, data)
+    if IsPhoneReadOnly(source) then return false end
     local identifier = GetIdentifier(source)
     if not identifier then return false end
-    local tone = SafeToneId(type(data) == 'table' and data.tone or nil)
+    local tone = ResolveToneId(type(data) == 'table' and data.tone or nil, 'notification')
     if not tone then return false end
 
     MySQL.update.await(
@@ -606,9 +935,10 @@ lib.callback.register('gcphone:setNotificationTone', function(source, data)
 end)
 
 lib.callback.register('gcphone:setMessageTone', function(source, data)
+    if IsPhoneReadOnly(source) then return false end
     local identifier = GetIdentifier(source)
     if not identifier then return false end
-    local tone = SafeToneId(type(data) == 'table' and data.tone or nil)
+    local tone = ResolveToneId(type(data) == 'table' and data.tone or nil, 'message')
     if not tone then return false end
 
     MySQL.update.await(
@@ -620,6 +950,7 @@ lib.callback.register('gcphone:setMessageTone', function(source, data)
 end)
 
 lib.callback.register('gcphone:setVolume', function(source, data)
+    if IsPhoneReadOnly(source) then return false end
     local identifier = GetIdentifier(source)
     if not identifier then return false end
     local volume = SafeNumber(type(data) == 'table' and data.volume or nil, 0.0, 1.0)
@@ -634,6 +965,7 @@ lib.callback.register('gcphone:setVolume', function(source, data)
 end)
 
 lib.callback.register('gcphone:setLockCode', function(source, data)
+    if IsPhoneReadOnly(source) then return false end
     local identifier = GetIdentifier(source)
     if not identifier then return false end
     local code = SafeString(type(data) == 'table' and data.code or nil, 16)
@@ -647,7 +979,21 @@ lib.callback.register('gcphone:setLockCode', function(source, data)
     return true
 end)
 
+lib.callback.register('gcphone:factoryResetPhone', function(source)
+    if IsPhoneReadOnly(source) then return { success = false, error = 'READ_ONLY' } end
+    local identifier = GetIdentifier(source)
+    if not identifier then return { success = false, error = 'MISSING_IDENTIFIER' } end
+
+    local phone = ResetPhone(identifier)
+    if not phone then return { success = false, error = 'RESET_FAILED' } end
+
+    local payload = BuildPhonePayload(phone, source) or {}
+    payload.success = true
+    return payload
+end)
+
 lib.callback.register('gcphone:setTheme', function(source, data)
+    if IsPhoneReadOnly(source) then return false end
     local identifier = GetIdentifier(source)
     if not identifier then return false end
     local theme = SafeTheme(type(data) == 'table' and data.theme or nil)
@@ -662,6 +1008,7 @@ lib.callback.register('gcphone:setTheme', function(source, data)
 end)
 
 lib.callback.register('gcphone:setLanguage', function(source, data)
+    if IsPhoneReadOnly(source) then return false end
     local identifier = GetIdentifier(source)
     if not identifier then return false end
     local language = SafeLanguage(type(data) == 'table' and data.language or nil)
@@ -676,6 +1023,7 @@ lib.callback.register('gcphone:setLanguage', function(source, data)
 end)
 
 lib.callback.register('gcphone:setAudioProfile', function(source, data)
+    if IsPhoneReadOnly(source) then return false end
     local identifier = GetIdentifier(source)
     if not identifier then return false end
     local profile = SafeString(type(data) == 'table' and data.audioProfile or nil, 16)
@@ -710,6 +1058,7 @@ lib.callback.register('gcphone:getAppLayout', function(source)
 end)
 
 lib.callback.register('gcphone:setAppLayout', function(source, layout)
+    if IsPhoneReadOnly(source) then return false end
     local identifier = GetIdentifier(source)
     if not identifier then return false end
 
@@ -744,40 +1093,25 @@ lib.callback.register('gcphone:getPhoneMetadata', function(source, phoneId)
     }
 end)
 
+RegisterNetEvent('gcphone:clearPhoneAccessContext', function()
+    ClearPhoneAccessContext(source)
+end)
+
 RegisterNetEvent('QBCore:Server:PlayerLoaded', function(Player)
     if not Player then return end
     
     local phone = GetOrCreatePhone(Player.PlayerData.source)
     if phone then
-        local featureFlags = GetFeatureFlags()
-        local enabledApps = BuildEnabledApps(featureFlags)
-        local layoutRaw = MySQL.scalar.await(
-            'SELECT layout_json FROM phone_layouts WHERE identifier = ?',
-            { phone.identifier }
-        )
-        local savedLayout = layoutRaw and layoutRaw ~= '' and json.decode(layoutRaw) or nil
-        TriggerClientEvent('gcphone:init', Player.PlayerData.source, {
-            phoneNumber = phone.phone_number,
-            wallpaper = phone.wallpaper,
-            ringtone = phone.ringtone,
-            callRingtone = phone.call_ringtone or phone.ringtone,
-            notificationTone = phone.notification_tone or (Config.Phone.DefaultSettings.notificationTone or 'soft-ping.ogg'),
-            messageTone = phone.message_tone or (Config.Phone.DefaultSettings.messageTone or 'pop.ogg'),
-            volume = phone.volume,
-            lockCode = '',
-            theme = phone.theme or 'light',
-            language = phone.language or 'es',
-            audioProfile = phone.audio_profile or 'normal',
-            appLayout = NormalizeLayout(savedLayout, enabledApps),
-            enabledApps = EnabledList(enabledApps),
-            featureFlags = featureFlags,
-            requiresSetup = ResolveSetupState(phone.identifier).requiresSetup,
-            setup = ResolveSetupState(phone.identifier),
-        })
+        TriggerClientEvent('gcphone:init', Player.PlayerData.source, BuildPhonePayload(phone, Player.PlayerData.source))
     end
 end)
 
 RegisterNetEvent('QBCore:Server:OnPlayerUnload', function(source)
+    ClearPhoneAccessContext(source)
+end)
+
+AddEventHandler('playerDropped', function()
+    ClearPhoneAccessContext(source)
 end)
 
 exports('GetPhoneNumber', function(identifier)
@@ -792,4 +1126,24 @@ exports('GetIdentifierByPhone', function(phoneNumber)
         'SELECT identifier FROM phone_numbers WHERE phone_number = ?',
         { phoneNumber }
     )
+end)
+
+exports('MarkPhoneAsStolenByIMEI', function(imei, reason, reporter)
+    local success, result = SetPhoneStolenStateByIMEI(imei, {
+        isStolen = true,
+        reason = reason,
+        reporter = reporter,
+    })
+
+    if not success then
+        return {
+            success = false,
+            error = result,
+        }
+    end
+
+    return {
+        success = true,
+        phone = result,
+    }
 end)

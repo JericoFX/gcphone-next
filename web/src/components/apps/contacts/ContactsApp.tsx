@@ -2,6 +2,7 @@ import { createSignal, For, Show, createEffect, onCleanup, batch, createMemo } f
 import { useRouter } from '../../Phone/PhoneFrame';
 import { useContacts } from '../../../store/contacts';
 import { useMessages } from '../../../store/messages';
+import { usePhoneState } from '../../../store/phone';
 import { fetchNui } from '../../../utils/fetchNui';
 import { sanitizePhone } from '../../../utils/sanitize';
 import { buildSharedContactMessage } from '../../../utils/contactShare';
@@ -10,6 +11,7 @@ import { generateColorForString, getBestFontColor } from '../../../utils/misc';
 import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { AppScaffold } from '../../shared/layout';
 import { ActionSheet } from '../../shared/ui/ActionSheet';
+import { InlineNotice } from '../../shared/ui/InlineNotice';
 import { SearchInput } from '../../shared/ui/SearchInput';
 import { ScreenState } from '../../shared/ui/ScreenState';
 import { SkeletonList } from '../../shared/ui/SkeletonList';
@@ -17,6 +19,7 @@ import styles from './ContactsApp.module.scss';
 
 export function ContactsApp() {
   const router = useRouter();
+  const phoneState = usePhoneState();
   const [contactsState, contactsActions] = useContacts();
   const [, messagesActions] = useMessages();
   const [showForm, setShowForm] = createSignal(false);
@@ -38,6 +41,7 @@ export function ContactsApp() {
     const base = contactsState.contacts.filter((c) => c.display.toLowerCase().includes(q) || c.number.toLowerCase().includes(q));
     return tab() === 'favoritos' ? base.filter((c) => c.favorite) : base;
   };
+  const isReadOnly = createMemo(() => phoneState.accessMode === 'foreign-readonly');
 
   const contactsCounter = createMemo(() => filteredContacts().length);
   const shareTargets = createMemo(() => {
@@ -81,6 +85,7 @@ export function ContactsApp() {
   });
   
   const openAddForm = () => {
+    if (isReadOnly()) return;
     batch(() => {
       setFormName('');
       setFormNumber('');
@@ -90,6 +95,7 @@ export function ContactsApp() {
   };
   
   const openEditForm = (contact: { id: number; display: string; number: string }) => {
+    if (isReadOnly()) return;
     batch(() => {
       setFormName(contact.display);
       setFormNumber(contact.number);
@@ -99,6 +105,7 @@ export function ContactsApp() {
   };
   
   const saveContact = async () => {
+    if (isReadOnly()) return;
     if (!formName().trim() || !formNumber().trim()) return;
     
     if (editingContact()) {
@@ -116,6 +123,7 @@ export function ContactsApp() {
   };
   
   const deleteContact = async (id: number) => {
+    if (isReadOnly()) return;
     await contactsActions.remove(id);
   };
   
@@ -124,6 +132,7 @@ export function ContactsApp() {
   };
 
   const openShareContact = () => {
+    if (isReadOnly()) return;
     if (!actionContact()) return;
     setShareContact(actionContact());
     setShareChannel(null);
@@ -150,8 +159,11 @@ export function ContactsApp() {
   };
   
   return (
-    <AppScaffold title="Contactos" onBack={() => router.goBack()} action={{ icon: '+', onClick: openAddForm }}>
+    <AppScaffold title="Contactos" onBack={() => router.goBack()} action={isReadOnly() ? undefined : { icon: '+', onClick: openAddForm }}>
       <div class={styles.list}>
+        <Show when={isReadOnly()}>
+          <InlineNotice title="Solo lectura" message={`Estas revisando los contactos de ${phoneState.accessOwnerName || 'otra persona'}.`} />
+        </Show>
         <SearchInput
           class={styles.searchWrap}
           value={search()}
@@ -197,16 +209,18 @@ export function ContactsApp() {
               emptyTitle="Sin contactos"
               emptyDescription="Crea un contacto nuevo para comenzar."
             >
-              <div
-                class={styles.addItem}
-                classList={{ [styles.selected]: selectedIndex() === 0 }}
-                onClick={openAddForm}
-              >
-                <div class={styles.avatar} style={{ 'background-color': '#34c759' }}>
-                  +
+              <Show when={!isReadOnly()}>
+                <div
+                  class={styles.addItem}
+                  classList={{ [styles.selected]: selectedIndex() === 0 }}
+                  onClick={openAddForm}
+                >
+                  <div class={styles.avatar} style={{ 'background-color': '#34c759' }}>
+                    +
+                  </div>
+                  <span class={styles.name}>Nuevo contacto</span>
                 </div>
-                <span class={styles.name}>Nuevo contacto</span>
-              </div>
+              </Show>
 
               <For each={filteredContacts()}>
                 {(contact, index) => (
@@ -229,24 +243,26 @@ export function ContactsApp() {
                 <span class={styles.number}>{contact.number}</span>
               </div>
               <div class={styles.actions}>
-                <button
-                  class={styles.actionBtn}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setActionContact(contact);
-                  }}
-                >
-                  •••
-                </button>
-                <button
-                  class={styles.actionBtn}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    void contactsActions.toggleFavorite(contact.id);
-                  }}
-                >
-                  {contact.favorite ? '★' : '☆'}
-                </button>
+                <Show when={!isReadOnly()}>
+                  <button
+                    class={styles.actionBtn}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActionContact(contact);
+                    }}
+                  >
+                    •••
+                  </button>
+                  <button
+                    class={styles.actionBtn}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      void contactsActions.toggleFavorite(contact.id);
+                    }}
+                  >
+                    {contact.favorite ? '★' : '☆'}
+                  </button>
+                </Show>
               </div>
                   </div>
                 )}
