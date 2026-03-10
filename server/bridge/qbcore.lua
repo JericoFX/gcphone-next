@@ -153,6 +153,14 @@ function GetIdentifierByPhone(phoneNumber)
     if not phoneNumber then return nil end
 
     if Core then
+        if Core.Functions.GetPlayerByPhone then
+            -- Verified: qbcore-framework/qb-core server/functions.lua exposes QBCore.Functions.GetPlayerByPhone(number).
+            local player = Core.Functions.GetPlayerByPhone(phoneNumber)
+            if player and player.PlayerData then
+                return player.PlayerData.citizenid
+            end
+        end
+
         local players = Core.Functions.GetPlayers()
         for _, src in pairs(players) do
             local player = Core.Functions.GetPlayer(src)

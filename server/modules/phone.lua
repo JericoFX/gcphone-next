@@ -1162,15 +1162,23 @@ AddEventHandler('playerDropped', function()
 end)
 
 exports('GetPhoneNumber', function(identifier)
+    if GetPhoneNumber then
+        return GetPhoneNumber(identifier)
+    end
+
     return MySQL.scalar.await(
-        'SELECT phone_number FROM phone_numbers WHERE identifier = ?',
+        'SELECT phone_number FROM phone_numbers WHERE identifier = ? LIMIT 1',
         { identifier }
     )
 end)
 
 exports('GetIdentifierByPhone', function(phoneNumber)
+    if GetIdentifierByPhone then
+        return GetIdentifierByPhone(phoneNumber)
+    end
+
     return MySQL.scalar.await(
-        'SELECT identifier FROM phone_numbers WHERE phone_number = ?',
+        'SELECT identifier FROM phone_numbers WHERE phone_number = ? LIMIT 1',
         { phoneNumber }
     )
 end)
@@ -1180,6 +1188,24 @@ exports('MarkPhoneAsStolenByIMEI', function(imei, reason, reporter)
         isStolen = true,
         reason = reason,
         reporter = reporter,
+    })
+
+    if not success then
+        return {
+            success = false,
+            error = result,
+        }
+    end
+
+    return {
+        success = true,
+        phone = result,
+    }
+end)
+
+exports('ClearPhoneStolenByIMEI', function(imei)
+    local success, result = SetPhoneStolenStateByIMEI(imei, {
+        isStolen = false,
     })
 
     if not success then
@@ -1212,6 +1238,55 @@ exports('GetPhoneOwnerByIMEI', function(imei)
             LIMIT 1
         ]],
         { safeImei }
+    )
+
+    if not phone then
+        return {
+            success = false,
+            error = 'PHONE_NOT_FOUND',
+        }
+    end
+
+    return {
+        success = true,
+        owner = {
+            identifier = phone.identifier,
+            name = ResolvePhoneOwnerName(nil, phone.identifier),
+            phoneNumber = phone.phone_number,
+            imei = phone.imei,
+            isStolen = tonumber(phone.is_stolen) == 1,
+            stolenAt = phone.stolen_at,
+            stolenReason = phone.stolen_reason,
+            stolenReporter = phone.stolen_reporter,
+        }
+    }
+end)
+
+exports('GetPhoneOwnerByNumber', function(phoneNumber)
+    local safePhone = SafeString(phoneNumber, 20)
+    if not safePhone then
+        return {
+            success = false,
+            error = 'INVALID_PHONE_NUMBER',
+        }
+    end
+
+    local identifier = GetIdentifierByPhone and GetIdentifierByPhone(safePhone) or nil
+    if not identifier then
+        return {
+            success = false,
+            error = 'PHONE_NOT_FOUND',
+        }
+    end
+
+    local phone = MySQL.single.await(
+        [[
+            SELECT identifier, phone_number, imei, is_stolen, stolen_at, stolen_reason, stolen_reporter
+            FROM phone_numbers
+            WHERE identifier = ?
+            LIMIT 1
+        ]],
+        { identifier }
     )
 
     if not phone then
