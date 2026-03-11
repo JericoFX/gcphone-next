@@ -15,10 +15,10 @@ local MIGRATIONS = {
                 `phone_number` VARCHAR(15) NOT NULL UNIQUE,
                 `imei` VARCHAR(20) NOT NULL UNIQUE,
                 `wallpaper` VARCHAR(255) DEFAULT './img/background/back001.jpg',
-                `ringtone` VARCHAR(50) DEFAULT 'call_main_01',
-                `call_ringtone` VARCHAR(64) DEFAULT 'call_main_01',
-                `notification_tone` VARCHAR(64) DEFAULT 'notif_soft_01',
-                `message_tone` VARCHAR(64) DEFAULT 'msg_soft_01',
+                `ringtone` VARCHAR(50) DEFAULT 'call_1',
+                `call_ringtone` VARCHAR(64) DEFAULT 'call_1',
+                `notification_tone` VARCHAR(64) DEFAULT 'notif_1',
+                `message_tone` VARCHAR(64) DEFAULT 'msg_1',
                 `volume` FLOAT DEFAULT 0.5,
                 `lock_code` VARCHAR(10) DEFAULT '0000',
                 `theme` VARCHAR(10) DEFAULT 'light',
@@ -1154,9 +1154,9 @@ local MIGRATIONS = {
                 ADD COLUMN IF NOT EXISTS `pin_hash` CHAR(64) NULL AFTER `lock_code`,
                 ADD COLUMN IF NOT EXISTS `is_setup` TINYINT(1) NOT NULL DEFAULT 1 AFTER `pin_hash`,
                 ADD COLUMN IF NOT EXISTS `clips_username` VARCHAR(32) NULL AFTER `audio_profile`,
-                ADD COLUMN IF NOT EXISTS `call_ringtone` VARCHAR(64) DEFAULT 'call_main_01' AFTER `ringtone`,
-                ADD COLUMN IF NOT EXISTS `notification_tone` VARCHAR(64) DEFAULT 'notif_soft_01' AFTER `call_ringtone`,
-                ADD COLUMN IF NOT EXISTS `message_tone` VARCHAR(64) DEFAULT 'msg_soft_01' AFTER `notification_tone`]],
+                ADD COLUMN IF NOT EXISTS `call_ringtone` VARCHAR(64) DEFAULT 'call_1' AFTER `ringtone`,
+                ADD COLUMN IF NOT EXISTS `notification_tone` VARCHAR(64) DEFAULT 'notif_1' AFTER `call_ringtone`,
+                ADD COLUMN IF NOT EXISTS `message_tone` VARCHAR(64) DEFAULT 'msg_1' AFTER `notification_tone`]],
 
             [[CREATE UNIQUE INDEX IF NOT EXISTS `idx_phone_numbers_clips_username`
                 ON `phone_numbers` (`clips_username`)]],
@@ -1172,9 +1172,9 @@ local MIGRATIONS = {
                 WHERE `is_setup` IS NULL]],
 
             [[UPDATE `phone_numbers`
-                SET `call_ringtone` = COALESCE(NULLIF(`call_ringtone`, ''), `ringtone`, 'call_main_01'),
-                    `notification_tone` = COALESCE(NULLIF(`notification_tone`, ''), 'notif_soft_01'),
-                    `message_tone` = COALESCE(NULLIF(`message_tone`, ''), 'msg_soft_01')]],
+                SET `call_ringtone` = COALESCE(NULLIF(`call_ringtone`, ''), `ringtone`, 'call_1'),
+                    `notification_tone` = COALESCE(NULLIF(`notification_tone`, ''), 'notif_1'),
+                    `message_tone` = COALESCE(NULLIF(`message_tone`, ''), 'msg_1')]],
 
             [[CREATE TABLE IF NOT EXISTS `phone_clips_accounts` (
                 `id` INT AUTO_INCREMENT PRIMARY KEY,
@@ -1252,14 +1252,14 @@ local MIGRATIONS = {
         description = "Store call, notification and message tones independently",
         statements = {
             [[ALTER TABLE `phone_numbers`
-                ADD COLUMN IF NOT EXISTS `call_ringtone` VARCHAR(64) DEFAULT 'call_main_01' AFTER `ringtone`,
-                ADD COLUMN IF NOT EXISTS `notification_tone` VARCHAR(64) DEFAULT 'notif_soft_01' AFTER `call_ringtone`,
-                ADD COLUMN IF NOT EXISTS `message_tone` VARCHAR(64) DEFAULT 'msg_soft_01' AFTER `notification_tone`]],
+                ADD COLUMN IF NOT EXISTS `call_ringtone` VARCHAR(64) DEFAULT 'call_1' AFTER `ringtone`,
+                ADD COLUMN IF NOT EXISTS `notification_tone` VARCHAR(64) DEFAULT 'notif_1' AFTER `call_ringtone`,
+                ADD COLUMN IF NOT EXISTS `message_tone` VARCHAR(64) DEFAULT 'msg_1' AFTER `notification_tone`]],
 
             [[UPDATE `phone_numbers`
-                SET `call_ringtone` = COALESCE(NULLIF(`call_ringtone`, ''), `ringtone`, 'call_main_01'),
-                    `notification_tone` = COALESCE(NULLIF(`notification_tone`, ''), 'notif_soft_01'),
-                    `message_tone` = COALESCE(NULLIF(`message_tone`, ''), 'msg_soft_01')]]
+                SET `call_ringtone` = COALESCE(NULLIF(`call_ringtone`, ''), `ringtone`, 'call_1'),
+                    `notification_tone` = COALESCE(NULLIF(`notification_tone`, ''), 'notif_1'),
+                    `message_tone` = COALESCE(NULLIF(`message_tone`, ''), 'msg_1')]]
         }
     },
 

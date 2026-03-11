@@ -1,0 +1,41 @@
+{
+  "source": {
+    "name": "Pixabay",
+    "license": "Pixabay Content License",
+    "licenseUrl": "https://pixabay.com/service/license-summary/",
+    "downloadPage": "https://pixabay.com/sound-effects/"
+  },
+  "categories": {
+    "ringtones": [
+      { "id": "call_1", "name": "Tono 1", "file": "/audio/ringtones/call_1.mp3", "vibrando": "/audio/ringtones/call_vibrando.mp3" },
+      { "id": "call_2", "name": "Tono 2", "file": "/audio/ringtones/call_2.mp3", "vibrando": "/audio/ringtones/call_vibrando.mp3" },
+      { "id": "call_3", "name": "Tono 3", "file": "/audio/ringtones/call_3.mp3", "vibrando": "/audio/ringtones/call_vibrando.mp3" },
+      { "id": "call_4", "name": "Tono 4", "file": "/audio/ringtones/call_4.mp3", "vibrando": "/audio/ringtones/call_vibrando.mp3" },
+      { "id": "call_5", "name": "Tono 5", "file": "/audio/ringtones/call_5.mp3", "vibrando": "/audio/ringtones/call_vibrando.mp3" },
+      { "id": "call_6", "name": "Tono 6", "file": "/audio/ringtones/call_6.mp3", "vibrando": "/audio/ringtones/call_vibrando.mp3" },
+      { "id": "call_7", "name": "Tono 7", "file": "/audio/ringtones/call_7.mp3", "vibrando": "/audio/ringtones/call_vibrando.mp3" },
+      { "id": "call_8", "name": "Tono 8", "file": "/audio/ringtones/call_8.mp3", "vibrando": "/audio/ringtones/call_vibrando.mp3" },
+      { "id": "call_9", "name": "Tono 9", "file": "/audio/ringtones/call_9.mp3", "vibrando": "/audio/ringtones/call_vibrando.mp3" },
+      { "id": "call_10", "name": "Tono 10", "file": "/audio/ringtones/call_10.mp3", "vibrando": "/audio/ringtones/call_vibrando.mp3" },
+      { "id": "call_11", "name": "Tono 11", "file": "/audio/ringtones/call_11.mp3", "vibrando": "/audio/ringtones/call_vibrando.mp3" },
+      { "id": "call_12", "name": "Tono 12", "file": "/audio/ringtones/call_12.mp3", "vibrando": "/audio/ringtones/call_vibrando.mp3" },
+      { "id": "call_13", "name": "Tono 13", "file": "/audio/ringtones/call_13.mp3", "vibrando": "/audio/ringtones/call_vibrando.mp3" }
+    ],
+    "notifications": [
+      { "id": "notif_1", "name": "Notificacion 1", "file": "/audio/notifications/nueva_notificacion.mp3", "vibrando": "/audio/notifications/nueva_notificacion_vibrando.mp3" },
+      { "id": "notif_2", "name": "Notificacion 2", "file": "/audio/notifications/nueva_notificacion2.mp3", "vibrando": "/audio/notifications/nueva_notificacion_vibrando.mp3" },
+      { "id": "notif_3", "name": "Notificacion 3", "file": "/audio/notifications/nueva_notificacion3.mp3", "vibrando": "/audio/notifications/nueva_notificacion_vibrando.mp3" },
+      { "id": "pop_1", "name": "Pop 1", "file": "/audio/notifications/pop.mp3" },
+      { "id": "pop_2", "name": "Pop 2", "file": "/audio/notifications/pop2.mp3" }
+    ],
+    "messages": [
+      { "id": "msg_1", "name": "Mensaje 1", "file": "/audio/messages/nueva_notificacion.mp3", "vibrando": "/audio/messages/nueva_notificacion_vibrando.mp3" },
+      { "id": "msg_2", "name": "Mensaje 2", "file": "/audio/messages/nueva_notificacion2.mp3", "vibrando": "/audio/messages/nueva_notificacion_vibrando.mp3" },
+      { "id": "msg_3", "name": "Mensaje 3", "file": "/audio/messages/nueva_notificacion3.mp3", "vibrando": "/audio/messages/nueva_notificacion_vibrando.mp3" }
+    ],
+    "calling": [
+      { "id": "calling_loop", "name": "Sonando", "file": "/audio/sonando.mp3" },
+      { "id": "calling_short", "name": "Sonando corto", "file": "/audio/sonando_corto.mp3" }
+    ]
+  }
+}

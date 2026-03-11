@@ -60,6 +60,8 @@ end
 
 RegisterNetEvent('gcphone:incomingCall', function(callData)
     currentCallId = callData.id
+    StopSoundJS('calling_loop')
+    StopSoundJS('calling_short')
     
     SendNUIMessage({
         action = 'incomingCall',
@@ -76,6 +78,8 @@ RegisterNetEvent('gcphone:callAccepted', function(callData)
     currentCallId = callData.id
 
     TriggerEvent('gcphone:stopIncomingCallTone')
+    StopSoundJS('calling_loop')
+    StopSoundJS('calling_short')
     
     if not useRTC then SetCallVoice(currentCallId) end
     
@@ -96,6 +100,8 @@ RegisterNetEvent('gcphone:callRejected', function(callId)
     currentCallId = nil
 
     TriggerEvent('gcphone:stopIncomingCallTone')
+    StopSoundJS('calling_loop')
+    StopSoundJS('calling_short')
     
     if not useRTC then ResetCallVoice() end
     
@@ -112,6 +118,8 @@ RegisterNetEvent('gcphone:callEnded', function(callId)
     currentCallId = nil
 
     TriggerEvent('gcphone:stopIncomingCallTone')
+    StopSoundJS('calling_loop')
+    StopSoundJS('calling_short')
     
     if not useRTC then ResetCallVoice() end
     
@@ -134,6 +142,7 @@ RegisterNUICallback('startCall', function(data, cb)
     lib.callback('gcphone:startCall', false, function(callData)
         if callData then
             currentCallId = callData.id
+            PlaySoundJS('calling_loop', PhoneState and PhoneState.volume or 0.5)
             PlayPhoneAnimation('call')
         end
         cb(callData)
@@ -153,6 +162,8 @@ RegisterNUICallback('rejectCall', function(data, cb)
         return
     end
 
+    StopSoundJS('calling_loop')
+    StopSoundJS('calling_short')
     TriggerServerEvent('gcphone:rejectCall', callId)
     cb(true)
 end)
@@ -164,6 +175,8 @@ RegisterNUICallback('endCall', function(data, cb)
         return
     end
 
+    StopSoundJS('calling_loop')
+    StopSoundJS('calling_short')
     TriggerServerEvent('gcphone:endCall', callId)
     cb(true)
 end)
