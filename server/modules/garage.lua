@@ -187,6 +187,16 @@ lib.callback.register('gcphone:garage:getStats', function(source, plate)
 end)
 
 -- Export to sync vehicle from external garage systems
+---Insert or update a vehicle entry for the garage app from an external garage resource.
+---@param identifier string
+---@param plate string
+---@param model string|number
+---@param modelName? string
+---@param garageName? string
+---@param impounded? boolean
+---@param properties? table<string, any>
+---@param coords? vector3|table<string, any>
+---@return boolean
 exports('SyncVehicle', function(identifier, plate, model, modelName, garageName, impounded, properties, coords)
     local existing = MySQL.single.await(
         'SELECT id FROM phone_garage WHERE identifier = ? AND plate = ?',

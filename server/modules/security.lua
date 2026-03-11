@@ -167,9 +167,32 @@ lib.callback.register('gcphone:security:reportUser', function(source, data)
     return { success = true }
 end)
 
+---Hit a named rate-limit bucket for a player source.
+---@param source integer
+---@param key string
+---@param windowMs integer
+---@param maxHits? integer
+---@return boolean
 exports('HitRateLimit', HitRateLimit)
+
+---Check whether an identifier is blocked from using social features.
+---@param identifier string
+---@return boolean
 exports('IsBlockedByIdentifier', IsBlockedByIdentifier)
+
+---Check whether either side of a social interaction is blocked.
+---@param identifierA string
+---@param identifierB string
+---@return boolean
 exports('IsBlockedEither', IsBlockedEither)
+
+---Record a moderation report between players/identifiers.
+---@param reporterIdentifier string
+---@param targetIdentifier string|nil
+---@param targetPhone string|nil
+---@param appId string|nil
+---@param evidence string|table|nil
+---@return nil
 exports('RecordReport', RecordReport)
 
 AddEventHandler('playerDropped', function()

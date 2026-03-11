@@ -62,6 +62,9 @@ lib.callback.register('gcphone:setPhotoAsWallpaper', function(source, data)
     return true
 end)
 
+---Get gallery media for a phone owner identifier.
+---@param identifier string
+---@return table[]
 exports('GetGallery', function(identifier)
     return MySQL.query.await(
         'SELECT id, url, type, created_at FROM phone_gallery WHERE identifier = ? ORDER BY created_at DESC',

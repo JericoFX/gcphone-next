@@ -477,8 +477,15 @@ RegisterNetEvent('gcphone:sendIceCandidate', function(callId, candidates)
     end
 end)
 
+---@class GCActiveCallMap: table<integer, table<string, any>>
+
+---Get the currently active calls indexed by call id.
+---@return GCActiveCallMap
 exports('GetActiveCalls', function()
     return ActiveCalls
 end)
 
+---Get call history rows for a player identifier.
+---@param identifier string
+---@return table[]
 exports('GetCallHistory', GetCallHistory)

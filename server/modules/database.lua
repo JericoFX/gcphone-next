@@ -1433,9 +1433,13 @@ CreateThread(function()
 end)
 
 -- Export for potential manual runs
+---Run database migrations for the resource.
+---@return nil
 exports('RunMigrations', RunMigrations)
 
 -- Export to get current DB version
+---Get the current database schema version recorded in phone_migrations.
+---@return integer
 exports('GetDatabaseVersion', function()
     local result = MySQL.query.await('SELECT MAX(`version`) as max_version FROM `phone_migrations`')
     if result and result[1] then
