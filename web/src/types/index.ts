@@ -53,6 +53,8 @@ export interface PhoneSettings {
   audioProfile?: 'normal' | 'street' | 'vehicle' | 'silent';
 }
 
+export type PhoneFramework = 'esx' | 'qbcore' | 'qbox' | 'unknown';
+
 export interface PhoneFeatureFlags {
   appstore: boolean;
   wavechat: boolean;
@@ -89,6 +91,7 @@ export interface PhoneState {
   visible: boolean;
   locked: boolean;
   initialized: boolean;
+  framework?: PhoneFramework;
   imei?: string;
   deviceOwnerName?: string;
   isStolen?: boolean;

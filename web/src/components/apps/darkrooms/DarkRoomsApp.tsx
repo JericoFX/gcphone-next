@@ -7,6 +7,10 @@ import { useAppCache } from '../../../hooks';
 import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { MediaLightbox } from '../../shared/ui/MediaLightbox';
 import { VirtualList } from '../../shared/ui/VirtualList';
+import { EmptyState } from '../../shared/ui/EmptyState';
+import { SearchInput } from '../../shared/ui/SearchInput';
+import { SegmentedTabs } from '../../shared/ui/SegmentedTabs';
+import { SheetIntro } from '../../shared/ui/SheetIntro';
 import { FormCheckbox, FormField, FormSection, Modal, ModalActions, ModalButton } from '../../shared/ui/Modal';
 import styles from './DarkRoomsApp.module.scss';
 
@@ -115,6 +119,10 @@ export function DarkRoomsApp() {
 
   // Viewer
   const [viewerUrl, setViewerUrl] = createSignal<string | null>(null);
+  const sortOptions = [
+    { id: 'alphabetical', label: 'A-Z' },
+    { id: 'activity', label: 'Actividad' },
+  ];
 
   // FAB Tooltip timeout
   let fabTimeout: number;
@@ -372,26 +380,16 @@ export function DarkRoomsApp() {
     <div class={styles.roomsView}>
       <div class={styles.roomsHeader}>
         <div class={styles.searchBar}>
-          <input 
-            type="text" 
-            placeholder="Buscar salas..." 
+          <SearchInput
             value={searchQuery()}
-            onInput={(e) => setSearchQuery(e.currentTarget.value)}
+            onInput={setSearchQuery}
+            placeholder="Buscar salas..."
+            class={styles.searchInputRoot}
+            inputClass={styles.searchInput}
           />
         </div>
         <div class={styles.sortToggle}>
-          <button 
-            classList={{ [styles.active]: sortMode() === 'alphabetical' }}
-            onClick={() => setSortMode('alphabetical')}
-          >
-            A-Z
-          </button>
-          <button 
-            classList={{ [styles.active]: sortMode() === 'activity' }}
-            onClick={() => setSortMode('activity')}
-          >
-            Actividad
-          </button>
+          <SegmentedTabs items={sortOptions} active={sortMode()} onChange={(id) => setSortMode(id as SortMode)} />
         </div>
       </div>
 
@@ -423,9 +421,7 @@ export function DarkRoomsApp() {
           )}
         </For>
         <Show when={filteredRooms().length === 0}>
-          <div class={styles.emptyState}>
-            <p>No se encontraron salas</p>
-          </div>
+          <EmptyState class={styles.emptyState} title="No se encontraron salas" description="Prueba otra busqueda o crea una nueva comunidad." />
         </Show>
       </div>
 
@@ -465,10 +461,7 @@ export function DarkRoomsApp() {
 
         <div class={styles.postsList}>
           <Show when={posts().length === 0}>
-            <div class={styles.emptyState}>
-              <p>No hay posts en esta sala</p>
-              <p class={styles.emptyHint}>Se el primero en publicar</p>
-            </div>
+            <EmptyState class={styles.emptyState} title="No hay posts en esta sala" description="Se el primero en publicar." />
           </Show>
           
           <VirtualList items={posts} itemHeight={180} overscan={3}>
@@ -639,6 +632,7 @@ export function DarkRoomsApp() {
         onClose={() => setShowCreateRoom(false)}
         size="md"
       >
+        <SheetIntro title="Crear sala" description="Define un nombre, un icono y si quieres una clave para acceso privado." />
         <FormField 
           label="Nombre" 
           value={roomName()} 
@@ -730,6 +724,7 @@ export function DarkRoomsApp() {
         onClose={() => setShowCreatePost(false)}
         size="lg"
       >
+        <SheetIntro title="Nuevo post" description="Comparte contexto, evidencia o una pregunta clara para la comunidad." />
         <FormField 
           label="Titulo" 
           value={postTitle()} 

@@ -5,7 +5,7 @@ import { useContacts } from '../../../store/contacts';
 import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { fetchNui } from '../../../utils/fetchNui';
 import { useNuiCustomEvent } from '../../../utils/useNui';
-import { generateColorForString, timeAgo } from '../../../utils/misc';
+import { formatPhoneNumber, generateColorForString, timeAgo } from '../../../utils/misc';
 import { resolveMediaType, sanitizeMediaUrl, sanitizePhone, sanitizeText } from '../../../utils/sanitize';
 import { parseSharedContactMessage } from '../../../utils/contactShare';
 import { fetchSocketToken } from '../../../utils/realtimeAuth';
@@ -14,7 +14,13 @@ import { uiAlert } from '../../../utils/uiAlert';
 import { connectWaveSocket, disconnectWaveSocket, isWaveSocketConnected, joinWaveRoom, sendWaveMessage, sendWaveTyping, type WaveSocketMessage } from '../../../utils/socket';
 import { usePhone } from '../../../store/phone';
 import { ActionSheet } from '../../shared/ui/ActionSheet';
+import { EmptyState } from '../../shared/ui/EmptyState';
+import { LetterAvatar } from '../../shared/ui/LetterAvatar';
 import { MediaLightbox } from '../../shared/ui/MediaLightbox';
+import { Modal, ModalActions, ModalButton } from '../../shared/ui/Modal';
+import { SearchInput } from '../../shared/ui/SearchInput';
+import { SegmentedTabs } from '../../shared/ui/SegmentedTabs';
+import { SheetIntro } from '../../shared/ui/SheetIntro';
 import { VirtualList } from '../../shared/ui/VirtualList';
 import { EmojiPickerButton } from '../../shared/ui/EmojiPicker';
 import { AppScaffold } from '../../shared/layout';
@@ -118,6 +124,12 @@ export function WaveChatApp() {
   const [groupMessages, setGroupMessages] = createSignal<Record<number, WaveChatGroupMessage[]>>({});
   const [groupMessageInput, setGroupMessageInput] = createSignal('');
   const [showCreateGroupModal, setShowCreateGroupModal] = createSignal(false);
+  const waveTabs = [
+    { id: 'chats', label: 'Chats' },
+    { id: 'status', label: 'Estado' },
+    { id: 'calls', label: 'Llamadas' },
+    { id: 'groups', label: 'Grupos' },
+  ];
   const [groupNameDraft, setGroupNameDraft] = createSignal('');
   const [groupContactSearch, setGroupContactSearch] = createSignal('');
   const [groupMemberDraft, setGroupMemberDraft] = createSignal<string[]>([]);
@@ -853,50 +865,48 @@ export function WaveChatApp() {
             }}
             onOpenCoords={(x, y) => router.navigate('maps', { x, y })}
             onDeleteConversation={() => void deleteConversation(selectedConversation()!)}
+            framework={phoneState.framework || 'unknown'}
           />
         }
       >
         <AppScaffold title='WaveChat' subtitle='Chats, grupos y llamadas' onBack={() => router.goBack()} bodyPadding='none'>
           <div class={styles.app}>
             <div class={styles.tabs}>
-              <button class={styles.tabBtn} classList={{ [styles.tabActive]: activeTab() === 'chats' }} onClick={() => setActiveTab('chats')}>Chats</button>
-              <button class={styles.tabBtn} classList={{ [styles.tabActive]: activeTab() === 'status' }} onClick={() => setActiveTab('status')}>Estado</button>
-              <button class={styles.tabBtn} classList={{ [styles.tabActive]: activeTab() === 'calls' }} onClick={() => setActiveTab('calls')}>Llamadas</button>
-              <button class={styles.tabBtn} classList={{ [styles.tabActive]: activeTab() === 'groups' }} onClick={() => setActiveTab('groups')}>Grupos</button>
+              <SegmentedTabs items={waveTabs} active={activeTab()} onChange={(id) => setActiveTab(id as 'chats' | 'status' | 'calls' | 'groups')} />
             </div>
 
             <div class={styles.list}>
-              <Show when={activeTab() === 'chats'}>
-            <VirtualList items={conversations} itemHeight={78} overscan={5}>
-              {(convo, index) => (
-                <div
-                  class={styles.conversationItem}
-                  classList={{ [styles.selected]: isSelectedConversationIndex(index()) }}
-                  onClick={() => openConversation(convo.number, convo.display)}
-                >
-                  <div class={styles.avatar} style={{ 'background-color': generateColorForString(convo.number) }}>
-                    {convo.display.charAt(0).toUpperCase()}
-                  </div>
-                  <div class={styles.info}>
-                    <div class={styles.topRow}>
-                      <span class={styles.name}>{convo.display}</span>
-                      <span class={styles.time}>{timeAgo(convo.lastMessage.time)}</span>
+          <Show when={activeTab() === 'chats'}>
+            <Show when={conversations().length > 0} fallback={<EmptyState class={styles.emptyState} title="Sin chats por ahora" description="Tus conversaciones apareceran aqui." />}>
+              <VirtualList items={conversations} itemHeight={78} overscan={5}>
+                {(convo, index) => (
+                  <div
+                    class={styles.conversationItem}
+                    classList={{ [styles.selected]: isSelectedConversationIndex(index()) }}
+                    onClick={() => openConversation(convo.number, convo.display)}
+                  >
+                    <LetterAvatar class={styles.avatar} color={generateColorForString(convo.number)} label={convo.display} />
+                    <div class={styles.info}>
+                      <div class={styles.topRow}>
+                        <span class={styles.name}>{convo.display}</span>
+                        <span class={styles.time}>{timeAgo(convo.lastMessage.time)}</span>
+                      </div>
+                      <div class={styles.previewRow}>
+                        <Show when={convo.unread > 0}>
+                          <span class={styles.unreadBadge}>{convo.unread}</span>
+                        </Show>
+                        <span class={styles.previewText}>
+                          {getPreviewText(convo.lastMessage)}
+                        </span>
+                      </div>
                     </div>
-                    <div class={styles.previewRow}>
-                      <Show when={convo.unread > 0}>
-                        <span class={styles.unreadBadge}>{convo.unread}</span>
-                      </Show>
-                      <span class={styles.previewText}>
-                        {getPreviewText(convo.lastMessage)}
-                      </span>
-                    </div>
+                    <button class={styles.deleteConversationBtn} onClick={(e) => { e.stopPropagation(); void deleteConversation(convo.number); }}>
+                      Borrar
+                    </button>
                   </div>
-                  <button class={styles.deleteConversationBtn} onClick={(e) => { e.stopPropagation(); void deleteConversation(convo.number); }}>
-                    Borrar
-                  </button>
-                </div>
-              )}
-            </VirtualList>
+                )}
+              </VirtualList>
+            </Show>
           </Show>
 
           <Show when={activeTab() === 'status'}>
@@ -926,9 +936,7 @@ export function WaveChatApp() {
                   {(status) => (
                     <div class={styles.statusItem} onClick={() => void openStatus(status)}>
                       <div class={styles.statusRing}>
-                        <div class={styles.avatar} style={{ 'background-color': generateColorForString(status.phone_number) }}>
-                          {(status.contact_name || 'Yo').charAt(0).toUpperCase()}
-                        </div>
+                        <LetterAvatar class={styles.avatar} color={generateColorForString(status.phone_number)} label={status.contact_name || 'Yo'} />
                       </div>
                       <div class={styles.info}>
                         <div class={styles.name}>Mi estado</div>
@@ -949,9 +957,7 @@ export function WaveChatApp() {
                   {(status) => (
                     <div class={styles.statusItem} onClick={() => void openStatus(status)}>
                       <div class={styles.statusRing}>
-                        <div class={styles.avatar} style={{ 'background-color': generateColorForString(status.phone_number) }}>
-                          {(status.contact_name || getContactName(status.phone_number)).charAt(0).toUpperCase()}
-                        </div>
+                        <LetterAvatar class={styles.avatar} color={generateColorForString(status.phone_number)} label={status.contact_name || getContactName(status.phone_number)} />
                       </div>
                       <div class={styles.info}>
                         <div class={styles.name}>{status.contact_name || getContactName(status.phone_number)}</div>
@@ -969,18 +975,20 @@ export function WaveChatApp() {
           </Show>
 
           <Show when={activeTab() === 'calls'}>
-            <VirtualList items={callHistory} itemHeight={72} overscan={4}>
-              {(call) => (
-                <div class={styles.callItem}>
-                  <div class={styles.callDirection}>{call.incoming ? 'Entrante' : 'Saliente'}</div>
-                  <div class={styles.info}>
-                    <div class={styles.name}>{call.hidden ? 'Privado' : call.num}</div>
-                    <div class={styles.previewText}>{timeAgo(call.time)}</div>
+            <Show when={callHistory().length > 0} fallback={<EmptyState class={styles.emptyState} title="Sin llamadas recientes" description="Tu historial de llamadas aparecera aqui." />}>
+              <VirtualList items={callHistory} itemHeight={72} overscan={4}>
+                {(call) => (
+                  <div class={styles.callItem}>
+                    <div class={styles.callDirection}>{call.incoming ? 'Entrante' : 'Saliente'}</div>
+                    <div class={styles.info}>
+                      <div class={styles.name}>{call.hidden ? 'Privado' : formatPhoneNumber(call.num, phoneState.framework || 'unknown')}</div>
+                      <div class={styles.previewText}>{timeAgo(call.time)}</div>
+                    </div>
+                    <button class={styles.statusBtn} onClick={() => fetchNui('startCall', { phoneNumber: call.num })}>Llamar</button>
                   </div>
-                  <button class={styles.statusBtn} onClick={() => fetchNui('startCall', { phoneNumber: call.num })}>Llamar</button>
-                </div>
-              )}
-            </VirtualList>
+                )}
+              </VirtualList>
+            </Show>
           </Show>
 
           <Show when={activeTab() === 'groups'}>
@@ -1016,9 +1024,7 @@ export function WaveChatApp() {
                     void loadGroupMessages(group.id);
                   }}
                 >
-                  <div class={styles.avatar} style={{ 'background-color': generateColorForString(String(group.id)) }}>
-                    {group.name.charAt(0).toUpperCase()}
-                  </div>
+                  <LetterAvatar class={styles.avatar} color={generateColorForString(String(group.id))} label={group.name} />
                   <div class={styles.info}>
                     <div class={styles.topRow}>
                       <span class={styles.name}>{group.name}</span>
@@ -1091,109 +1097,100 @@ export function WaveChatApp() {
         </AppScaffold>
       </Show>
 
-      <Show when={showGifPicker()}>
-        <div class={styles.gifOverlay}>
-          <div class={styles.gifPanel}>
-            <div class={styles.gifHeader}>
-              <strong>GIFs</strong>
-              <button onClick={() => setShowGifPicker(false)}>Cerrar</button>
-            </div>
-            <div class={styles.gifSearchRow}>
-              <input
-                type="text"
-                placeholder="Buscar GIF"
-                value={gifQuery()}
-                onInput={(e) => setGifQuery(sanitizeText(e.currentTarget.value, 80))}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') void searchGifs();
-                }}
-              />
-              <button onClick={() => void searchGifs()}>Buscar</button>
-            </div>
-            <Show when={!gifLoading()} fallback={<div class={styles.gifEmpty}>Buscando...</div>}>
-              <Show when={gifResults().length > 0} fallback={<div class={styles.gifEmpty}>Sin resultados</div>}>
-                <div class={styles.gifGrid}>
-                  <For each={gifResults()}>
-                    {(gif) => (
-                      <button
-                        class={styles.gifItem}
-                        onClick={() => {
-                          setAttachmentUrl(gif.url);
-                          setShowGifPicker(false);
-                        }}
-                      >
-                        <img src={gif.url} alt="gif" />
-                      </button>
-                    )}
-                  </For>
-                </div>
-              </Show>
+      <Modal open={showGifPicker()} title="GIFs" onClose={() => setShowGifPicker(false)} size="lg">
+        <div class={styles.gifPanel}>
+          <SheetIntro title="Buscar GIF" description="Encuentra una reaccion rapida y agregala al mensaje actual." />
+          <div class={styles.gifSearchRow}>
+            <SearchInput
+              value={gifQuery()}
+              onInput={(value) => setGifQuery(sanitizeText(value, 80))}
+              placeholder="Buscar GIF"
+              class={styles.gifSearchInputRoot}
+              inputClass={styles.gifSearchInput}
+            />
+            <button onClick={() => void searchGifs()}>Buscar</button>
+          </div>
+          <Show when={!gifLoading()} fallback={<div class={styles.gifEmpty}>Buscando...</div>}>
+            <Show when={gifResults().length > 0} fallback={<div class={styles.gifEmpty}>Sin resultados</div>}>
+              <div class={styles.gifGrid}>
+                <For each={gifResults()}>
+                  {(gif) => (
+                    <button
+                      class={styles.gifItem}
+                      onClick={() => {
+                        setAttachmentUrl(gif.url);
+                        setShowGifPicker(false);
+                      }}
+                    >
+                      <img src={gif.url} alt="gif" />
+                    </button>
+                  )}
+                </For>
+              </div>
+            </Show>
+          </Show>
+          <ModalActions>
+            <ModalButton label="Cerrar" onClick={() => setShowGifPicker(false)} />
+          </ModalActions>
+        </div>
+      </Modal>
+      <Modal open={showCreateGroupModal()} title="Nuevo grupo" onClose={closeCreateGroupModal} size="lg">
+        <div class={styles.groupModalBody}>
+          <SheetIntro title="Crear grupo" description="Elige un nombre claro y suma contactos para iniciar la conversacion compartida." />
+          <label class={styles.groupField}>
+            <span>Nombre del grupo</span>
+            <input
+              value={groupNameDraft()}
+              onInput={(e) => setGroupNameDraft(sanitizeText(e.currentTarget.value, 80))}
+              placeholder="Ej. Familia, Trabajo, Amigos"
+            />
+          </label>
+
+          <label class={styles.groupField}>
+            <span>Buscar contactos</span>
+            <SearchInput
+              value={groupContactSearch()}
+              onInput={(value) => setGroupContactSearch(sanitizeText(value, 80))}
+              placeholder="Buscar por nombre o numero"
+              class={styles.groupSearchInputRoot}
+              inputClass={styles.groupSearchInput}
+            />
+          </label>
+
+          <div class={styles.groupSelectionSummary}>
+            <strong>{groupMemberDraft().length}</strong>
+            <span>contactos seleccionados</span>
+          </div>
+
+          <div class={styles.groupChecklist}>
+            <For each={selectableContacts()}>
+              {(contact) => {
+                const safeNumber = sanitizePhone(contact.number);
+                return (
+                  <label class={styles.groupChecklistItem}>
+                    <input
+                      type="checkbox"
+                      checked={groupMemberDraft().includes(safeNumber)}
+                      onChange={() => toggleGroupMember(safeNumber)}
+                    />
+                    <div class={styles.groupChecklistInfo}>
+                      <strong>{contact.display}</strong>
+                      <span>{formatPhoneNumber(contact.number, phoneState.framework || 'unknown')}</span>
+                    </div>
+                  </label>
+                );
+              }}
+            </For>
+            <Show when={selectableContacts().length === 0}>
+              <div class={styles.groupChecklistEmpty}>No hay contactos disponibles para agregar.</div>
             </Show>
           </div>
+          <ModalActions>
+            <ModalButton label="Cancelar" onClick={closeCreateGroupModal} />
+            <ModalButton label="Crear" tone="primary" onClick={() => void createGroup()} disabled={!groupNameDraft().trim()} />
+          </ModalActions>
         </div>
-      </Show>
-      <Show when={showCreateGroupModal()}>
-        <div class={styles.groupModalOverlay}>
-          <div class={styles.groupModal}>
-            <div class={styles.groupModalHeader}>
-              <strong>Nuevo grupo</strong>
-              <button onClick={closeCreateGroupModal}>Cerrar</button>
-            </div>
-            <div class={styles.groupModalBody}>
-              <label class={styles.groupField}>
-                <span>Nombre del grupo</span>
-                <input
-                  value={groupNameDraft()}
-                  onInput={(e) => setGroupNameDraft(sanitizeText(e.currentTarget.value, 80))}
-                  placeholder="Ej. Familia, Trabajo, Amigos"
-                />
-              </label>
-
-              <label class={styles.groupField}>
-                <span>Buscar contactos</span>
-                <input
-                  value={groupContactSearch()}
-                  onInput={(e) => setGroupContactSearch(sanitizeText(e.currentTarget.value, 80))}
-                  placeholder="Buscar por nombre o numero"
-                />
-              </label>
-
-              <div class={styles.groupSelectionSummary}>
-                <strong>{groupMemberDraft().length}</strong>
-                <span>contactos seleccionados</span>
-              </div>
-
-              <div class={styles.groupChecklist}>
-                <For each={selectableContacts()}>
-                  {(contact) => {
-                    const safeNumber = sanitizePhone(contact.number);
-                    return (
-                      <label class={styles.groupChecklistItem}>
-                        <input
-                          type="checkbox"
-                          checked={groupMemberDraft().includes(safeNumber)}
-                          onChange={() => toggleGroupMember(safeNumber)}
-                        />
-                        <div class={styles.groupChecklistInfo}>
-                          <strong>{contact.display}</strong>
-                          <span>{contact.number}</span>
-                        </div>
-                      </label>
-                    );
-                  }}
-                </For>
-                <Show when={selectableContacts().length === 0}>
-                  <div class={styles.groupChecklistEmpty}>No hay contactos disponibles para agregar.</div>
-                </Show>
-              </div>
-            </div>
-            <div class={styles.groupModalFooter}>
-              <button class={styles.groupSecondaryBtn} onClick={closeCreateGroupModal}>Cancelar</button>
-              <button class={styles.statusBtn} onClick={() => void createGroup()} disabled={!groupNameDraft().trim()}>Crear</button>
-            </div>
-          </div>
-        </div>
-      </Show>
+      </Modal>
       <MediaLightbox url={viewerUrl()} onClose={() => setViewerUrl(null)} />
     </>
   );
@@ -1228,6 +1225,7 @@ function ConversationView(props: {
   onBack: () => void;
   onOpenCoords: (x: number, y: number) => void;
   onDeleteConversation: () => void;
+  framework?: 'esx' | 'qbcore' | 'qbox' | 'unknown';
 }) {
   let messagesEnd: HTMLDivElement | undefined;
 
@@ -1280,7 +1278,7 @@ function ConversationView(props: {
                   <div class={styles.contactCard}>
                     <div class={styles.contactCardLabel}>Contacto compartido</div>
                     <div class={styles.contactCardName}>{shared().display}</div>
-                    <div class={styles.contactCardNumber}>{shared().number}</div>
+                    <div class={styles.contactCardNumber}>{formatPhoneNumber(shared().number, props.framework || 'unknown')}</div>
                     <button
                       class={styles.contactCardBtn}
                       disabled={props.isKnownContact(shared().number)}

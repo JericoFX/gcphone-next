@@ -1,6 +1,7 @@
 import { For, Show, batch, createEffect, createMemo, createSignal, onCleanup, onMount } from 'solid-js';
 import { usePhone } from '../../store/phone';
 import { useNotifications } from '../../store/notifications';
+import { formatPhoneNumber } from '../../utils/misc';
 import { fetchNui } from '../../utils/fetchNui';
 import { formatDate, formatTime, t } from '../../i18n';
 import styles from './LockScreen.module.scss';
@@ -134,7 +135,7 @@ export function LockScreen() {
           <Show when={phoneState.settings.phoneNumber}>
             <div class={styles.deviceIdentityRow}>
               <span>Numero</span>
-              <strong>{phoneState.settings.phoneNumber}</strong>
+              <strong>{formatPhoneNumber(phoneState.settings.phoneNumber, phoneState.framework || 'unknown')}</strong>
             </div>
           </Show>
           <Show when={phoneState.imei}>

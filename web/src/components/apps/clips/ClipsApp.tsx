@@ -12,6 +12,9 @@ import { MediaAttachmentPreview } from '../../shared/ui/MediaAttachmentPreview';
 import { MediaActionButtons } from '../../shared/ui/MediaActionButtons';
 import { FormField, FormTextarea, Modal, ModalActions, ModalButton } from '../../shared/ui/Modal';
 import { EmojiPickerButton } from '../../shared/ui/EmojiPicker';
+import { InlineNotice } from '../../shared/ui/InlineNotice';
+import { SegmentedTabs } from '../../shared/ui/SegmentedTabs';
+import { SheetIntro } from '../../shared/ui/SheetIntro';
 import { SocialOnboardingModal, type SocialOnboardingPayload } from '../../shared/ui/SocialOnboardingModal';
 import styles from './ClipsApp.module.scss';
 
@@ -49,6 +52,11 @@ export function ClipsApp() {
   const router = useRouter();
   const cache = useAppCache('clips');
   const [phoneState] = usePhone();
+  const isReadOnly = createMemo(() => phoneState.accessMode === 'foreign-readonly');
+  const clipTabs = [
+    { id: 'feed', label: 'Para ti' },
+    { id: 'myVideos', label: 'Biblioteca' },
+  ];
 
   // Data
   const [clips, setClips] = createSignal<Clip[]>([]);
@@ -386,7 +394,10 @@ export function ClipsApp() {
   return (
     <AppScaffold title="Clips" subtitle="Videos cortos" onBack={() => router.goBack()} bodyClass={styles.body}>
       <div class={styles.clipsApp}>
-        {/* Tabs */}
+        <Show when={isReadOnly()}>
+          <InlineNotice title="Solo lectura" message={`Estas viendo los clips de ${phoneState.accessOwnerName || 'otra persona'}.`} />
+        </Show>
+
         <Show when={statusMessage()}>
           <div class={styles.statusBanner}>
             {statusMessage()}
@@ -400,20 +411,7 @@ export function ClipsApp() {
         </Show>
 
         <div class={styles.tabs}>
-          <button 
-            class={styles.tabBtn}
-            classList={{ [styles.active]: currentTab() === 'feed' }}
-            onClick={() => setCurrentTab('feed')}
-          >
-            Para ti
-          </button>
-          <button 
-            class={styles.tabBtn}
-            classList={{ [styles.active]: currentTab() === 'myVideos' }}
-            onClick={() => setCurrentTab('myVideos')}
-          >
-            Mis Videos
-          </button>
+          <SegmentedTabs items={clipTabs} active={currentTab()} onChange={(id) => setCurrentTab(id as 'feed' | 'myVideos')} />
           <button class={styles.profileBtn} onClick={() => void openProfileEditor()}>
             Perfil
           </button>
@@ -528,7 +526,7 @@ export function ClipsApp() {
 
                       <div class={styles.clipMetaRow}>
                         <span class={styles.clipMetaPill}>{clip.display_name || clip.username || 'Creador'}</span>
-                        <span class={styles.clipMetaPill}>{phoneState.featureFlags.clips ? 'Clip iOS' : 'Solo lectura'}</span>
+                        <span class={styles.clipMetaPill}>{clip.is_own ? 'Tu clip' : 'En clips'}</span>
                       </div>
                        
                       <Show when={clip.caption}>
@@ -573,52 +571,55 @@ export function ClipsApp() {
 
         {/* Comments Modal */}
         <Show when={showComments()}>
-          <div class={styles.commentsModal}>
-            <div class={styles.commentsHeader}>
-              <h4>{comments().length} comentarios</h4>
-              <button class={styles.closeBtn} onClick={() => setShowComments(false)}>✕</button>
-            </div>
-            
-            <div class={styles.commentsList}>
-              <For each={comments()}>
-                {(comment) => (
-                  <div class={styles.commentItem}>
-                    <div class={styles.commentAvatar}>
-                      {comment.avatar ? (
-                        <img src={comment.avatar} alt="" />
-                      ) : (
-                        <span>{(comment.display_name || comment.username || 'U').charAt(0).toUpperCase()}</span>
-                      )}
-                    </div>
-                    <div class={styles.commentContent}>
-                      <strong>{comment.display_name || comment.username}</strong>
-                      <p>{comment.content}</p>
-                      <span class={styles.commentTime}>{comment.created_at ? timeAgo(comment.created_at) : 'ahora'}</span>
-                    </div>
-                  </div>
-                )}
-              </For>
+          <div class={styles.commentsScrim} onClick={() => setShowComments(false)}>
+            <div class={styles.commentsModal} onClick={(e) => e.stopPropagation()}>
+              <div class={styles.sheetHandle} />
+              <div class={styles.commentsHeader}>
+                <h4>{comments().length} comentarios</h4>
+                <button class={styles.closeBtn} onClick={() => setShowComments(false)}>✕</button>
+              </div>
 
-              <Show when={comments().length === 0}>
-                <div class={styles.emptyComments}>
-                  <p>Sin comentarios aun</p>
-                  <p>¡Se el primero en comentar!</p>
-                </div>
-              </Show>
-            </div>
-            
-            <div class={styles.commentInput}>
-              <EmojiPickerButton value={commentText()} onChange={setCommentText} maxLength={500} />
-              <input
-                type="text"
-                placeholder="Escribe un comentario..."
-                value={commentText()}
-                onInput={(e) => setCommentText(sanitizeText(e.currentTarget.value, 500))}
-                onKeyDown={(e) => e.key === 'Enter' && addComment()}
-              />
-              <button onClick={addComment} disabled={!commentText().trim()}>
-                Enviar
-              </button>
+              <div class={styles.commentsList}>
+                <For each={comments()}>
+                  {(comment) => (
+                    <div class={styles.commentItem}>
+                      <div class={styles.commentAvatar}>
+                        {comment.avatar ? (
+                          <img src={comment.avatar} alt="" />
+                        ) : (
+                          <span>{(comment.display_name || comment.username || 'U').charAt(0).toUpperCase()}</span>
+                        )}
+                      </div>
+                      <div class={styles.commentContent}>
+                        <strong>{comment.display_name || comment.username}</strong>
+                        <p>{comment.content}</p>
+                        <span class={styles.commentTime}>{comment.created_at ? timeAgo(comment.created_at) : 'ahora'}</span>
+                      </div>
+                    </div>
+                  )}
+                </For>
+
+                <Show when={comments().length === 0}>
+                  <div class={styles.emptyComments}>
+                    <p>Sin comentarios aun</p>
+                    <p>¡Se el primero en comentar!</p>
+                  </div>
+                </Show>
+              </div>
+
+              <div class={styles.commentInput}>
+                <EmojiPickerButton value={commentText()} onChange={setCommentText} maxLength={500} />
+                <input
+                  type="text"
+                  placeholder="Escribe un comentario..."
+                  value={commentText()}
+                  onInput={(e) => setCommentText(sanitizeText(e.currentTarget.value, 500))}
+                  onKeyDown={(e) => e.key === 'Enter' && addComment()}
+                />
+                <button onClick={addComment} disabled={!commentText().trim()}>
+                  Enviar
+                </button>
+              </div>
             </div>
           </div>
         </Show>
@@ -631,6 +632,7 @@ export function ClipsApp() {
           size="md"
         >
           <div class={styles.uploadContent}>
+            <SheetIntro title="Nuevo clip" description="Sube un video vertical y agrega una descripcion corta para tu feed." />
             <Show when={!uploadMedia()}>
               <>
                 <div class={styles.uploadOptions}>

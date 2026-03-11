@@ -343,6 +343,23 @@
   }
 }
 
+.customUrlInfo {
+  width: 100%;
+}
+
+.customUrlTitle {
+  margin-bottom: 4px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.customUrlText {
+  font-size: 12px;
+  line-height: 1.45;
+  color: #6b7280;
+}
+
 /* Language Options */
 .lang-option {
   display: flex;

@@ -12,6 +12,10 @@ import { LiveFlashlightControl } from '../../shared/ui/LiveFlashlightControl';
 import { MediaLightbox } from '../../shared/ui/MediaLightbox';
 import { MediaActionButtons } from '../../shared/ui/MediaActionButtons';
 import { MediaAttachmentPreview } from '../../shared/ui/MediaAttachmentPreview';
+import { EmptyState } from '../../shared/ui/EmptyState';
+import { Modal, ModalActions, ModalButton } from '../../shared/ui/Modal';
+import { SearchInput } from '../../shared/ui/SearchInput';
+import { SheetIntro } from '../../shared/ui/SheetIntro';
 import { SocialOnboardingModal, type SocialOnboardingPayload } from '../../shared/ui/SocialOnboardingModal';
 import { AppFAB, AppScaffold } from '../../shared/layout';
 import { useLiveFlashlight } from '../../../hooks/useLiveFlashlight';
@@ -739,11 +743,12 @@ export function NewsApp() {
         </Show>
 
         <div class={styles.searchRow}>
-          <input
-            class={styles.searchInput}
-            placeholder="Buscar titulares, autores o coberturas"
+          <SearchInput
             value={query()}
-            onInput={(event) => setQuery(event.currentTarget.value)}
+            onInput={setQuery}
+            placeholder="Buscar titulares, autores o coberturas"
+            class={styles.searchInputRoot}
+            inputClass={styles.searchInput}
           />
         </div>
 
@@ -820,72 +825,71 @@ export function NewsApp() {
               </article>
             )}
           </For>
+          <Show when={visibleArticles().length === 0}>
+            <EmptyState class={styles.emptyState} title="Sin noticias por ahora" description="Prueba otra categoria o publica una nueva cobertura." />
+          </Show>
         </div>
 
-        <Show when={showCompose()}>
-          <div class={styles.modal}>
-            <div class={styles.modalContent}>
-              <h2>Publicar noticia</h2>
-              <input type="text" placeholder="Titulo" value={title()} onInput={(event) => setTitle(event.currentTarget.value)} />
-              <textarea placeholder="Contenido" value={content()} onInput={(event) => setContent(event.currentTarget.value)} />
-              <div class={styles.composeAttachments}>
-                <MediaActionButtons
-                  actions={[
-                    { icon: '🖼', label: 'Galeria', onClick: attachFromGallery },
-                    { icon: '📷', label: 'Camara', onClick: attachFromCamera },
-                    { icon: '🔗', label: 'URL', onClick: () => void attachByUrl() },
-                    ...(mediaUrl() ? [{ icon: '✕', label: 'Quitar', onClick: () => setMediaUrl(''), tone: 'danger' as const }] : []),
-                  ]}
-                  variant="compact"
-                  class={styles.composeMediaButtons}
-                />
-                <input type="text" placeholder="URL media (opcional)" value={mediaUrl()} onInput={(event) => setMediaUrl(sanitizeMediaUrl(event.currentTarget.value))} />
-              </div>
-              <MediaAttachmentPreview url={mediaUrl()} mediaClass={styles.composePreviewMedia} onOpen={() => setViewerUrl(mediaUrl())} />
-              <input type="text" placeholder="Categoria" value={category()} onInput={(event) => setCategory(sanitizeText(event.currentTarget.value, 30))} />
-              <div class={styles.actions}>
-                <button onClick={() => setShowCompose(false)}>Cancelar</button>
-                <button class={styles.primary} onClick={() => void publish()}>Publicar</button>
-              </div>
+        <Modal open={showCompose()} title="Publicar noticia" onClose={() => setShowCompose(false)} size="lg">
+          <div class={styles.modalContent}>
+            <SheetIntro title="Nueva cobertura" description="Publica un titular claro, agrega contexto y adjunta media si ayuda a contar la historia." />
+            <input type="text" placeholder="Titulo" value={title()} onInput={(event) => setTitle(event.currentTarget.value)} />
+            <textarea placeholder="Contenido" value={content()} onInput={(event) => setContent(event.currentTarget.value)} />
+            <div class={styles.composeAttachments}>
+              <MediaActionButtons
+                actions={[
+                  { icon: '🖼', label: 'Galeria', onClick: attachFromGallery },
+                  { icon: '📷', label: 'Camara', onClick: attachFromCamera },
+                  { icon: '🔗', label: 'URL', onClick: () => void attachByUrl() },
+                  ...(mediaUrl() ? [{ icon: '✕', label: 'Quitar', onClick: () => setMediaUrl(''), tone: 'danger' as const }] : []),
+                ]}
+                variant="compact"
+                class={styles.composeMediaButtons}
+              />
+              <input type="text" placeholder="URL media (opcional)" value={mediaUrl()} onInput={(event) => setMediaUrl(sanitizeMediaUrl(event.currentTarget.value))} />
             </div>
+            <MediaAttachmentPreview url={mediaUrl()} mediaClass={styles.composePreviewMedia} onOpen={() => setViewerUrl(mediaUrl())} />
+            <input type="text" placeholder="Categoria" value={category()} onInput={(event) => setCategory(sanitizeText(event.currentTarget.value, 30))} />
+            <ModalActions>
+              <ModalButton label="Cancelar" onClick={() => setShowCompose(false)} />
+              <ModalButton label="Publicar" tone="primary" onClick={() => void publish()} />
+            </ModalActions>
           </div>
-        </Show>
+        </Modal>
 
-        <Show when={showProfileModal()}>
-          <div class={styles.modal}>
-            <div class={styles.modalContent}>
-              <h2>Perfil de Noticias</h2>
-              <input
-                type="text"
-                placeholder="Nombre visible"
-                value={profileDisplayName()}
-                onInput={(event) => setProfileDisplayName(event.currentTarget.value)}
+        <Modal open={showProfileModal()} title="Perfil de Noticias" onClose={() => setShowProfileModal(false)} size="md">
+          <div class={styles.modalContent}>
+            <SheetIntro title="Perfil editorial" description="Actualiza tu firma visible y el avatar con el que apareceras en las coberturas." />
+            <input
+              type="text"
+              placeholder="Nombre visible"
+              value={profileDisplayName()}
+              onInput={(event) => setProfileDisplayName(event.currentTarget.value)}
+            />
+            <textarea
+              placeholder="Bio o firma editorial"
+              value={profileBio()}
+              onInput={(event) => setProfileBio(event.currentTarget.value)}
+            />
+            <div class={styles.composeAttachments}>
+              <MediaActionButtons
+                actions={[
+                  { icon: '🖼', label: 'Galeria', onClick: attachProfileFromGallery },
+                  { icon: '📷', label: 'Camara', onClick: attachProfileFromCamera },
+                  ...(profileAvatar() ? [{ icon: '✕', label: 'Quitar', onClick: () => setProfileAvatar(''), tone: 'danger' as const }] : []),
+                ]}
+                variant="compact"
+                class={styles.composeMediaButtons}
               />
-              <textarea
-                placeholder="Bio o firma editorial"
-                value={profileBio()}
-                onInput={(event) => setProfileBio(event.currentTarget.value)}
-              />
-              <div class={styles.composeAttachments}>
-                <MediaActionButtons
-                  actions={[
-                    { icon: '🖼', label: 'Galeria', onClick: attachProfileFromGallery },
-                    { icon: '📷', label: 'Camara', onClick: attachProfileFromCamera },
-                    ...(profileAvatar() ? [{ icon: '✕', label: 'Quitar', onClick: () => setProfileAvatar(''), tone: 'danger' as const }] : []),
-                  ]}
-                  variant="compact"
-                  class={styles.composeMediaButtons}
-                />
-                <input type="text" placeholder="URL de avatar" value={profileAvatar()} onInput={(event) => setProfileAvatar(sanitizeMediaUrl(event.currentTarget.value) || '')} />
-              </div>
-              <MediaAttachmentPreview url={profileAvatar()} mediaClass={styles.composePreviewMedia} onOpen={() => setViewerUrl(profileAvatar())} />
-              <div class={styles.actions}>
-                <button onClick={() => setShowProfileModal(false)}>Cancelar</button>
-                <button class={styles.primary} onClick={() => void saveProfile()}>Guardar perfil</button>
-              </div>
+              <input type="text" placeholder="URL de avatar" value={profileAvatar()} onInput={(event) => setProfileAvatar(sanitizeMediaUrl(event.currentTarget.value) || '')} />
             </div>
+            <MediaAttachmentPreview url={profileAvatar()} mediaClass={styles.composePreviewMedia} onOpen={() => setViewerUrl(profileAvatar())} />
+            <ModalActions>
+              <ModalButton label="Cancelar" onClick={() => setShowProfileModal(false)} />
+              <ModalButton label="Guardar perfil" tone="primary" onClick={() => void saveProfile()} />
+            </ModalActions>
           </div>
-        </Show>
+        </Modal>
 
         <Show when={activeLive()}>
           <div class={styles.liveViewer}>

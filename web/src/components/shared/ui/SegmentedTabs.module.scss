@@ -1,0 +1,27 @@
+.root {
+  display: flex;
+  gap: 6px;
+  padding: 6px;
+  border-radius: 18px;
+  background: rgba(118, 118, 128, 0.12);
+  border: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+.tab {
+  flex: 1;
+  min-height: 34px;
+  border: none;
+  border-radius: 12px;
+  background: transparent;
+  color: #6b7280;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 160ms ease, color 160ms ease, box-shadow 160ms ease;
+}
+
+.active {
+  background: #ffffff;
+  color: #111827;
+  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.08);
+}

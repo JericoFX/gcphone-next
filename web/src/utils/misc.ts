@@ -30,7 +30,11 @@ export const getBestFontColor = (bgColor: string): string => {
   return brightness > 128 ? '#000000' : '#FFFFFF';
 };
 
-export const formatPhoneNumber = (phone: string): string => {
+export const formatPhoneNumber = (phone: string, framework: 'esx' | 'qbcore' | 'qbox' | 'unknown' = 'unknown'): string => {
+  if (framework === 'qbcore' || framework === 'qbox') {
+    return phone;
+  }
+
   const cleaned = phone.replace(/\D/g, '');
   if (cleaned.length === 7) {
     return `${cleaned.slice(0, 3)}-${cleaned.slice(3)}`;

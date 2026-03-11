@@ -1,0 +1,26 @@
+.root {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 14px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 248, 252, 0.98));
+  border: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+.root strong {
+  font-size: 14px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.root span {
+  font-size: 12px;
+  line-height: 1.45;
+  color: #6b7280;
+}
+
+.warm {
+  background: linear-gradient(180deg, #ffffff, #fff8ef);
+  border-color: rgba(255, 149, 0, 0.14);
+}

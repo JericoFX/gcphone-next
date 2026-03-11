@@ -1,15 +1,20 @@
 import { For, Show, createEffect, createSignal } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { fetchNui } from '../../../utils/fetchNui';
-import { timeAgo } from '../../../utils/misc';
+import { formatPhoneNumber, timeAgo } from '../../../utils/misc';
 import { sanitizeMediaUrl, sanitizeText } from '../../../utils/sanitize';
 import { uiConfirm } from '../../../utils/uiDialog';
 import { uiAlert } from '../../../utils/uiAlert';
 import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
+import { usePhone } from '../../../store/phone';
 import { AppScaffold } from '../../shared/layout';
 import { useAppCache } from '../../../hooks';
 import { MediaLightbox } from '../../shared/ui/MediaLightbox';
 import { EmptyState } from '../../shared/ui/EmptyState';
+import { InlineNotice } from '../../shared/ui/InlineNotice';
+import { SearchInput } from '../../shared/ui/SearchInput';
+import { SegmentedTabs } from '../../shared/ui/SegmentedTabs';
+import { SheetIntro } from '../../shared/ui/SheetIntro';
 import { FormRow, FormSection, Modal, ModalActions, ModalButton } from '../../shared/ui/Modal';
 import styles from './YellowPagesApp.module.scss';
 
@@ -64,6 +69,7 @@ interface SellerInfo {
 export function YellowPagesApp() {
   const router = useRouter();
   const cache = useAppCache('yellowpages');
+  const [phoneState] = usePhone();
 
   // Data
   const [listings, setListings] = createSignal<Listing[]>([]);
@@ -88,6 +94,11 @@ export function YellowPagesApp() {
   const [price, setPrice] = createSignal('');
   const [composerCategory, setComposerCategory] = createSignal('items');
   const [photos, setPhotos] = createSignal<string[]>([]);
+  const isReadOnly = () => phoneState.accessMode === 'foreign-readonly';
+  const tabs = [
+    { id: 'all', label: 'Explorar' },
+    { id: 'my', label: 'Mis anuncios' },
+  ];
 
   const loadCategories = async () => {
     const cats = await fetchNui<Category[]>('yellowpagesGetCategories', {}, []);
@@ -196,6 +207,7 @@ export function YellowPagesApp() {
   };
 
   const publish = async () => {
+    if (isReadOnly()) return;
     const payload = {
       title: sanitizeText(title(), 100),
       description: sanitizeText(description(), 1000),
@@ -255,15 +267,19 @@ export function YellowPagesApp() {
   return (
     <AppScaffold title="Paginas Amarillas" subtitle="Compra, vende, conecta" onBack={() => router.goBack()} bodyClass={styles.body}>
       <div class={styles.yellowpagesApp}>
+        <Show when={isReadOnly()}>
+          <InlineNotice title="Solo lectura" message={`Estas viendo los anuncios de ${phoneState.accessOwnerName || 'otra persona'}.`} />
+        </Show>
+
         {/* Header with Search */}
         <div class={styles.header}>
           <div class={styles.searchBar}>
-            <input
-              type="text"
-              placeholder="Buscar anuncios..."
+            <SearchInput
               value={searchQuery()}
-              onInput={(e) => setSearchQuery(e.currentTarget.value)}
-              onKeyDown={(e) => e.key === 'Enter' && loadListings()}
+              onInput={setSearchQuery}
+              placeholder="Buscar anuncios..."
+              class={styles.searchInputRoot}
+              inputClass={styles.searchInput}
             />
             <button class={styles.searchBtn} onClick={() => loadListings()}>
               <img src="./img/icons_ios/ui-search.svg" alt="" />
@@ -289,20 +305,7 @@ export function YellowPagesApp() {
 
         {/* Tabs */}
         <div class={styles.tabs}>
-          <button
-            class={styles.tabBtn}
-            classList={{ [styles.active]: currentTab() === 'all' }}
-            onClick={() => setCurrentTab('all')}
-          >
-            Todos
-          </button>
-          <button
-            class={styles.tabBtn}
-            classList={{ [styles.active]: currentTab() === 'my' }}
-            onClick={() => setCurrentTab('my')}
-          >
-            Mis Anuncios
-          </button>
+          <SegmentedTabs items={tabs} active={currentTab()} onChange={(id) => setCurrentTab(id as 'all' | 'my')} />
         </div>
 
         {/* Listings */}
@@ -355,9 +358,11 @@ export function YellowPagesApp() {
         </div>
 
         {/* FAB */}
-        <button class={styles.fab} onClick={() => setShowComposer(true)}>
-          <span>+</span>
-        </button>
+        <Show when={!isReadOnly()}>
+          <button class={styles.fab} onClick={() => setShowComposer(true)}>
+            <span>+</span>
+          </button>
+        </Show>
 
         {/* Listing Detail Modal */}
         <Show when={selectedListing()}>
@@ -413,7 +418,7 @@ export function YellowPagesApp() {
                     </div>
                     <div class={styles.sellerInfo}>
                       <strong>{sellerInfo().seller_name || 'Vendedor'}</strong>
-                      <span class={styles.metaWithIcon}><img src="./img/icons_ios/ui-phone.svg" alt="" /> {sellerInfo().phone_number || 'Sin telefono'}</span>
+                      <span class={styles.metaWithIcon}><img src="./img/icons_ios/ui-phone.svg" alt="" /> {sellerInfo().phone_number ? formatPhoneNumber(sellerInfo().phone_number, phoneState.framework || 'unknown') : 'Sin telefono'}</span>
                     </div>
                   </div>
                 </div>
@@ -456,7 +461,7 @@ export function YellowPagesApp() {
               <span class={styles.contactIcon}><img src="./img/icons_ios/ui-phone.svg" alt="" /></span>
               <div class={styles.contactInfo}>
                 <strong>Llamar</strong>
-                <span>{sellerInfo()?.phone_number}</span>
+                <span>{sellerInfo()?.phone_number ? formatPhoneNumber(sellerInfo()!.phone_number, phoneState.framework || 'unknown') : 'Sin telefono'}</span>
               </div>
             </button>
             
@@ -482,6 +487,7 @@ export function YellowPagesApp() {
           size="md"
         >
           <div class={styles.composerContent}>
+            <SheetIntro title="Publica tu anuncio" description="Completa lo esencial y agrega hasta 5 fotos para que el aviso se vea limpio en el feed." tone="warm" />
             <FormSection class={styles.formField} label="Titulo *">
               <input
                 type="text"

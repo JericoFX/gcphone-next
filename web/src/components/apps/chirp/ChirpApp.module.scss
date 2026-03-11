@@ -1,54 +1,25 @@
 .body {
   display: flex;
   flex-direction: column;
-  background: #f5f5f7;
+  background:
+    radial-gradient(120% 90% at 0% -10%, rgba(10, 132, 255, 0.08), transparent 52%),
+    radial-gradient(120% 90% at 100% 0%, rgba(90, 200, 250, 0.12), transparent 46%),
+    linear-gradient(180deg, #f8fbff 0%, #eef4fb 100%);
 }
 
 // Header & Tabs
 .headerSection {
-  background: #ffffff;
-  border-bottom: 1px solid #e5e5ea;
+  background: rgba(255, 255, 255, 0.84);
+  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
   padding: 0;
   position: sticky;
   top: 0;
   z-index: 10;
+  backdrop-filter: blur(18px);
 }
 
 .tabs {
-  display: flex;
-  border-bottom: 1px solid #e5e5ea;
-}
-
-.tabBtn {
-  flex: 1;
-  padding: 14px 8px;
-  border: none;
-  background: transparent;
-  color: #8e8e93;
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background-color 150ms ease, color 150ms ease;
-  position: relative;
-  
-  &:hover {
-    background: rgba(0, 0, 0, 0.02);
-  }
-  
-  &.active {
-    color: #1a1a1a;
-    
-    &::after {
-      content: '';
-      position: absolute;
-      bottom: 0;
-      left: 20%;
-      right: 20%;
-      height: 3px;
-      background: #007aff;
-      border-radius: 2px;
-    }
-  }
+  padding: 10px 12px 0;
 }
 
 // List View
@@ -85,17 +56,17 @@
 
 // Tweet Card
 .tweetCard {
-  background: #ffffff;
-  border: 1px solid #e5e5ea;
-  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  border-radius: 16px;
   padding: 14px;
   margin-bottom: 10px;
   cursor: pointer;
   transition: background-color 150ms ease, border-color 150ms ease;
   
   &:hover {
-    background: #fafafa;
-    border-color: #d1d1d6;
+    background: #fbfcff;
+    border-color: rgba(10, 132, 255, 0.16);
   }
   
   &:active {
@@ -256,6 +227,16 @@
   }
 }
 
+.statusBanner {
+  margin: 8px 12px 0;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(255, 159, 10, 0.12);
+  border: 1px solid rgba(255, 159, 10, 0.18);
+  color: #7a4a00;
+  font-size: 12px;
+}
+
 // Detail View
 .detailView {
   flex: 1;
@@ -265,8 +246,8 @@
 }
 
 .detailHeader {
-  background: #ffffff;
-  border-bottom: 1px solid #e5e5ea;
+  background: rgba(255, 255, 255, 0.92);
+  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
   padding: 12px 16px;
   display: flex;
   align-items: center;
@@ -306,9 +287,9 @@
 }
 
 .detailTweet {
-  background: #ffffff;
+  background: rgba(255, 255, 255, 0.96);
   padding: 16px;
-  border-bottom: 1px solid #e5e5ea;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
 }
 
 .detailText {
@@ -344,7 +325,7 @@
 
 // Comments Section
 .commentsSection {
-  background: #f5f5f7;
+  background: linear-gradient(180deg, #f8fbff 0%, #eef4fb 100%);
   padding: 16px;
 }
 
@@ -363,9 +344,9 @@
 }
 
 .commentItem {
-  background: #ffffff;
-  border: 1px solid #e5e5ea;
-  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  border-radius: 16px;
   padding: 14px;
 }
 
@@ -403,9 +384,9 @@
 
 // Comment Composer
 .commentComposer {
-  background: #ffffff;
-  border: 1px solid #e5e5ea;
-  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  border-radius: 16px;
   padding: 12px;
 }
 
@@ -516,9 +497,9 @@
 }
 
 .socialBtn {
-  border: 1px solid #d8e7ff;
-  border-radius: 12px;
-  background: #f5f9ff;
+  border: 1px solid rgba(10, 132, 255, 0.12);
+  border-radius: 14px;
+  background: linear-gradient(180deg, #f8fbff, #eef6ff);
   color: #15406f;
   padding: 10px;
   display: flex;
@@ -530,8 +511,8 @@
   transition: background-color 150ms ease, border-color 150ms ease;
 
   &:hover {
-    background: #ebf3ff;
-    border-color: #bfd9ff;
+    background: linear-gradient(180deg, #f3f9ff, #e8f2ff);
+    border-color: rgba(10, 132, 255, 0.18);
   }
 }
 
@@ -575,9 +556,9 @@
   justify-content: space-between;
   gap: 10px;
   border: 1px solid #e5e7eb;
-  border-radius: 10px;
+  border-radius: 14px;
   padding: 10px;
-  background: #f9fafb;
+  background: linear-gradient(180deg, #ffffff, #f8fafc);
 }
 
 .requestIdentity {
@@ -631,4 +612,8 @@
   margin-top: 8px;
   color: #374151;
   font-size: 13px;
+
+  input {
+    accent-color: #0a84ff;
+  }
 }
