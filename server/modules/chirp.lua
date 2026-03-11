@@ -76,6 +76,18 @@ local function CreateAccount(identifier, username, displayName, avatar)
     return GetAccount(identifier)
 end
 
+local function GetTweetOwner(tweetId)
+    if not tweetId then return nil end
+
+    return MySQL.single.await([[
+        SELECT t.id, t.account_id, a.identifier, a.display_name, a.username
+        FROM phone_chirp_tweets t
+        JOIN phone_chirp_accounts a ON a.id = t.account_id
+        WHERE t.id = ?
+        LIMIT 1
+    ]], { tweetId })
+end
+
 local function GenerateUsername(source)
     local name = GetName(source) or 'User'
     local cleanName = string.lower(string.gsub(name, '%s+', ''))
@@ -199,7 +211,9 @@ lib.callback.register('gcphone:chirp:getTweets', function(source, data)
             SELECT t.*, a.username, a.display_name, a.avatar, a.verified,
                    (SELECT COUNT(*) FROM phone_chirp_comments WHERE tweet_id = t.id) as comments_count,
                    (SELECT COUNT(*) FROM phone_chirp_rechirps WHERE original_tweet_id = t.id) as rechirps_count,
-                   1 as is_own
+                   1 as is_own,
+                   'tweet' as activity_type,
+                   t.created_at as activity_created_at
             FROM phone_chirp_tweets t
             JOIN phone_chirp_accounts a ON t.account_id = a.id
             WHERE t.account_id = ?
@@ -212,7 +226,9 @@ lib.callback.register('gcphone:chirp:getTweets', function(source, data)
             SELECT t.*, a.username, a.display_name, a.avatar, a.verified,
                    (SELECT COUNT(*) FROM phone_chirp_comments WHERE tweet_id = t.id) as comments_count,
                    (SELECT COUNT(*) FROM phone_chirp_rechirps WHERE original_tweet_id = t.id) as rechirps_count,
-                   1 as liked
+                   1 as liked,
+                   'like' as activity_type,
+                   l.created_at as activity_created_at
             FROM phone_chirp_tweets t
             JOIN phone_chirp_accounts a ON t.account_id = a.id
             JOIN phone_chirp_likes l ON l.tweet_id = t.id
@@ -220,14 +236,35 @@ lib.callback.register('gcphone:chirp:getTweets', function(source, data)
             ORDER BY l.created_at DESC
             LIMIT ? OFFSET ?
         ]], { account.id, math.floor(limit / 2), offset }) or {}
+
+        local rechirpedTweets = MySQL.query.await([[
+            SELECT t.*, a.username, a.display_name, a.avatar, a.verified,
+                   (SELECT COUNT(*) FROM phone_chirp_comments WHERE tweet_id = t.id) as comments_count,
+                   (SELECT COUNT(*) FROM phone_chirp_rechirps WHERE original_tweet_id = t.id) as rechirps_count,
+                   'rechirp' as activity_type,
+                   r.created_at as activity_created_at,
+                   ? as activity_actor_display_name
+            FROM phone_chirp_tweets t
+            JOIN phone_chirp_accounts a ON t.account_id = a.id
+            JOIN phone_chirp_rechirps r ON r.original_tweet_id = t.id
+            WHERE r.account_id = ?
+            ORDER BY r.created_at DESC
+            LIMIT ? OFFSET ?
+        ]], { account.display_name or account.username or 'Tu cuenta', account.id, math.floor(limit / 2), offset }) or {}
         
         tweets = myTweets
         for _, tweet in ipairs(likedTweets) do
             tweets[#tweets + 1] = tweet
         end
+        for _, tweet in ipairs(rechirpedTweets) do
+            tweets[#tweets + 1] = tweet
+        end
         
-        -- Sort by created_at
-        table.sort(tweets, function(a, b) return a.created_at > b.created_at end)
+        table.sort(tweets, function(a, b)
+            local aDate = a.activity_created_at or a.created_at or ''
+            local bDate = b.activity_created_at or b.created_at or ''
+            return aDate > bDate
+        end)
     else
         -- For you - all tweets
         local forYouAccountId = account and account.id or 0
@@ -367,10 +404,24 @@ lib.callback.register('gcphone:chirp:toggleRechirp', function(source, data)
         return { rechirped = false }
     else
         -- Create rechirp
+        local tweetOwner = GetTweetOwner(tweetId)
+
         MySQL.insert.await(
             'INSERT INTO phone_chirp_rechirps (original_tweet_id, account_id) VALUES (?, ?)',
             { tweetId, account.id }
         )
+
+        if tweetOwner and tweetOwner.identifier and tweetOwner.identifier ~= identifier then
+            UpsertSocialNotification(
+                tweetOwner.identifier,
+                identifier,
+                'chirp',
+                'mention',
+                tweetId,
+                'tweet',
+                ('%s hizo rechirp de tu chirp'):format(account.display_name or account.username or 'Alguien')
+            )
+        end
         
         return { rechirped = true }
     end
@@ -411,12 +462,6 @@ lib.callback.register('gcphone:chirp:addComment', function(source, data)
         { tweetId, account.id, content }
     )
     
-    -- Update tweet comments count
-    MySQL.update.await(
-        'UPDATE phone_chirp_tweets SET replies = replies + 1 WHERE id = ?',
-        { tweetId }
-    )
-    
     local comment = MySQL.single.await([[
         SELECT c.*, a.username, a.display_name, a.avatar
         FROM phone_chirp_comments c
@@ -449,12 +494,6 @@ lib.callback.register('gcphone:chirp:deleteComment', function(source, data)
     MySQL.execute.await(
         'DELETE FROM phone_chirp_comments WHERE id = ? AND account_id = ?',
         { commentId, account.id }
-    )
-    
-    -- Update tweet comments count
-    MySQL.update.await(
-        'UPDATE phone_chirp_tweets SET replies = GREATEST(0, replies - 1) WHERE id = ?',
-        { comment.tweet_id }
     )
     
     return true
