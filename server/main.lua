@@ -1,5 +1,22 @@
 local Bridge = nil
 
+---@alias GCPhoneNotificationPriority 'low'|'normal'|'high'
+
+---@class GCPhoneNotificationPayload
+---@field id? string Stable notification id. Duplicates are ignored by the web queue.
+---@field appId? string App identifier used for mute filters and app-specific unread state.
+---@field title string Notification title.
+---@field message string Notification message body.
+---@field icon? string Short glyph or icon text rendered in the banner.
+---@field durationMs? integer Auto-dismiss duration in milliseconds. Ignored when sticky is true.
+---@field sticky? boolean Keeps the notification visible until manually dismissed.
+---@field priority? GCPhoneNotificationPriority High bypasses DND/mute filters where supported by the UI.
+---@field route? string Route opened when the user taps the notification.
+---@field data? table<string, any> Optional route payload passed to the app router.
+---@field createdAt? integer Unix ms timestamp used for ordering.
+
+---@alias GCPhoneNotificationTarget integer|integer[]|'-1'|'all'
+
 local function L(key, ...)
     if type(locale) == 'function' then
         local ok, value = pcall(locale, key, ...)
@@ -25,6 +42,8 @@ local function sanitizeText(value, maxLength)
     return text:sub(1, maxLength or 120)
 end
 
+---@param payload GCPhoneNotificationPayload
+---@return GCPhoneNotificationPayload|nil
 local function normalizeNotification(payload)
     if type(payload) ~= 'table' then return nil end
 
@@ -135,6 +154,12 @@ exports('IsPlayerActionAllowed', function(source)
     return bridgeCall('IsPlayerActionAllowed', source)
 end)
 
+---Send an ephemeral phone notification to one or more players.
+---Use `route` + `data` if tapping the notification should open an app.
+---Muted apps and DND are enforced client-side unless the payload uses `priority = 'high'`.
+---@param target GCPhoneNotificationTarget
+---@param payload GCPhoneNotificationPayload
+---@return boolean
 exports('SendPhoneNotification', function(target, payload)
     local notification = normalizeNotification(payload)
     if not notification then return false end

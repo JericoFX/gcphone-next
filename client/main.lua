@@ -6,6 +6,21 @@ PhoneState = {
     airplaneMode = false
 }
 
+---@alias GCPhoneNotificationPriority 'low'|'normal'|'high'
+
+---@class GCPhoneNotificationPayload
+---@field id? string Stable notification id. Duplicates are ignored by the UI queue.
+---@field appId? string App identifier used by mute filters and unread tracking.
+---@field title string Notification title.
+---@field message string Notification message body.
+---@field icon? string Short glyph or icon text rendered in the banner.
+---@field durationMs? integer Auto-dismiss duration in milliseconds. Ignored when sticky is true.
+---@field sticky? boolean Keeps the notification visible until manually dismissed.
+---@field priority? GCPhoneNotificationPriority High bypasses DND/mute filters where supported by the UI.
+---@field route? string Route opened when the user taps the notification.
+---@field data? table<string, any> Optional route payload passed to the app router.
+---@field createdAt? integer Unix ms timestamp used for ordering.
+
 local function CreateNuiAuthToken()
     local now = GetGameTimer() or 0
     local a = math.random(100000, 999999)
@@ -144,6 +159,8 @@ RegisterNUICallback('nuiReady', function(_, cb)
     cb(true)
 end)
 
+---@param payload GCPhoneNotificationPayload
+---@return boolean
 local function PushPhoneNotification(payload)
     if type(payload) ~= 'table' then return false end
     SendNUIMessage({
@@ -165,6 +182,10 @@ exports('IsPhoneOpen', function()
     return PhoneState.isOpen
 end)
 
+---Push a local phone notification directly from client Lua.
+---Use this for client-side only UX. For cross-resource server notifications, prefer `SendPhoneNotification` server export.
+---@param payload GCPhoneNotificationPayload
+---@return boolean
 exports('NotifyPhone', function(payload)
     return PushPhoneNotification(payload)
 end)

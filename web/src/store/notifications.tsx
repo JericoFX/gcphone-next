@@ -86,6 +86,7 @@ function normalizeNotification(payload: Partial<PhoneNotification>): PhoneNotifi
     message,
     icon: sanitizeText(payload.icon || '', 8),
     durationMs: Math.max(1200, Math.min(Number(payload.durationMs || 3200), 12000)),
+    sticky: payload.sticky === true,
     priority: payload.priority === 'high' ? 'high' : payload.priority === 'low' ? 'low' : 'normal',
     route: sanitizeText(payload.route || '', 40) || undefined,
     data: payload.data && typeof payload.data === 'object' ? payload.data : undefined,
@@ -255,6 +256,7 @@ export const NotificationsProvider: ParentComponent = (props) => {
 
     const current = state.current;
     if (!current) return;
+    if (current.sticky) return;
 
     timeoutId = window.setTimeout(() => {
       actions.dismissCurrent();

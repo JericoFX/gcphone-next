@@ -1155,6 +1155,22 @@ const emitPhoneNotification = (payload: Record<string, unknown>) => {
   window.dispatchEvent(new CustomEvent('phone:notification', { detail: payload }));
 };
 
+const emitHiddenMockNotification = (payload?: Partial<Record<string, unknown>>) => {
+  emitMessage('hidePhone');
+  window.setTimeout(() => {
+    emitPhoneNotification({
+      id: `mock-hidden-${Date.now()}-${Math.random()}`,
+      appId: 'chirp',
+      title: 'Chirp',
+      message: 'Maria hizo rechirp de tu chirp.',
+      icon: '↻',
+      durationMs: 4200,
+      priority: 'high',
+      ...(payload || {}),
+    });
+  }, 120);
+};
+
 const chirpCloneTweets = (tab: MockChirpTab) =>
   mockChirpTweetsByTab[tab].map((tweet) => ({ ...tweet }));
 
@@ -1260,18 +1276,39 @@ export function setupBrowserMock() {
       });
     },
     hiddenNotification: () => {
-      emitMessage('hidePhone');
-      window.setTimeout(() => {
-        emitPhoneNotification({
-          id: `mock-hidden-${Date.now()}`,
-          appId: 'chirp',
-          title: 'Chirp',
-          message: 'Maria hizo rechirp de tu chirp.',
-          icon: '↻',
-          durationMs: 4200,
-          priority: 'high',
-        });
-      }, 120);
+      emitHiddenMockNotification();
+    },
+    hiddenNotificationSticky: () => {
+      emitHiddenMockNotification({ sticky: true, durationMs: 3600000 });
+    },
+    hiddenNotificationBurst: () => {
+      emitHiddenMockNotification({
+        title: 'Chirp',
+        message: 'Maria hizo rechirp de tu chirp.',
+        icon: '↻',
+        durationMs: 2600,
+      });
+      window.setTimeout(() => emitHiddenMockNotification({
+        appId: 'messages',
+        title: 'Mensajes',
+        message: 'Nuevo mensaje de Rafa: "Llegamos en 5"',
+        icon: '✉',
+        durationMs: 2400,
+      }), 650);
+      window.setTimeout(() => emitHiddenMockNotification({
+        appId: 'mail',
+        title: 'Mail',
+        message: 'Tienes un correo nuevo de soporte.',
+        icon: '@',
+        durationMs: 2400,
+      }), 1280);
+      window.setTimeout(() => emitHiddenMockNotification({
+        appId: 'bank',
+        title: 'Banco',
+        message: 'Transferencia recibida: $2,500',
+        icon: '$',
+        durationMs: 2600,
+      }), 1910);
     },
     getRealtime: () => readRealtimeConfig(),
     setRealtime: (config: Partial<MockRealtimeConfig>) => {

@@ -10,43 +10,50 @@
 
 .notification-preview-shell {
   position: absolute;
-  right: 14px;
-  bottom: 20px;
-  width: 308px;
-  display: grid;
-  justify-items: end;
-  gap: 8px;
+  right: 0;
+  bottom: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+}
+
+.notification-preview-phone {
+  position: absolute;
+  right: -94px;
+  bottom: -826px;
+  width: var(--phone-shell-width);
+  height: var(--phone-shell-height);
   pointer-events: auto;
+  transform-origin: bottom right;
+  filter: drop-shadow(0 20px 38px rgba(3, 8, 18, 0.42));
 }
 
-.notification-preview-top {
-  position: relative;
-  width: 182px;
-  height: 28px;
-  border-radius: 18px 18px 10px 10px;
-  background: linear-gradient(180deg, #1f2938 0%, #111722 100%);
-  box-shadow: 0 12px 26px rgba(0, 0, 0, 0.42);
-}
-
-.notification-preview-notch {
+.notification-preview-screen {
   position: absolute;
-  top: 8px;
-  left: 50%;
-  width: 74px;
-  height: 7px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.14);
-  transform: translateX(-50%);
+  bottom: var(--phone-screen-bottom);
+  left: var(--phone-screen-left);
+  width: var(--phone-screen-width);
+  height: var(--phone-screen-height);
+  border-radius: var(--phone-screen-radius);
+  overflow: hidden;
+  background:
+    radial-gradient(120% 80% at 50% -10%, rgba(92, 172, 255, 0.22), rgba(92, 172, 255, 0) 48%),
+    linear-gradient(180deg, #0f1724 0%, #0a111b 100%);
 }
 
-.notification-preview-glow {
+.notification-preview-banner-wrap {
   position: absolute;
-  inset: auto 16px -8px 16px;
-  height: 16px;
-  border-radius: 999px;
-  background: radial-gradient(circle, rgba(90, 200, 250, 0.32) 0%, rgba(90, 200, 250, 0) 72%);
+  top: 6px;
+  left: 0;
+  right: 0;
+  z-index: 4;
 }
 
-.notification-preview-card {
-  width: 296px;
+.notification-preview-frame {
+  position: absolute;
+  top: var(--phone-frame-top);
+  left: var(--phone-frame-left);
+  width: var(--phone-frame-width);
+  height: var(--phone-frame-height);
+  pointer-events: none;
 }

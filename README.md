@@ -189,6 +189,95 @@ Notas:
 - usar sanitizacion de input y rate-limit en acciones spameables.
 - mantener error codes estables para debug (`INVALID_PAYLOAD`, `RATE_LIMITED`, etc.).
 
+### Notifications API
+
+El recurso ya expone helpers para mandar notificaciones al telefono desde otros resources.
+
+Comportamiento importante:
+
+- si la notificacion trae `route`, al tocarla abre esa ruta en el telefono.
+- si la app esta silenciada, no aparece salvo que `priority = 'high'`.
+- si `Do Not Disturb` esta activo, no aparece salvo que `priority = 'high'`.
+- si `sticky = true`, no se oculta sola.
+- si no es sticky, usa `durationMs` y luego se descarta automaticamente.
+
+Payload soportado:
+
+- `appId`: id de app (`messages`, `chirp`, `mail`, etc.)
+- `title`: titulo de la notificacion
+- `message`: texto visible
+- `icon`: glifo corto o texto breve
+- `durationMs`: tiempo visible en ms
+- `sticky`: si queda fija hasta cerrar manualmente
+- `priority`: `low` | `normal` | `high`
+- `route`: ruta a abrir al clickear
+- `data`: payload adicional para la ruta
+
+#### Server export
+
+```lua
+exports['gcphone-next']:SendPhoneNotification(source, {
+    appId = 'messages',
+    title = 'Mensajes',
+    message = 'Nuevo mensaje de Rafa',
+    icon = '✉',
+    priority = 'normal',
+    durationMs = 2600,
+    route = 'messages',
+    data = {
+        conversation = '5551234'
+    }
+})
+```
+
+Broadcast:
+
+```lua
+exports['gcphone-next']:SendPhoneNotification(-1, {
+    appId = 'system',
+    title = 'Servidor',
+    message = 'Habra reinicio en 10 minutos',
+    icon = 'i',
+    priority = 'high'
+})
+```
+
+#### Client export
+
+```lua
+exports['gcphone-next']:NotifyPhone({
+    appId = 'chirp',
+    title = 'Chirp',
+    message = 'Maria hizo rechirp de tu chirp.',
+    icon = '↻',
+    priority = 'high',
+    durationMs = 2600,
+    route = 'chirp'
+})
+```
+
+#### Persistent notification
+
+```lua
+exports['gcphone-next']:AddPersistentNotification(identifier, {
+    appId = 'mail',
+    title = 'Mail',
+    message = 'Tienes un correo nuevo pendiente'
+})
+```
+
+#### Browser mock helpers
+
+En browser/devtools puedes probar los banners con:
+
+```js
+window.gcphoneMock.hiddenNotification()
+window.gcphoneMock.hiddenNotificationBurst()
+window.gcphoneMock.hiddenNotificationSticky()
+```
+
+Eso sirve para revisar el estado "telefono guardado" y las transiciones de cola sin entrar al juego.
+
 ### Lluvia de ideas (rendimiento)
 
 - reemplazar `transition: all` restante por transiciones de propiedades especificas (`transform`, `opacity`, `background-color`, etc.).
