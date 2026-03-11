@@ -218,8 +218,22 @@ function GetPhoneFlashlightProfile()
     return GetFlashlightProfilePayload()
 end
 
+---@class GCPhoneFlashlightProfile
+---@field kelvin integer
+---@field lumens integer
+---@field enabled boolean
+
+---Enable or disable the phone flashlight.
+---@param enabled boolean
+---@return boolean
 exports('SetPhoneFlashlightEnabled', SetPhoneFlashlightEnabled)
+
+---Check if the phone flashlight is enabled.
+---@return boolean
 exports('IsPhoneFlashlightEnabled', IsPhoneFlashlightEnabled)
+
+---Get the current flashlight profile used by the phone camera.
+---@return GCPhoneFlashlightProfile
 exports('GetPhoneFlashlightProfile', GetPhoneFlashlightProfile)
 
 RegisterNUICallback('cameraToggleFlashlight', function(data, cb)

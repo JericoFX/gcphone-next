@@ -247,5 +247,10 @@ CreateThread(function()
     end
 end)
 
+---Check whether the local player is currently in a phone call.
+---@return boolean
 exports('IsInCall', function() return inCall end)
+
+---Get the active phone call id for the local player.
+---@return integer|nil
 exports('GetCurrentCallId', function() return currentCallId end)
