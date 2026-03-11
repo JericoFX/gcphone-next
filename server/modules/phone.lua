@@ -97,18 +97,18 @@ end
 local function DefaultToneId(category)
     local defaults = NativeAudioDefaults()
     if category == 'ringtone' then
-        return defaults.ringtone or 'call_main_01'
+        return defaults.ringtone or 'call_1'
     end
     if category == 'notification' then
-        return defaults.notification or 'notif_soft_01'
+        return defaults.notification or 'notif_1'
     end
     if category == 'message' then
-        return defaults.message or 'msg_soft_01'
+        return defaults.message or 'msg_1'
     end
     if category == 'vibrate' then
         return defaults.vibrate or 'buzz_short_01'
     end
-    return defaults.ringtone or 'call_main_01'
+    return defaults.ringtone or 'call_1'
 end
 
 local function ResolveToneId(value, category)

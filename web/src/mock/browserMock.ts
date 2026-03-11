@@ -575,10 +575,10 @@ const openRealtimePanel = () => {
 const state: BrowserMockState = {
   phoneNumber: '555-1234',
   wallpaper: './img/background/back001.jpg',
-  ringtone: 'call_main_01',
-  callRingtone: 'call_main_01',
-  notificationTone: 'notif_soft_01',
-  messageTone: 'msg_soft_01',
+  ringtone: 'call_1',
+  callRingtone: 'call_1',
+  notificationTone: 'notif_1',
+  messageTone: 'msg_1',
   volume: 0.5,
   lockCode: '1234',
   theme: 'light',
@@ -720,10 +720,10 @@ const phonePayload = () => ({
 
 const resetMockPhoneData = () => {
   state.wallpaper = './img/background/back001.jpg';
-  state.ringtone = 'call_main_01';
-  state.callRingtone = 'call_main_01';
-  state.notificationTone = 'notif_soft_01';
-  state.messageTone = 'msg_soft_01';
+  state.ringtone = 'call_1';
+  state.callRingtone = 'call_1';
+  state.notificationTone = 'notif_1';
+  state.messageTone = 'msg_1';
   state.volume = 0.5;
   state.lockCode = '0000';
   state.theme = 'light';

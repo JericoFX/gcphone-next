@@ -10,33 +10,8 @@ import { InlineNotice } from '../../shared/ui/InlineNotice';
 import { SectionGroup, SectionHeader } from '../../shared/ui/SectionBlock';
 import { appName, t } from '../../../i18n';
 import { uiConfirm } from '../../../utils/uiDialog';
+import { FALLBACK_AUDIO_CATALOG, type PhoneToneCatalog, type ToneCategory } from '../../../utils/phoneAudio';
 import styles from './SettingsApp.module.scss';
-
-interface ToneItem {
-  id: string;
-  name: string;
-  category?: string;
-  sourceMp3?: string;
-  native?: {
-    soundName?: string;
-    bank?: string;
-    soundSet?: string;
-  };
-}
-
-interface ToneCatalog {
-  source?: {
-    name?: string;
-    license?: string;
-    licenseUrl?: string;
-    downloadPage?: string;
-  };
-  categories?: {
-    ringtones?: ToneItem[];
-    notifications?: ToneItem[];
-    messages?: ToneItem[];
-  };
-}
 
 type SettingsSection = 'main' | 'appearance' | 'sound' | 'security' | 'notifications' | 'system' | 'about';
 
@@ -53,27 +28,6 @@ const wallpapers = [
   './img/background/playa.jpg',
   './img/background/tokio.jpg',
 ];
-
-const fallbackCatalog: ToneCatalog = {
-  source: {
-    name: 'Pixabay Sound Effects',
-    license: 'Pixabay Content License',
-    licenseUrl: 'https://pixabay.com/service/license-summary/',
-    downloadPage: 'https://pixabay.com/sound-effects/',
-  },
-  categories: {
-    ringtones: [
-      { id: 'call_main_01', name: 'Call Main 01', category: 'ringtone', sourceMp3: 'audio_sources/ringtones/call_main_01.mp3', native: { soundName: 'call_main_01', bank: '', soundSet: '' } },
-      { id: 'call_alt_01', name: 'Call Alt 01', category: 'ringtone', sourceMp3: 'audio_sources/ringtones/call_alt_01.mp3', native: { soundName: 'call_alt_01', bank: '', soundSet: '' } },
-    ],
-    notifications: [
-      { id: 'notif_soft_01', name: 'Notif Soft 01', category: 'notification', sourceMp3: 'audio_sources/notifications/notif_soft_01.mp3', native: { soundName: 'notif_soft_01', bank: '', soundSet: '' } },
-    ],
-    messages: [
-      { id: 'msg_soft_01', name: 'Msg Soft 01', category: 'message', sourceMp3: 'audio_sources/messages/msg_soft_01.mp3', native: { soundName: 'msg_soft_01', bank: '', soundSet: '' } },
-    ],
-  },
-};
 
 const languages = [
   { code: 'es', name: 'Español', flag: '🇪🇸' },
@@ -100,7 +54,7 @@ export function SettingsApp() {
   const [pinCode, setPinCode] = createSignal('');
   const [pinConfirm, setPinConfirm] = createSignal('');
   const [status, setStatus] = createSignal<{ type: 'ok' | 'error'; text: string } | null>(null);
-  const [toneCatalog, setToneCatalog] = createSignal<ToneCatalog>(fallbackCatalog);
+  const [toneCatalog, setToneCatalog] = createSignal<PhoneToneCatalog>(FALLBACK_AUDIO_CATALOG);
   const [previewToneId, setPreviewToneId] = createSignal<string | null>(null);
   const [liveLocationEnabled, setLiveLocationEnabled] = createSignal(false);
   const [liveLocationInterval, setLiveLocationInterval] = createSignal<10>(10);
@@ -123,18 +77,19 @@ export function SettingsApp() {
     try {
       const response = await fetch('./audio/catalog.json');
       if (response.ok) {
-        const payload = await response.json() as ToneCatalog;
+        const payload = await response.json() as PhoneToneCatalog;
         setToneCatalog({
-          source: payload.source || fallbackCatalog.source,
+          source: payload.source || FALLBACK_AUDIO_CATALOG.source,
           categories: {
-            ringtones: payload.categories?.ringtones?.length ? payload.categories.ringtones : fallbackCatalog.categories?.ringtones,
-            notifications: payload.categories?.notifications?.length ? payload.categories.notifications : fallbackCatalog.categories?.notifications,
-            messages: payload.categories?.messages?.length ? payload.categories.messages : fallbackCatalog.categories?.messages,
+            ringtones: payload.categories?.ringtones?.length ? payload.categories.ringtones : FALLBACK_AUDIO_CATALOG.categories.ringtones,
+            notifications: payload.categories?.notifications?.length ? payload.categories.notifications : FALLBACK_AUDIO_CATALOG.categories.notifications,
+            messages: payload.categories?.messages?.length ? payload.categories.messages : FALLBACK_AUDIO_CATALOG.categories.messages,
+            calling: payload.categories?.calling?.length ? payload.categories.calling : FALLBACK_AUDIO_CATALOG.categories.calling,
           },
         });
       }
     } catch (_err) {
-      setToneCatalog(fallbackCatalog);
+      setToneCatalog(FALLBACK_AUDIO_CATALOG);
     }
 
     const persisted = window.localStorage.getItem('gcphone:liveLocationInterval');
@@ -148,7 +103,7 @@ export function SettingsApp() {
   });
 
   onCleanup(() => {
-    void fetchNui('stopNativeTonePreview', {}, true);
+    window.dispatchEvent(new CustomEvent('gcphone:stopTonePreview'));
   });
 
   const updateLiveLocationInterval = async (seconds: 10) => {
@@ -276,18 +231,20 @@ export function SettingsApp() {
 
   const getCurrentPin = () => pinStep() === 1 ? pinCode() : pinConfirm();
 
-  const playRingtonePreview = async (ringtoneId: string) => {
+  const playRingtonePreview = (ringtoneId: string, category: ToneCategory) => {
     if (previewToneId() === ringtoneId) {
       setPreviewToneId(null);
-      await fetchNui('stopNativeTonePreview', {}, true);
+      window.dispatchEvent(new CustomEvent('gcphone:stopTonePreview'));
       return;
     }
 
     setPreviewToneId(ringtoneId);
-    const result = await fetchNui<{ success?: boolean }>('previewNativeTone', { toneId: ringtoneId }, { success: false });
-    if (!result?.success) {
-      setPreviewToneId(null);
-    }
+    window.dispatchEvent(new CustomEvent('gcphone:previewTone', {
+      detail: {
+        toneId: ringtoneId,
+        category,
+      },
+    }));
   };
 
   // Cell component helper
@@ -573,7 +530,7 @@ export function SettingsApp() {
               <div class={styles.ringtoneActions}>
                 <button
                   class={styles.previewBtn}
-                  onClick={() => playRingtonePreview(ringtone.id)}
+                  onClick={() => playRingtonePreview(ringtone.id, 'ringtone')}
                   title="Escuchar"
                 >
                   {previewToneId() === ringtone.id ? '⏹️' : '▶️'}
@@ -600,7 +557,7 @@ export function SettingsApp() {
                 <span class={styles.ringtoneName}>{tone.name}</span>
               </div>
               <div class={styles.ringtoneActions}>
-                <button class={styles.previewBtn} onClick={() => playRingtonePreview(tone.id)} title="Escuchar">
+                <button class={styles.previewBtn} onClick={() => playRingtonePreview(tone.id, 'notification')} title="Escuchar">
                   {previewToneId() === tone.id ? '⏹️' : '▶️'}
                 </button>
                 <button
@@ -625,7 +582,7 @@ export function SettingsApp() {
                 <span class={styles.ringtoneName}>{tone.name}</span>
               </div>
               <div class={styles.ringtoneActions}>
-                <button class={styles.previewBtn} onClick={() => playRingtonePreview(tone.id)} title="Escuchar">
+                <button class={styles.previewBtn} onClick={() => playRingtonePreview(tone.id, 'message')} title="Escuchar">
                   {previewToneId() === tone.id ? '⏹️' : '▶️'}
                 </button>
                 <button

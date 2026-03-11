@@ -5,6 +5,7 @@ import { LockScreen } from './components/LockScreen/LockScreen';
 import { PhoneSetup } from './components/Setup/PhoneSetup';
 import { ContactRequestNotification } from './components/shared/ContactRequest/ContactRequest';
 import { PhoneNotificationBanner } from './components/shared/notifications/PhoneNotificationBanner';
+import { PhoneAudioController } from './components/system/PhoneAudioController';
 import { fetchNui } from './utils/fetchNui';
 import { setNuiAuthToken } from './utils/fetchNui';
 import { isEnvBrowser } from './utils/misc';
@@ -193,6 +194,7 @@ export function App() {
       <NotificationsProvider>
         <ContactsProvider>
           <MessagesProvider>
+            <PhoneAudioController />
             <PhoneContent />
           </MessagesProvider>
         </ContactsProvider>

@@ -77,7 +77,7 @@ end
 
 local function ResolveToneId(value)
     if type(value) ~= 'string' then
-        return NativeAudioDefaults().ringtone or 'call_main_01'
+        return NativeAudioDefaults().ringtone or 'call_1'
     end
 
     local toneId = value:gsub('[^%w%._%-]', ''):sub(1, 64)
@@ -92,7 +92,7 @@ local function ResolveToneId(value)
         return mapped
     end
 
-    return NativeAudioDefaults().ringtone or 'call_main_01'
+    return NativeAudioDefaults().ringtone or 'call_1'
 end
 
 local function BuildIncomingCallAudioState(targetSource, callId, fromNumber)
