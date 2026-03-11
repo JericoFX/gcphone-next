@@ -7,13 +7,14 @@ import { fetchNui } from '../../../utils/fetchNui';
 import { sanitizePhone } from '../../../utils/sanitize';
 import { buildSharedContactMessage } from '../../../utils/contactShare';
 import { uiPrompt } from '../../../utils/uiDialog';
-import { formatPhoneNumber, generateColorForString, getBestFontColor } from '../../../utils/misc';
+import { formatPhoneNumber, generateColorForString } from '../../../utils/misc';
 import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { AppScaffold } from '../../shared/layout';
 import { ActionSheet } from '../../shared/ui/ActionSheet';
 import { InlineNotice } from '../../shared/ui/InlineNotice';
 import { SearchInput } from '../../shared/ui/SearchInput';
 import { ScreenState } from '../../shared/ui/ScreenState';
+import { LetterAvatar } from '../../shared/ui/LetterAvatar';
 import { SkeletonList } from '../../shared/ui/SkeletonList';
 import styles from './ContactsApp.module.scss';
 
@@ -229,15 +230,7 @@ export function ContactsApp() {
                     classList={{ [styles.selected]: selectedIndex() === index() + 1 }}
                     onClick={() => handleSelect(contact)}
                   >
-                <div 
-                  class={styles.avatar}
-                  style={{ 
-                    'background-color': generateColorForString(contact.number),
-                    color: getBestFontColor(generateColorForString(contact.number))
-                  }}
-                >
-                {contact.display.charAt(0).toUpperCase()}
-              </div>
+                <LetterAvatar class={styles.avatar} color={generateColorForString(contact.number)} label={contact.display} />
               <div class={styles.info}>
                 <span class={styles.name}>{contact.display}</span>
                 <span class={styles.number}>{formatPhoneNumber(contact.number, phoneState.framework || 'unknown')}</span>

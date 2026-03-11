@@ -1,10 +1,13 @@
 import { createSignal, Show, onCleanup } from 'solid-js';
+import { usePhoneState } from '../../../store/phone';
 import { useNuiCustomEvent } from '../../../utils/useNui';
 import { fetchNui } from '../../../utils/fetchNui';
+import { formatPhoneNumber } from '../../../utils/misc';
 import type { ContactRequest, FriendRequest, SharedLocation } from '../../../types';
 import styles from './ContactRequest.module.scss';
 
 export function ContactRequestNotification() {
+  const phoneState = usePhoneState();
   const [contactRequest, setContactRequest] = createSignal<ContactRequest | null>(null);
   const [friendRequest, setFriendRequest] = createSignal<FriendRequest | null>(null);
   const [sharedLocation, setSharedLocation] = createSignal<SharedLocation | null>(null);
@@ -74,7 +77,7 @@ export function ContactRequestNotification() {
               <div class={styles.message}>{request().fromPlayer} quiere compartir un contacto</div>
               <div class={styles.contact}>
                 <strong>{request().contact.display}</strong>
-                <span>{request().contact.number}</span>
+                <span>{formatPhoneNumber(request().contact.number, phoneState.framework || 'unknown')}</span>
               </div>
             </div>
             <div class={styles.actions}>

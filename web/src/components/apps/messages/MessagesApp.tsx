@@ -12,6 +12,7 @@ import { uiPrompt } from '../../../utils/uiDialog';
 import { uiAlert } from '../../../utils/uiAlert';
 import { ActionSheet } from '../../shared/ui/ActionSheet';
 import { InlineNotice } from '../../shared/ui/InlineNotice';
+import { LetterAvatar } from '../../shared/ui/LetterAvatar';
 import { MediaLightbox } from '../../shared/ui/MediaLightbox';
 import { SkeletonList } from '../../shared/ui/SkeletonList';
 import { VirtualList } from '../../shared/ui/VirtualList';
@@ -305,9 +306,7 @@ export function MessagesApp() {
                         classList={{ [styles.selected]: isSelectedConversationIndex(index()) }}
                         onClick={() => openConversation(convo.number, convo.display)}
                       >
-                        <div class={styles.avatar} style={{ 'background-color': generateColorForString(convo.number) }}>
-                          {convo.display.charAt(0).toUpperCase()}
-                        </div>
+                      <LetterAvatar class={styles.avatar} color={generateColorForString(convo.number)} label={convo.display} />
                         <div class={styles.info}>
                           <div class={styles.topRow}>
                             <span class={styles.name}>{convo.display}</span>
