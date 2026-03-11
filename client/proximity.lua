@@ -15,23 +15,18 @@ local function GetNearbyPlayers(maxDistance)
     local ped = cache.ped
     local coords = GetEntityCoords(ped)
     local nearbyPlayers = {}
-    
-    for _, player in ipairs(GetActivePlayers()) do
-        if player ~= PlayerId() then
-            local targetPed = GetPlayerPed(player)
-            local targetCoords = GetEntityCoords(targetPed)
-            local distance = #(coords - targetCoords)
-            
-            if distance <= maxDistance then
-                nearbyPlayers[#nearbyPlayers + 1] = {
-                    serverId = GetPlayerServerId(player),
-                    ped = targetPed,
-                    distance = distance
-                }
-            end
-        end
+
+    -- Verified: Context7 /communityox/ox_lib exposes lib.getNearbyPlayers(coords, radius, includePlayer) returning id/ped/coords entries.
+    local players = lib.getNearbyPlayers(coords, maxDistance, false)
+    for i = 1, #players do
+        local player = players[i]
+        nearbyPlayers[#nearbyPlayers + 1] = {
+            serverId = GetPlayerServerId(player.id),
+            ped = player.ped,
+            distance = #(coords - player.coords)
+        }
     end
-    
+
     return nearbyPlayers
 end
 
