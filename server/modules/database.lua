@@ -1310,6 +1310,19 @@ local MIGRATIONS = {
             [[CREATE INDEX IF NOT EXISTS `idx_phone_numbers_stolen_number`
                 ON `phone_numbers` (`phone_number`, `is_stolen`)]]
         }
+    },
+
+    {
+        version = 17,
+        name = "chirp_rechirp_comments",
+        description = "Allow optional comment text on rechirps",
+        statements = {
+            [[ALTER TABLE `phone_chirp_rechirps`
+                ADD COLUMN IF NOT EXISTS `content` VARCHAR(280) DEFAULT NULL AFTER `account_id`]],
+
+            [[CREATE INDEX IF NOT EXISTS `idx_chirp_rechirps_created_content`
+                ON `phone_chirp_rechirps` (`created_at`, `account_id`)]]
+        }
     }
 }
 

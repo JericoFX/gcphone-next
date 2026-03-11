@@ -146,6 +146,42 @@
   word-wrap: break-word;
 }
 
+.quoteCard {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 12px;
+  border-radius: 14px;
+  background: rgba(247, 250, 255, 0.95);
+  border: 1px solid rgba(10, 132, 255, 0.12);
+}
+
+.quoteHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  strong {
+    font-size: 13px;
+    font-weight: 700;
+    color: #111827;
+  }
+}
+
+.quoteContent {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.45;
+  color: #374151;
+}
+
+.quoteMedia {
+  width: 100%;
+  max-height: 220px;
+  border-radius: 12px;
+  object-fit: cover;
+}
+
 .tweetMedia {
   width: 100%;
   max-height: 300px;
