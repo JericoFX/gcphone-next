@@ -1984,6 +1984,7 @@ export async function handleBrowserNui<T = unknown>(eventName: string, data?: un
     const wasRechirped = tweet.rechirped === true;
     const nextRechirped = !wasRechirped;
     const rechirps = Number(tweet.rechirps || 0) + (nextRechirped ? 1 : -1);
+    const content = String(payload.content || '').trim();
     tweet.rechirped = nextRechirped;
     tweet.rechirps = rechirps < 0 ? 0 : rechirps;
 
@@ -1995,6 +1996,13 @@ export async function handleBrowserNui<T = unknown>(eventName: string, data?: un
           activity_type: 'rechirp',
           activity_created_at: nowIso(),
           activity_actor_display_name: 'Mock User',
+          activity_actor_username: 'mockuser',
+          original_tweet_id: Number(tweet.id),
+          original_content: String(tweet.content || ''),
+          original_media_url: typeof tweet.media_url === 'string' ? tweet.media_url : undefined,
+          original_username: String(tweet.username || 'user'),
+          original_display_name: String(tweet.display_name || 'Usuario'),
+          rechirp_comment: content || undefined,
         });
       }
     } else {

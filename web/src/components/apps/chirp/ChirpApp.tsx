@@ -39,6 +39,15 @@ interface ChirpTweet {
   activity_type?: 'tweet' | 'like' | 'rechirp';
   activity_created_at?: string;
   activity_actor_display_name?: string;
+  activity_actor_username?: string;
+  original_tweet_id?: number;
+  original_content?: string;
+  original_media_url?: string;
+  original_username?: string;
+  original_display_name?: string;
+  original_avatar?: string;
+  original_verified?: boolean;
+  rechirp_comment?: string;
 }
 
 interface ChirpComment {
@@ -106,6 +115,9 @@ export function ChirpApp() {
   const [deleteTweetId, setDeleteTweetId] = createSignal<number | null>(null);
   const [deleteCommentId, setDeleteCommentId] = createSignal<number | null>(null);
   const [showAttachUrlModal, setShowAttachUrlModal] = createSignal(false);
+  const [showRechirpModal, setShowRechirpModal] = createSignal(false);
+  const [rechirpTarget, setRechirpTarget] = createSignal<ChirpTweet | null>(null);
+  const [rechirpComment, setRechirpComment] = createSignal('');
   const [attachUrlInput, setAttachUrlInput] = createSignal('');
   const [showProfileModal, setShowProfileModal] = createSignal(false);
   const [showRequestsModal, setShowRequestsModal] = createSignal(false);
@@ -244,6 +256,12 @@ export function ChirpApp() {
         setShowAttachUrlModal(false);
         return;
       }
+      if (showRechirpModal()) {
+        setShowRechirpModal(false);
+        setRechirpTarget(null);
+        setRechirpComment('');
+        return;
+      }
       if (deleteTweetId() !== null) {
         setDeleteTweetId(null);
         return;
@@ -281,17 +299,21 @@ export function ChirpApp() {
   const openTweetDetail = async (tweet: ChirpTweet) => {
     setSelectedTweet(normalizeTweet(tweet));
     setViewMode('detail');
+    const targetTweetId = Number(tweet.original_tweet_id || tweet.id);
     
-    const cacheKey = `comments:${tweet.id}`;
+    const cacheKey = `comments:${targetTweetId}`;
     const cached = cache.get<ChirpComment[]>(cacheKey);
-    const list = cached ?? await fetchNui<ChirpComment[]>('chirpGetComments', { tweetId: tweet.id }, []);
+    const list = cached ?? await fetchNui<ChirpComment[]>('chirpGetComments', { tweetId: targetTweetId }, []);
     
     if (!cached) cache.set(cacheKey, list || [], 60000);
     setComments(list || []);
   };
 
-  const toggleLike = async (e: Event, tweetId: number) => {
+  const getActionTweetId = (tweet: ChirpTweet) => Number(tweet.original_tweet_id || tweet.id);
+
+  const toggleLike = async (e: Event, tweet: ChirpTweet) => {
     e.stopPropagation();
+    const tweetId = getActionTweetId(tweet);
     const result = await fetchNui<{ liked?: boolean }>('chirpToggleLike', { tweetId });
     if (result?.liked !== undefined) {
       applyTweetUpdate(tweetId, (tweet) => {
@@ -307,18 +329,18 @@ export function ChirpApp() {
     }
   };
 
-  const toggleRechirp = async (e: Event, tweetId: number) => {
-    e.stopPropagation();
-    const result = await fetchNui<{ rechirped?: boolean }>('chirpToggleRechirp', { tweetId });
+  const submitRechirp = async (tweet: ChirpTweet, content = '') => {
+    const tweetId = getActionTweetId(tweet);
+    const result = await fetchNui<{ rechirped?: boolean }>('chirpToggleRechirp', { tweetId, content: sanitizeText(content, 280) });
     if (result?.rechirped !== undefined) {
       const nextRechirped = result.rechirped === true;
-      applyTweetUpdate(tweetId, (tweet) => {
-        const prevRechirped = tweet.rechirped === true;
+      applyTweetUpdate(tweetId, (entry) => {
+        const prevRechirped = entry.rechirped === true;
         const delta = prevRechirped === nextRechirped ? 0 : nextRechirped ? 1 : -1;
         return {
-          ...tweet,
+          ...entry,
           rechirped: nextRechirped,
-          rechirps: Math.max(0, (tweet.rechirps || 0) + delta),
+          rechirps: Math.max(0, (entry.rechirps || 0) + delta),
         };
       });
 
@@ -326,16 +348,41 @@ export function ChirpApp() {
       notificationsActions.receive({
         appId: 'chirp',
         title: nextRechirped ? 'ReChirp agregado' : 'ReChirp eliminado',
-        message: nextRechirped ? 'Ahora aparece en Actividad.' : 'El chirp ya no aparece como rechirpeado.',
+        message: nextRechirped
+          ? content.trim()
+            ? 'Tu comentario fue publicado junto al ReChirp.'
+            : 'Ahora aparece en Actividad.'
+          : 'El chirp ya no aparece como rechirpeado.',
         icon: '↻',
         durationMs: 2200,
       });
 
       cache.invalidate('tweets:myActivity');
-      if (currentTab() === 'myActivity') {
-        void loadTweets();
+      cache.invalidate('tweets:forYou');
+      cache.invalidate('tweets:following');
+      if (showRechirpModal()) {
+        setShowRechirpModal(false);
+        setRechirpTarget(null);
+        setRechirpComment('');
       }
+      void loadTweets();
     }
+  };
+
+  const openRechirpComposer = (tweet: ChirpTweet) => {
+    setRechirpTarget(tweet);
+    setRechirpComment('');
+    setShowRechirpModal(true);
+  };
+
+  const toggleRechirp = async (e: Event, tweet: ChirpTweet) => {
+    e.stopPropagation();
+    if (tweet.rechirped) {
+      await submitRechirp(tweet);
+      return;
+    }
+
+    openRechirpComposer(tweet);
   };
 
   const publishTweet = async () => {
@@ -372,11 +419,12 @@ export function ChirpApp() {
     if (result?.success && result.comment) {
       setCommentText('');
       setComments(prev => [...prev, result.comment!]);
+      const targetTweetId = getActionTweetId(tweet);
       setTweets(prev => prev.map(t => 
-        t.id === tweet.id ? { ...t, replies: (t.replies || 0) + 1 } : t
+        getActionTweetId(t) === targetTweetId ? { ...t, replies: (t.replies || 0) + 1 } : t
       ));
       setSelectedTweet(prev => prev ? { ...prev, replies: (prev.replies || 0) + 1 } : null);
-      cache.invalidate(`comments:${tweet.id}`);
+      cache.invalidate(`comments:${targetTweetId}`);
     }
   };
 
@@ -411,14 +459,15 @@ export function ChirpApp() {
     
     const tweet = selectedTweet();
     if (tweet) {
+      const targetTweetId = getActionTweetId(tweet);
       setTweets(prev => prev.map(t => 
-        t.id === tweet.id ? { ...t, replies: Math.max(0, (t.replies || 0) - 1) } : t
+        getActionTweetId(t) === targetTweetId ? { ...t, replies: Math.max(0, (t.replies || 0) - 1) } : t
       ));
       setSelectedTweet(prev => prev ? { 
         ...prev, 
         replies: Math.max(0, (prev.replies || 0) - 1) 
       } : null);
-      cache.invalidate(`comments:${tweet.id}`);
+      cache.invalidate(`comments:${targetTweetId}`);
     }
     setDeleteCommentId(null);
   };
@@ -565,7 +614,7 @@ export function ChirpApp() {
         <button
           class={styles.actionBtn}
           classList={{ [styles.active]: tweet.liked }}
-          onClick={(e) => void toggleLike(e, tweet.id)}
+          onClick={(e) => void toggleLike(e, tweet)}
         >
           <span class={styles.icon}>{tweet.liked ? '♥' : '♡'}</span>
           <span class={styles.count}>{tweet.likes || 0}</span>
@@ -574,7 +623,7 @@ export function ChirpApp() {
         <button
           class={styles.actionBtn}
           classList={{ [styles.active]: tweet.rechirped }}
-          onClick={(e) => void toggleRechirp(e, tweet.id)}
+          onClick={(e) => void toggleRechirp(e, tweet)}
         >
           <span class={styles.icon}>↻</span>
           <span class={styles.count}>{tweet.rechirps || 0}</span>
@@ -597,6 +646,8 @@ export function ChirpApp() {
   // Render Tweet Card
   const TweetCard = (props: { tweet: ChirpTweet }) => {
     const tweet = props.tweet;
+    const quotedMedia = () => tweet.original_media_url || tweet.media_url;
+    const quotedContent = () => tweet.original_content || tweet.content;
     const activityLabel = () => {
       if (tweet.activity_type === 'rechirp') {
         return `${tweet.activity_actor_display_name || 'Tu cuenta'} hizo rechirp`;
@@ -630,9 +681,31 @@ export function ChirpApp() {
           </div>
         </div>
         
-        <p class={styles.tweetContent}>{tweet.content}</p>
+        <Show when={tweet.activity_type === 'rechirp' && tweet.rechirp_comment}>
+          <p class={styles.tweetContent}>{tweet.rechirp_comment}</p>
+        </Show>
+        <Show when={tweet.activity_type !== 'rechirp'}>
+          <p class={styles.tweetContent}>{tweet.content}</p>
+        </Show>
         
-        <Show when={tweet.media_url}>
+        <Show when={tweet.activity_type === 'rechirp'}>
+          <div class={styles.quoteCard}>
+            <div class={styles.quoteHeader}>
+              <strong>{tweet.original_display_name || tweet.display_name || 'Usuario'}</strong>
+              <span class={styles.username}>@{tweet.original_username || tweet.username || 'user'}</span>
+            </div>
+            <p class={styles.quoteContent}>{quotedContent()}</p>
+            <Show when={quotedMedia()}>
+              {resolveMediaType(quotedMedia()) === 'image' ? (
+                <img class={styles.quoteMedia} src={quotedMedia()!} alt="" onClick={(e) => { e.stopPropagation(); setViewerUrl(quotedMedia()!); }} />
+              ) : (
+                <video class={styles.quoteMedia} src={quotedMedia()!} controls playsinline preload="metadata" onClick={(e) => e.stopPropagation()} />
+              )}
+            </Show>
+          </div>
+        </Show>
+
+        <Show when={tweet.activity_type !== 'rechirp' && tweet.media_url}>
           {resolveMediaType(tweet.media_url) === 'image' ? (
             <img 
               class={styles.tweetMedia} 
@@ -745,9 +818,41 @@ export function ChirpApp() {
               </div>
             </div>
             
-            <p class={styles.detailText}>{tweet.content}</p>
-            
-            <Show when={tweet.media_url}>
+            <Show when={tweet.activity_type === 'rechirp' && tweet.rechirp_comment}>
+              <p class={styles.detailText}>{tweet.rechirp_comment}</p>
+            </Show>
+            <Show when={tweet.activity_type === 'rechirp'}>
+              <div class={styles.quoteCard}>
+                <div class={styles.quoteHeader}>
+                  <strong>{tweet.original_display_name || tweet.display_name || 'Usuario'}</strong>
+                  <span class={styles.username}>@{tweet.original_username || tweet.username || 'user'}</span>
+                </div>
+                <p class={styles.quoteContent}>{tweet.original_content || tweet.content}</p>
+                <Show when={tweet.original_media_url || tweet.media_url}>
+                  {resolveMediaType(tweet.original_media_url || tweet.media_url) === 'image' ? (
+                    <img
+                      class={styles.quoteMedia}
+                      src={tweet.original_media_url || tweet.media_url}
+                      alt=""
+                      onClick={() => setViewerUrl(tweet.original_media_url || tweet.media_url || null)}
+                    />
+                  ) : (
+                    <video
+                      class={styles.quoteMedia}
+                      src={tweet.original_media_url || tweet.media_url}
+                      controls
+                      playsinline
+                      preload="metadata"
+                    />
+                  )}
+                </Show>
+              </div>
+            </Show>
+            <Show when={tweet.activity_type !== 'rechirp'}>
+              <p class={styles.detailText}>{tweet.content}</p>
+            </Show>
+
+            <Show when={tweet.activity_type !== 'rechirp' && tweet.media_url}>
               {resolveMediaType(tweet.media_url) === 'image' ? (
                 <img 
                   class={styles.detailMedia} 
@@ -767,7 +872,7 @@ export function ChirpApp() {
             </Show>
             
             <div class={styles.detailMeta}>
-              <span>{tweet.created_at ? timeAgo(tweet.created_at) : 'ahora'}</span>
+              <span>{(tweet.activity_created_at || tweet.created_at) ? timeAgo(tweet.activity_created_at || tweet.created_at) : 'ahora'}</span>
             </div>
             
             <div class={styles.detailActions}>
@@ -886,6 +991,33 @@ export function ChirpApp() {
             tone="primary"
             disabled={!composerText().trim() || charCount() > 280 || loading()}
           />
+        </ModalActions>
+      </Modal>
+
+      <Modal
+        open={showRechirpModal()}
+        title="ReChirp"
+        onClose={() => { setShowRechirpModal(false); setRechirpTarget(null); setRechirpComment(''); }}
+        size="md"
+      >
+        <div class={styles.composerContent}>
+          <SheetIntro title="ReChirpear" description="Puedes compartirlo tal cual o agregar una opinion corta como cita." />
+          <FormTextarea label="Comentario opcional" value={rechirpComment()} onChange={(value) => setRechirpComment(sanitizeText(value, 280))} placeholder="Agrega un comentario a tu ReChirp..." rows={4} />
+          <Show when={rechirpTarget()}>
+            {(target) => (
+              <div class={styles.quoteCard}>
+                <div class={styles.quoteHeader}>
+                  <strong>{target().display_name || 'Usuario'}</strong>
+                  <span class={styles.username}>@{target().username || 'user'}</span>
+                </div>
+                <p class={styles.quoteContent}>{target().content}</p>
+              </div>
+            )}
+          </Show>
+        </div>
+        <ModalActions>
+          <ModalButton label="Cancelar" onClick={() => { setShowRechirpModal(false); setRechirpTarget(null); setRechirpComment(''); }} />
+          <ModalButton label="ReChirpear" tone="primary" onClick={() => rechirpTarget() && void submitRechirp(rechirpTarget()!, rechirpComment())} />
         </ModalActions>
       </Modal>
 
