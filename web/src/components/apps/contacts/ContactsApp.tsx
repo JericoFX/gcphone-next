@@ -216,7 +216,7 @@ export function ContactsApp() {
                   classList={{ [styles.selected]: selectedIndex() === 0 }}
                   onClick={openAddForm}
                 >
-                  <div class={styles.avatar} style={{ 'background-color': '#34c759' }}>
+                  <div class={styles.avatar} classList={{ [styles.addAvatar]: true }}>
                     +
                   </div>
                   <span class={styles.name}>Nuevo contacto</span>
