@@ -3,6 +3,7 @@ import { useRouter } from '../../Phone/PhoneFrame';
 import { fetchNui } from '../../../utils/fetchNui';
 import { timeAgo } from '../../../utils/misc';
 import { resolveMediaType, sanitizeMediaUrl, sanitizeText } from '../../../utils/sanitize';
+import { useNotifications } from '../../../store/notifications';
 import { AppFAB, AppScaffold } from '../../shared/layout';
 import { useAppCache } from '../../../hooks';
 import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
@@ -35,6 +36,9 @@ interface ChirpTweet {
   created_at?: string;
   verified?: boolean;
   is_own?: boolean;
+  activity_type?: 'tweet' | 'like' | 'rechirp';
+  activity_created_at?: string;
+  activity_actor_display_name?: string;
 }
 
 interface ChirpComment {
@@ -71,6 +75,7 @@ type TabMode = 'forYou' | 'following' | 'myActivity';
 export function ChirpApp() {
   const router = useRouter();
   const cache = useAppCache('chirp');
+  const [, notificationsActions] = useNotifications();
 
   // View state
   const [currentTab, setCurrentTab] = createSignal<TabMode>('forYou');
@@ -144,9 +149,9 @@ export function ChirpApp() {
   };
 
   const normalizeTweet = (tweet: ChirpTweet): ChirpTweet => {
-    const likes = toCount(tweet.likes ?? tweet.likes_count);
-    const rechirps = toCount(tweet.rechirps ?? tweet.rechirps_count);
-    const replies = toCount(tweet.replies ?? tweet.comments_count);
+    const likes = toCount(tweet.likes_count ?? tweet.likes);
+    const rechirps = toCount(tweet.rechirps_count ?? tweet.rechirps);
+    const replies = toCount(tweet.comments_count ?? tweet.replies);
     return {
       ...tweet,
       likes,
@@ -306,8 +311,8 @@ export function ChirpApp() {
     e.stopPropagation();
     const result = await fetchNui<{ rechirped?: boolean }>('chirpToggleRechirp', { tweetId });
     if (result?.rechirped !== undefined) {
+      const nextRechirped = result.rechirped === true;
       applyTweetUpdate(tweetId, (tweet) => {
-        const nextRechirped = result.rechirped === true;
         const prevRechirped = tweet.rechirped === true;
         const delta = prevRechirped === nextRechirped ? 0 : nextRechirped ? 1 : -1;
         return {
@@ -316,6 +321,20 @@ export function ChirpApp() {
           rechirps: Math.max(0, (tweet.rechirps || 0) + delta),
         };
       });
+
+      setStatusMessage(nextRechirped ? 'ReChirp agregado a tu actividad' : 'ReChirp eliminado');
+      notificationsActions.receive({
+        appId: 'chirp',
+        title: nextRechirped ? 'ReChirp agregado' : 'ReChirp eliminado',
+        message: nextRechirped ? 'Ahora aparece en Actividad.' : 'El chirp ya no aparece como rechirpeado.',
+        icon: '↻',
+        durationMs: 2200,
+      });
+
+      cache.invalidate('tweets:myActivity');
+      if (currentTab() === 'myActivity') {
+        void loadTweets();
+      }
     }
   };
 
@@ -578,8 +597,21 @@ export function ChirpApp() {
   // Render Tweet Card
   const TweetCard = (props: { tweet: ChirpTweet }) => {
     const tweet = props.tweet;
+    const activityLabel = () => {
+      if (tweet.activity_type === 'rechirp') {
+        return `${tweet.activity_actor_display_name || 'Tu cuenta'} hizo rechirp`;
+      }
+      if (tweet.activity_type === 'like') {
+        return 'Te gusto este chirp';
+      }
+      return '';
+    };
+
     return (
       <article class={styles.tweetCard} onClick={() => openTweetDetail(tweet)}>
+        <Show when={activityLabel()}>
+          <div class={styles.activityBanner}>{activityLabel()}</div>
+        </Show>
         <div class={styles.tweetHeader}>
           <div class={styles.avatar}>
             {tweet.avatar ? (
@@ -594,7 +626,7 @@ export function ChirpApp() {
               {tweet.verified && <span class={styles.verified}>✓</span>}
               <span class={styles.username}>@{tweet.username || 'user'}</span>
             </div>
-            <span class={styles.time}>{tweet.created_at ? timeAgo(tweet.created_at) : 'ahora'}</span>
+            <span class={styles.time}>{(tweet.activity_created_at || tweet.created_at) ? timeAgo(tweet.activity_created_at || tweet.created_at) : 'ahora'}</span>
           </div>
         </div>
         

@@ -1151,6 +1151,10 @@ const mockChirpCommentsByTweet: Record<number, Array<Record<string, unknown>>> =
 
 let nextChirpCommentId = 1100;
 
+const emitPhoneNotification = (payload: Record<string, unknown>) => {
+  window.dispatchEvent(new CustomEvent('phone:notification', { detail: payload }));
+};
+
 const chirpCloneTweets = (tab: MockChirpTab) =>
   mockChirpTweetsByTab[tab].map((tweet) => ({ ...tweet }));
 
@@ -1254,6 +1258,20 @@ export function setupBrowserMock() {
           number: '555-4444',
         },
       });
+    },
+    hiddenNotification: () => {
+      emitMessage('hidePhone');
+      window.setTimeout(() => {
+        emitPhoneNotification({
+          id: `mock-hidden-${Date.now()}`,
+          appId: 'chirp',
+          title: 'Chirp',
+          message: 'Maria hizo rechirp de tu chirp.',
+          icon: '↻',
+          durationMs: 4200,
+          priority: 'high',
+        });
+      }, 120);
     },
     getRealtime: () => readRealtimeConfig(),
     setRealtime: (config: Partial<MockRealtimeConfig>) => {
@@ -1968,6 +1986,21 @@ export async function handleBrowserNui<T = unknown>(eventName: string, data?: un
     const rechirps = Number(tweet.rechirps || 0) + (nextRechirped ? 1 : -1);
     tweet.rechirped = nextRechirped;
     tweet.rechirps = rechirps < 0 ? 0 : rechirps;
+
+    if (nextRechirped) {
+      const existsInActivity = mockChirpTweetsByTab.myActivity.some((entry) => Number(entry.id) === tweetId && entry.activity_type === 'rechirp');
+      if (!existsInActivity) {
+        mockChirpTweetsByTab.myActivity.unshift({
+          ...tweet,
+          activity_type: 'rechirp',
+          activity_created_at: nowIso(),
+          activity_actor_display_name: 'Mock User',
+        });
+      }
+    } else {
+      mockChirpTweetsByTab.myActivity = mockChirpTweetsByTab.myActivity.filter((entry) => !(Number(entry.id) === tweetId && entry.activity_type === 'rechirp'));
+    }
+
     return { rechirped: nextRechirped } as T;
   }
 
