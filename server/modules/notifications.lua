@@ -1,3 +1,22 @@
+---@alias GCPhoneNotificationPriority 'low'|'normal'|'high'
+
+---@class GCPhoneNotificationPayload
+---@field id? string Stable notification id. Duplicates are ignored by the UI queue.
+---@field appId? string App identifier used by mute filters and unread tracking.
+---@field app? string Legacy alias for `appId`.
+---@field title? string Notification title.
+---@field content? string Persistent notification body.
+---@field message? string Runtime notification body alias.
+---@field avatar? string Optional avatar/image URL.
+---@field icon? string Short glyph or icon text rendered in the banner.
+---@field durationMs? integer Auto-dismiss duration in milliseconds. Ignored when sticky is true.
+---@field sticky? boolean Keeps the notification visible until manually dismissed.
+---@field priority? GCPhoneNotificationPriority High bypasses DND/mute filters where supported by the UI.
+---@field route? string Route opened when the user taps the notification.
+---@field data? table<string, any> Optional route payload passed to the app router.
+---@field meta? table<string, any>|string Optional persistent metadata stored in DB.
+---@field createdAt? integer Unix ms timestamp used for ordering.
+
 local function SafeText(value, maxLen)
     if type(value) ~= 'string' then return nil end
     local text = value:gsub('[%c]', ''):gsub('^%s+', ''):gsub('%s+$', '')
@@ -27,6 +46,9 @@ local function SafeMeta(value)
     return nil
 end
 
+---@param identifier string
+---@param payload GCPhoneNotificationPayload
+---@return integer|nil
 local function InsertNotification(identifier, payload)
     local appId = SafeText(payload.appId or payload.app or 'system', 40) or 'system'
     local title = SafeText(payload.title or 'Notificacion', 80) or 'Notificacion'
@@ -144,6 +166,11 @@ lib.callback.register('gcphone:notifications:delete', function(source, data)
     return (changed or 0) > 0
 end)
 
+---Insert a persistent notification and push it live if the owner is online.
+---Use this for inbox-style notifications that should survive reconnects.
+---@param identifier string
+---@param payload GCPhoneNotificationPayload
+---@return integer|nil
 exports('AddPersistentNotification', function(identifier, payload)
     if not identifier or type(payload) ~= 'table' then
         return nil
