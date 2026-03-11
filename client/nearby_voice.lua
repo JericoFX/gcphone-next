@@ -1,4 +1,12 @@
 local NearbyVoiceSession = nil
+local NearbyVoiceLastState = nil
+local NearbyVoiceLastVolume = nil
+
+local function RoundToStep(value, step)
+    local num = tonumber(value) or 0.0
+    local precision = tonumber(step) or 0.1
+    return math.floor((num / precision) + 0.5) * precision
+end
 
 local function ClampNumber(value, minValue, maxValue)
     local num = tonumber(value) or minValue
@@ -34,6 +42,11 @@ end
 local function PushNearbyVoiceState()
     local session = NearbyVoiceSession
     if not session then
+        if NearbyVoiceLastState == 'inactive' then
+            return
+        end
+
+        NearbyVoiceLastState = 'inactive'
         SendNUIMessage({
             action = 'gcphone:nearbyVoiceState',
             data = {
@@ -47,6 +60,19 @@ local function PushNearbyVoiceState()
         return
     end
 
+    local roundedDistance = session.distance and RoundToStep(session.distance, 0.1) or -1
+    local stateKey = ('%s|%s|%s|%s'):format(
+        tostring(session.peerId),
+        tostring(session.listening == true),
+        tostring(session.targetOnline == true),
+        tostring(roundedDistance)
+    )
+    if stateKey == NearbyVoiceLastState then
+        return
+    end
+
+    NearbyVoiceLastState = stateKey
+
     SendNUIMessage({
         action = 'gcphone:nearbyVoiceState',
         data = {
@@ -54,25 +80,34 @@ local function PushNearbyVoiceState()
             listening = session.listening == true,
             peerId = session.peerId,
             targetOnline = session.targetOnline == true,
-            distance = session.distance or -1,
+            distance = roundedDistance,
         }
     })
 end
 
 local function PushNearbyVoiceVolume(volume)
     local session = NearbyVoiceSession
+    local roundedVolume = RoundToStep(ClampNumber(volume or 0.0, 0.0, 1.0), 0.01)
+    local volumeKey = ('%s|%s'):format(tostring(session and session.peerId or false), tostring(roundedVolume))
+    if volumeKey == NearbyVoiceLastVolume then
+        return
+    end
+
+    NearbyVoiceLastVolume = volumeKey
     SendNUIMessage({
         action = 'gcphone:nearbyVoiceVolume',
         data = {
             active = session ~= nil,
             peerId = session and session.peerId or nil,
-            volume = ClampNumber(volume or 0.0, 0.0, 1.0),
+            volume = roundedVolume,
         }
     })
 end
 
 local function StopNearbyVoiceSession(notifyServer)
     NearbyVoiceSession = nil
+    NearbyVoiceLastState = nil
+    NearbyVoiceLastVolume = nil
     PushNearbyVoiceState()
     PushNearbyVoiceVolume(0.0)
 

@@ -5,6 +5,7 @@ local useRTC = false
 local currentCallId = nil
 local peerConnection = nil
 local usingPmaVoice = GetResourceState('pma-voice') == 'started'
+local callVoiceResetApplied = false
 
 local function IsNativeIncomingToneEnabled()
     local resource = GetCurrentResourceName()
@@ -235,9 +236,13 @@ end)
 CreateThread(function()
     while true do
         Wait(1000)
-        
-        if not inCall and not useRTC and not usingPmaVoice then
+
+        local shouldResetVoice = not inCall and not useRTC and not usingPmaVoice
+        if shouldResetVoice and not callVoiceResetApplied then
             NetworkSetTalkerProximity(2.5)
+            callVoiceResetApplied = true
+        elseif not shouldResetVoice then
+            callVoiceResetApplied = false
         end
     end
 end)
