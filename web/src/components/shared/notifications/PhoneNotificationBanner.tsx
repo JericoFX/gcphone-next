@@ -1,4 +1,5 @@
-import { Show, createEffect, createSignal } from 'solid-js';
+import { Show, createEffect, createSignal, onCleanup } from 'solid-js';
+import type { PhoneNotification } from '../../../types';
 import { useNotifications } from '../../../store/notifications';
 import { getStoredLanguage, t } from '../../../i18n';
 import styles from './PhoneNotificationBanner.module.scss';
@@ -11,12 +12,47 @@ interface Props {
 export function PhoneNotificationBanner(props: Props) {
   const [notifications, notificationsActions] = useNotifications();
   const [peekOpen, setPeekOpen] = createSignal(false);
+  const [displayed, setDisplayed] = createSignal<PhoneNotification | null>(null);
+  const [phase, setPhase] = createSignal<'idle' | 'enter' | 'exit'>('idle');
+  let swapTimer: number | undefined;
+
+  const clearSwapTimer = () => {
+    if (swapTimer) {
+      window.clearTimeout(swapTimer);
+      swapTimer = undefined;
+    }
+  };
 
   createEffect(() => {
-    const currentId = notifications.current?.id;
+    const current = notifications.current;
+    const currentId = current?.id;
+    const visible = displayed();
+
+    clearSwapTimer();
+
     if (!currentId) {
+      if (visible) {
+        setPhase('exit');
+        swapTimer = window.setTimeout(() => {
+          setDisplayed(null);
+          setPhase('idle');
+        }, 220);
+      }
       setPeekOpen(false);
       return;
+    }
+
+    if (!visible) {
+      setDisplayed(current);
+      setPhase('enter');
+      swapTimer = window.setTimeout(() => setPhase('idle'), 240);
+    } else if (visible.id !== currentId) {
+      setPhase('exit');
+      swapTimer = window.setTimeout(() => {
+        setDisplayed(current);
+        setPhase('enter');
+        swapTimer = window.setTimeout(() => setPhase('idle'), 240);
+      }, 220);
     }
 
     if (props.preview) {
@@ -29,8 +65,10 @@ export function PhoneNotificationBanner(props: Props) {
     return () => window.clearTimeout(timer);
   });
 
+  onCleanup(() => clearSwapTimer());
+
   const openNotification = () => {
-    const current = notifications.current;
+    const current = displayed();
     if (!current) return;
     if (current.route && props.onOpenRoute) props.onOpenRoute(current.route, current.data || {});
     notificationsActions.dismissCurrent();
@@ -38,7 +76,7 @@ export function PhoneNotificationBanner(props: Props) {
   };
 
   return (
-    <Show when={notifications.current}>
+    <Show when={displayed()}>
       {(notification) => (
         <div class={styles.stack}>
           <button
@@ -48,7 +86,7 @@ export function PhoneNotificationBanner(props: Props) {
             aria-label={t('notify.open', getStoredLanguage())}
           />
           <Show when={peekOpen() || !!props.preview}>
-            <button class={styles.peekCard} classList={{ [styles.preview]: !!props.preview }} onClick={openNotification}>
+            <button class={styles.peekCard} classList={{ [styles.preview]: !!props.preview, [styles.enter]: phase() === 'enter', [styles.exit]: phase() === 'exit' }} onClick={openNotification}>
               <div class={styles.icon}>{notification().icon || '•'}</div>
               <div class={styles.content}>
                 <div class={styles.title}>{notification().title}</div>
