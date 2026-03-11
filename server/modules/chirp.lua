@@ -102,6 +102,7 @@ local function GetRechirpRows(account, scope, limit, offset)
                    ar.display_name as activity_actor_display_name,
                    ar.username as activity_actor_username,
                    r.content as rechirp_comment,
+                   r.media_url as rechirp_media_url,
                    t.id as original_tweet_id,
                    t.content as original_content,
                    t.media_url as original_media_url,
@@ -157,6 +158,7 @@ local function GetRechirpRows(account, scope, limit, offset)
                    ? as activity_actor_display_name,
                    ? as activity_actor_username,
                    r.content as rechirp_comment,
+                   r.media_url as rechirp_media_url,
                    t.id as original_tweet_id,
                    t.content as original_content,
                    t.media_url as original_media_url,
@@ -453,7 +455,6 @@ lib.callback.register('gcphone:chirp:toggleLike', function(source, data)
 
     if type(data) ~= 'table' then return false end
     local tweetId = tonumber(data.tweetId)
-    local content = SanitizeText(data.content, Config.Chirp.MaxTweetLength)
     if not tweetId or tweetId < 1 then return false end
     
     local account = GetAccount(identifier)
@@ -488,6 +489,8 @@ lib.callback.register('gcphone:chirp:toggleRechirp', function(source, data)
 
     if type(data) ~= 'table' then return false end
     local tweetId = tonumber(data.tweetId)
+    local content = SanitizeText(data.content, Config.Chirp.MaxTweetLength)
+    local mediaUrl = SanitizeMediaUrl(data.mediaUrl)
     if not tweetId or tweetId < 1 then return false end
     
     local account = GetAccount(identifier)
@@ -512,8 +515,8 @@ lib.callback.register('gcphone:chirp:toggleRechirp', function(source, data)
         local tweetOwner = GetTweetOwner(tweetId)
 
         MySQL.insert.await(
-            'INSERT INTO phone_chirp_rechirps (original_tweet_id, account_id, content) VALUES (?, ?, ?)',
-            { tweetId, account.id, content ~= '' and content or nil }
+            'INSERT INTO phone_chirp_rechirps (original_tweet_id, account_id, content, media_url) VALUES (?, ?, ?, ?)',
+            { tweetId, account.id, content ~= '' and content or nil, mediaUrl }
         )
 
         if tweetOwner and tweetOwner.identifier and tweetOwner.identifier ~= identifier then

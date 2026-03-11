@@ -1989,24 +1989,33 @@ export async function handleBrowserNui<T = unknown>(eventName: string, data?: un
     tweet.rechirps = rechirps < 0 ? 0 : rechirps;
 
     if (nextRechirped) {
-      const existsInActivity = mockChirpTweetsByTab.myActivity.some((entry) => Number(entry.id) === tweetId && entry.activity_type === 'rechirp');
-      if (!existsInActivity) {
-        mockChirpTweetsByTab.myActivity.unshift({
-          ...tweet,
-          activity_type: 'rechirp',
-          activity_created_at: nowIso(),
-          activity_actor_display_name: 'Mock User',
-          activity_actor_username: 'mockuser',
-          original_tweet_id: Number(tweet.id),
-          original_content: String(tweet.content || ''),
-          original_media_url: typeof tweet.media_url === 'string' ? tweet.media_url : undefined,
-          original_username: String(tweet.username || 'user'),
-          original_display_name: String(tweet.display_name || 'Usuario'),
-          rechirp_comment: content || undefined,
-        });
+      const rechirpRow = {
+        ...tweet,
+        activity_type: 'rechirp',
+        activity_created_at: nowIso(),
+        activity_actor_display_name: 'Mock User',
+        activity_actor_username: 'mockuser',
+        original_tweet_id: Number(tweet.id),
+        original_content: String(tweet.content || ''),
+        original_media_url: typeof tweet.media_url === 'string' ? tweet.media_url : undefined,
+        original_username: String(tweet.username || 'user'),
+        original_display_name: String(tweet.display_name || 'Usuario'),
+        rechirp_comment: content || undefined,
+        rechirp_media_url: typeof payload.mediaUrl === 'string' ? payload.mediaUrl : undefined,
+      };
+
+      const tabs: MockChirpTab[] = ['myActivity', 'forYou', 'following'];
+      for (const tab of tabs) {
+        const exists = mockChirpTweetsByTab[tab].some((entry) => Number(entry.id) === tweetId && entry.activity_type === 'rechirp');
+        if (!exists) {
+          mockChirpTweetsByTab[tab].unshift({ ...rechirpRow });
+        }
       }
     } else {
-      mockChirpTweetsByTab.myActivity = mockChirpTweetsByTab.myActivity.filter((entry) => !(Number(entry.id) === tweetId && entry.activity_type === 'rechirp'));
+      const tabs: MockChirpTab[] = ['myActivity', 'forYou', 'following'];
+      for (const tab of tabs) {
+        mockChirpTweetsByTab[tab] = mockChirpTweetsByTab[tab].filter((entry) => !(Number(entry.id) === tweetId && entry.activity_type === 'rechirp'));
+      }
     }
 
     return { rechirped: nextRechirped } as T;

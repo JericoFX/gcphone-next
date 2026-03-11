@@ -1318,7 +1318,8 @@ local MIGRATIONS = {
         description = "Allow optional comment text on rechirps",
         statements = {
             [[ALTER TABLE `phone_chirp_rechirps`
-                ADD COLUMN IF NOT EXISTS `content` VARCHAR(280) DEFAULT NULL AFTER `account_id`]],
+                ADD COLUMN IF NOT EXISTS `content` VARCHAR(280) DEFAULT NULL AFTER `account_id`,
+                ADD COLUMN IF NOT EXISTS `media_url` VARCHAR(500) DEFAULT NULL AFTER `content`]],
 
             [[CREATE INDEX IF NOT EXISTS `idx_chirp_rechirps_created_content`
                 ON `phone_chirp_rechirps` (`created_at`, `account_id`)]]
