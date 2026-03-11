@@ -1,12 +1,54 @@
-local KeyOpenClose = Config.Phone.KeyOpen
 local menuIsOpen = false
-local hasFocus = false
-local useMouse = false
-local ignoreFocus = false
 local phoneProp = nil
 local PHONE_PROP_MODEL = GetHashKey("prop_npc_phone_02")
 local phoneVisualMode = 'text'
 local phoneVisualOptions = {}
+local nuiInputState = {
+    focus = false,
+    cursor = false,
+    keepInput = false,
+}
+
+local function ResolvePhoneOpenKey()
+    local key = Config.Phone and Config.Phone.KeyOpen
+    if type(key) == 'string' and key ~= '' then
+        return key
+    end
+
+    local controlMap = {
+        [288] = 'F1',
+        [289] = 'F2',
+        [170] = 'F3',
+        [166] = 'F5',
+        [167] = 'F6',
+        [168] = 'F7',
+    }
+
+    return controlMap[tonumber(key) or -1] or 'F1'
+end
+
+local function UpdateNuiInputState(force)
+    local desiredFocus = menuIsOpen
+    local desiredCursor = menuIsOpen
+    local desiredKeepInput = menuIsOpen
+
+    if not force
+        and nuiInputState.focus == desiredFocus
+        and nuiInputState.cursor == desiredCursor
+        and nuiInputState.keepInput == desiredKeepInput then
+        return
+    end
+
+    nuiInputState.focus = desiredFocus
+    nuiInputState.cursor = desiredCursor
+    nuiInputState.keepInput = desiredKeepInput
+
+    SetNuiFocus(desiredFocus, desiredCursor)
+    SetNuiFocusKeepInput(desiredKeepInput)
+
+    PhoneState.hasFocus = desiredFocus
+    PhoneState.useMouse = desiredCursor
+end
 
 local function GetVisualPreset()
     local cfg = Config.PhoneVisual or {}
@@ -63,10 +105,7 @@ local function EnsurePhoneProp()
     local ped = cache.ped
     if phoneProp and DoesEntityExist(phoneProp) then return end
 
-    RequestModel(PHONE_PROP_MODEL)
-    while not HasModelLoaded(PHONE_PROP_MODEL) do
-        Wait(0)
-    end
+    lib.requestModel(PHONE_PROP_MODEL)
 
     phoneProp = CreateObject(PHONE_PROP_MODEL, 0.0, 0.0, 0.0, true, true, false)
     if phoneProp and DoesEntityExist(phoneProp) then
@@ -85,15 +124,6 @@ local function RemovePhoneProp()
     phoneProp = nil
 end
 
-local KeyControls = {
-    { code = 172, event = 'ArrowUp' },
-    { code = 173, event = 'ArrowDown' },
-    { code = 174, event = 'ArrowLeft' },
-    { code = 175, event = 'ArrowRight' },
-    { code = 176, event = 'Enter' },
-    { code = 177, event = 'Backspace' }
-}
-
 local function ShowPhonePayload(data)
     if not data then return end
 
@@ -101,6 +131,7 @@ local function ShowPhonePayload(data)
     PhoneState.isOpen = true
     TriggerServerEvent('gcphone:stateChanged', true)
     EnsurePhoneProp()
+    UpdateNuiInputState(true)
 
     data.nuiAuthToken = RotateNuiAuthToken()
     SendNUIMessage({
@@ -133,11 +164,7 @@ function TogglePhone()
         phoneVisualOptions = {}
         
         SendNUIMessage({ action = 'hidePhone' })
-        
-        if hasFocus then
-            SetNuiFocus(false, false)
-            hasFocus = false
-        end
+        UpdateNuiInputState(true)
         
         PlayPhoneAnimation('out')
     end
@@ -159,50 +186,31 @@ function ClosePhone()
     end
 end
 
-CreateThread(function()
-    while true do
-        local sleepMs = menuIsOpen and 0 or 150
-        Wait(sleepMs)
-        
-        if IsControlJustPressed(1, KeyOpenClose) then
-            if not PhoneState.phoneNumber then
-                lib.callback('gcphone:getPhoneData', false, function(data)
-                    if data then
-                        PhoneState.phoneNumber = data.phoneNumber
-                        TogglePhone()
-                    end
-                end)
-            else
-                TogglePhone()
-            end
-        end
-        
-        if menuIsOpen then
-            for _, key in ipairs(KeyControls) do
-                if IsControlJustPressed(1, key.code) then
-                    SendNUIMessage({ keyUp = key.event })
+local phoneKeybind = lib.addKeybind({
+    name = 'gcphone_toggle',
+    description = 'Abrir o cerrar telefono',
+    defaultMapper = 'keyboard',
+    defaultKey = ResolvePhoneOpenKey(),
+    onPressed = function()
+        if not PhoneState.phoneNumber then
+            lib.callback('gcphone:getPhoneData', false, function(data)
+                if data then
+                    PhoneState.phoneNumber = data.phoneNumber
+                    TogglePhone()
                 end
-            end
-            
-            if useMouse and hasFocus == ignoreFocus then
-                local nuiFocus = not hasFocus
-                SetNuiFocus(nuiFocus, nuiFocus)
-                hasFocus = nuiFocus
-            elseif not useMouse and hasFocus then
-                SetNuiFocus(false, false)
-                hasFocus = false
-            end
-        else
-            if hasFocus then
-                SetNuiFocus(false, false)
-                hasFocus = false
-            end
+            end)
+            return
         end
-    end
-end)
+
+        TogglePhone()
+    end,
+})
 
 AddEventHandler('onResourceStop', function(resourceName)
     if resourceName ~= GetCurrentResourceName() then return end
+    phoneKeybind:disable(true)
+    SetNuiFocus(false, false)
+    SetNuiFocusKeepInput(false)
     RemovePhoneProp()
 end)
 
@@ -212,12 +220,12 @@ RegisterNUICallback('closePhone', function(_, cb)
 end)
 
 RegisterNUICallback('useMouse', function(state, cb)
-    useMouse = state
+    UpdateNuiInputState(true)
     cb(true)
 end)
 
 RegisterNUICallback('setIgnoreFocus', function(data, cb)
-    ignoreFocus = data.ignoreFocus
+    UpdateNuiInputState(true)
     cb(true)
 end)
 
