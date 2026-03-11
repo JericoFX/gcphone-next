@@ -9,6 +9,16 @@ local function GetContacts(identifier)
     ) or {}
 end
 
+local function CanAccessIdentifierExport(identifier, requestSource)
+    local src = tonumber(requestSource)
+    if not src or src <= 0 or not identifier then
+        return false
+    end
+
+    local ownerIdentifier = GetPhoneOwnerIdentifier and GetPhoneOwnerIdentifier(src, true) or GetIdentifier(src)
+    return ownerIdentifier ~= nil and ownerIdentifier == identifier
+end
+
 local function SafeText(value, maxLength)
     if type(value) ~= 'string' then return nil end
     local text = value:gsub('[%z\1-\31\127]', '')
@@ -207,5 +217,12 @@ end)
 
 ---Get contact list for an identifier.
 ---@param identifier string
+---@param requestSource integer
 ---@return table[]
-exports('GetContacts', GetContacts)
+exports('GetContacts', function(identifier, requestSource)
+    if not CanAccessIdentifierExport(identifier, requestSource) then
+        return {}
+    end
+
+    return GetContacts(identifier)
+end)

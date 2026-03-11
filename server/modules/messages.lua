@@ -235,6 +235,16 @@ local function GetConversation(identifier, phoneNumber)
     ) or {}
 end
 
+local function CanAccessIdentifierExport(identifier, requestSource)
+    local src = tonumber(requestSource)
+    if not src or src <= 0 or not identifier then
+        return false
+    end
+
+    local ownerIdentifier = GetPhoneOwnerIdentifier and GetPhoneOwnerIdentifier(src, true) or GetIdentifier(src)
+    return ownerIdentifier ~= nil and ownerIdentifier == identifier
+end
+
 lib.callback.register('gcphone:getMessages', function(source)
     local identifier = GetPhoneOwnerIdentifier(source, true)
     return GetMessages(identifier)
@@ -568,14 +578,28 @@ end)
 
 ---Get recent message threads for an identifier.
 ---@param identifier string
+---@param requestSource integer
 ---@return table[]
-exports('GetMessages', GetMessages)
+exports('GetMessages', function(identifier, requestSource)
+    if not CanAccessIdentifierExport(identifier, requestSource) then
+        return {}
+    end
+
+    return GetMessages(identifier)
+end)
 
 ---Get a conversation with a specific phone number.
 ---@param identifier string
 ---@param targetNumber string
+---@param requestSource integer
 ---@return table[]
-exports('GetConversation', GetConversation)
+exports('GetConversation', function(identifier, targetNumber, requestSource)
+    if not CanAccessIdentifierExport(identifier, requestSource) then
+        return {}
+    end
+
+    return GetConversation(identifier, targetNumber)
+end)
 
 AddEventHandler('gcphone:wavechat:persistBatch', function(requestId, entries)
     local reqId = tonumber(requestId) or 0

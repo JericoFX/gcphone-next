@@ -7,6 +7,16 @@ local AirplaneModeBySource = {}
 local UsingPmaVoice = GetResourceState('pma-voice') == 'started'
 local LastCallStartBySource = {}
 
+local function CanAccessIdentifierExport(identifier, requestSource)
+    local src = tonumber(requestSource)
+    if not src or src <= 0 or not identifier then
+        return false
+    end
+
+    local ownerIdentifier = GetPhoneOwnerIdentifier and GetPhoneOwnerIdentifier(src, true) or GetIdentifier(src)
+    return ownerIdentifier ~= nil and ownerIdentifier == identifier
+end
+
 local function SyncActiveCallsToGlobalState()
     GlobalState.gcphoneActiveCalls = ActiveCalls
 end
@@ -487,5 +497,12 @@ end)
 
 ---Get call history rows for a player identifier.
 ---@param identifier string
+---@param requestSource integer
 ---@return table[]
-exports('GetCallHistory', GetCallHistory)
+exports('GetCallHistory', function(identifier, requestSource)
+    if not CanAccessIdentifierExport(identifier, requestSource) then
+        return {}
+    end
+
+    return GetCallHistory(identifier)
+end)

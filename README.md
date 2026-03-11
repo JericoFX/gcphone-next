@@ -266,6 +266,30 @@ exports['gcphone-next']:AddPersistentNotification(identifier, {
 })
 ```
 
+### Sensitive exports and identifier ownership
+
+Los exports server-side que leen datos privados por `identifier` ahora exigen `requestSource` y validan ownership antes de devolver datos.
+
+Esto aplica a exports como:
+
+- `GetContacts(identifier, requestSource)`
+- `GetGallery(identifier, requestSource)`
+- `GetMessages(identifier, requestSource)`
+- `GetConversation(identifier, phoneNumber, requestSource)`
+- `GetCallHistory(identifier, requestSource)`
+- `GetPhoneNumber(identifier, requestSource)`
+- `GetPhoneByIdentifier(identifier, requestSource)`
+
+Ejemplo correcto:
+
+```lua
+local src = source
+local identifier = exports['gcphone-next']:GetIdentifier(src)
+local contacts = exports['gcphone-next']:GetContacts(identifier, src)
+```
+
+Si `requestSource` no coincide con el owner real del `identifier`, el export devuelve vacio, `nil` o `UNAUTHORIZED` segun el caso.
+
 #### Browser mock helpers
 
 En browser/devtools puedes probar los banners con:
