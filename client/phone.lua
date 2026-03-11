@@ -161,7 +161,8 @@ end
 
 CreateThread(function()
     while true do
-        Wait(0)
+        local sleepMs = menuIsOpen and 0 or 150
+        Wait(sleepMs)
         
         if IsControlJustPressed(1, KeyOpenClose) then
             if not PhoneState.phoneNumber then

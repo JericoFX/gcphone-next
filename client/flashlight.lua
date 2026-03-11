@@ -278,13 +278,14 @@ CreateThread(function()
         else
             Wait(0)
             local myCoords = GetEntityCoords(cache.ped)
+            local syncDistance = Clamp(Config.Flashlight and Config.Flashlight.SyncDistance or 30.0, 5.0, 60.0)
             for serverId, profile in pairs(remoteFlashlights) do
                 local player = GetPlayerFromServerId(serverId)
                 if player ~= -1 then
                     local ped = GetPlayerPed(player)
                     if ped ~= 0 and DoesEntityExist(ped) then
                         local coords = GetEntityCoords(ped)
-                        if #(myCoords - coords) <= Clamp(Config.Flashlight and Config.Flashlight.SyncDistance or 30.0, 5.0, 60.0) then
+                        if #(myCoords - coords) <= syncDistance then
                             DrawPhoneFlashlightForPed(ped, {
                                 scale = 0.9,
                                 kelvin = profile.kelvin,
