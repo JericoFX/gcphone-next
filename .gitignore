@@ -2,9 +2,10 @@ socket-server/node_modules/
 gcphone-next/web/node_modules/
 server/js/node_modules/@bufbuild/protobuf/package.json
 web/node_modules/
-web
 web/tests/e2e
 web/test-results
 tools/livekit/.env
 tools/livekit/livekit.yaml
 tools/livekit/data/
+
+/c:/Users/Jerico/Desktop/gcphone-master/gcphone-master/gcphone-next/sounds/gcphone-next-sound

@@ -2,20 +2,13 @@ local Core = nil
 local Framework = nil
 
 CreateThread(function()
-    while true do
-        if GetResourceState('qb-core') == 'started' then
-            Core = exports['qb-core']:GetCoreObject()
-            Framework = 'qbcore'
-            break
-        elseif GetResourceState('qbx_core') == 'started' then
-            Core = exports.qbx_core
-            Framework = 'qbox'
-            break
-        end
-
-        Wait(100)
+    if GetResourceState('qb-core') == 'started' then
+        Core = exports['qb-core']:GetCoreObject()
+        Framework = 'qbcore'
+    elseif GetResourceState('qbx_core') == 'started' then
+        Core = exports.qbx_core
+        Framework = 'qbox'
     end
-
     if Framework then
         print(('[gcphone-next] Framework detected: %s'):format(Framework))
     end
@@ -54,7 +47,7 @@ function IsPlayerActionAllowed(source)
     if not player then return false, 'PLAYER_NOT_FOUND' end
 
     local metadata = (player.PlayerData and player.PlayerData.metadata) or {}
-    local isDead = IsTruthy(metadata.isdead) or IsTruthy(metadata.dead)
+    local isDead = (IsTruthy(metadata.isdead) or IsTruthy(metadata.dead)) or Player(source).inLastStand
     local inLastStand = IsTruthy(metadata.inlaststand)
     local isCuffed = IsTruthy(metadata.ishandcuffed) or IsTruthy(metadata.handcuffed) or IsTruthy(metadata.isHandcuffed)
 
@@ -132,8 +125,6 @@ function GetFrameworkPhoneNumber(source, identifier)
             player = GetPlayer(onlineSource)
         end
     end
-
-    -- Verified: QBCore PlayerData docs list charinfo.phone as the generated player phone number.
     return GetQBPhoneFromPlayer(player)
 end
 
@@ -154,7 +145,6 @@ function GetIdentifierByPhone(phoneNumber)
 
     if Core then
         if Core.Functions.GetPlayerByPhone then
-            -- Verified: qbcore-framework/qb-core server/functions.lua exposes QBCore.Functions.GetPlayerByPhone(number).
             local player = Core.Functions.GetPlayerByPhone(phoneNumber)
             if player and player.PlayerData then
                 return player.PlayerData.citizenid

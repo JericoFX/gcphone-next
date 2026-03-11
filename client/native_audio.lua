@@ -43,7 +43,8 @@ end
 local function ResolveToneForProfile(toneId)
     local profile = PhoneState and PhoneState.audioProfile or 'normal'
     if profile == 'silent' then
-        local vibrateId = NativeAudioConfig().DefaultByCategory and NativeAudioConfig().DefaultByCategory.vibrate or 'buzz_short_01'
+        local vibrateId = NativeAudioConfig().DefaultByCategory and NativeAudioConfig().DefaultByCategory.vibrate or
+            'buzz_short_01'
         return GetToneConfig(vibrateId), vibrateId
     end
 
@@ -52,8 +53,6 @@ end
 
 local function RequestToneBank(bank)
     if type(bank) ~= 'string' or bank == '' then return false end
-
-    -- Verified: /communityox/ox_lib requestAudioBank uses RequestScriptAudioBank and waits for the bank to load.
     if lib and lib.requestAudioBank then
         local ok = pcall(function()
             lib.requestAudioBank(bank)
@@ -83,7 +82,6 @@ local function PlayTone(toneId, mode)
 
     local soundId = GetSoundId()
 
-    -- TODO: Verify final playback native against the generated Audiotool resource once the real bank and soundset are available.
     if playback == 'entity' then
         PlaySoundFromEntity(soundId, soundName, cache.ped, soundSet ~= '' and soundSet or bank, false, 0)
     else

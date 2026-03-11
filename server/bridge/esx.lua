@@ -22,22 +22,15 @@ local function safeQuery(query, values)
 end
 
 local function ensureESXPhoneColumn()
-    -- Verified: ESX Legacy centers character data in `users`, but phone storage is not standardized in core docs.
     safeQuery('ALTER TABLE `users` ADD COLUMN IF NOT EXISTS `phone_number` VARCHAR(10) NULL', {})
 end
 
 CreateThread(function()
-    while true do
-        if GetResourceState('es_extended') == 'started' then
-            -- Verified: /esx-framework/esx-legacy-documentation server imports use exports["es_extended"]:getSharedObject().
-            ESX = exports['es_extended']:getSharedObject()
-            Framework = 'esx'
-            ensureESXPhoneColumn()
-            print(('[gcphone-next] Framework detected: %s'):format(Framework))
-            break
-        end
-
-        Wait(100)
+    if GetResourceState('es_extended') == 'started' then
+        ESX = exports['es_extended']:getSharedObject()
+        Framework = 'esx'
+        ensureESXPhoneColumn()
+        print(('[gcphone-next] Framework detected: %s'):format(Framework))
     end
 end)
 
@@ -76,7 +69,6 @@ end
 
 function GetPlayer(source)
     if not ESX then return nil end
-    -- Verified: /esx-framework/esx-legacy-documentation uses ESX.GetPlayerFromId(playerId) for xPlayer retrieval.
     return ESX.GetPlayerFromId(source)
 end
 
@@ -106,7 +98,6 @@ end
 function GetName(source)
     local player = GetPlayer(source)
     if not player then return nil end
-    -- Verified: /esx-framework/esx-legacy-documentation xPlayer.getName returns the RP/full player name.
     return player.getName and player.getName() or player.name
 end
 
@@ -130,12 +121,10 @@ function AddMoney(source, amount, accountType, reason)
     reason = reason or 'gcphone'
 
     if accountType == 'cash' or accountType == 'money' then
-        -- Verified: /esx-framework/esx-legacy-documentation xPlayer.addMoney exists for money account.
         player.addMoney(amount, reason)
         return true
     end
 
-    -- Verified: /esx-framework/esx-legacy-documentation xPlayer.addAccountMoney(account, amount, reason) is supported.
     player.addAccountMoney(accountType, amount, reason)
     return true
 end
@@ -151,7 +140,6 @@ function RemoveMoney(source, amount, accountType, reason)
         return true
     end
 
-    -- Verified: /esx-framework/esx-legacy-documentation xPlayer.removeAccountMoney(account, amount, reason) is supported.
     player.removeAccountMoney(accountType, amount, reason)
     return true
 end
@@ -165,7 +153,6 @@ end
 function GetSourceFromIdentifier(identifier)
     if not ESX or not identifier then return nil end
 
-    -- Verified: /esx-framework/esx-legacy-documentation notes ESX.GetPlayerFromIdentifier(identifier) exists server-side.
     local xPlayer = ESX.GetPlayerFromIdentifier and ESX.GetPlayerFromIdentifier(identifier) or nil
     if xPlayer then
         return tonumber(xPlayer.source or xPlayer.getSource and xPlayer.getSource())
@@ -187,7 +174,6 @@ function GetFrameworkPhoneNumber(source, identifier)
     if phone then return phone end
 
     if identifier then
-        -- TODO: Verify exact ESX phone storage for this server once its phone resource/schema is chosen.
         phone = safeScalar('SELECT phone_number FROM users WHERE identifier = ? LIMIT 1', { identifier })
             or safeScalar('SELECT phone FROM users WHERE identifier = ? LIMIT 1', { identifier })
         if type(phone) == 'string' and phone ~= '' then
@@ -212,7 +198,8 @@ function SetFrameworkPhoneNumber(source, identifier, phoneNumber)
         return false
     end
 
-    return safeQuery('UPDATE `users` SET `phone_number` = ? WHERE `identifier` = ?', { phoneNumber, targetIdentifier }) ~= nil
+    return safeQuery('UPDATE `users` SET `phone_number` = ? WHERE `identifier` = ?', { phoneNumber, targetIdentifier }) ~=
+        nil
 end
 
 function GetPhoneNumber(identifier)
