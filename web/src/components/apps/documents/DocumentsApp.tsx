@@ -1,7 +1,7 @@
 import { For, Show, createEffect, createMemo, createSignal, onMount } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { fetchNui } from '../../../utils/fetchNui';
-import { timeAgo } from '../../../utils/misc';
+import { formatPhoneNumber, timeAgo } from '../../../utils/misc';
 import { uiConfirm } from '../../../utils/uiDialog';
 import { uiAlert } from '../../../utils/uiAlert';
 import { useNuiEvent } from '../../../utils/useNui';
@@ -10,7 +10,10 @@ import { useAppCache } from '../../../hooks';
 import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { usePhoneState } from '../../../store/phone';
 import { FormCheckbox, FormSection, Modal, ModalActions, ModalButton } from '../../shared/ui/Modal';
+import { EmptyState } from '../../shared/ui/EmptyState';
 import { InlineNotice } from '../../shared/ui/InlineNotice';
+import { SegmentedTabs } from '../../shared/ui/SegmentedTabs';
+import { SheetIntro } from '../../shared/ui/SheetIntro';
 import styles from './DocumentsApp.module.scss';
 
 interface Document {
@@ -50,6 +53,14 @@ interface ScannedDoc {
   scanned_at: string;
 }
 
+function DocumentTypeAccent(props: { icon: string; color: string; class: string; label?: string }) {
+  return (
+    <div class={props.class} style={{ '--doc-accent': props.color }} aria-label={props.label}>
+      <span>{props.icon}</span>
+    </div>
+  );
+}
+
 function TabToggle(props: {
   active: boolean;
   label: string;
@@ -84,6 +95,11 @@ export function DocumentsApp() {
   const [composerExpires, setComposerExpires] = createSignal('');
   const [composerNFC, setComposerNFC] = createSignal(true);
   const isReadOnly = createMemo(() => phoneState.accessMode === 'foreign-readonly');
+  const tabs = [
+    { id: 'my', label: 'Mis Docs' },
+    { id: 'nfc', label: 'NFC' },
+    { id: 'history', label: 'Historial' },
+  ];
 
   const loadData = async () => {
     setLoading(true);
@@ -263,9 +279,7 @@ export function DocumentsApp() {
           <InlineNotice title="Solo lectura" message={`Estas viendo los documentos de ${phoneState.accessOwnerName || 'otra persona'}.`} />
         </Show>
         <div class={styles.tabs}>
-          <TabToggle active={activeTab() === 'my'} label="Mis Docs" onClick={() => setActiveTab('my')} />
-          <TabToggle active={activeTab() === 'nfc'} label="NFC" onClick={() => setActiveTab('nfc')} />
-          <TabToggle active={activeTab() === 'history'} label="Historial" onClick={() => setActiveTab('history')} />
+          <SegmentedTabs items={tabs} active={activeTab()} onChange={(id) => setActiveTab(id as 'my' | 'nfc' | 'history')} />
         </div>
 
         <Show when={activeTab() === 'my'}>
@@ -281,9 +295,7 @@ export function DocumentsApp() {
                 
                 return (
                   <div class={styles.documentCard} onClick={() => setSelectedDoc(doc)}>
-                    <div class={styles.docIcon} style={{ background: typeInfo.color }}>
-                      <span>{typeInfo.icon}</span>
-                    </div>
+                    <DocumentTypeAccent class={styles.docIcon} color={typeInfo.color} icon={typeInfo.icon} label={typeInfo.name} />
                     
                     <div class={styles.docInfo}>
                       <h3 class={styles.docTitle}>{doc.title}</h3>
@@ -307,10 +319,7 @@ export function DocumentsApp() {
             </For>
             
             <Show when={!loading() && documents().length === 0}>
-              <div class={styles.emptyState}>
-                <p>No tienes documentos</p>
-                <p class={styles.emptyHint}>Crea tu primer documento digital</p>
-              </div>
+              <EmptyState class={styles.emptyState} title="No tienes documentos" description="Crea tu primer documento digital." />
             </Show>
           </div>
 
@@ -350,10 +359,7 @@ export function DocumentsApp() {
         <Show when={activeTab() === 'history'}>
           <div class={styles.historyList}>
             <Show when={scanHistory().length === 0}>
-              <div class={styles.emptyState}>
-                <p>Sin historial</p>
-                <p class={styles.emptyHint}>Los escaneos apareceran aqui</p>
-              </div>
+              <EmptyState class={styles.emptyState} title="Sin historial" description="Los escaneos apareceran aqui." />
             </Show>
             
             <For each={scanHistory()}>
@@ -388,7 +394,7 @@ export function DocumentsApp() {
               
               return (
                 <div class={styles.detailContent}>
-                  <div class={styles.detailHeader} style={{ background: typeInfo.color }}>
+                  <div class={styles.detailHeader} style={{ '--doc-accent': typeInfo.color }}>
                     <span class={styles.detailIconLarge}>{typeInfo.icon}</span>
                     <h2>{doc.title}</h2>
                     <span class={styles.detailType}>{typeInfo.name}</span>
@@ -403,7 +409,7 @@ export function DocumentsApp() {
                     <Show when={doc.holder_number}>
                       <div class={styles.detailField}>
                         <label>Numero</label>
-                        <strong>{doc.holder_number}</strong>
+                        <strong>{formatPhoneNumber(doc.holder_number || '', phoneState.framework || 'unknown')}</strong>
                       </div>
                     </Show>
                     
@@ -460,6 +466,7 @@ export function DocumentsApp() {
           size="md"
         >
           <div class={styles.composerContent}>
+            <SheetIntro title="Nuevo documento" description="Crea una version digital clara y activa NFC solo cuando tenga sentido compartirlo de cerca." />
             <FormSection class={styles.formField} label="Tipo de Documento">
               <div class={styles.typeGrid}>
                 <For each={docTypes()}>
@@ -468,9 +475,9 @@ export function DocumentsApp() {
                       class={styles.typeBtn}
                       classList={{ [styles.active]: composerType() === type.id }}
                       onClick={() => setComposerType(type.id)}
-                      style={{ 'border-color': composerType() === type.id ? type.color : undefined }}
+                      style={{ '--doc-accent': type.color }}
                     >
-                      <span style={{ color: type.color }}>{type.icon}</span>
+                      <span class={styles.typeBtnIcon}>{type.icon}</span>
                       <span>{type.name}</span>
                     </button>
                   )}
@@ -541,6 +548,7 @@ export function DocumentsApp() {
           size="md"
         >
           <div class={styles.docPickerContent}>
+            <SheetIntro title="Seleccionar documento" description="Solo aparecen los documentos que tienen NFC activado para compartir rapido." />
             <p>Selecciona un documento para mostrar:</p>
             <div class={styles.docPickerList}>
               <For each={documents().filter(d => d.nfc_enabled)}>
@@ -551,9 +559,7 @@ export function DocumentsApp() {
                       class={styles.docPickerItem}
                       onClick={() => shareDocument(doc.id)}
                     >
-                      <div class={styles.docPickerIcon} style={{ background: typeInfo.color }}>
-                        <span>{typeInfo.icon}</span>
-                      </div>
+                      <DocumentTypeAccent class={styles.docPickerIcon} color={typeInfo.color} icon={typeInfo.icon} label={typeInfo.name} />
                       <div class={styles.docPickerInfo}>
                         <strong>{doc.title}</strong>
                         <span>{typeInfo.name}</span>
@@ -591,9 +597,7 @@ export function DocumentsApp() {
                   </div>
                   
                   <div class={styles.scanResultBody}>
-                    <div class={styles.scanDocIcon} style={{ background: typeInfo.color }}>
-                      <span>{typeInfo.icon}</span>
-                    </div>
+                    <DocumentTypeAccent class={styles.scanDocIcon} color={typeInfo.color} icon={typeInfo.icon} label={typeInfo.name} />
                     
                     <h2>{doc.title}</h2>
                     <span class={styles.scanDocType}>{typeInfo.name}</span>
@@ -607,7 +611,7 @@ export function DocumentsApp() {
                       <Show when={doc.holder_number}>
                         <div class={styles.scanField}>
                           <label>Numero</label>
-                          <strong>{doc.holder_number}</strong>
+                          <strong>{formatPhoneNumber(doc.holder_number || '', phoneState.framework || 'unknown')}</strong>
                         </div>
                       </Show>
                       

@@ -13,42 +13,7 @@
 
 // Tabs
 .tabs {
-  display: flex;
-  background: #ffffff;
-  border-bottom: 1px solid #e5e5ea;
-  padding: 0 16px;
-}
-
-.tabBtn {
-  flex: 1;
-  padding: 14px 8px;
-  border: none;
-  background: transparent;
-  color: #8e8e93;
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-  position: relative;
-  transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease, opacity 150ms ease, transform 150ms ease, box-shadow 150ms ease;
-  
-  &:hover {
-    color: #3a3a3c;
-  }
-  
-  &.active {
-    color: #007aff;
-    
-    &::after {
-      content: '';
-      position: absolute;
-      bottom: 0;
-      left: 20%;
-      right: 20%;
-      height: 3px;
-      background: #007aff;
-      border-radius: 2px;
-    }
-  }
+  padding: 10px 16px 0;
 }
 
 // Documents List
@@ -92,6 +57,7 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  background: var(--doc-accent, #8e8e93);
   
   span {
     color: #ffffff;
@@ -156,20 +122,10 @@
 
 // Empty State
 .emptyState {
-  text-align: center;
-  padding: 60px 20px;
-  color: #8e8e93;
-  
-  p {
-    margin: 0;
-    font-size: 16px;
-  }
-  
-  .emptyHint {
-    font-size: 14px;
-    margin-top: 8px;
-    opacity: 0.7;
-  }
+  margin: 12px 0;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid rgba(15, 23, 42, 0.06);
 }
 
 // FAB
@@ -373,6 +329,7 @@
   padding: 60px 20px 30px;
   text-align: center;
   color: #ffffff;
+  background: var(--doc-accent, #8e8e93);
   
   h2 {
     font-size: 24px;
@@ -545,6 +502,7 @@
   align-items: center;
   justify-content: center;
   margin: 0 auto;
+  background: var(--doc-accent, #8e8e93);
   
   span {
     color: #ffffff;
@@ -658,8 +616,13 @@
   
   &.active {
     border-width: 2px;
-    background: rgba(0, 122, 255, 0.05);
+    border-color: var(--doc-accent, #007aff);
+    background: color-mix(in srgb, var(--doc-accent, #007aff) 10%, #ffffff);
   }
+}
+
+.typeBtnIcon {
+  color: var(--doc-accent, #007aff);
 }
 
 .checkboxLabel {
