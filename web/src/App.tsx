@@ -127,12 +127,13 @@ function PhoneContent() {
 
       <Show when={!phoneState.visible && notifications.current}>
         <div class="notification-preview-shell">
-          <div class="notification-preview-top">
-            <div class="notification-preview-notch" />
-            <div class="notification-preview-glow" />
-          </div>
-          <div class="notification-preview-card">
-            <PhoneNotificationBanner preview />
+          <div class="notification-preview-phone">
+            <div class="notification-preview-screen">
+              <div class="notification-preview-banner-wrap">
+                <PhoneNotificationBanner preview />
+              </div>
+            </div>
+            <img class="notification-preview-frame" src="./img/phone/frame-clean.svg" alt="frame" />
           </div>
         </div>
       </Show>

@@ -115,6 +115,7 @@ export interface PhoneNotification {
   message: string;
   icon?: string;
   durationMs: number;
+  sticky?: boolean;
   priority?: 'low' | 'normal' | 'high';
   route?: string;
   data?: Record<string, unknown>;
