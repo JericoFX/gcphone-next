@@ -10,6 +10,7 @@ import { ScreenState } from '../../shared/ui/ScreenState';
 import { SkeletonList } from '../../shared/ui/SkeletonList';
 import { ActionSheet } from '../../shared/ui/ActionSheet';
 import { InlineNotice } from '../../shared/ui/InlineNotice';
+import { LetterAvatar } from '../../shared/ui/LetterAvatar';
 import { AppFAB, AppScaffold, AppTabs } from '../../shared/layout';
 import { useNotifications } from '../../../store/notifications';
 import { fetchLiveKitToken } from '../../../utils/realtimeAuth';
@@ -489,9 +490,7 @@ export function CallsApp() {
                   <For each={contacts()}>
                     {(contact) => (
                       <div class={styles.historyItem}>
-                        <div class={styles.callIcon} style={{ color: generateColorForString(contact.number) }}>
-                          ●
-                        </div>
+                        <LetterAvatar class={styles.callIcon} color={generateColorForString(contact.number)} label={contact.display} />
                         <div class={styles.info}>
                           <span class={styles.number}>{contact.display}</span>
                           <span class={styles.time}>{formatPhoneNumber(contact.number, phoneState.framework || 'unknown')}</span>

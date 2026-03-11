@@ -1,6 +1,8 @@
 import { For, Show, createEffect, createMemo, createSignal, onCleanup, onMount } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { fetchNui } from '../../../utils/fetchNui';
+import { formatPhoneNumber } from '../../../utils/misc';
+import { usePhone } from '../../../store/phone';
 import { uiAlert } from '../../../utils/uiAlert';
 import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { AppScaffold } from '../../shared/layout';
@@ -43,6 +45,7 @@ type TargetMode = 'nearby' | 'contact' | 'phone' | 'identifier';
 
 export function WalletApp() {
   const router = useRouter();
+  const [phoneState] = usePhone();
   const [balance, setBalance] = createSignal(0);
   const [cards, setCards] = createSignal<WalletCard[]>([]);
   const [tx, setTx] = createSignal<WalletTx[]>([]);
@@ -416,7 +419,7 @@ export function WalletApp() {
                     {(contact) => (
                       <button class={styles.optionCard} onClick={() => setProximityPhoneInput(contact.number)}>
                         <strong>{contact.display}</strong>
-                        <span>{contact.number}</span>
+                        <span>{formatPhoneNumber(contact.number, phoneState.framework || 'unknown')}</span>
                       </button>
                     )}
                   </For>
@@ -506,7 +509,7 @@ export function WalletApp() {
                           onClick={() => setTargetPhone(contact.number)}
                         >
                           <strong>{contact.display}</strong>
-                          <span>{contact.number}</span>
+                          <span>{formatPhoneNumber(contact.number, phoneState.framework || 'unknown')}</span>
                         </button>
                       )}
                     </For>

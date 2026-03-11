@@ -212,7 +212,7 @@ export function BankApp() {
               </div>
               
               <Show when={error()}>
-                <div style={{ color: '#ff3b30', 'font-size': '14px', 'margin-top': '8px', 'text-align': 'center' }}>
+                <div class={styles.errorMessage}>
                   {error()}
                 </div>
               </Show>
