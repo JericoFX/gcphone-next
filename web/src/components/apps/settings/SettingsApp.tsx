@@ -10,6 +10,7 @@ import { InlineNotice } from '../../shared/ui/InlineNotice';
 import { SectionGroup, SectionHeader } from '../../shared/ui/SectionBlock';
 import { appName, t } from '../../../i18n';
 import { uiConfirm } from '../../../utils/uiDialog';
+import { formatPhoneNumber } from '../../../utils/misc';
 import { FALLBACK_AUDIO_CATALOG, type PhoneToneCatalog, type ToneCategory } from '../../../utils/phoneAudio';
 import styles from './SettingsApp.module.scss';
 
@@ -507,12 +508,12 @@ export function SettingsApp() {
 
       <SectionHeader title="TONOS" />
       <div class={styles.customUrl}>
-        <div style={{ width: '100%' }}>
-          <div style={{ 'font-weight': '700', 'font-size': '13px', color: '#111827', 'margin-bottom': '4px' }}>
+        <div class={styles.customUrlInfo}>
+          <div class={styles.customUrlTitle}>
             Biblioteca publica
           </div>
-          <div style={{ 'font-size': '12px', color: '#6b7280', 'line-height': '1.45' }}>
-            Fuente recomendada: {toneCatalog().source?.name || 'Pixabay Sound Effects'} - licencia {toneCatalog().source?.license || 'royalty-free'}. El preview usa placeholders nativos hasta convertir los bancos finales.
+          <div class={styles.customUrlText}>
+            Fuente recomendada: {toneCatalog().source?.name || 'Pixabay Sound Effects'} - licencia {toneCatalog().source?.license || 'royalty-free'}. El preview actual usa audio web/NUI; el audio nativo queda pendiente hasta convertir los bancos finales.
           </div>
         </div>
         <button onClick={() => window.open(toneCatalog().source?.downloadPage || 'https://pixabay.com/sound-effects/', '_blank')}>Descargar</button>
@@ -759,11 +760,11 @@ export function SettingsApp() {
       <Group>
         <div class={styles.infoRow}>
           <span class={styles.infoLabel}>Número</span>
-          <span class={styles.infoValue}>{phoneState.settings.phoneNumber || 'No asignado'}</span>
+          <span class={styles.infoValue}>{phoneState.settings.phoneNumber ? formatPhoneNumber(phoneState.settings.phoneNumber, phoneState.framework || 'unknown') : 'No asignado'}</span>
         </div>
         <div class={styles.infoRow}>
           <span class={styles.infoLabel}>Framework</span>
-          <span class={styles.infoValue}>GCPhone Next</span>
+          <span class={styles.infoValue}>{phoneState.framework || 'unknown'}</span>
         </div>
         <div class={styles.infoRow}>
           <span class={styles.infoLabel}>Plataforma</span>

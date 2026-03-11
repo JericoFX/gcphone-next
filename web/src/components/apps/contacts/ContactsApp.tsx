@@ -7,7 +7,7 @@ import { fetchNui } from '../../../utils/fetchNui';
 import { sanitizePhone } from '../../../utils/sanitize';
 import { buildSharedContactMessage } from '../../../utils/contactShare';
 import { uiPrompt } from '../../../utils/uiDialog';
-import { generateColorForString, getBestFontColor } from '../../../utils/misc';
+import { formatPhoneNumber, generateColorForString, getBestFontColor } from '../../../utils/misc';
 import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { AppScaffold } from '../../shared/layout';
 import { ActionSheet } from '../../shared/ui/ActionSheet';
@@ -240,7 +240,7 @@ export function ContactsApp() {
               </div>
               <div class={styles.info}>
                 <span class={styles.name}>{contact.display}</span>
-                <span class={styles.number}>{contact.number}</span>
+                <span class={styles.number}>{formatPhoneNumber(contact.number, phoneState.framework || 'unknown')}</span>
               </div>
               <div class={styles.actions}>
                 <Show when={!isReadOnly()}>

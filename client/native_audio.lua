@@ -5,12 +5,28 @@ local function NativeAudioConfig()
     return Config.NativeAudio or {}
 end
 
+local function NotifyNativeCallToneState(active, toneId)
+    SendNUIMessage({
+        action = 'gcphone:nativeCallToneState',
+        data = {
+            active = active == true,
+            toneId = toneId,
+            placeholder = NativeAudioConfig().PlaceholderMode == true,
+        }
+    })
+end
+
 local function NativeAudioCatalog()
     return NativeAudioConfig().Catalog or {}
 end
 
 local function IncomingCallStateBagName()
     return NativeAudioConfig().IncomingCallStateBag or 'gcphoneIncomingCall'
+end
+
+local function IsNativeCallToneEnabled()
+    local config = NativeAudioConfig()
+    return config.Enabled ~= false and config.PlaceholderMode ~= true
 end
 
 local function PreviewDurationMs()
@@ -64,6 +80,10 @@ local function RequestToneBank(bank)
 end
 
 local function PlayTone(toneId, mode)
+    if not IsNativeCallToneEnabled() then
+        return false
+    end
+
     local entry, resolvedToneId = ResolveToneForProfile(toneId)
     if not entry then return false end
 
@@ -98,6 +118,7 @@ local function PlayTone(toneId, mode)
     if mode == 'call' then
         StopTone(activeCallTone)
         activeCallTone = handle
+        NotifyNativeCallToneState(true, resolvedToneId)
     else
         StopTone(activePreviewTone)
         activePreviewTone = handle
@@ -113,6 +134,9 @@ local function PlayTone(toneId, mode)
 end
 
 local function StopCallTone()
+    if activeCallTone then
+        NotifyNativeCallToneState(false, activeCallTone.toneId)
+    end
     StopTone(activeCallTone)
     activeCallTone = nil
 end
@@ -163,3 +187,4 @@ end)
 exports('PlayPhoneNativeTone', PlayTone)
 exports('StopPhoneNativeCallTone', StopCallTone)
 exports('StopPhoneNativePreviewTone', StopPreviewTone)
+exports('IsPhoneNativeCallToneEnabled', IsNativeCallToneEnabled)

@@ -32,6 +32,7 @@ interface MockMailMessage {
 
 interface BrowserMockState {
   phoneNumber: string;
+  framework: 'esx' | 'qbcore' | 'qbox' | 'unknown';
   wallpaper: string;
   ringtone: string;
   callRingtone: string;
@@ -574,6 +575,7 @@ const openRealtimePanel = () => {
 
 const state: BrowserMockState = {
   phoneNumber: '555-1234',
+  framework: 'esx',
   wallpaper: './img/background/back001.jpg',
   ringtone: 'call_1',
   callRingtone: 'call_1',
@@ -676,6 +678,7 @@ const emitMessage = (action: string, data?: unknown) => {
 
 const phonePayload = () => ({
   phoneNumber: state.phoneNumber,
+  framework: state.framework,
   imei: state.imei,
   deviceOwnerName: 'Jerico Mock',
   isStolen: false,

@@ -604,6 +604,7 @@ local function BuildPhonePayload(phone, source)
 
     local context = source and GetPhoneAccessContext(source) or nil
     local isForeignReadOnly = context and context.mode == 'foreign-readonly'
+    local framework = GetFramework and GetFramework() or 'unknown'
     local featureFlags = GetFeatureFlags()
     local enabledApps = isForeignReadOnly and BuildReadOnlyEnabledApps() or BuildEnabledApps(featureFlags)
     local layoutRaw = MySQL.scalar.await(
@@ -617,6 +618,7 @@ local function BuildPhonePayload(phone, source)
 
     return {
         phoneNumber = phone.phone_number,
+        framework = framework,
         imei = phone.imei,
         deviceOwnerName = ownerName,
         isStolen = tonumber(phone.is_stolen) == 1,

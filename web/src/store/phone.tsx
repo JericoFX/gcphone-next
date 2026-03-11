@@ -9,7 +9,7 @@ import {
 import { createStore } from 'solid-js/store';
 import { fetchNui } from '../utils/fetchNui';
 import { useNuiCustomEvent } from '../utils/useNui';
-import type { AppLayout, PhoneFeatureFlags, PhoneSettings, PhoneSetupPayload, PhoneState, PhoneSetupState } from '../types';
+import type { AppLayout, PhoneFeatureFlags, PhoneFramework, PhoneSettings, PhoneSetupPayload, PhoneState, PhoneSetupState } from '../types';
 import { APP_IDS, DEFAULT_HOME_APPS, DEFAULT_MENU_APPS } from '../config/apps';
 import { isEnvBrowser } from '../utils/misc';
 
@@ -86,6 +86,7 @@ const defaultLayout: AppLayout = {
 };
 
 type PhonePayload = PhoneSettings & {
+  framework?: PhoneFramework;
   imei?: string;
   deviceOwnerName?: string;
   isStolen?: boolean;
@@ -105,6 +106,11 @@ type PhonePayload = PhoneSettings & {
 
 const PINNED_HOME_APPS = ['contacts', 'messages', 'mail'] as const;
 const REQUIRED_ENABLED_APPS = ['contacts', 'messages', 'mail'] as const;
+
+function normalizeFramework(value: unknown): PhoneFramework {
+  if (value === 'esx' || value === 'qbcore' || value === 'qbox') return value;
+  return 'unknown';
+}
 
 function ensureRequiredEnabledApps(enabledApps: string[]): string[] {
   const active = new Set<string>();
@@ -207,6 +213,7 @@ export const PhoneProvider: ParentComponent = (props) => {
     visible: false,
     locked: true,
     initialized: false,
+    framework: 'unknown',
     imei: undefined,
     deviceOwnerName: undefined,
     isStolen: false,
@@ -375,6 +382,7 @@ export const PhoneProvider: ParentComponent = (props) => {
           audioProfile: response.audioProfile || defaultSettings.audioProfile,
         });
         setLayout(response.appLayout || defaultLayout, enabledApps);
+        setState('framework', normalizeFramework(response.framework));
         setState('imei', response.imei);
         setState('deviceOwnerName', response.deviceOwnerName);
         setState('isStolen', response.isStolen === true);
@@ -458,6 +466,7 @@ export const PhoneProvider: ParentComponent = (props) => {
           audioProfile: data.audioProfile || defaultSettings.audioProfile,
         });
       setLayout(data?.appLayout || defaultLayout, enabledApps);
+      setState('framework', normalizeFramework(data?.framework));
       setState('imei', data?.imei);
       setState('deviceOwnerName', data?.deviceOwnerName);
       setState('isStolen', data?.isStolen === true);
@@ -509,6 +518,7 @@ export const PhoneProvider: ParentComponent = (props) => {
              audioProfile: data.audioProfile || state.settings.audioProfile,
           });
         setLayout(data.appLayout || state.appLayout, enabledApps);
+        setState('framework', normalizeFramework(data.framework));
         setState('imei', data.imei);
         setState('deviceOwnerName', data.deviceOwnerName);
         setState('isStolen', data.isStolen === true);

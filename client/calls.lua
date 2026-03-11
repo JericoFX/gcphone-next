@@ -6,6 +6,14 @@ local currentCallId = nil
 local peerConnection = nil
 local usingPmaVoice = GetResourceState('pma-voice') == 'started'
 
+local function IsNativeIncomingToneEnabled()
+    local resource = GetCurrentResourceName()
+    local ok, enabled = pcall(function()
+        return exports[resource]:IsPhoneNativeCallToneEnabled()
+    end)
+    return ok and enabled == true or false
+end
+
 local function IsPhoneOpenSafe()
     local resource = GetCurrentResourceName()
     local ok, open = pcall(function()
@@ -62,10 +70,13 @@ RegisterNetEvent('gcphone:incomingCall', function(callData)
     currentCallId = callData.id
     StopSoundJS('calling_loop')
     StopSoundJS('calling_short')
+
+    local payload = type(callData) == 'table' and callData or {}
+    payload.nativeTone = IsNativeIncomingToneEnabled()
     
     SendNUIMessage({
         action = 'incomingCall',
-        data = callData
+        data = payload
     })
 
     if not IsPhoneOpenSafe() then

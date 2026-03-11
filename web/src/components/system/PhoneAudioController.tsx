@@ -17,6 +17,16 @@ type MessageDetail = {
   id?: number;
 };
 
+type IncomingCallDetail = {
+  nativeTone?: boolean;
+};
+
+type NativeCallToneDetail = {
+  active?: boolean;
+  toneId?: string;
+  placeholder?: boolean;
+};
+
 function asEventListener<T>(handler: (detail: T) => void) {
   return ((event: Event) => {
     handler((event as CustomEvent<T>).detail);
@@ -27,6 +37,7 @@ export function PhoneAudioController() {
   const [phoneState] = usePhone();
   const [notifications] = useNotifications();
   let lastNotificationId: string | null = null;
+  let nativeIncomingCallActive = false;
 
   const audioProfile = () => (phoneState.settings.audioProfile || 'normal') as AudioProfile;
   const masterVolume = () => phoneState.settings.volume ?? 0.5;
@@ -69,8 +80,12 @@ export function PhoneAudioController() {
   };
 
   onMount(() => {
-    const onIncomingCall = asEventListener<Record<string, unknown>>(() => {
+    const onIncomingCall = asEventListener<IncomingCallDetail>((detail) => {
       phoneAudio.stop('outgoing-call');
+      if (nativeIncomingCallActive || detail?.nativeTone === true) {
+        phoneAudio.stop('incoming-call');
+        return;
+      }
       playIncomingTone();
     });
 
@@ -122,6 +137,13 @@ export function PhoneAudioController() {
       stopPreview();
     });
 
+    const onNativeCallToneState = asEventListener<NativeCallToneDetail>((detail) => {
+      nativeIncomingCallActive = detail?.active === true && detail?.placeholder !== true;
+      if (nativeIncomingCallActive) {
+        phoneAudio.stop('incoming-call');
+      }
+    });
+
     window.addEventListener('incomingCall', onIncomingCall);
     window.addEventListener('callAccepted', onCallResolved);
     window.addEventListener('callRejected', onCallResolved);
@@ -133,6 +155,7 @@ export function PhoneAudioController() {
     window.addEventListener('stopSound', onStopSound);
     window.addEventListener('setSoundVolume', onSetSoundVolume);
     window.addEventListener('phone:hide', onHidePhone);
+    window.addEventListener('gcphone:nativeCallToneState', onNativeCallToneState);
 
     onCleanup(() => {
       window.removeEventListener('incomingCall', onIncomingCall);
@@ -146,6 +169,7 @@ export function PhoneAudioController() {
       window.removeEventListener('stopSound', onStopSound);
       window.removeEventListener('setSoundVolume', onSetSoundVolume);
       window.removeEventListener('phone:hide', onHidePhone);
+      window.removeEventListener('gcphone:nativeCallToneState', onNativeCallToneState);
       phoneAudio.stopAll();
     });
   });

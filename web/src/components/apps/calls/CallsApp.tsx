@@ -3,7 +3,7 @@ import { useRouter } from '../../Phone/PhoneFrame';
 import { usePhoneState } from '../../../store/phone';
 import { fetchNui } from '../../../utils/fetchNui';
 import { useNuiEvent } from '../../../utils/useNui';
-import { generateColorForString, timeAgo } from '../../../utils/misc';
+import { formatPhoneNumber, generateColorForString, timeAgo } from '../../../utils/misc';
 import { sanitizePhone, sanitizeText } from '../../../utils/sanitize';
 import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { ScreenState } from '../../shared/ui/ScreenState';
@@ -450,7 +450,7 @@ export function CallsApp() {
                       </div>
                       <div class={styles.info}>
                         <span class={styles.number}>
-                          {call.hidden ? '###-####' : call.num}
+                          {call.hidden ? '###-####' : formatPhoneNumber(call.num, phoneState.framework || 'unknown')}
                         </span>
                         <span class={styles.time}>{timeAgo(call.time)}</span>
                       </div>
@@ -494,7 +494,7 @@ export function CallsApp() {
                         </div>
                         <div class={styles.info}>
                           <span class={styles.number}>{contact.display}</span>
-                          <span class={styles.time}>{contact.number}</span>
+                          <span class={styles.time}>{formatPhoneNumber(contact.number, phoneState.framework || 'unknown')}</span>
                         </div>
                          <button class={styles.callBtn} onClick={() => startCall(contact.number, contact.display)} disabled={isReadOnly()}>
                            📞
@@ -599,7 +599,7 @@ function ActiveCallView(props: { callInfo: any; videoMode: boolean; videoStatus:
           {(props.callInfo?.displayName || props.callInfo?.receiverNum)?.charAt(0) || '?'}
         </div>
         <div class={styles.name}>
-          {props.callInfo?.displayName || props.callInfo?.receiverNum || 'Llamando...'}
+          {props.callInfo?.displayName || (props.callInfo?.receiverNum ? formatPhoneNumber(props.callInfo.receiverNum, phoneState.framework || 'unknown') : 'Llamando...')}
         </div>
         <Show when={remainingTime() !== null && remainingTime()! > 0 && remainingTime()! <= 60 && props.videoMode}>
           <div class={styles.callTimer}>

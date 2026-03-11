@@ -8,9 +8,12 @@ import { useAppCache } from '../../../hooks';
 import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { MediaLightbox } from '../../shared/ui/MediaLightbox';
 import { MediaAttachmentPreview } from '../../shared/ui/MediaAttachmentPreview';
+import { EmptyState } from '../../shared/ui/EmptyState';
 import { FormField, FormTextarea, Modal, ModalActions, ModalButton } from '../../shared/ui/Modal';
 import { EmojiPickerButton } from '../../shared/ui/EmojiPicker';
 import { MediaActionButtons } from '../../shared/ui/MediaActionButtons';
+import { SegmentedTabs } from '../../shared/ui/SegmentedTabs';
+import { SheetIntro } from '../../shared/ui/SheetIntro';
 import { SocialOnboardingModal, type SocialOnboardingPayload } from '../../shared/ui/SocialOnboardingModal';
 import styles from './ChirpApp.module.scss';
 
@@ -112,6 +115,11 @@ export function ChirpApp() {
   // Viewer
   const [viewerUrl, setViewerUrl] = createSignal<string | null>(null);
   const [query, setQuery] = createSignal('');
+  const chirpTabs = [
+    { id: 'forYou', label: 'Para ti' },
+    { id: 'following', label: 'Siguiendo' },
+    { id: 'myActivity', label: 'Actividad' },
+  ];
 
   const pendingCount = createMemo(() => pendingRequests().length);
   const sentCount = createMemo(() => sentRequests().length);
@@ -629,27 +637,7 @@ export function ChirpApp() {
     <div class={styles.listView}>
       <div class={styles.headerSection}>
         <div class={styles.tabs}>
-          <button 
-            class={styles.tabBtn}
-            classList={{ [styles.active]: currentTab() === 'forYou' }}
-            onClick={() => setCurrentTab('forYou')}
-          >
-            Para ti
-          </button>
-          <button 
-            class={styles.tabBtn}
-            classList={{ [styles.active]: currentTab() === 'following' }}
-            onClick={() => setCurrentTab('following')}
-          >
-            Siguiendo
-          </button>
-          <button 
-            class={styles.tabBtn}
-            classList={{ [styles.active]: currentTab() === 'myActivity' }}
-            onClick={() => setCurrentTab('myActivity')}
-          >
-            Mi Actividad
-          </button>
+          <SegmentedTabs items={chirpTabs} active={currentTab()} onChange={(id) => setCurrentTab(id as TabMode)} />
         </div>
 
         <div class={styles.socialStrip}>
@@ -674,9 +662,7 @@ export function ChirpApp() {
         </For>
         
         <Show when={!loading() && tweets().length === 0}>
-          <div class={styles.emptyState}>
-            <p>No hay tweets para mostrar</p>
-          </div>
+          <EmptyState class={styles.emptyState} title="No hay chirps para mostrar" description="Cuando haya actividad nueva la veras aqui." />
         </Show>
       </div>
 
@@ -812,7 +798,7 @@ export function ChirpApp() {
     <AppScaffold title="Chirp" subtitle="Que esta pasando?" onBack={() => router.goBack()} bodyClass={styles.body}>
       <Show when={viewMode() === 'list'} fallback={<DetailView />}>
         <Show when={statusMessage()}>
-          <div style={{ padding: '8px 12px', margin: '8px', 'background-color': 'rgba(255, 159, 10, 0.14)', color: '#7a4a00', 'font-size': '12px', 'border-radius': '10px' }}>
+          <div class={styles.statusBanner}>
             {statusMessage()}
           </div>
         </Show>
@@ -827,8 +813,9 @@ export function ChirpApp() {
         size="md"
       >
         <div class={styles.composerContent}>
+          <SheetIntro title="Nuevo Chirp" description="Comparte una idea breve y, si quieres, agrega una imagen o video para acompañarla." />
           <EmojiPickerButton value={composerText()} onChange={setComposerText} maxLength={280} />
-      <textarea class={styles.composerTextarea}
+          <textarea class={styles.composerTextarea}
             placeholder="Que esta pasando?"
             value={composerText()}
             onInput={(e) => setComposerText(e.currentTarget.value)}
@@ -960,7 +947,7 @@ export function ChirpApp() {
         onClose={() => setShowProfileModal(false)}
         size="md"
       >
-        <p style={{ margin: '0 0 10px', color: '#6b7280', 'font-size': '12px' }}>La identidad de Chirp queda ligada al inicio del telefono.</p>
+        <SheetIntro title="Perfil de Chirp" description="La identidad de Chirp queda ligada al inicio del telefono." />
         <FormField label="Nombre visible" value={profileDisplayName()} onChange={setProfileDisplayName} placeholder="Tu nombre" disabled />
         <label class={styles.privateToggle}>
           <input

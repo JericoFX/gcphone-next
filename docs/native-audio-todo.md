@@ -5,8 +5,8 @@ Estado actual:
 - El telefono ya usa `toneId` abstractos en vez de `.ogg` legacy.
 - Hay placeholders listos para audio nativo en `shared/config.lua`.
 - Las llamadas entrantes ya usan `state bag` `gcphoneIncomingCall`.
-- El cliente ya tiene controlador placeholder en `client/native_audio.lua`.
-- El preview de Settings ya llama a `previewNativeTone` / `stopNativeTonePreview`.
+- El cliente ya tiene controlador placeholder en `client/native_audio.lua`, pero no entra en runtime final mientras `PlaceholderMode = true` o falten bancos reales.
+- El preview de Settings sigue usando audio web/NUI mediante `gcphone:previewTone` / `gcphone:stopTonePreview`.
 - El ringtone JS hardcodeado `Phone_Call_Sound_Effect.ogg` ya no se usa.
 
 Tone IDs definidos:
@@ -53,13 +53,14 @@ Archivos a completar cuando exista el output real de Audiotool:
   - confirmar si `PlaySoundFrontend` es suficiente o si conviene `PlaySoundFromEntity`
   - quitar modo placeholder cuando ya existan bancos reales
 
-Flujo ya implementado:
+Flujo implementado hoy:
 
 - Server guarda/lee tonos por `toneId`
 - Server setea `Player(target).state.gcphoneIncomingCall`
 - Client escucha el `state bag`
-- Client intenta resolver `toneId -> soundName/bank/soundSet`
-- Client puede parar el sonido con natives
+- Client intenta resolver `toneId -> soundName/bank/soundSet`, pero con `PlaceholderMode = true` no reproduce runtime nativo aun
+- El telefono reproduce tonos actuales por JS/NUI (`PhoneAudioController` + `phoneAudio.ts`)
+- Client puede parar el sonido con natives cuando el runtime final quede habilitado
 
 Compatibilidad legacy ya resuelta:
 
@@ -77,4 +78,5 @@ Punto importante:
 
 - Los MP3 actuales NO son el runtime final.
 - `catalog.json` ahora funciona como catalogo logico/UI y referencia de source assets.
+- El runtime actual funcional sigue siendo audio web/NUI.
 - El runtime final sera audio nativo de FiveM cuando se complete el mapper real.

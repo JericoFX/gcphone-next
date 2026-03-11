@@ -1,0 +1,23 @@
+.emptyState {
+  min-height: 160px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 24px 16px;
+  text-align: center;
+  color: #6b7280;
+}
+
+.emptyState strong {
+  font-size: 16px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.emptyState span {
+  max-width: 240px;
+  font-size: 13px;
+  line-height: 1.45;
+}

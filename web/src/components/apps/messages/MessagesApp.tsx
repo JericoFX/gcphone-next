@@ -5,7 +5,7 @@ import { useContacts } from '../../../store/contacts';
 import { usePhoneState } from '../../../store/phone';
 import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { fetchNui } from '../../../utils/fetchNui';
-import { generateColorForString, timeAgo } from '../../../utils/misc';
+import { formatPhoneNumber, generateColorForString, timeAgo } from '../../../utils/misc';
 import { resolveMediaType, sanitizeMediaUrl, sanitizePhone, sanitizeText } from '../../../utils/sanitize';
 import { parseSharedContactMessage } from '../../../utils/contactShare';
 import { uiPrompt } from '../../../utils/uiDialog';
@@ -262,7 +262,7 @@ export function MessagesApp() {
     <>
       <Show when={!selectedConversation()} fallback={
         <ConversationView
-          phoneNumber={selectedConversation()!}
+          phoneNumber={formatPhoneNumber(selectedConversation()!, phoneState.framework || 'unknown')}
           contactName={routeConversationName() || getContactName(selectedConversation()!)}
         messages={getConversationMessages()}
         messageInput={messageInput()}
@@ -284,6 +284,7 @@ export function MessagesApp() {
           setRouteConversationName('');
         }}
         onDeleteConversation={() => void deleteConversation(selectedConversation()!)}
+        framework={phoneState.framework || 'unknown'}
         readOnly={isReadOnly()}
         readOnlyOwnerName={phoneState.accessOwnerName}
       />
@@ -363,6 +364,7 @@ function ConversationView(props: {
   onAddContact: (display: string, number: string) => void;
   onBack: () => void;
   onDeleteConversation: () => void;
+  framework?: 'esx' | 'qbcore' | 'qbox' | 'unknown';
   readOnly?: boolean;
   readOnlyOwnerName?: string;
 }) {
@@ -417,7 +419,7 @@ function ConversationView(props: {
                   <div class={styles.contactCard}>
                     <div class={styles.contactCardLabel}>Contacto compartido</div>
                     <div class={styles.contactCardName}>{shared().display}</div>
-                    <div class={styles.contactCardNumber}>{shared().number}</div>
+                    <div class={styles.contactCardNumber}>{formatPhoneNumber(shared().number, props.framework || 'unknown')}</div>
                     <Show when={!props.readOnly}>
                       <button
                         class={styles.contactCardBtn}

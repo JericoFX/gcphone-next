@@ -20,13 +20,17 @@ import {
 } from '../../../utils/socket';
 import { AppFAB, AppScaffold } from '../../shared/layout';
 import { useAppCache } from '../../../hooks';
+import { EmptyState } from '../../shared/ui/EmptyState';
 import { MediaLightbox } from '../../shared/ui/MediaLightbox';
-import { FormField, FormTextarea, Modal, ModalActions, ModalButton } from '../../shared/ui/Modal';
+import { FormField, Modal, ModalActions, ModalButton } from '../../shared/ui/Modal';
 import { ActionSheet } from '../../shared/ui/ActionSheet';
 import { EmojiPickerButton } from '../../shared/ui/EmojiPicker';
 import { LiveFlashlightControl } from '../../shared/ui/LiveFlashlightControl';
 import { MediaActionButtons } from '../../shared/ui/MediaActionButtons';
 import { MediaAttachmentPreview } from '../../shared/ui/MediaAttachmentPreview';
+import { SearchInput } from '../../shared/ui/SearchInput';
+import { SegmentedTabs } from '../../shared/ui/SegmentedTabs';
+import { SheetIntro } from '../../shared/ui/SheetIntro';
 import { SocialOnboardingModal, type SocialOnboardingPayload } from '../../shared/ui/SocialOnboardingModal';
 import { VirtualList } from '../../shared/ui/VirtualList';
 import { useLiveFlashlight } from '../../../hooks/useLiveFlashlight';
@@ -260,6 +264,10 @@ export function SnapApp() {
   const [discoverOffset, setDiscoverOffset] = createSignal(0);
   const [discoverHasMore, setDiscoverHasMore] = createSignal(true);
   const [discoverQuery, setDiscoverQuery] = createSignal('');
+  const postModeTabs = [
+    { id: 'post', label: 'Publicacion' },
+    { id: 'story', label: 'Story' },
+  ];
 
   const [profileDisplayName, setProfileDisplayName] = createSignal('');
   const [profileAvatar, setProfileAvatar] = createSignal('');
@@ -1608,9 +1616,7 @@ export function SnapApp() {
         </div>
 
         <Show when={statusMessage()}>
-          <div style={{ padding: '8px 12px', 'margin-bottom': '8px', 'background-color': 'rgba(255, 159, 10, 0.14)', color: '#7a4a00', 'font-size': '12px', 'border-radius': '10px' }}>
-            {statusMessage()}
-          </div>
+          <div class={styles.statusBanner}>{statusMessage()}</div>
         </Show>
 
         <Show when={activeTab() === 'feed'}>
@@ -1714,10 +1720,7 @@ export function SnapApp() {
               </div>
 
               <Show when={!loading() && posts().length === 0}>
-                <div class={styles.emptyState}>
-                  <p>No hay publicaciones</p>
-                  <p class={styles.emptyHint}>¡Sé el primero en compartir!</p>
-                </div>
+                <EmptyState class={styles.emptyState} title="No hay publicaciones" description="Se el primero en compartir algo con tu circulo." />
               </Show>
             </div>
           </>
@@ -1726,11 +1729,12 @@ export function SnapApp() {
         <Show when={activeTab() === 'discover'}>
           <div class={styles.discoverSection}>
             <h4 class={styles.sectionTitle}>Descubrir</h4>
-            <input
-              class={styles.discoverSearch}
+            <SearchInput
               value={discoverQuery()}
-              onInput={(e) => setDiscoverQuery(sanitizeText(e.currentTarget.value, 60))}
+              onInput={(value) => setDiscoverQuery(sanitizeText(value, 60))}
               placeholder="Buscar por @usuario, nombre o caption"
+              class={styles.discoverSearchRoot}
+              inputClass={styles.discoverSearch}
             />
 
             <Show when={!discoverLoading()} fallback={<p class={styles.discoverHint}>Cargando descubrimiento...</p>}>
@@ -1806,9 +1810,9 @@ export function SnapApp() {
           <div class={styles.profileTab}>
             <h4 class={styles.sectionTitle}>Perfil</h4>
 
-            <p style={{ margin: '0 0 10px', color: 'var(--ios-secondary-label, #6b7280)', 'font-size': '12px' }}>
+            <div class={styles.profileHelper}>
               El nombre principal de Snap queda fijo desde la configuracion inicial del telefono.
-            </p>
+            </div>
 
             <FormField
               label="Nombre visible"
@@ -1872,21 +1876,9 @@ export function SnapApp() {
         size="md"
       >
         <div class={styles.createContent}>
+          <SheetIntro title="Crear contenido" description="Publica una foto o video en tu perfil, o comparte una story temporal." />
           <div class={styles.modeToggle}>
-            <button 
-              class={styles.modeBtn}
-              classList={{ [styles.active]: postMode() === 'post' }}
-              onClick={() => setPostMode('post')}
-            >
-              Publicacion
-            </button>
-            <button 
-              class={styles.modeBtn}
-              classList={{ [styles.active]: postMode() === 'story' }}
-              onClick={() => setPostMode('story')}
-            >
-              Story
-            </button>
+            <SegmentedTabs items={postModeTabs} active={postMode()} onChange={(id) => setPostMode(id as 'post' | 'story')} />
           </div>
 
           <Show when={!postMedia()}>
@@ -2158,9 +2150,10 @@ export function SnapApp() {
         size="lg"
       >
         <div class={styles.requestsBlock}>
+          <SheetIntro title="Solicitudes" description="Administra quien puede seguirte y revisa las peticiones que enviaste." />
           <h4>Recibidas</h4>
           <Show when={!requestsLoading()} fallback={<p>Cargando...</p>}>
-            <Show when={pendingRequests().length > 0} fallback={<p>Sin pendientes.</p>}>
+            <Show when={pendingRequests().length > 0} fallback={<EmptyState title="Sin pendientes" description="Las nuevas solicitudes apareceran aqui." />}>
               <For each={pendingRequests()}>
                 {(request) => (
                   <div class={styles.requestRow}>
@@ -2181,7 +2174,7 @@ export function SnapApp() {
 
         <div class={styles.requestsBlock}>
           <h4>Enviadas</h4>
-          <Show when={sentRequests().length > 0} fallback={<p>Sin solicitudes enviadas.</p>}>
+          <Show when={sentRequests().length > 0} fallback={<EmptyState title="Sin solicitudes enviadas" description="Cuando envies una solicitud podras seguirla desde aqui." />}>
             <For each={sentRequests()}>
               {(request) => (
                 <div class={styles.requestRow}>
