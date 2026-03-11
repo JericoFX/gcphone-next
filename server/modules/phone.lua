@@ -63,6 +63,16 @@ local function GenerateUniqueIMEI()
     return nil
 end
 
+local function CanAccessIdentifierExport(identifier, requestSource)
+    local src = tonumber(requestSource)
+    if not src or src <= 0 or not identifier then
+        return false
+    end
+
+    local ownerIdentifier = GetPhoneOwnerIdentifier and GetPhoneOwnerIdentifier(src, true) or GetIdentifier(src)
+    return ownerIdentifier ~= nil and ownerIdentifier == identifier
+end
+
 local function SafeString(value, maxLen)
     if type(value) ~= 'string' then return nil end
     local trimmed = value:gsub('%s+', ' '):gsub('^%s+', ''):gsub('%s+$', '')
@@ -1185,8 +1195,13 @@ end)
 
 ---Get a phone number by owner identifier.
 ---@param identifier string
+---@param requestSource integer
 ---@return string|nil
-exports('GetPhoneNumber', function(identifier)
+exports('GetPhoneNumber', function(identifier, requestSource)
+    if not CanAccessIdentifierExport(identifier, requestSource) then
+        return nil
+    end
+
     if GetPhoneNumber then
         return GetPhoneNumber(identifier)
     end
@@ -1372,8 +1387,16 @@ end)
 
 ---Get phone owner details by identifier.
 ---@param identifier string
+---@param requestSource integer
 ---@return GCPhoneLookupResponse
-exports('GetPhoneByIdentifier', function(identifier)
+exports('GetPhoneByIdentifier', function(identifier, requestSource)
+    if not CanAccessIdentifierExport(identifier, requestSource) then
+        return {
+            success = false,
+            error = 'UNAUTHORIZED',
+        }
+    end
+
     local phone, err = GetPhoneLookupRecordByIdentifier(identifier)
     if err then
         return {

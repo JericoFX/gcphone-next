@@ -62,10 +62,25 @@ lib.callback.register('gcphone:setPhotoAsWallpaper', function(source, data)
     return true
 end)
 
+local function CanAccessIdentifierExport(identifier, requestSource)
+    local src = tonumber(requestSource)
+    if not src or src <= 0 or not identifier then
+        return false
+    end
+
+    local ownerIdentifier = GetPhoneOwnerIdentifier and GetPhoneOwnerIdentifier(src, true) or GetIdentifier(src)
+    return ownerIdentifier ~= nil and ownerIdentifier == identifier
+end
+
 ---Get gallery media for a phone owner identifier.
 ---@param identifier string
+---@param requestSource integer
 ---@return table[]
-exports('GetGallery', function(identifier)
+exports('GetGallery', function(identifier, requestSource)
+    if not CanAccessIdentifierExport(identifier, requestSource) then
+        return {}
+    end
+
     return MySQL.query.await(
         'SELECT id, url, type, created_at FROM phone_gallery WHERE identifier = ? ORDER BY created_at DESC',
         { identifier }
