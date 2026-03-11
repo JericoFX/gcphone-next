@@ -27,6 +27,8 @@ local function ResolvePhoneOpenKey()
     return controlMap[tonumber(key) or -1] or 'F1'
 end
 
+---@alias GCPhoneVisualMode 'text'|'call'|'camera'|'live'
+
 local function UpdateNuiInputState(force)
     local desiredFocus = menuIsOpen
     local desiredCursor = menuIsOpen
@@ -246,8 +248,24 @@ RegisterNetEvent('gcphone:forceClosePhone', function()
     end
 end)
 
+---Toggle the phone open/closed state.
+---@return nil
 exports('TogglePhone', TogglePhone)
+
+---Force the phone closed if it is open.
+---@return nil
 exports('ClosePhone', ClosePhone)
+
+---Check whether the phone UI is currently open.
+---@return boolean
 exports('IsPhoneOpen', function() return menuIsOpen end)
+
+---Set the current phone visual mode used by animations and presentation.
+---@param mode GCPhoneVisualMode|string
+---@param options? table<string, any>
+---@return nil
 exports('SetPhoneVisualMode', SetPhoneVisualMode)
+
+---Get the current phone visual mode.
+---@return string, table<string, any>
 exports('GetPhoneVisualMode', GetPhoneVisualMode)

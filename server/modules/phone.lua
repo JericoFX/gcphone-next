@@ -2,6 +2,26 @@
 
 local PhoneExists
 
+---@class GCPhoneLookupOwner
+---@field identifier string
+---@field name string
+---@field phoneNumber string
+---@field imei string
+---@field isStolen boolean
+---@field stolenAt? string
+---@field stolenReason? string
+---@field stolenReporter? string
+
+---@class GCPhoneLookupResponse
+---@field success boolean
+---@field error? string
+---@field owner? GCPhoneLookupOwner
+
+---@class GCPhoneStolenMutationResponse
+---@field success boolean
+---@field error? string
+---@field phone? table<string, any>
+
 local function GenerateIMEI()
     local imei = ''
     for i = 1, 15 do
@@ -1163,6 +1183,9 @@ AddEventHandler('playerDropped', function()
     ClearPhoneAccessContext(source)
 end)
 
+---Get a phone number by owner identifier.
+---@param identifier string
+---@return string|nil
 exports('GetPhoneNumber', function(identifier)
     if GetPhoneNumber then
         return GetPhoneNumber(identifier)
@@ -1174,6 +1197,9 @@ exports('GetPhoneNumber', function(identifier)
     )
 end)
 
+---Resolve an identifier from a phone number.
+---@param phoneNumber string
+---@return string|nil
 exports('GetIdentifierByPhone', function(phoneNumber)
     if GetIdentifierByPhone then
         return GetIdentifierByPhone(phoneNumber)
@@ -1185,6 +1211,11 @@ exports('GetIdentifierByPhone', function(phoneNumber)
     )
 end)
 
+---Mark a phone as stolen using its IMEI.
+---@param imei string
+---@param reason? string
+---@param reporter? string
+---@return GCPhoneStolenMutationResponse
 exports('MarkPhoneAsStolenByIMEI', function(imei, reason, reporter)
     local success, result = SetPhoneStolenStateByIMEI(imei, {
         isStolen = true,
@@ -1205,6 +1236,9 @@ exports('MarkPhoneAsStolenByIMEI', function(imei, reason, reporter)
     }
 end)
 
+---Clear stolen state for a phone using its IMEI.
+---@param imei string
+---@return GCPhoneStolenMutationResponse
 exports('ClearPhoneStolenByIMEI', function(imei)
     local success, result = SetPhoneStolenStateByIMEI(imei, {
         isStolen = false,
@@ -1306,6 +1340,9 @@ local function GetPhoneLookupRecordByNumber(phoneNumber)
     return GetPhoneLookupRecordByIdentifier(identifier)
 end
 
+---Get phone owner details by IMEI.
+---@param imei string
+---@return GCPhoneLookupResponse
 exports('GetPhoneOwnerByIMEI', function(imei)
     local phone, err = GetPhoneLookupRecordByIMEI(imei)
     if err then
@@ -1318,6 +1355,9 @@ exports('GetPhoneOwnerByIMEI', function(imei)
     return BuildOwnerLookupResponse(phone)
 end)
 
+---Get phone owner details by phone number.
+---@param phoneNumber string
+---@return GCPhoneLookupResponse
 exports('GetPhoneOwnerByNumber', function(phoneNumber)
     local phone, err = GetPhoneLookupRecordByNumber(phoneNumber)
     if err then
@@ -1330,6 +1370,9 @@ exports('GetPhoneOwnerByNumber', function(phoneNumber)
     return BuildOwnerLookupResponse(phone)
 end)
 
+---Get phone owner details by identifier.
+---@param identifier string
+---@return GCPhoneLookupResponse
 exports('GetPhoneByIdentifier', function(identifier)
     local phone, err = GetPhoneLookupRecordByIdentifier(identifier)
     if err then
@@ -1342,6 +1385,11 @@ exports('GetPhoneByIdentifier', function(identifier)
     return BuildOwnerLookupResponse(phone)
 end)
 
+---Mark a phone as stolen using its phone number.
+---@param phoneNumber string
+---@param reason? string
+---@param reporter? string
+---@return GCPhoneStolenMutationResponse
 exports('MarkPhoneAsStolenByNumber', function(phoneNumber, reason, reporter)
     local phone, err = GetPhoneLookupRecordByNumber(phoneNumber)
     if err then
@@ -1370,6 +1418,9 @@ exports('MarkPhoneAsStolenByNumber', function(phoneNumber, reason, reporter)
     }
 end)
 
+---Clear stolen state for a phone using its phone number.
+---@param phoneNumber string
+---@return GCPhoneStolenMutationResponse
 exports('ClearPhoneStolenByNumber', function(phoneNumber)
     local phone, err = GetPhoneLookupRecordByNumber(phoneNumber)
     if err then

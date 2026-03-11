@@ -635,6 +635,23 @@ CreateThread(function()
     end
 end)
 
+---@class GCSnapLiveAudioStatus
+---@field active boolean
+---@field listenerSource? integer
+---@field broadcasterSource? integer
+---@field distance? number
+---@field volume? number
+
+---@class GCNearbyPlayerEntry
+---@field serverId integer
+---@field ped integer
+---@field distance number
+
+---Get the current Snap live audio status for the local player.
+---@return GCSnapLiveAudioStatus
 exports('GetSnapLiveAudioStatus', GetLiveAudioStatus)
 
+---Get nearby players around the local player.
+---@param maxDistance number
+---@return GCNearbyPlayerEntry[]
 exports('GetNearbyPlayers', GetNearbyPlayers)

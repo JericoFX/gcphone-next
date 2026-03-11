@@ -184,7 +184,20 @@ AddEventHandler('onResourceStop', function(resourceName)
     StopPreviewTone()
 end)
 
+---Play a native phone tone by logical tone id.
+---@param toneId string
+---@param mode? 'call'|'preview'
+---@return boolean
 exports('PlayPhoneNativeTone', PlayTone)
+
+---Stop the currently active native incoming-call tone.
+---@return nil
 exports('StopPhoneNativeCallTone', StopCallTone)
+
+---Stop the currently active native preview tone.
+---@return nil
 exports('StopPhoneNativePreviewTone', StopPreviewTone)
+
+---Check whether native call tones are fully enabled and not in placeholder mode.
+---@return boolean
 exports('IsPhoneNativeCallToneEnabled', IsNativeCallToneEnabled)
