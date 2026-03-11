@@ -13,6 +13,10 @@ type SoundDetail = {
   loop?: boolean;
 };
 
+type MessageDetail = {
+  id?: number;
+};
+
 function asEventListener<T>(handler: (detail: T) => void) {
   return ((event: Event) => {
     handler((event as CustomEvent<T>).detail);
@@ -50,6 +54,20 @@ export function PhoneAudioController() {
     phoneAudio.stop('tone-preview');
   };
 
+  const playAlertTone = (channel: string, category: ToneCategory) => {
+    const toneId = category === 'message'
+      ? phoneState.settings.messageTone
+      : phoneState.settings.notificationTone;
+
+    phoneAudio.playTone(channel, {
+      toneId,
+      category,
+      volume: masterVolume(),
+      audioProfile: audioProfile(),
+      forceVibrate: shouldUseVibrateVariant(),
+    });
+  };
+
   onMount(() => {
     const onIncomingCall = asEventListener<Record<string, unknown>>(() => {
       phoneAudio.stop('outgoing-call');
@@ -82,6 +100,10 @@ export function PhoneAudioController() {
       }
     });
 
+    const onMessageReceived = asEventListener<MessageDetail>(() => {
+      playAlertTone('message', 'message');
+    });
+
     const onStopSound = asEventListener<SoundDetail>((detail) => {
       if (!detail?.sound) return;
       if (detail.sound === 'calling_loop' || detail.sound === 'calling_short') {
@@ -106,6 +128,7 @@ export function PhoneAudioController() {
     window.addEventListener('callEnded', onCallResolved);
     window.addEventListener('gcphone:previewTone', onPreviewTone);
     window.addEventListener('gcphone:stopTonePreview', stopPreview as EventListener);
+    window.addEventListener('messageReceived', onMessageReceived);
     window.addEventListener('playSound', onPlaySound);
     window.addEventListener('stopSound', onStopSound);
     window.addEventListener('setSoundVolume', onSetSoundVolume);
@@ -118,6 +141,7 @@ export function PhoneAudioController() {
       window.removeEventListener('callEnded', onCallResolved);
       window.removeEventListener('gcphone:previewTone', onPreviewTone);
       window.removeEventListener('gcphone:stopTonePreview', stopPreview as EventListener);
+      window.removeEventListener('messageReceived', onMessageReceived);
       window.removeEventListener('playSound', onPlaySound);
       window.removeEventListener('stopSound', onStopSound);
       window.removeEventListener('setSoundVolume', onSetSoundVolume);
@@ -132,16 +156,7 @@ export function PhoneAudioController() {
     if (!currentId || currentId === lastNotificationId) return;
 
     lastNotificationId = currentId;
-    const category: ToneCategory = current?.appId === 'messages' ? 'message' : 'notification';
-    const toneId = category === 'message' ? phoneState.settings.messageTone : phoneState.settings.notificationTone;
-
-    phoneAudio.playTone(category, {
-      toneId,
-      category,
-      volume: masterVolume(),
-      audioProfile: audioProfile(),
-      forceVibrate: shouldUseVibrateVariant(),
-    });
+    playAlertTone('notification', 'notification');
   });
 
   createEffect(() => {
