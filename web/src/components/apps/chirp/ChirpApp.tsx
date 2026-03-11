@@ -48,6 +48,7 @@ interface ChirpTweet {
   original_avatar?: string;
   original_verified?: boolean;
   rechirp_comment?: string;
+  rechirp_media_url?: string;
 }
 
 interface ChirpComment {
@@ -118,7 +119,9 @@ export function ChirpApp() {
   const [showRechirpModal, setShowRechirpModal] = createSignal(false);
   const [rechirpTarget, setRechirpTarget] = createSignal<ChirpTweet | null>(null);
   const [rechirpComment, setRechirpComment] = createSignal('');
+  const [rechirpMedia, setRechirpMedia] = createSignal('');
   const [attachUrlInput, setAttachUrlInput] = createSignal('');
+  const [attachUrlTarget, setAttachUrlTarget] = createSignal<'composer' | 'rechirp'>('composer');
   const [showProfileModal, setShowProfileModal] = createSignal(false);
   const [showRequestsModal, setShowRequestsModal] = createSignal(false);
   const [showOnboarding, setShowOnboarding] = createSignal(false);
@@ -238,6 +241,20 @@ export function ChirpApp() {
     setShowComposer(true);
   });
 
+  let lastRechirpMedia = '';
+  createEffect(() => {
+    const params = router.params();
+    const sharedMedia = sanitizeMediaUrl(typeof params.rechirpMedia === 'string' ? params.rechirpMedia : '');
+    const openRechirp = params.openRechirp === '1';
+    if (!openRechirp || !sharedMedia || sharedMedia === lastRechirpMedia) return;
+    const targetId = Number(params.rechirpTweetId || 0);
+    const targetTweet = tweets().find((tweet) => getActionTweetId(tweet) === targetId) || selectedTweet();
+    lastRechirpMedia = sharedMedia;
+    if (targetTweet) setRechirpTarget(targetTweet);
+    setRechirpMedia(sharedMedia);
+    setShowRechirpModal(true);
+  });
+
   let lastAvatarMedia = '';
   createEffect(() => {
     const params = router.params();
@@ -260,6 +277,7 @@ export function ChirpApp() {
         setShowRechirpModal(false);
         setRechirpTarget(null);
         setRechirpComment('');
+        setRechirpMedia('');
         return;
       }
       if (deleteTweetId() !== null) {
@@ -329,9 +347,13 @@ export function ChirpApp() {
     }
   };
 
-  const submitRechirp = async (tweet: ChirpTweet, content = '') => {
+  const submitRechirp = async (tweet: ChirpTweet, content = '', mediaUrl = '') => {
     const tweetId = getActionTweetId(tweet);
-    const result = await fetchNui<{ rechirped?: boolean }>('chirpToggleRechirp', { tweetId, content: sanitizeText(content, 280) });
+    const result = await fetchNui<{ rechirped?: boolean }>('chirpToggleRechirp', {
+      tweetId,
+      content: sanitizeText(content, 280),
+      mediaUrl: sanitizeMediaUrl(mediaUrl),
+    });
     if (result?.rechirped !== undefined) {
       const nextRechirped = result.rechirped === true;
       applyTweetUpdate(tweetId, (entry) => {
@@ -364,6 +386,7 @@ export function ChirpApp() {
         setShowRechirpModal(false);
         setRechirpTarget(null);
         setRechirpComment('');
+        setRechirpMedia('');
       }
       void loadTweets();
     }
@@ -372,6 +395,7 @@ export function ChirpApp() {
   const openRechirpComposer = (tweet: ChirpTweet) => {
     setRechirpTarget(tweet);
     setRechirpComment('');
+    setRechirpMedia('');
     setShowRechirpModal(true);
   };
 
@@ -474,13 +498,20 @@ export function ChirpApp() {
 
   const attachFromGallery = async () => {
     const gallery = await fetchNui<any[]>('getGallery', undefined, []);
-    if (gallery?.[0]?.url) {
-      setComposerMedia(sanitizeMediaUrl(gallery[0].url) || '');
+    const picked = (gallery || []).find((item: any) => resolveMediaType(item?.url || '') === 'image') || gallery?.[0];
+    if (picked?.url) {
+      const clean = sanitizeMediaUrl(picked.url) || '';
+      if (attachUrlTarget() === 'rechirp') {
+        setRechirpMedia(clean);
+      } else {
+        setComposerMedia(clean);
+      }
     }
   };
 
-  const attachByUrl = () => {
-    setAttachUrlInput(composerMedia());
+  const attachByUrl = (target: 'composer' | 'rechirp' = 'composer') => {
+    setAttachUrlTarget(target);
+    setAttachUrlInput(target === 'rechirp' ? rechirpMedia() : composerMedia());
     setShowAttachUrlModal(true);
   };
 
@@ -491,13 +522,17 @@ export function ChirpApp() {
       return;
     }
 
-    setComposerMedia(url);
+    if (attachUrlTarget() === 'rechirp') {
+      setRechirpMedia(url);
+    } else {
+      setComposerMedia(url);
+    }
     setStatusMessage('');
     setShowAttachUrlModal(false);
   };
 
-  const openCamera = () => {
-    router.navigate('camera', { target: 'chirp' });
+  const openCamera = (target: 'chirp' | 'chirp-rechirp' = 'chirp', tweetId?: number) => {
+    router.navigate('camera', target === 'chirp-rechirp' && tweetId ? { target, rechirpTweetId: String(tweetId) } : { target });
   };
 
   const attachAvatarFromGallery = async () => {
@@ -647,6 +682,7 @@ export function ChirpApp() {
   const TweetCard = (props: { tweet: ChirpTweet }) => {
     const tweet = props.tweet;
     const quotedMedia = () => tweet.original_media_url || tweet.media_url;
+    const rechirpMedia = () => tweet.rechirp_media_url;
     const quotedContent = () => tweet.original_content || tweet.content;
     const activityLabel = () => {
       if (tweet.activity_type === 'rechirp') {
@@ -683,6 +719,13 @@ export function ChirpApp() {
         
         <Show when={tweet.activity_type === 'rechirp' && tweet.rechirp_comment}>
           <p class={styles.tweetContent}>{tweet.rechirp_comment}</p>
+        </Show>
+        <Show when={tweet.activity_type === 'rechirp' && rechirpMedia()}>
+          {resolveMediaType(rechirpMedia()) === 'image' ? (
+            <img class={styles.tweetMedia} src={rechirpMedia()!} alt="" onClick={(e) => { e.stopPropagation(); setViewerUrl(rechirpMedia()!); }} />
+          ) : (
+            <video class={styles.tweetMedia} src={rechirpMedia()!} controls playsinline preload="metadata" onClick={(e) => e.stopPropagation()} />
+          )}
         </Show>
         <Show when={tweet.activity_type !== 'rechirp'}>
           <p class={styles.tweetContent}>{tweet.content}</p>
@@ -820,6 +863,24 @@ export function ChirpApp() {
             
             <Show when={tweet.activity_type === 'rechirp' && tweet.rechirp_comment}>
               <p class={styles.detailText}>{tweet.rechirp_comment}</p>
+            </Show>
+            <Show when={tweet.activity_type === 'rechirp' && tweet.rechirp_media_url}>
+              {resolveMediaType(tweet.rechirp_media_url) === 'image' ? (
+                <img
+                  class={styles.detailMedia}
+                  src={tweet.rechirp_media_url}
+                  alt=""
+                  onClick={() => setViewerUrl(tweet.rechirp_media_url || null)}
+                />
+              ) : (
+                <video
+                  class={styles.detailMedia}
+                  src={tweet.rechirp_media_url}
+                  controls
+                  playsinline
+                  preload="metadata"
+                />
+              )}
             </Show>
             <Show when={tweet.activity_type === 'rechirp'}>
               <div class={styles.quoteCard}>
@@ -1003,6 +1064,20 @@ export function ChirpApp() {
         <div class={styles.composerContent}>
           <SheetIntro title="ReChirpear" description="Puedes compartirlo tal cual o agregar una opinion corta como cita." />
           <FormTextarea label="Comentario opcional" value={rechirpComment()} onChange={(value) => setRechirpComment(sanitizeText(value, 280))} placeholder="Agrega un comentario a tu ReChirp..." rows={4} />
+          <Show when={rechirpMedia()}>
+            <MediaAttachmentPreview url={rechirpMedia()} />
+          </Show>
+          <div class={styles.composerActions}>
+            <MediaActionButtons
+              actions={[
+                { icon: '📷', label: 'Camara', onClick: () => rechirpTarget() && openCamera('chirp-rechirp', getActionTweetId(rechirpTarget()!)) },
+                { icon: '🖼', label: 'Galeria', onClick: async () => { setAttachUrlTarget('rechirp'); await attachFromGallery(); } },
+                { icon: '🔗', label: 'URL', onClick: () => attachByUrl('rechirp') },
+                ...(rechirpMedia() ? [{ icon: '✕', label: 'Quitar', onClick: () => setRechirpMedia(''), tone: 'danger' as const }] : []),
+              ]}
+              variant="compact"
+            />
+          </div>
           <Show when={rechirpTarget()}>
             {(target) => (
               <div class={styles.quoteCard}>
@@ -1016,8 +1091,8 @@ export function ChirpApp() {
           </Show>
         </div>
         <ModalActions>
-          <ModalButton label="Cancelar" onClick={() => { setShowRechirpModal(false); setRechirpTarget(null); setRechirpComment(''); }} />
-          <ModalButton label="ReChirpear" tone="primary" onClick={() => rechirpTarget() && void submitRechirp(rechirpTarget()!, rechirpComment())} />
+          <ModalButton label="Cancelar" onClick={() => { setShowRechirpModal(false); setRechirpTarget(null); setRechirpComment(''); setRechirpMedia(''); }} />
+          <ModalButton label="ReChirpear" tone="primary" onClick={() => rechirpTarget() && void submitRechirp(rechirpTarget()!, rechirpComment(), rechirpMedia())} />
         </ModalActions>
       </Modal>
 

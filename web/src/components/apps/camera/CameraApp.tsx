@@ -9,7 +9,7 @@ import { useNuiEvent } from '../../../utils/useNui';
 import styles from './CameraApp.module.scss';
 
 type CameraEffect = 'normal' | 'noir' | 'vivid' | 'warm';
-type CameraTarget = 'snap-post' | 'snap-story' | 'snap-avatar' | 'chirp' | 'chirp-avatar' | 'clips' | 'clips-avatar' | '';
+type CameraTarget = 'snap-post' | 'snap-story' | 'snap-avatar' | 'chirp' | 'chirp-avatar' | 'chirp-rechirp' | 'clips' | 'clips-avatar' | '';
 
 interface EffectConfig {
   id: CameraEffect;
@@ -30,6 +30,7 @@ function targetLabel(target: CameraTarget) {
   if (target === 'snap-avatar') return 'Avatar';
   if (target === 'chirp') return 'Chirp';
   if (target === 'chirp-avatar') return 'Avatar';
+  if (target === 'chirp-rechirp') return 'ReChirp';
   if (target === 'clips') return 'Clips';
   if (target === 'clips-avatar') return 'Avatar';
   return 'Foto';
@@ -198,6 +199,8 @@ export function CameraApp() {
         mediaUrl,
       });
       router.navigate('chirp');
+    } else if (target() === 'chirp-rechirp') {
+      router.navigate('chirp', { rechirpMedia: mediaUrl, openRechirp: '1', rechirpTweetId: String(router.params().rechirpTweetId || '') });
     } else if (target() === 'clips') {
       setError('Clips requiere video');
     }
