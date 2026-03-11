@@ -621,7 +621,7 @@ export function MailApp() {
                       Cancelar
                     </button>
                     <h4 class={styles.composeTitle}>Nuevo mensaje</h4>
-                    <div style={{ width: '70px' }}></div>
+                    <div class={styles.composeHeaderSpacer}></div>
                   </div>
 
                   <div class={styles.composeCard}>
