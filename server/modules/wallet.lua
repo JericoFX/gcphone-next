@@ -604,6 +604,11 @@ lib.callback.register('gcphone:wallet:respondRequest', function(source, data)
     }
 end)
 
+---Check whether two players can use proximity payment within a given distance.
+---@param source integer
+---@param targetSource integer
+---@param maxDistance? number
+---@return boolean, string|nil, number|nil
 exports('CanUseProximityPayment', function(source, targetSource, maxDistance)
     source = tonumber(source)
     targetSource = tonumber(targetSource)
@@ -619,6 +624,19 @@ exports('CanUseProximityPayment', function(source, targetSource, maxDistance)
     return true, nil, distance
 end)
 
+---@class GCWalletTransferResponse
+---@field success boolean
+---@field error? string
+---@field status? string
+---@field balance? number
+
+---Execute a proximity wallet transfer between two players.
+---@param source integer
+---@param targetSource integer
+---@param amount number
+---@param title? string
+---@param method? 'qr'|'nfc'|string
+---@return GCWalletTransferResponse
 exports('ProximityTransfer', function(source, targetSource, amount, title, method)
     source = tonumber(source)
     targetSource = tonumber(targetSource)

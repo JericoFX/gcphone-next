@@ -566,7 +566,15 @@ lib.callback.register('gcphone:wavechatSendGroupMessage', function(source, data)
     return true, payload
 end)
 
+---Get recent message threads for an identifier.
+---@param identifier string
+---@return table[]
 exports('GetMessages', GetMessages)
+
+---Get a conversation with a specific phone number.
+---@param identifier string
+---@param targetNumber string
+---@return table[]
 exports('GetConversation', GetConversation)
 
 AddEventHandler('gcphone:wavechat:persistBatch', function(requestId, entries)

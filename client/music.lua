@@ -60,14 +60,20 @@ RegisterNetEvent('gcphone:music:setState', function(state)
     })
 end)
 
+---Check whether any phone music is currently playing.
+---@return boolean
 exports('isPlayingMusic', function()
     return isPlaying
 end)
 
+---Check whether current phone music playback is paused.
+---@return boolean
 exports('isMusicPaused', function()
     return isPaused
 end)
 
+---Get the current music URL loaded in the phone player.
+---@return string|nil
 exports('getCurrentMusicUrl', function()
     return currentUrl
 end)

@@ -518,6 +518,10 @@ lib.callback.register('gcphone:mail:delete', function(source, data)
     return { success = changed ~= nil }
 end)
 
+---Send in-game mail from an identifier using an external resource.
+---@param fromIdentifier string
+---@param payload table<string, any>
+---@return table<string, any>
 exports('SendInGameMail', function(fromIdentifier, payload)
     if Config.Mail and Config.Mail.Enabled == false then
         return { success = false, error = 'MAIL_DISABLED' }

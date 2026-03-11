@@ -85,10 +85,27 @@ function PhonePlayLive()
     return PlayPhoneAnimation('live')
 end
 
+---@alias GCPhoneAnimationMode 'in'|'out'|'call'|'text'|'camera'|'live'
+
+---Play a phone animation by logical mode.
+---@param mode GCPhoneAnimationMode|string
+---@return boolean
 exports('PlayPhoneAnimation', PlayPhoneAnimation)
+
+---@return boolean
 exports('PhonePlayIn', PhonePlayIn)
+
+---@return boolean
 exports('PhonePlayOut', PhonePlayOut)
+
+---@return boolean
 exports('PhonePlayCall', PhonePlayCall)
+
+---@return boolean
 exports('PhonePlayText', PhonePlayText)
+
+---@return boolean
 exports('PhonePlayCamera', PhonePlayCamera)
+
+---@return boolean
 exports('PhonePlayLive', PhonePlayLive)

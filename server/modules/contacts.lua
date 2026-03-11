@@ -205,4 +205,7 @@ lib.callback.register('gcphone:acceptSharedContact', function(source, data)
     return true
 end)
 
+---Get contact list for an identifier.
+---@param identifier string
+---@return table[]
 exports('GetContacts', GetContacts)
