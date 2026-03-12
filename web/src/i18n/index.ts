@@ -2,6 +2,7 @@ import esES from '../locales/es_ES.json';
 import enUS from '../locales/en_US.json';
 import ptBR from '../locales/pt_BR.json';
 import frFR from '../locales/fr_FR.json';
+import { normalizeAppLanguage } from '../utils/misc';
 
 export type AppLanguage = 'es' | 'en' | 'pt' | 'fr';
 export type LocaleCode = 'es_ES' | 'en_US' | 'pt_BR' | 'fr_FR';
@@ -39,18 +40,12 @@ const ES_VALUE_TO_KEY = Object.entries(esES.strings || {}).reduce<Record<string,
 }, {});
 
 export function localeFromLanguage(language?: string | null): LocaleCode {
-  if (language === 'en') return 'en_US';
-  if (language === 'pt') return 'pt_BR';
-  if (language === 'fr') return 'fr_FR';
-  if (language === 'es') return 'es_ES';
-  return 'es_ES';
+  return LANGUAGE_TO_LOCALE[normalizeAppLanguage(language)];
 }
 
 export function getStoredLanguage(): AppLanguage {
   if (typeof window === 'undefined') return 'es';
-  const value = window.localStorage.getItem('gcphone:language');
-  if (value === 'en' || value === 'pt' || value === 'fr' || value === 'es') return value;
-  return 'es';
+  return normalizeAppLanguage(window.localStorage.getItem('gcphone:language'));
 }
 
 export function localeTagFromLanguage(language?: string | null): string {

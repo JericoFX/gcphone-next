@@ -1,4 +1,5 @@
 import type { Call, Contact, Message } from '../types';
+import { isEnvBrowser, normalizeAppLanguage } from '../utils/misc';
 
 type AnyRecord = Record<string, unknown>;
 
@@ -32,6 +33,7 @@ interface MockMailMessage {
 
 interface BrowserMockState {
   phoneNumber: string;
+  imei: string;
   framework: 'esx' | 'qbcore' | 'qbox' | 'unknown';
   wallpaper: string;
   ringtone: string;
@@ -115,16 +117,23 @@ const sanitizeConfigValue = (value: unknown, maxLength = 512) => {
 };
 
 const readRealtimeConfig = (): MockRealtimeConfig => ({
-  socketHost: sanitizeConfigValue(window.localStorage.getItem(MOCK_REALTIME_KEYS.socketHost), 200),
-  socketToken: sanitizeConfigValue(window.localStorage.getItem(MOCK_REALTIME_KEYS.socketToken), 1000),
-  livekitUrl: sanitizeConfigValue(window.localStorage.getItem(MOCK_REALTIME_KEYS.livekitUrl), 200),
-  livekitToken: sanitizeConfigValue(window.localStorage.getItem(MOCK_REALTIME_KEYS.livekitToken), 2000),
-  livekitIdentity: sanitizeConfigValue(window.localStorage.getItem(MOCK_REALTIME_KEYS.livekitIdentity), 120),
-  livekitApiKey: sanitizeConfigValue(window.localStorage.getItem(MOCK_REALTIME_KEYS.livekitApiKey), 120),
+  socketHost: isEnvBrowser() ? sanitizeConfigValue(window.localStorage.getItem(MOCK_REALTIME_KEYS.socketHost), 200) : '',
+  socketToken: isEnvBrowser() ? sanitizeConfigValue(window.localStorage.getItem(MOCK_REALTIME_KEYS.socketToken), 1000) : '',
+  livekitUrl: isEnvBrowser() ? sanitizeConfigValue(window.localStorage.getItem(MOCK_REALTIME_KEYS.livekitUrl), 200) : '',
+  livekitToken: isEnvBrowser() ? sanitizeConfigValue(window.localStorage.getItem(MOCK_REALTIME_KEYS.livekitToken), 2000) : '',
+  livekitIdentity: isEnvBrowser() ? sanitizeConfigValue(window.localStorage.getItem(MOCK_REALTIME_KEYS.livekitIdentity), 120) : '',
+  livekitApiKey: isEnvBrowser() ? sanitizeConfigValue(window.localStorage.getItem(MOCK_REALTIME_KEYS.livekitApiKey), 120) : '',
   livekitApiSecret: volatileLivekitApiSecret,
 });
 
 const writeRealtimeConfig = (config: Partial<MockRealtimeConfig>) => {
+  if (!isEnvBrowser()) {
+    if (Object.prototype.hasOwnProperty.call(config, 'livekitApiSecret')) {
+      volatileLivekitApiSecret = sanitizeConfigValue(config.livekitApiSecret, 512);
+    }
+    return;
+  }
+
   const nextSocketHost = sanitizeConfigValue(config.socketHost, 200);
   const nextSocketToken = sanitizeConfigValue(config.socketToken, 1000);
   const nextLivekitUrl = sanitizeConfigValue(config.livekitUrl, 200);
@@ -145,12 +154,14 @@ const writeRealtimeConfig = (config: Partial<MockRealtimeConfig>) => {
 };
 
 const clearRealtimeConfig = () => {
-  window.localStorage.removeItem(MOCK_REALTIME_KEYS.socketHost);
-  window.localStorage.removeItem(MOCK_REALTIME_KEYS.socketToken);
-  window.localStorage.removeItem(MOCK_REALTIME_KEYS.livekitUrl);
-  window.localStorage.removeItem(MOCK_REALTIME_KEYS.livekitToken);
-  window.localStorage.removeItem(MOCK_REALTIME_KEYS.livekitIdentity);
-  window.localStorage.removeItem(MOCK_REALTIME_KEYS.livekitApiKey);
+  if (isEnvBrowser()) {
+    window.localStorage.removeItem(MOCK_REALTIME_KEYS.socketHost);
+    window.localStorage.removeItem(MOCK_REALTIME_KEYS.socketToken);
+    window.localStorage.removeItem(MOCK_REALTIME_KEYS.livekitUrl);
+    window.localStorage.removeItem(MOCK_REALTIME_KEYS.livekitToken);
+    window.localStorage.removeItem(MOCK_REALTIME_KEYS.livekitIdentity);
+    window.localStorage.removeItem(MOCK_REALTIME_KEYS.livekitApiKey);
+  }
   volatileLivekitApiSecret = '';
 };
 
@@ -575,6 +586,7 @@ const openRealtimePanel = () => {
 
 const state: BrowserMockState = {
   phoneNumber: '555-1234',
+  imei: '123456789012345',
   framework: 'esx',
   wallpaper: './img/background/back001.jpg',
   ringtone: 'call_1',
@@ -722,6 +734,7 @@ const phonePayload = () => ({
 });
 
 const resetMockPhoneData = () => {
+  state.imei = '123456789012345';
   state.wallpaper = './img/background/back001.jpg';
   state.ringtone = 'call_1';
   state.callRingtone = 'call_1';
@@ -1355,6 +1368,10 @@ export function setupBrowserMock() {
 }
 
 export async function handleBrowserNui<T = unknown>(eventName: string, data?: unknown): Promise<T | undefined> {
+  if (!isEnvBrowser()) {
+    return undefined;
+  }
+
   const payload = (data ?? {}) as AnyRecord;
 
   if (eventName === 'nuiReady') {
@@ -1395,7 +1412,7 @@ export async function handleBrowserNui<T = unknown>(eventName: string, data?: un
   if (eventName === 'phoneCompleteSetup') {
     const pin = String(payload.pin || '').replace(/\D/g, '').slice(0, 6);
     const mailAlias = String(payload.mailAlias || '').trim().toLowerCase();
-    const nextLanguage = String(payload.language || state.language);
+    const nextLanguage = normalizeAppLanguage(String(payload.language || state.language));
     const nextTheme = String(payload.theme || state.theme);
     const nextAudioProfile = String(payload.audioProfile || state.audioProfile);
     const handles = [payload.snapUsername, payload.chirpUsername, payload.clipsUsername].map((value) => String(value || '').trim().toLowerCase());
@@ -1404,9 +1421,7 @@ export async function handleBrowserNui<T = unknown>(eventName: string, data?: un
       return { success: false, error: 'INVALID_SETUP_DATA' } as T;
     }
 
-    if (nextLanguage === 'es' || nextLanguage === 'en' || nextLanguage === 'pt' || nextLanguage === 'fr') {
-      state.language = nextLanguage;
-    }
+    state.language = nextLanguage;
     if (nextTheme === 'auto' || nextTheme === 'light' || nextTheme === 'dark') {
       state.theme = nextTheme;
     }
@@ -1809,10 +1824,7 @@ export async function handleBrowserNui<T = unknown>(eventName: string, data?: un
   }
 
   if (eventName === 'setLanguage') {
-    const next = String(payload.language || state.language);
-    if (next === 'es' || next === 'en' || next === 'pt' || next === 'fr') {
-      state.language = next;
-    }
+    state.language = normalizeAppLanguage(String(payload.language || state.language));
     return true as T;
   }
 

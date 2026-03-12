@@ -6,6 +6,16 @@ local LastCallId = 10
 local AirplaneModeBySource = {}
 local UsingPmaVoice = GetResourceState('pma-voice') == 'started'
 local LastCallStartBySource = {}
+local SecurityResource = GetCurrentResourceName()
+
+local function HitRateLimit(source, key, windowMs, maxHits)
+    local ok, blocked = pcall(function()
+        return exports[SecurityResource]:HitRateLimit(source, key, windowMs, maxHits)
+    end)
+
+    if not ok then return false end
+    return blocked == true
+end
 
 local function CanAccessIdentifierExport(identifier, requestSource)
     local src = tonumber(requestSource)
@@ -39,6 +49,11 @@ local function SanitizeCallSignal(value, maxLen)
 end
 
 local function CanStartCall(source)
+    local callMs = (Config.Security and Config.Security.RateLimits and Config.Security.RateLimits.calls) or 1200
+    if HitRateLimit(source, 'calls_start', callMs, 1) then
+        return false
+    end
+
     local now = GetGameTimer()
     local last = LastCallStartBySource[source] or 0
     if (now - last) < 1200 then
@@ -345,6 +360,7 @@ lib.callback.register('gcphone:acceptCall', function(source, data)
     end
 
     if type(data) ~= 'table' then return nil end
+    if HitRateLimit(source, 'calls_accept', 1000, 2) then return nil end
     local callId = IsValidCallId(data.callId)
     if not callId then return nil end
     local callData = ActiveCalls[callId]
@@ -376,6 +392,7 @@ end)
 
 RegisterNetEvent('gcphone:setAirplaneMode', function(enabled)
     local source = source
+    if HitRateLimit(source, 'calls_airplane_mode', 500, 4) then return end
     AirplaneModeBySource[source] = enabled and true or nil
 end)
 
@@ -412,6 +429,7 @@ end)
 
 RegisterNetEvent('gcphone:rejectCall', function(callId)
     local source = source
+    if HitRateLimit(source, 'calls_reject', 750, 3) then return end
     callId = IsValidCallId(callId)
     if not callId then return end
     local callData = ActiveCalls[callId]
@@ -440,6 +458,7 @@ end)
 
 RegisterNetEvent('gcphone:endCall', function(callId)
     local source = source
+    if HitRateLimit(source, 'calls_end', 750, 3) then return end
     callId = IsValidCallId(callId)
     if not callId then return end
     local callData = ActiveCalls[callId]
@@ -467,6 +486,7 @@ end)
 
 RegisterNetEvent('gcphone:sendIceCandidate', function(callId, candidates)
     local source = source
+    if HitRateLimit(source, 'calls_ice', 250, 12) then return end
     callId = IsValidCallId(callId)
     if not callId then return end
     local callData = ActiveCalls[callId]
