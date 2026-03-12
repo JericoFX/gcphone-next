@@ -434,6 +434,10 @@ lib.callback.register('gcphone:mail:getMessages', function(source, data)
         return { success = false, error = 'MAIL_DISABLED' }
     end
 
+    if HitRateLimit(source, 'mail_get_messages', 500, 8) then
+        return { success = false, error = 'RATE_LIMITED' }
+    end
+
     local identifier = GetIdentifier(source)
     if not identifier then
         return { success = false, error = 'MISSING_IDENTIFIER' }
