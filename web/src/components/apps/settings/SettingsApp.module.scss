@@ -361,6 +361,11 @@
 }
 
 /* Language Options */
+.lang-list {
+  max-height: min(42vh, 320px);
+  overflow-y: auto;
+}
+
 .lang-option {
   display: flex;
   align-items: center;

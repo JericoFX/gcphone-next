@@ -19,6 +19,7 @@ import { SheetIntro } from '../../shared/ui/SheetIntro';
 import { SocialOnboardingModal, type SocialOnboardingPayload } from '../../shared/ui/SocialOnboardingModal';
 import { AppFAB, AppScaffold } from '../../shared/layout';
 import { useLiveFlashlight } from '../../../hooks/useLiveFlashlight';
+import { getStoredLanguage, t } from '../../../i18n';
 import styles from './NewsApp.module.scss';
 
 interface NewsArticle {
@@ -101,6 +102,7 @@ function buildClockTime() {
 
 export function NewsApp() {
   const router = useRouter();
+  const language = () => getStoredLanguage();
   const [articles, setArticles] = createSignal<NewsArticle[]>([]);
   const [liveArticles, setLiveArticles] = createSignal<NewsArticle[]>([]);
   const [categories, setCategories] = createSignal<string[]>(['general']);
@@ -496,13 +498,13 @@ export function NewsApp() {
   };
 
   const attachByUrl = async () => {
-    const input = await uiPrompt('Pega URL de imagen o video', { title: 'Adjuntar en noticias' });
+    const input = await uiPrompt(t('news.attach_prompt', language()), { title: t('messages.attach', language()) });
     const nextUrl = sanitizeMediaUrl(input);
     if (nextUrl) {
       setMediaUrl(nextUrl);
       return;
     }
-    if (input && input.trim()) uiAlert('URL invalida o formato no permitido');
+    if (input && input.trim()) uiAlert(t('messages.error.invalid_media_url', language()));
   };
 
   const viewArticle = async (articleId: number) => {
@@ -638,7 +640,7 @@ export function NewsApp() {
     });
     if (ok?.success) {
       setShowProfileModal(false);
-      setStatusMessage('Perfil actualizado');
+      setStatusMessage(t('snap.profile_updated', language()));
       await loadAccount();
     }
   };
@@ -736,7 +738,7 @@ export function NewsApp() {
   const activeLiveMedia = createMemo(() => articleMediaUrl(activeLive()));
 
   return (
-    <AppScaffold title="Noticias" subtitle="Noticias de la ciudad" onBack={() => router.goBack()}>
+    <AppScaffold title={t('news.title', language())} subtitle={t('news.subtitle', language())} onBack={() => router.goBack()}>
       <div class={styles.newsApp}>
         <Show when={statusMessage()}>
           <div class={styles.statusBanner}>{statusMessage()}</div>
@@ -746,7 +748,7 @@ export function NewsApp() {
           <SearchInput
             value={query()}
             onInput={setQuery}
-            placeholder="Buscar titulares, autores o coberturas"
+            placeholder={t('news.search_placeholder', language())}
             class={styles.searchInputRoot}
             inputClass={styles.searchInput}
           />
@@ -760,7 +762,7 @@ export function NewsApp() {
           <div class={styles.liveActions}>
             <button class={styles.liveBtn} onClick={() => void toggleLive()}>{liveArticleId() ? 'Terminar live' : 'Iniciar live'}</button>
             <button class={styles.mockBtn} onClick={toggleMockLive}>{mockLiveEnabled() ? 'Mock off' : 'Mock live'}</button>
-            <button class={styles.profileBtn} onClick={() => void editProfile()}>Perfil</button>
+            <button class={styles.profileBtn} onClick={() => void editProfile()}>{t('chirp.profile', language())}</button>
           </div>
         </div>
 
@@ -821,16 +823,16 @@ export function NewsApp() {
                 </Show>
                 <p>{article.content}</p>
                 <small>{article.category || 'general'}</small>
-                <button class={styles.deleteBtn} onClick={(event) => { event.stopPropagation(); void deleteArticle(article.id); }}>Eliminar</button>
+                <button class={styles.deleteBtn} onClick={(event) => { event.stopPropagation(); void deleteArticle(article.id); }}>{t('action.delete', language())}</button>
               </article>
             )}
           </For>
           <Show when={visibleArticles().length === 0}>
-            <EmptyState class={styles.emptyState} title="Sin noticias por ahora" description="Prueba otra categoria o publica una nueva cobertura." />
+            <EmptyState class={styles.emptyState} title={t('news.empty_title', language())} description={t('news.empty_desc', language())} />
           </Show>
         </div>
 
-        <Modal open={showCompose()} title="Publicar noticia" onClose={() => setShowCompose(false)} size="lg">
+        <Modal open={showCompose()} title={t('news.publish', language())} onClose={() => setShowCompose(false)} size="lg">
           <div class={styles.modalContent}>
             <SheetIntro title="Nueva cobertura" description="Publica un titular claro, agrega contexto y adjunta media si ayuda a contar la historia." />
             <input type="text" placeholder="Titulo" value={title()} onInput={(event) => setTitle(event.currentTarget.value)} />
@@ -838,8 +840,8 @@ export function NewsApp() {
             <div class={styles.composeAttachments}>
               <MediaActionButtons
                 actions={[
-                  { icon: '🖼', label: 'Galeria', onClick: attachFromGallery },
-                  { icon: '📷', label: 'Camara', onClick: attachFromCamera },
+                  { icon: '🖼', label: t('camera.gallery', language()), onClick: attachFromGallery },
+                  { icon: '📷', label: t('camera.switch', language()).includes('camera') ? t('chirp.camera', language()) : t('chirp.camera', language()), onClick: attachFromCamera },
                   { icon: '🔗', label: 'URL', onClick: () => void attachByUrl() },
                   ...(mediaUrl() ? [{ icon: '✕', label: 'Quitar', onClick: () => setMediaUrl(''), tone: 'danger' as const }] : []),
                 ]}
@@ -851,15 +853,15 @@ export function NewsApp() {
             <MediaAttachmentPreview url={mediaUrl()} mediaClass={styles.composePreviewMedia} onOpen={() => setViewerUrl(mediaUrl())} />
             <input type="text" placeholder="Categoria" value={category()} onInput={(event) => setCategory(sanitizeText(event.currentTarget.value, 30))} />
             <ModalActions>
-              <ModalButton label="Cancelar" onClick={() => setShowCompose(false)} />
-              <ModalButton label="Publicar" tone="primary" onClick={() => void publish()} />
+              <ModalButton label={t('action.cancel', language())} onClick={() => setShowCompose(false)} />
+              <ModalButton label={t('news.post', language())} tone="primary" onClick={() => void publish()} />
             </ModalActions>
           </div>
         </Modal>
 
-        <Modal open={showProfileModal()} title="Perfil de Noticias" onClose={() => setShowProfileModal(false)} size="md">
+        <Modal open={showProfileModal()} title={t('news.profile_title', language())} onClose={() => setShowProfileModal(false)} size="md">
           <div class={styles.modalContent}>
-            <SheetIntro title="Perfil editorial" description="Actualiza tu firma visible y el avatar con el que apareceras en las coberturas." />
+            <SheetIntro title={t('news.editorial_profile', language())} description={t('news.editorial_profile_desc', language())} />
             <input
               type="text"
               placeholder="Nombre visible"
@@ -874,8 +876,8 @@ export function NewsApp() {
             <div class={styles.composeAttachments}>
               <MediaActionButtons
                 actions={[
-                  { icon: '🖼', label: 'Galeria', onClick: attachProfileFromGallery },
-                  { icon: '📷', label: 'Camara', onClick: attachProfileFromCamera },
+                  { icon: '🖼', label: t('camera.gallery', language()), onClick: attachProfileFromGallery },
+                  { icon: '📷', label: t('chirp.camera', language()), onClick: attachProfileFromCamera },
                   ...(profileAvatar() ? [{ icon: '✕', label: 'Quitar', onClick: () => setProfileAvatar(''), tone: 'danger' as const }] : []),
                 ]}
                 variant="compact"
@@ -885,8 +887,8 @@ export function NewsApp() {
             </div>
             <MediaAttachmentPreview url={profileAvatar()} mediaClass={styles.composePreviewMedia} onOpen={() => setViewerUrl(profileAvatar())} />
             <ModalActions>
-              <ModalButton label="Cancelar" onClick={() => setShowProfileModal(false)} />
-              <ModalButton label="Guardar perfil" tone="primary" onClick={() => void saveProfile()} />
+              <ModalButton label={t('action.cancel', language())} onClick={() => setShowProfileModal(false)} />
+              <ModalButton label={t('news.save_profile', language())} tone="primary" onClick={() => void saveProfile()} />
             </ModalActions>
           </div>
         </Modal>
@@ -933,7 +935,7 @@ export function NewsApp() {
             </div>
 
             <div class={styles.liveStage}>
-              <Show when={activeLiveMedia()} fallback={<div class={styles.liveStageFallback}>Sin video conectado todavia</div>}>
+              <Show when={activeLiveMedia()} fallback={<div class={styles.liveStageFallback}>{t('news.no_video_yet', language())}</div>}>
                 <Show when={resolveMediaType(activeLiveMedia()) === 'image'} fallback={<video class={styles.liveStageMedia} src={activeLiveMedia()} autoplay muted loop playsinline />}>
                   <img class={styles.liveStageMedia} src={activeLiveMedia()} alt={activeLive()?.title || 'Live'} />
                 </Show>
@@ -1022,7 +1024,7 @@ export function NewsApp() {
                     placeholder="Escribe un comentario para el directo"
                     disabled={viewerMuted()}
                   />
-                  <button onClick={() => void sendViewerMessage()} disabled={viewerMuted() || !liveChatInput().trim()}>Enviar</button>
+                  <button onClick={() => void sendViewerMessage()} disabled={viewerMuted() || !liveChatInput().trim()}>{t('mail.send', language())}</button>
                 </div>
               </aside>
             </Show>

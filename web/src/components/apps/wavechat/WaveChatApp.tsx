@@ -24,6 +24,7 @@ import { SheetIntro } from '../../shared/ui/SheetIntro';
 import { VirtualList } from '../../shared/ui/VirtualList';
 import { EmojiPickerButton } from '../../shared/ui/EmojiPicker';
 import { AppScaffold } from '../../shared/layout';
+import { getStoredLanguage, t } from '../../../i18n';
 import styles from './WaveChatApp.module.scss';
 
 interface GifResult {
@@ -1227,6 +1228,7 @@ function ConversationView(props: {
   onDeleteConversation: () => void;
   framework?: 'esx' | 'qbcore' | 'qbox' | 'unknown';
 }) {
+  const language = () => getStoredLanguage();
   let messagesEnd: HTMLDivElement | undefined;
 
   onMount(() => {
@@ -1329,7 +1331,7 @@ function ConversationView(props: {
         <EmojiPickerButton value={props.messageInput} onChange={props.onInput} maxLength={800} />
         <input
           type="text"
-          placeholder="Mensaje"
+          placeholder={t('messages.message_placeholder', language())}
           value={props.messageInput}
           onInput={(e) => props.onInput(e.currentTarget.value)}
           onKeyPress={(e) => e.key === 'Enter' && props.onSend()}
@@ -1340,22 +1342,22 @@ function ConversationView(props: {
       </div>
 
       <Show when={props.uploadingVoice}>
-        <div class={styles.voiceUploading}>Subiendo nota de voz...</div>
+        <div class={styles.voiceUploading}>{t('wavechat.uploading_voice', language())}</div>
       </Show>
 
       <ActionSheet
         open={props.showAttachSheet}
-        title="Adjuntar"
+        title={t('messages.attach', language())}
         onClose={() => props.setShowAttachSheet(false)}
         actions={[
-          { label: 'Foto desde galeria', tone: 'primary', onClick: props.onAttachGallery },
-          { label: 'Tomar foto con camara', onClick: props.onAttachCamera },
-          { label: 'Buscar GIF', onClick: props.onOpenGifPicker },
-          { label: 'Pegar URL multimedia', onClick: props.onAttachUrl },
-          { label: 'Pegar URL de audio', onClick: props.onAttachAudioUrl },
-          { label: props.isRecordingVoice ? `Detener grabacion (${props.recordingSeconds}s)` : 'Grabar nota de voz', onClick: props.isRecordingVoice ? props.onStopVoiceRecording : props.onStartVoiceRecording },
-          { label: 'Compartir ubicacion', onClick: props.onSendLocation },
-          { label: 'Quitar adjunto', tone: 'danger', onClick: props.onClearAttachment },
+          { label: t('messages.attach_gallery', language()), tone: 'primary', onClick: props.onAttachGallery },
+          { label: t('messages.attach_camera', language()), onClick: props.onAttachCamera },
+          { label: t('wavechat.search_gif', language()), onClick: props.onOpenGifPicker },
+          { label: t('messages.attach_url', language()), onClick: props.onAttachUrl },
+          { label: t('wavechat.attach_audio_url', language()), onClick: props.onAttachAudioUrl },
+          { label: props.isRecordingVoice ? t('wavechat.stop_recording', language(), { seconds: props.recordingSeconds }) : t('wavechat.record_voice', language()), onClick: props.isRecordingVoice ? props.onStopVoiceRecording : props.onStartVoiceRecording },
+          { label: t('maps.share_location', language()), onClick: props.onSendLocation },
+          { label: t('messages.remove_attachment', language()), tone: 'danger', onClick: props.onClearAttachment },
         ]}
       />
     </div>

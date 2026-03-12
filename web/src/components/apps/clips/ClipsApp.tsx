@@ -16,6 +16,7 @@ import { InlineNotice } from '../../shared/ui/InlineNotice';
 import { SegmentedTabs } from '../../shared/ui/SegmentedTabs';
 import { SheetIntro } from '../../shared/ui/SheetIntro';
 import { SocialOnboardingModal, type SocialOnboardingPayload } from '../../shared/ui/SocialOnboardingModal';
+import { t } from '../../../i18n';
 import styles from './ClipsApp.module.scss';
 
 interface Clip {
@@ -52,10 +53,11 @@ export function ClipsApp() {
   const router = useRouter();
   const cache = useAppCache('clips');
   const [phoneState] = usePhone();
+  const language = () => phoneState.settings.language || 'es';
   const isReadOnly = createMemo(() => phoneState.accessMode === 'foreign-readonly');
   const clipTabs = [
-    { id: 'feed', label: 'Para ti' },
-    { id: 'myVideos', label: 'Biblioteca' },
+    { id: 'feed', label: t('clips.for_you', language()) },
+    { id: 'myVideos', label: t('clips.library', language()) },
   ];
 
   // Data
@@ -249,13 +251,13 @@ export function ClipsApp() {
 
   const publishClip = async () => {
     if (!storageReady()) {
-      setStatusMessage('Clips necesita un proveedor de video activo para publicar.');
+      setStatusMessage(t('clips.storage_required', language()));
       return;
     }
 
     const media = sanitizeMediaUrl(uploadMedia());
     if (!media) {
-      setStatusMessage('Selecciona un video para subir.');
+      setStatusMessage(t('clips.select_video', language()));
       return;
     }
     setStatusMessage('');
@@ -282,13 +284,13 @@ export function ClipsApp() {
     if (video?.url) {
       setUploadMedia(sanitizeMediaUrl(video.url) || '');
     } else {
-      setStatusMessage('No se encontraron videos en la galeria.');
+      setStatusMessage(t('clips.no_gallery_videos', language()));
     }
   };
 
   const openCamera = () => {
     if (!storageReady()) {
-      setStatusMessage('Configura almacenamiento de video antes de grabar clips.');
+      setStatusMessage(t('clips.storage_before_record', language()));
       return;
     }
 
@@ -315,7 +317,7 @@ export function ClipsApp() {
     });
 
     if (ok?.success) {
-      setStatusMessage('Perfil actualizado');
+      setStatusMessage(t('snap.profile_updated', language()));
       setShowProfileModal(false);
       await loadClips();
     }
@@ -326,10 +328,10 @@ export function ClipsApp() {
     const image = gallery?.find((item: any) => item?.url && !item.url.match(/\.(mp4|webm|mov)$/i));
     if (image?.url) {
       setProfileAvatar(sanitizeMediaUrl(image.url) || '');
-      setStatusMessage('Avatar listo para guardar');
+      setStatusMessage(t('clips.avatar_ready', language()));
       setShowProfileModal(true);
     } else {
-      setStatusMessage('No se encontraron imagenes en la galeria.');
+      setStatusMessage(t('clips.no_gallery_images', language()));
     }
   };
 
@@ -363,7 +365,7 @@ export function ClipsApp() {
     }
 
     setShowOnboarding(false);
-    setStatusMessage('Cuenta creada');
+      setStatusMessage(t('clips.account_created', language()));
     await loadClips();
     return { ok: true };
   };
@@ -392,10 +394,10 @@ export function ClipsApp() {
   };
 
   return (
-    <AppScaffold title="Clips" subtitle="Videos cortos" onBack={() => router.goBack()} bodyClass={styles.body}>
+    <AppScaffold title={t('clips.title', language())} subtitle={t('clips.subtitle', language())} onBack={() => router.goBack()} bodyClass={styles.body}>
       <div class={styles.clipsApp}>
         <Show when={isReadOnly()}>
-          <InlineNotice title="Solo lectura" message={`Estas viendo los clips de ${phoneState.accessOwnerName || 'otra persona'}.`} />
+          <InlineNotice title={t('contacts.readonly_title', language())} message={t('clips.readonly_message', language(), { name: phoneState.accessOwnerName || t('common.other_person', language()) })} />
         </Show>
 
         <Show when={statusMessage()}>
@@ -406,14 +408,14 @@ export function ClipsApp() {
 
         <Show when={!storageReady()}>
           <div class={styles.statusBanner}>
-            Clips necesita almacenamiento de video activo. Usa `local`, `fivemanage` o `server_folder` con salida publica. Limite: 30 segundos.
+            {t('clips.storage_banner', language())}
           </div>
         </Show>
 
         <div class={styles.tabs}>
           <SegmentedTabs items={clipTabs} active={currentTab()} onChange={(id) => setCurrentTab(id as 'feed' | 'myVideos')} />
           <button class={styles.profileBtn} onClick={() => void openProfileEditor()}>
-            Perfil
+            {t('chirp.profile', language())}
           </button>
         </div>
 
@@ -433,7 +435,7 @@ export function ClipsApp() {
         {/* Feed */}
         <div class={styles.feed} ref={scrollContainer} onScroll={handleScroll}>
           <Show when={loading() && clips().length === 0}>
-            <div class={styles.loading}>Cargando videos...</div>
+            <div class={styles.loading}>{t('clips.loading_videos', language())}</div>
           </Show>
           
           <For each={clips()}>
@@ -507,7 +509,7 @@ export function ClipsApp() {
                           >
                             🗑
                           </button>
-                          <span class={styles.actionCount}>Eliminar</span>
+                          <span class={styles.actionCount}>{t('action.delete', language())}</span>
                         </div>
                       </Show>
                     </div>
@@ -534,7 +536,7 @@ export function ClipsApp() {
                       </Show>
                       
                       <div class={styles.musicInfo}>
-                        <span>🎵 Sonido original - {clip.display_name || clip.username}</span>
+                        <span>{t('clips.original_sound', language(), { name: clip.display_name || clip.username || 'user' })}</span>
                       </div>
                     </div>
                   </div>
@@ -545,8 +547,8 @@ export function ClipsApp() {
           
           <Show when={!loading() && clips().length === 0}>
             <div class={styles.emptyState}>
-              <p>No hay clips</p>
-              <p class={styles.emptyHint}>¡Sé el primero en subir un video!</p>
+              <p>{t('clips.no_clips', language())}</p>
+              <p class={styles.emptyHint}>{t('clips.no_clips_desc', language())}</p>
             </div>
           </Show>
         </div>
@@ -555,7 +557,7 @@ export function ClipsApp() {
         <Show when={storageReady()}>
           <div class={styles.fabContainer}>
             <Show when={fabTooltipVisible()}>
-              <div class={styles.fabTooltip}>Subir video</div>
+              <div class={styles.fabTooltip}>{t('clips.upload', language())}</div>
             </Show>
             <button 
               class={styles.fab}
