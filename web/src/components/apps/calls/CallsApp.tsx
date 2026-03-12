@@ -498,7 +498,7 @@ export function CallsApp() {
                           <span class={styles.time}>{formatPhoneNumber(contact.number, phoneState.framework || 'unknown')}</span>
                         </div>
                          <button class={styles.callBtn} onClick={() => startCall(contact.number, contact.display)} disabled={isReadOnly()}>
-                           📞
+                           <img src="./img/icons_ios/ui-phone.svg" alt="" draggable={false} />
                          </button>
                       </div>
                     )}
@@ -527,12 +527,12 @@ export function CallsApp() {
         </AppScaffold>
       }
     >
-          <ActiveCallView
-            callInfo={callInfo()}
-            framework={phoneState.framework || 'unknown'}
-            videoMode={videoMode()}
-            videoStatus={videoStatus()}
-            videoParticipants={videoParticipants()}
+        <ActiveCallView
+          callInfo={callInfo()}
+          framework={phoneState.framework || 'unknown'}
+          videoMode={videoMode()}
+          videoStatus={videoStatus()}
+          videoParticipants={videoParticipants()}
           onMediaHost={setMediaHost}
           onStartVideo={startVideoCall}
           onToggleMute={handleMuteToggle}

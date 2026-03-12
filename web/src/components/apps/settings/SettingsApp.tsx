@@ -18,6 +18,33 @@ type SettingsSection = 'main' | 'appearance' | 'sound' | 'security' | 'notificat
 type SecurityFlow = 'idle' | 'disable-lock' | 'change-verify' | 'change-new' | 'change-confirm';
 const PIN_LENGTH = 4;
 
+const ICONS = {
+  appearance: './img/icons_ios/ui-palette.svg',
+  sound: './img/icons_ios/speaker.svg',
+  security: './img/icons_ios/ui-lock.svg',
+  notifications: './img/icons_ios/ui-bell.svg',
+  location: './img/icons_ios/ui-location.svg',
+  airplane: './img/icons_ios/ui-plane.svg',
+  moon: './img/icons_ios/ui-moon.svg',
+  mute: './img/icons_ios/speaker-off.svg',
+  info: './img/icons_ios/ui-info.svg',
+  brightness: './img/icons_ios/ui-sun.svg',
+  gallery: './img/icons_ios/gallery.svg',
+  shuffle: './img/icons_ios/ui-shuffle.svg',
+  normal: './img/icons_ios/speaker.svg',
+  street: './img/icons_ios/ui-city.svg',
+  vehicle: './img/icons_ios/car.svg',
+  silent: './img/icons_ios/speaker-off.svg',
+  ringtone: './img/icons_ios/ui-bell.svg',
+  message: './img/icons_ios/ui-chat.svg',
+  trash: './img/icons_ios/ui-trash.svg',
+  check: './img/icons_ios/ui-check.svg',
+  play: './img/icons_ios/ui-play.svg',
+  stop: './img/icons_ios/ui-stop.svg',
+  backspace: './img/icons_ios/ui-backspace.svg',
+  appIcon: './img/icons_ios/settings.svg',
+} as const;
+
 const wallpapers = [
   './img/background/back001.jpg',
   './img/background/back002.jpg',
@@ -33,17 +60,17 @@ const wallpapers = [
 ];
 
 const languages = [
-  { code: 'es', name: 'Español', flag: '🇪🇸' },
-  { code: 'en', name: 'English', flag: '🇬🇧' },
-  { code: 'pt', name: 'Português', flag: '🇵🇹' },
-  { code: 'fr', name: 'Français', flag: '🇫🇷' },
+  { code: 'es', name: 'Español', label: 'ES' },
+  { code: 'en', name: 'English', label: 'EN' },
+  { code: 'pt', name: 'Português', label: 'PT' },
+  { code: 'fr', name: 'Français', label: 'FR' },
 ];
 
 const audioProfiles = [
-  { id: 'normal', name: 'Normal', desc: 'Uso general', icon: '🔊' },
-  { id: 'street', name: 'Calle', desc: 'Exterior ruidoso', icon: '🏙️' },
-  { id: 'vehicle', name: 'Vehículo', desc: 'En movimiento', icon: '🚗' },
-  { id: 'silent', name: 'Silencio', desc: 'Sin sonido', icon: '🔇' },
+  { id: 'normal', name: 'Normal', desc: 'Uso general', icon: ICONS.normal },
+  { id: 'street', name: 'Calle', desc: 'Exterior ruidoso', icon: ICONS.street },
+  { id: 'vehicle', name: 'Vehículo', desc: 'En movimiento', icon: ICONS.vehicle },
+  { id: 'silent', name: 'Silencio', desc: 'Sin sonido', icon: ICONS.silent },
 ];
 
 export function SettingsApp() {
@@ -316,6 +343,16 @@ export function SettingsApp() {
     }));
   };
 
+  const IconImage = (props: { src: string; class?: string; alt?: string }) => (
+    <img class={props.class} src={props.src} alt={props.alt || ''} draggable={false} />
+  );
+
+  const CheckIcon = () => (
+    <span class={styles.checkmark} aria-hidden="true">
+      <IconImage src={ICONS.check} class={styles.checkIcon} />
+    </span>
+  );
+
   // Cell component helper
   const Cell = (props: {
     icon?: string;
@@ -336,7 +373,7 @@ export function SettingsApp() {
       <div class={styles.cellLeft}>
         {props.icon && (
           <div class={`${styles.cellIcon} ${props.iconBg ? styles[props.iconBg] : ''}`}>
-            {props.icon}
+            <IconImage src={props.icon} class={styles.cellIconImage} />
           </div>
         )}
         <div class={styles.cellText}>
@@ -374,7 +411,7 @@ export function SettingsApp() {
       <SectionHeader title={t('settings.group.general', language())} />
       <Group>
         <Cell 
-          icon="🎨" 
+          icon={ICONS.appearance}
           iconBg="iconBlue"
           title={t('settings.appearance', language())} 
           subtitle={t('settings.subtitle.appearance', language())}
@@ -382,7 +419,7 @@ export function SettingsApp() {
           onClick={() => setSection('appearance')}
         />
         <Cell 
-          icon="🔊" 
+          icon={ICONS.sound}
           iconBg="iconOrange"
           title={t('settings.tab.sound', language())} 
           subtitle={t('settings.subtitle.sound', language())}
@@ -390,7 +427,7 @@ export function SettingsApp() {
           onClick={() => setSection('sound')}
         />
         <Cell 
-          icon="🔒" 
+          icon={ICONS.security}
           iconBg="iconRed"
           title={t('settings.tab.security', language())} 
           subtitle={t('settings.subtitle.security', language())}
@@ -402,14 +439,14 @@ export function SettingsApp() {
       <SectionHeader title={t('settings.system', language()).toUpperCase()} />
       <Group>
         <Cell 
-          icon="🔔" 
+          icon={ICONS.notifications}
           iconBg="iconRed"
           title={t('control.notifications', language())} 
           right="chevron"
           onClick={() => setSection('notifications')}
         />
         <Cell 
-          icon="📍" 
+          icon={ICONS.location}
           iconBg="iconBlue"
           title={t('settings.live_location', language())} 
           subtitle={liveLocationEnabled() ? t('settings.active', language()) : t('settings.inactive', language())}
@@ -417,7 +454,7 @@ export function SettingsApp() {
           onClick={() => setSection('system')}
         />
         <Cell 
-          icon="✈️" 
+          icon={ICONS.airplane}
           iconBg="iconOrange"
           title={t('settings.airplane', language())} 
           right="switch"
@@ -425,7 +462,7 @@ export function SettingsApp() {
           onSwitch={() => notificationsActions.setAirplaneMode(!notifications.airplaneMode)}
         />
         <Cell 
-          icon="🌙" 
+          icon={ICONS.moon}
           iconBg="iconPurple"
           title={t('settings.dnd', language())} 
           right="switch"
@@ -433,7 +470,7 @@ export function SettingsApp() {
           onSwitch={() => notificationsActions.setDoNotDisturb(!notifications.doNotDisturb)}
         />
         <Cell 
-          icon="🔇" 
+          icon={ICONS.mute}
           iconBg="iconGray"
           title={t('settings.silent', language())} 
           right="switch"
@@ -444,8 +481,10 @@ export function SettingsApp() {
 
       <div class={styles.brightnessSection}>
         <div class={styles.brightnessHeader}>
-          <span>☀️</span>
-           <span>{t('settings.brightness', language())}</span>
+          <span class={styles.brightnessTitle}>
+            <IconImage src={ICONS.brightness} class={styles.inlineIcon} />
+            <span>{t('settings.brightness', language())}</span>
+          </span>
           <span class={styles.brightnessValue}>{Math.round(notifications.brightness * 100)}%</span>
         </div>
         <input
@@ -461,7 +500,7 @@ export function SettingsApp() {
       <SectionHeader title={t('settings.info_group', language())} />
       <Group>
         <Cell 
-          icon="ℹ️" 
+          icon={ICONS.info}
           iconBg="iconGreen"
           title={t('settings.about_gcphone', language())} 
           right="chevron"
@@ -498,10 +537,12 @@ export function SettingsApp() {
 
       <div class={styles.quickActions}>
         <button class={styles.actionBtn} onClick={() => fetchNui('openGallery', { selectWallpaper: true })}>
-          📷 {t('camera.gallery', language())}
+          <IconImage src={ICONS.gallery} class={styles.actionIcon} />
+          <span>{t('camera.gallery', language())}</span>
         </button>
         <button class={styles.actionBtn} onClick={randomWallpaper}>
-          🎲 {t('settings.random_api', language())}
+          <IconImage src={ICONS.shuffle} class={styles.actionIcon} />
+          <span>{t('settings.random_api', language())}</span>
         </button>
       </div>
 
@@ -525,9 +566,9 @@ export function SettingsApp() {
                 classList={{ [styles.selected]: language() === lang.code }}
                 onClick={() => phoneActions.setLanguage(lang.code as 'es' | 'en' | 'pt' | 'fr')}
               >
-                <span class={styles.langFlag}>{lang.flag}</span>
+                <span class={styles.langFlag}>{lang.label}</span>
                 <span class={styles.langName}>{lang.name}</span>
-                {language() === lang.code && <div class={styles.checkmark}>✓</div>}
+                {language() === lang.code && <CheckIcon />}
               </button>
             )}
           </For>
@@ -542,9 +583,9 @@ export function SettingsApp() {
       <SectionHeader title={t('settings.volume', language()).toUpperCase()} />
       <div class={styles.volumeSection}>
         <div class={styles.volumeLabels}>
-          <span>🔇</span>
+          <IconImage src={ICONS.mute} class={styles.inlineIcon} />
           <span>{Math.round(phoneState.settings.volume * 100)}%</span>
-          <span>🔊</span>
+          <IconImage src={ICONS.sound} class={styles.inlineIcon} />
         </div>
         <input
           class={styles.slider}
@@ -565,12 +606,14 @@ export function SettingsApp() {
               classList={{ [styles.selected]: phoneState.settings.audioProfile === profile.id }}
               onClick={() => phoneActions.setAudioProfile(profile.id as 'normal' | 'street' | 'vehicle' | 'silent')}
             >
-              <span class={styles.profileIcon}>{profile.icon}</span>
+              <span class={styles.profileIcon}>
+                <IconImage src={profile.icon} class={styles.profileIconImage} />
+              </span>
               <div class={styles.profileInfo}>
                 <div class={styles.profileName}>{profile.name}</div>
                 <div class={styles.profileDesc}>{profile.desc}</div>
               </div>
-              {phoneState.settings.audioProfile === profile.id && <div class={styles.checkmark}>✓</div>}
+              {phoneState.settings.audioProfile === profile.id && <CheckIcon />}
             </button>
           )}
         </For>
@@ -594,8 +637,10 @@ export function SettingsApp() {
         <For each={toneCatalog().categories?.ringtones || []}>
           {(ringtone) => (
             <div class={styles.ringtoneItem}>
-              <div class={styles.ringtoneLeft}>
-                <div class={styles.ringtoneIcon}>🔔</div>
+                <div class={styles.ringtoneLeft}>
+                <div class={styles.ringtoneIcon}>
+                  <IconImage src={ICONS.ringtone} class={styles.ringtoneIconImage} />
+                </div>
                 <span class={styles.ringtoneName}>{ringtone.name}</span>
               </div>
               <div class={styles.ringtoneActions}>
@@ -604,13 +649,13 @@ export function SettingsApp() {
                   onClick={() => playRingtonePreview(ringtone.id, 'ringtone')}
                   title={t('settings.listen', language())}
                 >
-                  {previewToneId() === ringtone.id ? '⏹️' : '▶️'}
+                  <IconImage src={previewToneId() === ringtone.id ? ICONS.stop : ICONS.play} class={styles.previewIcon} />
                 </button>
                 <button
                   class={`${styles.selectBtn} ${(phoneState.settings.callRingtone || phoneState.settings.ringtone) === ringtone.id ? styles.selected : ''}`}
                   onClick={() => phoneActions.setCallRingtone(ringtone.id)}
                 >
-                  {(phoneState.settings.callRingtone || phoneState.settings.ringtone) === ringtone.id ? '✓' : t('settings.select', language())}
+                  {(phoneState.settings.callRingtone || phoneState.settings.ringtone) === ringtone.id ? <CheckIcon /> : t('settings.select', language())}
                 </button>
               </div>
             </div>
@@ -623,19 +668,21 @@ export function SettingsApp() {
         <For each={toneCatalog().categories?.notifications || []}>
           {(tone) => (
             <div class={styles.ringtoneItem}>
-              <div class={styles.ringtoneLeft}>
-                <div class={styles.ringtoneIcon}>🔔</div>
+                <div class={styles.ringtoneLeft}>
+                <div class={styles.ringtoneIcon}>
+                  <IconImage src={ICONS.ringtone} class={styles.ringtoneIconImage} />
+                </div>
                 <span class={styles.ringtoneName}>{tone.name}</span>
               </div>
               <div class={styles.ringtoneActions}>
                 <button class={styles.previewBtn} onClick={() => playRingtonePreview(tone.id, 'notification')} title={t('settings.listen', language())}>
-                  {previewToneId() === tone.id ? '⏹️' : '▶️'}
+                  <IconImage src={previewToneId() === tone.id ? ICONS.stop : ICONS.play} class={styles.previewIcon} />
                 </button>
                 <button
                   class={`${styles.selectBtn} ${phoneState.settings.notificationTone === tone.id ? styles.selected : ''}`}
                   onClick={() => phoneActions.setNotificationTone(tone.id)}
                 >
-                  {phoneState.settings.notificationTone === tone.id ? '✓' : t('settings.select', language())}
+                  {phoneState.settings.notificationTone === tone.id ? <CheckIcon /> : t('settings.select', language())}
                 </button>
               </div>
             </div>
@@ -648,19 +695,21 @@ export function SettingsApp() {
         <For each={toneCatalog().categories?.messages || []}>
           {(tone) => (
             <div class={styles.ringtoneItem}>
-              <div class={styles.ringtoneLeft}>
-                <div class={styles.ringtoneIcon}>💬</div>
+                <div class={styles.ringtoneLeft}>
+                <div class={styles.ringtoneIcon}>
+                  <IconImage src={ICONS.message} class={styles.ringtoneIconImage} />
+                </div>
                 <span class={styles.ringtoneName}>{tone.name}</span>
               </div>
               <div class={styles.ringtoneActions}>
                 <button class={styles.previewBtn} onClick={() => playRingtonePreview(tone.id, 'message')} title={t('settings.listen', language())}>
-                  {previewToneId() === tone.id ? '⏹️' : '▶️'}
+                  <IconImage src={previewToneId() === tone.id ? ICONS.stop : ICONS.play} class={styles.previewIcon} />
                 </button>
                 <button
                   class={`${styles.selectBtn} ${phoneState.settings.messageTone === tone.id ? styles.selected : ''}`}
                   onClick={() => phoneActions.setMessageTone(tone.id)}
                 >
-                  {phoneState.settings.messageTone === tone.id ? '✓' : t('settings.select', language())}
+                  {phoneState.settings.messageTone === tone.id ? <CheckIcon /> : t('settings.select', language())}
                 </button>
               </div>
             </div>
@@ -676,7 +725,9 @@ export function SettingsApp() {
       <Group>
         <div class={styles.locationRow}>
           <div class={styles.locationLeft}>
-            <div class={`${styles.cellIcon} ${styles.iconGreen}`}>🔓</div>
+            <div class={`${styles.cellIcon} ${styles.iconGreen}`}>
+              <IconImage src={ICONS.security} class={styles.cellIconImage} />
+            </div>
             <div>
               <div class={styles.cellTitle}>Bloqueo de pantalla</div>
               <div class={styles.cellSubtitle}>{screenLockEnabled() ? 'El telefono pide PIN al abrirse.' : 'El telefono abre directo sin lock screen.'}</div>
@@ -704,7 +755,9 @@ export function SettingsApp() {
 
         <div class={styles.locationRow}>
           <div class={styles.locationLeft}>
-            <div class={`${styles.cellIcon} ${styles.iconRed}`}>🔐</div>
+            <div class={`${styles.cellIcon} ${styles.iconRed}`}>
+              <IconImage src={ICONS.security} class={styles.cellIconImage} />
+            </div>
             <div>
               <div class={styles.cellTitle}>Cambiar PIN</div>
               <div class={styles.cellSubtitle}>Verifica tu PIN actual y despues introduce el nuevo.</div>
@@ -753,7 +806,7 @@ export function SettingsApp() {
               0
             </button>
             <button class={styles.pinBackspace} onClick={handlePinBackspace}>
-              ⌫
+              <IconImage src={ICONS.backspace} class={styles.keypadIcon} />
             </button>
           </div>
 
@@ -797,6 +850,13 @@ export function SettingsApp() {
                 >
                   <div class={styles.switchThumb} />
                 </div>
+                {unreadCount > 0 ? (
+                  <div class={styles.badge}>{unreadCount}</div>
+                ) : (
+                  <div class={styles.okIcon}>
+                    <IconImage src={ICONS.check} class={styles.okIconImage} />
+                  </div>
+                )}
               </div>
             );
           }}
@@ -823,7 +883,9 @@ export function SettingsApp() {
       <Group>
         <div class={styles.locationRow}>
           <div class={styles.locationLeft}>
-            <div class={`${styles.cellIcon} ${styles.iconBlue}`}>📍</div>
+            <div class={`${styles.cellIcon} ${styles.iconBlue}`}>
+              <IconImage src={ICONS.location} class={styles.cellIconImage} />
+            </div>
             <div>
               <div class={styles.cellTitle}>{t('settings.share_location', language())}</div>
               <div class={styles.cellSubtitle}>{liveLocationEnabled() ? t('settings.active', language()) : t('settings.inactive', language())}</div>
@@ -855,7 +917,7 @@ export function SettingsApp() {
       <SectionHeader title={t('settings.reset_group', language())} />
       <Group>
         <Cell
-          icon="🧹"
+          icon={ICONS.trash}
           iconBg="iconRed"
           title={t('settings.erase_phone', language())}
           subtitle={t('settings.erase_phone_desc', language())}
@@ -880,7 +942,9 @@ export function SettingsApp() {
   const renderAbout = () => (
     <div class={styles.content}>
       <div class={styles.aboutHeader}>
-        <div class={styles.aboutIcon}>📱</div>
+        <div class={styles.aboutIcon}>
+          <IconImage src={ICONS.appIcon} class={styles.aboutIconImage} alt="GCPhone Next" />
+        </div>
         <div class={styles.aboutName}>GCPhone Next</div>
         <div class={styles.aboutVersion}>{t('settings.version_label', language())} 2.1.0</div>
       </div>

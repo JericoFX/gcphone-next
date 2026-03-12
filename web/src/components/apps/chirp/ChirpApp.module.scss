@@ -124,8 +124,19 @@
 }
 
 .verified {
-  color: #007aff;
-  font-size: 12px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 122, 255, 0.12);
+}
+
+.verified img {
+  width: 12px;
+  height: 12px;
+  object-fit: contain;
 }
 
 .username {
@@ -226,7 +237,17 @@
   }
   
   .icon {
-    font-size: 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+  }
+
+  .icon img {
+    width: 16px;
+    height: 16px;
+    object-fit: contain;
   }
   
   .count {

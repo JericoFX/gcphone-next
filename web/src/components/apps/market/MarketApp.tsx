@@ -157,7 +157,7 @@ export function MarketApp() {
   return (
     <div class={styles.app}>
       <div class={styles.header}>
-        <button class={styles.backBtn} onClick={() => router.goBack()}>‹</button>
+        <button class={styles.backBtn} onClick={() => router.goBack()}><img src="./img/icons_ios/ui-chevron-left.svg" alt="" draggable={false} /></button>
         <h1>Market Pro</h1>
         <button class={styles.addBtn} onClick={() => setShowCreate(true)}>+</button>
       </div>

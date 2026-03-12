@@ -35,4 +35,13 @@
   color: #fff;
   font-size: 18px;
   z-index: 4;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.close-btn img {
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
 }

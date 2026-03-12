@@ -648,7 +648,10 @@ export function LockScreen() {
 
       <div class={styles.bottomActions}>
         <button class={styles.bottomBtn} classList={{ [styles.bottomBtnActive]: flashlightEnabled() }} onClick={() => void toggleFlashlight()} disabled={!flashlightSupported()}>
-          🔦
+          <img src="./img/icons_ios/ui-flashlight.svg" alt="" draggable={false} />
+        </button>
+        <button class={styles.bottomBtn} onClick={openCameraQuickAction}>
+          <img src="./img/icons_ios/camera.svg" alt="" draggable={false} />
         </button>
         <Show when={swipeUnlockEnabled()}>
           <div
@@ -668,7 +671,6 @@ export function LockScreen() {
           </div>
         </Show>
         <button class={styles.bottomBtn} onClick={() => setEmergencySheetOpen(true)}>SOS</button>
-        <button class={styles.bottomBtn} onClick={openCameraQuickAction}>📷</button>
       </div>
     </div>
   );
