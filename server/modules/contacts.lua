@@ -67,6 +67,17 @@ lib.callback.register('gcphone:addContact', function(source, data)
         'INSERT INTO phone_contacts (identifier, number, display, avatar) VALUES (?, ?, ?, ?)',
         { identifier, number, display, avatar }
     )
+
+    if type(TriggerPhoneHook) == 'function' then
+        TriggerPhoneHook('contactAdded', {
+            source = source,
+            identifier = identifier,
+            contactId = id,
+            name = display,
+            number = number,
+            avatar = avatar,
+        })
+    end
     
     TriggerClientEvent('gcphone:contactsUpdated', source, GetContacts(identifier))
     
@@ -91,6 +102,17 @@ lib.callback.register('gcphone:updateContact', function(source, data)
         'UPDATE phone_contacts SET number = ?, display = ?, avatar = ? WHERE id = ? AND identifier = ?',
         { number, display, avatar, contactId, identifier }
     )
+
+    if type(TriggerPhoneHook) == 'function' then
+        TriggerPhoneHook('contactUpdated', {
+            source = source,
+            identifier = identifier,
+            contactId = contactId,
+            name = display,
+            number = number,
+            avatar = avatar,
+        })
+    end
     
     TriggerClientEvent('gcphone:contactsUpdated', source, GetContacts(identifier))
     
@@ -105,10 +127,26 @@ lib.callback.register('gcphone:deleteContact', function(source, contactId)
     local id = tonumber(contactId)
     if not id then return false end
     
+    local deleted = MySQL.single.await(
+        'SELECT display, number, avatar FROM phone_contacts WHERE id = ? AND identifier = ? LIMIT 1',
+        { id, identifier }
+    )
+
     MySQL.execute.await(
         'DELETE FROM phone_contacts WHERE id = ? AND identifier = ?',
         { id, identifier }
     )
+
+    if deleted and type(TriggerPhoneHook) == 'function' then
+        TriggerPhoneHook('contactDeleted', {
+            source = source,
+            identifier = identifier,
+            contactId = id,
+            name = deleted.display,
+            number = deleted.number,
+            avatar = deleted.avatar,
+        })
+    end
     
     TriggerClientEvent('gcphone:contactsUpdated', source, GetContacts(identifier))
     
@@ -205,10 +243,22 @@ lib.callback.register('gcphone:acceptSharedContact', function(source, data)
         return false, 'Contact already exists'
     end
     
-    MySQL.insert.await(
+    local insertedId = MySQL.insert.await(
         'INSERT INTO phone_contacts (identifier, number, display, avatar) VALUES (?, ?, ?, ?)',
         { identifier, number, display, avatar }
     )
+
+    if type(TriggerPhoneHook) == 'function' then
+        TriggerPhoneHook('contactAdded', {
+            source = source,
+            identifier = identifier,
+            contactId = insertedId,
+            name = display,
+            number = number,
+            avatar = avatar,
+            shared = true,
+        })
+    end
     
     TriggerClientEvent('gcphone:contactsUpdated', source, GetContacts(identifier))
     

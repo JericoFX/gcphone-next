@@ -2,7 +2,7 @@
 
 ---@class GCPhoneNotificationPayload
 ---@field id? string Stable notification id. Duplicates are ignored by the UI queue.
----@field appId? string App identifier used by mute filters and unread tracking.
+---@field appId? string App identifier used by mute filters and unread tracking. Use an existing front app id like 'messages', 'mail', 'bank', 'wavechat', 'news', 'yellowpages'.
 ---@field app? string Legacy alias for `appId`.
 ---@field title? string Notification title.
 ---@field content? string Persistent notification body.
@@ -12,10 +12,32 @@
 ---@field durationMs? integer Auto-dismiss duration in milliseconds. Ignored when sticky is true.
 ---@field sticky? boolean Keeps the notification visible until manually dismissed.
 ---@field priority? GCPhoneNotificationPriority High bypasses DND/mute filters where supported by the UI.
----@field route? string Route opened when the user taps the notification.
----@field data? table<string, any> Optional route payload passed to the app router.
+---@field route? string Route opened when the user taps the notification. Usually this matches the app route, eg. 'messages', 'mail', 'bank', 'wavechat'.
+---@field data? table<string, any> Optional route payload passed to the app router, eg. { phoneNumber = '555-1111' } for a messages thread or { x = 123.4, y = -456.7 } for maps.
 ---@field meta? table<string, any>|string Optional persistent metadata stored in DB.
 ---@field createdAt? integer Unix ms timestamp used for ordering.
+
+-- Notification quick guide:
+-- appId  = who owns/mutes/counts the notification in UI.
+-- route  = where the phone navigates when the player taps the banner/inbox row.
+-- data   = optional params for that route.
+-- meta   = optional DB-only payload for persistence/auditing; UI navigation does not read this directly.
+-- Example messages thread:
+-- {
+--   appId = 'messages',
+--   title = 'Mensajes',
+--   message = 'Nuevo mensaje de Rafa',
+--   route = 'messages',
+--   data = { phoneNumber = '555-1111' }
+-- }
+-- Example maps pin:
+-- {
+--   appId = 'maps',
+--   title = 'GPS',
+--   message = 'Nueva ubicacion recibida',
+--   route = 'maps',
+--   data = { x = 123.4, y = 456.7 }
+-- }
 
 local function SafeText(value, maxLen)
     if type(value) ~= 'string' then return nil end

@@ -58,6 +58,7 @@ interface BrowserMockState {
   mailInbox: MockMailMessage[];
   mailSent: MockMailMessage[];
   airplaneMode: boolean;
+  emergencyContacts: Array<{ label: string; number: string }>;
   flashlightEnabled: boolean;
   flashlightKelvin: number;
   flashlightLumens: number;
@@ -598,7 +599,7 @@ const state: BrowserMockState = {
   theme: 'light',
   language: 'es',
   audioProfile: 'normal',
-  requiresSetup: false,
+  requiresSetup: true,
   contacts: [
     { id: 1, display: 'Maria Garcia', number: '555-1111', favorite: true },
     { id: 2, display: 'Juan Perez', number: '555-2222', favorite: false },
@@ -637,7 +638,7 @@ const state: BrowserMockState = {
     { id: 2, description: 'Transferencia enviada', amount: -1200, time: nowIso() },
   ],
   appLayout: {
-    home: ['contacts', 'messages', 'mail', 'calls', 'settings', 'gallery', 'camera', 'bank', 'wallet', 'documents', 'wavechat', 'music', 'chirp', 'snap', 'clips', 'darkrooms', 'yellowpages', 'market', 'news', 'garage', 'notes', 'maps'],
+    home: ['contacts', 'messages', 'mail', 'calls', 'settings', 'gallery', 'camera', 'bank', 'wallet', 'documents', 'wavechat', 'music', 'chirp', 'snap', 'clips', 'darkrooms', 'yellowpages', 'news', 'garage', 'notes', 'maps', 'weather', 'notifications'],
     menu: ['appstore']
   },
   mailDomain: 'jericofx.gg',
@@ -727,6 +728,7 @@ const phonePayload = () => ({
     hasClips: !state.requiresSetup,
     hasMail: !state.requiresSetup || Boolean(state.mailAccount),
     mailDomain: state.mailDomain,
+    emergencyContacts: state.emergencyContacts,
   },
   accessMode: 'own',
   accessOwnerName: undefined,
@@ -755,7 +757,12 @@ const resetMockPhoneData = () => {
   state.mailInbox = [];
   state.mailSent = [];
   state.airplaneMode = false;
+  state.emergencyContacts = [{ label: 'Emergencias', number: '911' }];
   state.flashlightEnabled = false;
+  state.appLayout = {
+    home: ['contacts', 'messages', 'mail', 'calls', 'settings', 'gallery', 'camera', 'bank', 'wallet', 'documents', 'wavechat', 'music', 'chirp', 'snap', 'clips', 'darkrooms', 'yellowpages', 'news', 'garage', 'notes', 'maps', 'weather', 'notifications'],
+    menu: ['appstore']
+  };
 };
 
 const showMockPhone = (overrides: AnyRecord = {}) => {
@@ -1262,13 +1269,26 @@ export function setupBrowserMock() {
         id: nextMessageId++,
         transmitter: '555-3333',
         receiver: state.phoneNumber,
-        message: 'Mock: mensaje entrante',
+        message: 'Te deje el paquete en recepción. Revisá cuando puedas.',
         isRead: false,
         owner: 0,
         time: nowIso(),
       };
       state.messages.push(incoming);
       emitMessage('messageReceived', incoming);
+      emitPhoneNotification({
+        id: `mock-message-${incoming.id}`,
+        appId: 'messages',
+        title: 'Mensajes',
+        message: `Nuevo mensaje de ${incoming.transmitter}: ${incoming.message}`,
+        icon: '✉',
+        durationMs: 4200,
+        priority: 'high',
+        route: 'messages',
+        data: {
+          phoneNumber: incoming.transmitter,
+        },
+      });
     },
     incomingCall: () => {
       emitMessage('incomingCall', {
@@ -1451,6 +1471,13 @@ export async function handleBrowserNui<T = unknown>(eventName: string, data?: un
     return {
       success: true,
       unlocked: pin.length >= 4 && pin === state.lockCode,
+    } as T;
+  }
+
+  if (eventName === 'phoneReportImeiViewed') {
+    return {
+      success: true,
+      imei: state.imei,
     } as T;
   }
 

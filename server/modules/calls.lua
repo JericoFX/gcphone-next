@@ -96,6 +96,23 @@ local function NativeAudioLegacyMap()
     return (Config.NativeAudio and Config.NativeAudio.LegacyMap) or {}
 end
 
+local function ResolveEmergencyContactByNumber(number)
+    local setup = Config.Phone and Config.Phone.Setup or {}
+    local contacts = type(setup.EmergencyContacts) == 'table' and setup.EmergencyContacts or {}
+
+    for i = 1, #contacts do
+        local entry = contacts[i]
+        if type(entry) == 'table' and tostring(entry.number or '') == tostring(number or '') then
+            return {
+                label = tostring(entry.label or entry.name or 'Emergencia'),
+                number = tostring(entry.number or ''),
+            }
+        end
+    end
+
+    return nil
+end
+
 local function IncomingCallStateBagName()
     return (Config.NativeAudio and Config.NativeAudio.IncomingCallStateBag) or 'gcphoneIncomingCall'
 end
@@ -267,8 +284,45 @@ lib.callback.register('gcphone:startCall', function(source, data)
         hidden = true
         targetNumber = string.sub(targetNumber, 2)
     end
+
+    local emergencyContact = ResolveEmergencyContactByNumber(targetNumber)
+
+    if type(TriggerPhoneHook) == 'function' then
+        TriggerPhoneHook('numberDialed', {
+            source = source,
+            identifier = identifier,
+            phoneNumber = targetNumber,
+            rawInput = tostring(data.phoneNumber or ''),
+            isEmergency = emergencyContact ~= nil,
+            isHidden = hidden,
+            fromLockscreen = type(data.extraData) == 'table' and data.extraData.source == 'lockscreen' or false,
+            context = type(data.extraData) == 'table' and data.extraData.source or 'app',
+        })
+    end
     
     if Config.FixePhone[targetNumber] then
+        if type(TriggerPhoneHook) == 'function' then
+            local payload = {
+                source = source,
+                identifier = identifier,
+                callId = LastCallId,
+                fromNumber = myNumber,
+                toNumber = targetNumber,
+                isEmergency = emergencyContact ~= nil,
+                emergencyLabel = emergencyContact and emergencyContact.label or nil,
+                isHidden = hidden,
+                isValid = false,
+                fromLockscreen = type(data.extraData) == 'table' and data.extraData.source == 'lockscreen' or false,
+                context = type(data.extraData) == 'table' and data.extraData.source or 'app',
+            }
+
+            TriggerPhoneHook('callStarted', payload)
+
+            if emergencyContact then
+                TriggerPhoneHook('emergencyCallStarted', payload)
+            end
+        end
+
         return {
             id = LastCallId,
             transmitterNum = myNumber,
@@ -342,6 +396,28 @@ lib.callback.register('gcphone:startCall', function(source, data)
     
     ActiveCalls[callId] = callData
     SyncActiveCallsToGlobalState()
+
+    if type(TriggerPhoneHook) == 'function' then
+        local payload = {
+            source = source,
+            identifier = identifier,
+            callId = callId,
+            fromNumber = myNumber,
+            toNumber = targetNumber,
+            isEmergency = emergencyContact ~= nil,
+            emergencyLabel = emergencyContact and emergencyContact.label or nil,
+            isHidden = hidden,
+            isValid = isValid,
+            fromLockscreen = type(data.extraData) == 'table' and data.extraData.source == 'lockscreen' or false,
+            context = type(data.extraData) == 'table' and data.extraData.source or 'app',
+        }
+
+        TriggerPhoneHook('callStarted', payload)
+
+        if emergencyContact then
+            TriggerPhoneHook('emergencyCallStarted', payload)
+        end
+    end
     
     return {
         id = callId,

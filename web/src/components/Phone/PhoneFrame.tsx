@@ -184,7 +184,7 @@ export const PhoneFrame: ParentComponent & { Router: () => JSX.Element } = (prop
           </div>
           {props.children}
 
-          <Show when={!phoneState.requiresSetup}>
+          <Show when={!phoneState.requiresSetup && !phoneState.locked}>
             <button class={styles.multitaskBtn} onClick={() => setMultitaskOpen(true)} data-testid="multitask-btn">▤</button>
 
             <Show when={multitaskOpen()}>

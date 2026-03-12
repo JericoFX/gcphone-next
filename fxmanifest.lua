@@ -46,6 +46,7 @@ server_scripts {
     '@oxmysql/lib/MySQL.lua',
     'server/modules/database.lua',
     'server/main.lua',
+    'server/modules/hooks.lua',
     'server/bridge/qbcore.lua',
     'server/bridge/esx.lua',
     'server/modules/phone.lua',

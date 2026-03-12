@@ -24,6 +24,7 @@ interface NotificationsState {
 
 interface NotificationsActions {
   receive: (payload: Partial<PhoneNotification>) => void;
+  remove: (id: string) => void;
   dismissCurrent: () => void;
   clear: () => void;
   setDoNotDisturb: (value: boolean) => void;
@@ -139,13 +140,22 @@ export const NotificationsProvider: ParentComponent = (props) => {
       const next = normalizeNotification(payload);
       if (!next) return;
 
-      setState('history', (current) => [next, ...current.filter((item) => item.id !== next.id)].slice(0, MAX_HISTORY));
-
       if (state.mutedApps.includes(next.appId) && next.priority !== 'high') return;
 
       if (state.doNotDisturb && next.priority !== 'high') return;
 
-      if (state.current?.id === next.id || state.queue.some((item) => item.id === next.id)) return;
+      setState('history', (current) => [next, ...current.filter((item) => item.id !== next.id)].slice(0, MAX_HISTORY));
+
+      if (state.current?.id === next.id) {
+        setState('current', next);
+        setTimerVersion((v) => v + 1);
+        return;
+      }
+
+      if (state.queue.some((item) => item.id === next.id)) {
+        setState('queue', (current) => current.map((item) => (item.id === next.id ? next : item)));
+        return;
+      }
 
       if (!state.current) {
         setState('current', next);
@@ -154,6 +164,30 @@ export const NotificationsProvider: ParentComponent = (props) => {
 
       const nextQueue = [...state.queue, next].slice(-MAX_QUEUE);
       setState('queue', nextQueue);
+    },
+    remove: (id) => {
+      const key = sanitizeText(id, 64);
+      if (!key) return;
+
+      setState('history', (current) => current.filter((item) => item.id !== key));
+      setState('queue', (current) => current.filter((item) => item.id !== key));
+
+      if (state.current?.id === key) {
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+          timeoutId = undefined;
+        }
+
+        if (state.queue.length > 0) {
+          const [head, ...rest] = state.queue.filter((item) => item.id !== key);
+          setState('queue', rest);
+          setState('current', head || null);
+        } else {
+          setState('current', null);
+        }
+
+        setTimerVersion((v) => v + 1);
+      }
     },
     dismissCurrent: () => {
       if (timeoutId) {
