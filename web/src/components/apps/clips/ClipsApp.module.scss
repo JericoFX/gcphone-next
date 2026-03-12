@@ -118,6 +118,12 @@
   z-index: 5;
 }
 
+.pauseIndicator img {
+  width: 26px;
+  height: 26px;
+  object-fit: contain;
+}
+
 // Like Animation
 .likeAnimation {
   position: absolute;
@@ -245,6 +251,12 @@
   }
 }
 
+.actionBtn img {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+}
+
 .actionCount {
   font-size: 12px;
   color: #ffffff;
@@ -331,8 +343,17 @@
   text-shadow: 0 1px 2px rgba(0,0,0,0.5);
   
   span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     animation: musicPulse 2s ease-in-out infinite;
   }
+}
+
+.musicInfo img {
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
 }
 
 @keyframes musicPulse {
@@ -589,6 +610,12 @@
   }
 }
 
+.closeBtn img {
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
+}
+
 .commentsList {
   flex: 1;
   overflow-y: auto;
@@ -797,7 +824,15 @@
 }
 
 .uploadIcon {
-  font-size: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.uploadIcon img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
 }
 
 .videoPreview {
@@ -833,6 +868,24 @@
   &:hover {
     background: rgba(0, 0, 0, 0.8);
   }
+}
+
+.removeBtn img {
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
+}
+
+.moderationMenu button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.moderationMenu button img {
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
 }
 
 .captionInput {

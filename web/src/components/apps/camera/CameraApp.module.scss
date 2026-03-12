@@ -270,6 +270,12 @@
   }
 }
 
+.iconBtn img {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+}
+
 .minimalRow {
   position: absolute;
   left: 50%;

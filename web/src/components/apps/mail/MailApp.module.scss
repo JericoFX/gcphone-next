@@ -284,6 +284,10 @@
   margin-bottom: var(--space-3);
 }
 
+.composeMediaButtons :global(.action) {
+  background: var(--mail-surface);
+}
+
 .composePreviewMedia {
   max-height: 160px;
   border-radius: var(--radius-md);
@@ -701,11 +705,14 @@
 }
 
 .empty::before {
-  content: '✉️';
+  content: '';
   display: block;
-  font-size: 48px;
+  width: 44px;
+  height: 44px;
   margin-bottom: var(--space-3);
   opacity: 0.5;
+  background: center / contain no-repeat url('/img/icons_ios/mail.svg');
+  margin-inline: auto;
 }
 
 /* Scrollable content areas */
@@ -808,9 +815,10 @@
   transform: scale(0.95);
 }
 
-.fab svg {
-  width: 24px;
-  height: 24px;
+.fab img {
+  width: 26px;
+  height: 26px;
+  object-fit: contain;
 }
 
 /* Detail View */
@@ -866,6 +874,15 @@
   font-family: inherit;
   cursor: pointer;
   transition: background-color var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard), border-color var(--dur-fast) var(--ease-standard), opacity var(--dur-fast) var(--ease-standard), transform var(--dur-fast) var(--ease-standard), box-shadow var(--dur-fast) var(--ease-standard);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.deleteButton img {
+  width: 15px;
+  height: 15px;
+  object-fit: contain;
 }
 
 .deleteButton:hover {

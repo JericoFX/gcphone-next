@@ -55,7 +55,7 @@ export function GlobalChatPanel(props: Props) {
       <div class={styles.globalChatPanel}>
         <div class={styles.globalChatHeader}>
           <h3>Chat en vivo</h3>
-          <button class={styles.closeBtn} onClick={props.onClose}>✕</button>
+          <button class={styles.closeBtn} onClick={props.onClose}><img src="./img/icons_ios/ui-close.svg" alt="" draggable={false} /></button>
         </div>
         
         <div class={styles.globalChatMessages}>
@@ -84,10 +84,10 @@ export function GlobalChatPanel(props: Props) {
                 <Show when={props.isOwner && selectedMessage() === message.id}>
                   <div class={styles.moderationMenu}>
                     <button onClick={() => handleDelete(message.id)}>
-                      🗑 Eliminar mensaje
+                      <img src="./img/icons_ios/ui-trash.svg" alt="" draggable={false} /><span>Eliminar mensaje</span>
                     </button>
                     <button onClick={() => handleMute(message.username)}>
-                      🚫 Silenciar usuario
+                      <img src="./img/icons_ios/ui-block.svg" alt="" draggable={false} /><span>Silenciar usuario</span>
                     </button>
                   </div>
                 </Show>

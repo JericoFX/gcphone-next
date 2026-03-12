@@ -3,6 +3,8 @@ import { Show } from 'solid-js';
 import { getStoredLanguage, tl } from '../../../i18n';
 import styles from './layout.module.scss';
 
+const isAssetIcon = (icon?: string) => !!icon && /\.(svg|png|webp|jpg|jpeg)$/i.test(icon);
+
 export interface AppLayoutProps extends ParentProps {
   class?: string;
   scrollable?: boolean;
@@ -63,7 +65,9 @@ export const AppHeader: ParentComponent<AppHeaderProps> = (props) => {
       }}
     >
       <button class="ios-icon-btn" onClick={handleBack}>
-        {props.backIcon || '‹'}
+        <Show when={isAssetIcon(props.backIcon)} fallback={<img src="./img/icons_ios/ui-chevron-left.svg" alt="back" draggable={false} />}>
+          <img src={props.backIcon as string} alt="back" draggable={false} />
+        </Show>
       </button>
       <div class="ios-nav-title">
         <Show when={props.title}>
@@ -76,17 +80,12 @@ export const AppHeader: ParentComponent<AppHeaderProps> = (props) => {
       <Show when={props.action}>
         <button class="ios-icon-btn" onClick={props.action!.onClick}>
           <Show
-            when={
-              typeof props.action!.icon === 'string' &&
-              (props.action!.icon.endsWith('.svg') ||
-                props.action!.icon.endsWith('.png') ||
-                props.action!.icon.endsWith('.webp'))
-            }
-            fallback={props.action!.icon}
-          >
-            <img src={props.action!.icon as string} alt={props.action!.label || 'action'} />
-          </Show>
-        </button>
+              when={isAssetIcon(props.action!.icon)}
+              fallback={props.action!.icon}
+            >
+              <img src={props.action!.icon as string} alt={props.action!.label || 'action'} draggable={false} />
+            </Show>
+          </button>
       </Show>
       <Show when={!props.action && props.children}>
         <div class={styles.headerChildren}>{props.children}</div>

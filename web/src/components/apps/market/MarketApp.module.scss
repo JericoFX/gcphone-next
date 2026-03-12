@@ -42,6 +42,15 @@
   font-size: 24px;
   color: #3066a6;
   background: rgba(45, 103, 176, 0.14);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.back-btn img {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
 }
 
 .add-btn {

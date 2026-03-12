@@ -460,7 +460,7 @@ export function ClipsApp() {
                   />
                   
                   <Show when={isPaused()}>
-                    <div class={styles.pauseIndicator}>▶</div>
+                    <div class={styles.pauseIndicator}><img src="./img/icons_ios/ui-play.svg" alt="" draggable={false} /></div>
                   </Show>
                   
                   <Show when={likeAnimation() === clip.id}>
@@ -491,7 +491,7 @@ export function ClipsApp() {
                             openComments(clip.id);
                           }}
                         >
-                          💬
+                          <img src="./img/icons_ios/ui-chat.svg" alt="" draggable={false} />
                         </button>
                         <span class={styles.actionCount}>{clip.comments_count || 0}</span>
                       </div>
@@ -505,7 +505,7 @@ export function ClipsApp() {
                               deleteClip(clip.id);
                             }}
                           >
-                            🗑
+                            <img src="./img/icons_ios/ui-trash.svg" alt="" draggable={false} />
                           </button>
                           <span class={styles.actionCount}>Eliminar</span>
                         </div>
@@ -534,7 +534,7 @@ export function ClipsApp() {
                       </Show>
                       
                       <div class={styles.musicInfo}>
-                        <span>🎵 Sonido original - {clip.display_name || clip.username}</span>
+                        <span><img src="./img/icons_ios/music.svg" alt="" draggable={false} />Sonido original - {clip.display_name || clip.username}</span>
                       </div>
                     </div>
                   </div>
@@ -576,7 +576,7 @@ export function ClipsApp() {
               <div class={styles.sheetHandle} />
               <div class={styles.commentsHeader}>
                 <h4>{comments().length} comentarios</h4>
-                <button class={styles.closeBtn} onClick={() => setShowComments(false)}>✕</button>
+                <button class={styles.closeBtn} onClick={() => setShowComments(false)}><img src="./img/icons_ios/ui-close.svg" alt="" draggable={false} /></button>
               </div>
 
               <div class={styles.commentsList}>
@@ -637,11 +637,11 @@ export function ClipsApp() {
               <>
                 <div class={styles.uploadOptions}>
                   <button class={styles.uploadBtn} onClick={openCamera}>
-                    <span class={styles.uploadIcon}>📷</span>
+                    <span class={styles.uploadIcon}><img src="./img/icons_ios/camera.svg" alt="" draggable={false} /></span>
                     <span>Grabar video</span>
                   </button>
                   <button class={styles.uploadBtn} onClick={attachFromGallery}>
-                    <span class={styles.uploadIcon}>🎬</span>
+                    <span class={styles.uploadIcon}><img src="./img/icons_ios/gallery.svg" alt="" draggable={false} /></span>
                     <span>Elegir de galeria</span>
                   </button>
                 </div>
@@ -652,7 +652,7 @@ export function ClipsApp() {
             <Show when={uploadMedia()}>
               <div class={styles.videoPreview}>
                 <video src={uploadMedia()} controls playsinline />
-                <button class={styles.removeBtn} onClick={() => setUploadMedia('')}>✕</button>
+                <button class={styles.removeBtn} onClick={() => setUploadMedia('')}><img src="./img/icons_ios/ui-close.svg" alt="" draggable={false} /></button>
               </div>
               
               <textarea

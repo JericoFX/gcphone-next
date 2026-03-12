@@ -19,6 +19,8 @@ interface MediaActionButtonsProps {
 
 export function MediaActionButtons(props: MediaActionButtonsProps) {
   const variant = () => props.variant || 'compact';
+  const isAssetIcon = (icon: JSX.Element | string) =>
+    typeof icon === 'string' && /\.(svg|png|webp|jpg|jpeg)$/i.test(icon);
 
   return (
     <div
@@ -42,7 +44,9 @@ export function MediaActionButtons(props: MediaActionButtonsProps) {
             disabled={action.disabled}
             title={action.label}
           >
-            <span class={styles.icon}>{action.icon}</span>
+            <span class={styles.icon}>
+              {isAssetIcon(action.icon) ? <img src={action.icon as string} alt="" draggable={false} /> : action.icon}
+            </span>
             <span class={styles.label}>{action.label}</span>
           </button>
         )}

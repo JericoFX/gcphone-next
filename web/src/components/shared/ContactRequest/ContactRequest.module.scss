@@ -37,6 +37,12 @@
   flex-shrink: 0;
 }
 
+.icon img {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+}
+
 .content {
   flex: 1;
   min-width: 0;
@@ -85,6 +91,12 @@
     align-items: center;
     justify-content: center;
     cursor: pointer;
+
+    img {
+      width: 14px;
+      height: 14px;
+      object-fit: contain;
+    }
     
     &.accept {
       background-color: #34c759;

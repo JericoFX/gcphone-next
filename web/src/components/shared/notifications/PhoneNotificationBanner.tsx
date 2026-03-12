@@ -4,6 +4,8 @@ import { useNotifications } from '../../../store/notifications';
 import { getStoredLanguage, t } from '../../../i18n';
 import styles from './PhoneNotificationBanner.module.scss';
 
+const isAssetIcon = (icon?: string) => !!icon && /\.(svg|png|webp|jpg|jpeg)$/i.test(icon);
+
 interface Props {
   preview?: boolean;
   onOpenRoute?: (route: string, data?: Record<string, unknown>) => void;
@@ -87,7 +89,11 @@ export function PhoneNotificationBanner(props: Props) {
           />
           <Show when={peekOpen() || !!props.preview}>
             <button class={styles.peekCard} classList={{ [styles.preview]: !!props.preview, [styles.enter]: phase() === 'enter', [styles.exit]: phase() === 'exit' }} onClick={openNotification}>
-              <div class={styles.icon}>{notification().icon || '•'}</div>
+              <div class={styles.icon}>
+                <Show when={isAssetIcon(notification().icon)} fallback={notification().icon || '•'}>
+                  <img src={notification().icon} alt="" draggable={false} />
+                </Show>
+              </div>
               <div class={styles.content}>
                 <div class={styles.title}>{notification().title}</div>
                 <div class={styles.message}>{notification().message}</div>
@@ -99,9 +105,9 @@ export function PhoneNotificationBanner(props: Props) {
                   notificationsActions.dismissCurrent();
                   setPeekOpen(false);
                 }}
-              >
-                ✕
-              </span>
+                >
+                  <img src="./img/icons_ios/ui-close.svg" alt="" draggable={false} />
+                </span>
             </button>
           </Show>
         </div>
