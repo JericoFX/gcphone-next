@@ -26,6 +26,7 @@ export function LockScreen() {
 
   onMount(() => {
     timer = window.setInterval(() => setCurrentTime(new Date()), 1000);
+    setShowPad(true);
     void (async () => {
       const capabilities = await fetchNui<{ flashlight?: boolean; flashlightEnabled?: boolean }>('cameraGetCapabilities', undefined, {
         flashlight: false,
@@ -104,6 +105,12 @@ export function LockScreen() {
     }
   };
 
+  createEffect(() => {
+    if (phoneState.locked) {
+      setShowPad(true);
+    }
+  });
+
   const formatClockTime = (date: Date) => formatTime(date, language(), { hour: '2-digit', minute: '2-digit' });
   const formatClockDate = (date: Date) => formatDate(date, language(), { weekday: 'long', day: 'numeric', month: 'long' });
 
@@ -154,7 +161,7 @@ export function LockScreen() {
         </button>
         <button class={styles.widget} onClick={() => triggerUnlockSheet()}>
           <span class={styles.widgetLabel}>Unlock</span>
-          <strong>{pendingRoute() === 'camera' ? 'Desbloquear para abrir camara' : 'Desliza arriba o toca para PIN'}</strong>
+          <strong>{pendingRoute() === 'camera' ? 'Abrir camara con PIN' : 'PIN listo para desbloquear'}</strong>
         </button>
       </div>
 
@@ -172,27 +179,30 @@ export function LockScreen() {
         </For>
       </div>
 
-      <div class={styles.swipeHint}>
-        <span>{pendingRoute() === 'camera' ? 'Desliza para abrir la camara' : 'Desliza para desbloquear'}</span>
-        <input
-          class={styles.swipeControl}
-          type="range"
-          min="0"
-          max="100"
-          value={swipeValue()}
-          onInput={(event) => handleSwipeInput(Number(event.currentTarget.value))}
-          onChange={(event) => {
-            if (Number(event.currentTarget.value) < 92) {
-              setSwipeValue(0);
-            }
-          }}
-        />
-      </div>
+      <Show when={!showPad()}>
+        <div class={styles.swipeHint}>
+          <span>{pendingRoute() === 'camera' ? 'Desliza para abrir la camara' : 'Desliza para desbloquear'}</span>
+          <input
+            class={styles.swipeControl}
+            type="range"
+            min="0"
+            max="100"
+            value={swipeValue()}
+            onInput={(event) => handleSwipeInput(Number(event.currentTarget.value))}
+            onChange={(event) => {
+              if (Number(event.currentTarget.value) < 92) {
+                setSwipeValue(0);
+              }
+            }}
+          />
+        </div>
+      </Show>
 
       <Show when={showPad()}>
         <div class={styles.unlockSheet}>
           <div class={styles.sheetHandle} />
           <div class={styles.codeContainer}>
+            <span class={styles.unlockTitle}>{pendingRoute() === 'camera' ? 'Abrir camara' : 'Desbloquear iPhone'}</span>
             <div class={styles.dots}>
               {[0, 1, 2, 3].map((i) => (
                 <div class={styles.dot} classList={{ [styles.filled]: i < code().length, [styles.errorDot]: error() }} />
