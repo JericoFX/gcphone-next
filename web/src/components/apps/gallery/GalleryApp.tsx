@@ -13,6 +13,7 @@ import { InlineNotice } from '../../shared/ui/InlineNotice';
 import { ScreenState } from '../../shared/ui/ScreenState';
 import { SkeletonList } from '../../shared/ui/SkeletonList';
 import { AppScaffold } from '../../shared/layout';
+import { t } from '../../../i18n';
 import styles from './GalleryApp.module.scss';
 
 function PlainIconButton(props: {
@@ -39,6 +40,7 @@ export function GalleryApp() {
   const [loading, setLoading] = createSignal(true);
   const [showActions, setShowActions] = createSignal(false);
   const [shareChatApp, setShareChatApp] = createSignal<'messages' | 'wavechat' | null>(null);
+  const language = () => phoneState.settings.language || 'es';
   const [query, setQuery] = createSignal('');
 
   const openPhotoAt = (index: number) => {
@@ -155,8 +157,8 @@ export function GalleryApp() {
     if (isReadOnly()) return;
     const app = shareChatApp();
     if (!app) return;
-    const input = await uiPrompt('Numero para compartir', {
-      title: app === 'messages' ? 'Compartir en Mensajes' : 'Compartir en WaveChat',
+    const input = await uiPrompt(t('contacts.share_number_prompt', language()), {
+      title: app === 'messages' ? t('gallery.share_messages', language()) : t('gallery.share_wavechat', language()),
     });
     shareToChatNumber(typeof input === 'string' ? input : '');
   };
@@ -197,14 +199,14 @@ export function GalleryApp() {
   
   return (
     <AppScaffold
-      title="Galeria"
-      subtitle="Fotos y videos"
+      title={t('app.gallery', language())}
+      subtitle={t('gallery.subtitle', language())}
       onBack={() => router.goBack()}
-      action={isReadOnly() ? undefined : { onClick: takePhoto, label: 'Camara', icon: './img/icons_ios/camera.svg' }}
+      action={isReadOnly() ? undefined : { onClick: takePhoto, label: t('chirp.camera', language()), icon: './img/icons_ios/camera.svg' }}
     >
       <div class={styles.page}>
         <Show when={isReadOnly()}>
-          <InlineNotice title="Solo lectura" message={`Estas viendo la galeria de ${phoneState.accessOwnerName || 'otra persona'}.`} />
+          <InlineNotice title={t('contacts.readonly_title', language())} message={t('gallery.readonly_message', language(), { name: phoneState.accessOwnerName || t('common.other_person', language()) })} />
         </Show>
         <div class={styles.toolbar}>
           <SearchInput
@@ -212,12 +214,12 @@ export function GalleryApp() {
             inputClass={styles.searchInput}
             value={query()}
             onInput={setQuery}
-            placeholder="Buscar en galeria"
+            placeholder={t('gallery.search', language())}
           />
           <div class={styles.counterPill}>{visiblePhotos().length}</div>
         </div>
         <div class={styles.grid}>
-          <Show when={loading()} fallback={<ScreenState loading={false} empty={visiblePhotos().length === 0} emptyTitle="Sin fotos" emptyDescription="Toma tu primera foto con la camara.">
+          <Show when={loading()} fallback={<ScreenState loading={false} empty={visiblePhotos().length === 0} emptyTitle={t('gallery.empty_title', language())} emptyDescription={t('gallery.empty_desc', language())}>
             <For each={visiblePhotos()}>
               {(photo, index) => (
                 <div
@@ -237,7 +239,7 @@ export function GalleryApp() {
 
       <Show when={selectedPhoto()}>
         <div class={styles.viewer}>
-          <PlainIconButton class={styles.closeBtn} onClick={() => setSelectedPhoto(null)} label="Cerrar" icon="./img/icons_ios/ui-close.svg" />
+          <PlainIconButton class={styles.closeBtn} onClick={() => setSelectedPhoto(null)} label={t('control.close', language())} icon="./img/icons_ios/ui-close.svg" />
           <button class={styles.navBtn} classList={{ [styles.disabled]: currentPhotoIndex() <= 0 }} onClick={() => viewOffset(-1)}>
             ‹
           </button>
@@ -247,36 +249,36 @@ export function GalleryApp() {
           <img src={selectedPhoto().url} alt="Photo" />
           <div class={styles.counter}>{Math.max(0, currentPhotoIndex() + 1)} / {visiblePhotos().length}</div>
           <div class={styles.actions}>
-            <button onClick={() => setShowActions(true)}>Opciones</button>
+            <button onClick={() => setShowActions(true)}>{t('gallery.options', language())}</button>
           </div>
         </div>
       </Show>
 
       <ActionSheet
         open={!isReadOnly() && showActions()}
-        title="Foto"
+        title={t('app.gallery', language())}
         onClose={() => setShowActions(false)}
         actions={[
-          { label: 'Compartir en Mensajes', tone: 'primary', onClick: () => void shareToMessages('messages') },
-          { label: 'Compartir en WaveChat', onClick: () => void shareToMessages('wavechat') },
-          { label: 'Compartir por Mail', onClick: shareToMail },
-          { label: 'Compartir en Chirp', onClick: () => shareToFeedApp('chirp') },
-          { label: 'Compartir en Snap', onClick: () => shareToFeedApp('snap') },
-          { label: 'Usar como fondo', tone: 'primary', onClick: setAsWallpaper },
-          { label: 'Eliminar foto', tone: 'danger', onClick: deletePhoto },
+          { label: t('gallery.share_messages', language()), tone: 'primary', onClick: () => void shareToMessages('messages') },
+          { label: t('gallery.share_wavechat', language()), onClick: () => void shareToMessages('wavechat') },
+          { label: t('gallery.share_mail', language()), onClick: shareToMail },
+          { label: t('gallery.share_chirp', language()), onClick: () => shareToFeedApp('chirp') },
+          { label: t('gallery.share_snap', language()), onClick: () => shareToFeedApp('snap') },
+          { label: t('gallery.use_wallpaper', language()), tone: 'primary', onClick: setAsWallpaper },
+          { label: t('gallery.delete_photo', language()), tone: 'danger', onClick: deletePhoto },
         ]}
       />
 
       <ActionSheet
         open={!!shareChatApp()}
-        title={shareChatApp() === 'messages' ? 'Compartir en Mensajes' : 'Compartir en WaveChat'}
+        title={shareChatApp() === 'messages' ? t('gallery.share_messages', language()) : t('gallery.share_wavechat', language())}
         onClose={() => setShareChatApp(null)}
         actions={[
           ...shareContacts().map((contact) => ({
             label: `${contact.display} (${contact.number})`,
             onClick: () => shareToChatNumber(contact.number),
           })),
-          { label: 'Ingresar numero', tone: 'primary' as const, onClick: () => void shareToChatManual() },
+          { label: t('contacts.enter_number', language()), tone: 'primary' as const, onClick: () => void shareToChatManual() },
         ]}
       />
     </AppScaffold>

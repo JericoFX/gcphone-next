@@ -1,6 +1,7 @@
 import { For, Show, createSignal } from 'solid-js';
 import { timeAgo } from '../../../../utils/misc';
 import { sanitizeText } from '../../../../utils/sanitize';
+import { getStoredLanguage, t } from '../../../../i18n';
 import { EmojiPickerButton } from '../../../shared/ui/EmojiPicker';
 import styles from '../ClipsApp.module.scss';
 
@@ -25,6 +26,7 @@ interface Props {
 }
 
 export function GlobalChatPanel(props: Props) {
+  const language = () => getStoredLanguage();
   const [messageText, setMessageText] = createSignal('');
   const [selectedMessage, setSelectedMessage] = createSignal<string | null>(null);
   
@@ -54,7 +56,7 @@ export function GlobalChatPanel(props: Props) {
     <Show when={props.isOpen}>
       <div class={styles.globalChatPanel}>
         <div class={styles.globalChatHeader}>
-          <h3>Chat en vivo</h3>
+          <h3>{t('snap.live_chat', language())}</h3>
           <button class={styles.closeBtn} onClick={props.onClose}>✕</button>
         </div>
         
@@ -84,10 +86,10 @@ export function GlobalChatPanel(props: Props) {
                 <Show when={props.isOwner && selectedMessage() === message.id}>
                   <div class={styles.moderationMenu}>
                     <button onClick={() => handleDelete(message.id)}>
-                      🗑 Eliminar mensaje
+                      🗑 {t('wavechat.delete_message', language())}
                     </button>
                     <button onClick={() => handleMute(message.username)}>
-                      🚫 Silenciar usuario
+                      🚫 {t('wavechat.mute_user', language())}
                     </button>
                   </div>
                 </Show>
@@ -104,13 +106,13 @@ export function GlobalChatPanel(props: Props) {
           />
           <input
             type="text"
-            placeholder="Escribe un mensaje..."
+            placeholder={t('wavechat.write_message', language())}
             value={messageText()}
             onInput={(e) => setMessageText(sanitizeText(e.currentTarget.value, 500))}
             onKeyDown={(e) => e.key === 'Enter' && handleSend()}
           />
           <button onClick={handleSend} disabled={!messageText().trim()}>
-            Enviar
+            {t('mail.send', language())}
           </button>
         </div>
         

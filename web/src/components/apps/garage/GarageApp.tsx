@@ -8,6 +8,7 @@ import { useAppCache } from '../../../hooks';
 import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { Modal, ModalActions, ModalButton } from '../../shared/ui/Modal';
 import { SearchInput } from '../../shared/ui/SearchInput';
+import { getStoredLanguage, t } from '../../../i18n';
 import styles from './GarageApp.module.scss';
 
 interface Vehicle {
@@ -36,6 +37,7 @@ interface LocationHistory {
 export function GarageApp() {
   const router = useRouter();
   const cache = useAppCache('garage');
+  const language = () => getStoredLanguage();
 
   // Data
   const [vehicles, setVehicles] = createSignal<Vehicle[]>([]);
@@ -163,8 +165,8 @@ export function GarageApp() {
 
   return (
     <AppScaffold
-      title='Garage'
-      subtitle='Tus vehiculos'
+      title={t('garage.title', language())}
+      subtitle={t('garage.subtitle', language())}
       onBack={() => router.goBack()}
       bodyClass={styles.body}
     >
@@ -175,7 +177,7 @@ export function GarageApp() {
             inputClass={styles.searchInput}
             value={searchQuery()}
             onInput={setSearchQuery}
-            placeholder='Buscar por placa o modelo'
+            placeholder={t('garage.search', language())}
           />
         </div>
 
@@ -185,27 +187,27 @@ export function GarageApp() {
             classList={{ [styles.active]: filter() === 'all' }}
             onClick={() => setFilter('all')}
           >
-            Todos
+            {t('contacts.all', language())}
           </button>
           <button
             class={styles.filterBtn}
             classList={{ [styles.active]: filter() === 'garage' }}
             onClick={() => setFilter('garage')}
           >
-            En Garage
+            {t('garage.in_garage', language())}
           </button>
           <button
             class={styles.filterBtn}
             classList={{ [styles.active]: filter() === 'impounded' }}
             onClick={() => setFilter('impounded')}
           >
-            Depositados
+            {t('garage.impounded', language())}
           </button>
         </div>
 
         <div class={styles.vehicleList}>
           <Show when={loading() && vehicles().length === 0}>
-            <div class={styles.loading}>Cargando vehiculos...</div>
+            <div class={styles.loading}>{t('state.loading', language())}</div>
           </Show>
 
           <For each={filteredVehicles()}>
@@ -220,13 +222,13 @@ export function GarageApp() {
 
                 <div class={styles.vehicleInfo}>
                   <h3 class={styles.vehicleName}>
-                    {vehicle.model_name || 'Vehiculo'}
+                    {vehicle.model_name || t('garage.vehicle', language())}
                   </h3>
                   <span class={styles.vehiclePlate}>{vehicle.plate}</span>
 
                   <div class={styles.vehicleStatus}>
                     <Show when={vehicle.impounded}>
-                      <span class={styles.impoundedBadge}>En Deposito</span>
+                      <span class={styles.impoundedBadge}>{t('garage.in_depot', language())}</span>
                     </Show>
                     <Show when={!vehicle.impounded}>
                       <span class={styles.garageBadge}>
@@ -236,7 +238,7 @@ export function GarageApp() {
                   </div>
 
                   <Show when={vehicle.has_location}>
-                    <span class={styles.locationBadge}>Ubicacion guardada</span>
+                    <span class={styles.locationBadge}>{t('garage.saved_location', language())}</span>
                   </Show>
                 </div>
 
@@ -249,10 +251,8 @@ export function GarageApp() {
 
           <Show when={!loading() && filteredVehicles().length === 0}>
             <div class={styles.emptyState}>
-              <p>No hay vehiculos</p>
-              <p class={styles.emptyHint}>
-                Los vehiculos apareceran aqui cuando los guardes
-              </p>
+              <p>{t('garage.no_vehicles', language())}</p>
+              <p class={styles.emptyHint}>{t('garage.no_vehicles_desc', language())}</p>
             </div>
           </Show>
         </div>
@@ -276,7 +276,7 @@ export function GarageApp() {
                   <img src={getVehicleIcon()} alt='' />
                 </div>
                 <div class={styles.detailTitle}>
-                  <h2>{selectedVehicle().model_name || 'Vehiculo'}</h2>
+                  <h2>{selectedVehicle().model_name || t('garage.vehicle', language())}</h2>
                   <span class={styles.detailPlate}>
                     {selectedVehicle().plate}
                   </span>
@@ -291,8 +291,8 @@ export function GarageApp() {
                       <img src='./img/icons_ios/ui-warning.svg' alt='' />
                     </span>
                     <div>
-                      <strong>Vehiculo en deposito</strong>
-                      <p>Debes pagar la multa para recuperarlo</p>
+                      <strong>{t('garage.vehicle_impounded', language())}</strong>
+                      <p>{t('garage.vehicle_impounded_desc', language())}</p>
                     </div>
                   </div>
                 </Show>
@@ -303,9 +303,9 @@ export function GarageApp() {
                     </span>
                     <div>
                       <strong>
-                        En {selectedVehicle().garage_name || 'Garage'}
+                         {t('garage.in_label', language(), { garage: selectedVehicle().garage_name || 'Garage' })}
                       </strong>
-                      <p>Vehiculo disponible</p>
+                       <p>{t('garage.vehicle_available', language())}</p>
                     </div>
                   </div>
                 </Show>
@@ -314,22 +314,22 @@ export function GarageApp() {
               {/* Location Info */}
               <Show when={selectedVehicle().has_location}>
                 <div class={styles.locationCard}>
-                  <h4>Ultima Ubicacion</h4>
+                   <h4>{t('garage.last_location', language())}</h4>
                   <Show when={selectedVehicle().location_updated}>
                     <p class={styles.locationTime}>
-                      Guardada {timeAgo(selectedVehicle().location_updated)}
+                       {t('garage.saved_at', language(), { time: timeAgo(selectedVehicle().location_updated) })}
                     </p>
                   </Show>
 
                   <div class={styles.locationActions}>
                     <button class={styles.mapBtn} onClick={viewOnMap}>
-                      Ver en Mapa
+                       {t('garage.view_map', language())}
                     </button>
                     <button
                       class={styles.shareBtn}
                       onClick={() => setShowShareModal(true)}
                     >
-                      Compartir
+                       {t('garage.share', language())}
                     </button>
                   </div>
                 </div>
@@ -337,7 +337,7 @@ export function GarageApp() {
                 {/* Location History */}
                 <Show when={locationHistory().length > 0}>
                   <div class={styles.historySection}>
-                    <h4>Historial de Ubicaciones</h4>
+                     <h4>{t('garage.location_history', language())}</h4>
                     <div class={styles.historyList}>
                       <For each={locationHistory().slice(0, 5)}>
                         {(loc) => (
@@ -366,7 +366,7 @@ export function GarageApp() {
                     class={styles.requestBtn}
                     onClick={() => requestVehicle(selectedVehicle().plate)}
                   >
-                    Solicitar Vehiculo
+                     {t('garage.request_vehicle', language())}
                   </button>
                 </div>
               </Show>
@@ -377,15 +377,15 @@ export function GarageApp() {
         {/* Share Modal */}
         <Modal
           open={showShareModal()}
-          title='Compartir Ubicacion'
+          title={t('garage.share_location', language())}
           onClose={() => setShowShareModal(false)}
           size='sm'
         >
           <div class={styles.shareContent}>
-            <p>Enviar ubicacion del vehiculo a:</p>
+            <p>{t('garage.share_vehicle_to', language())}</p>
             <input
               type='text'
-              placeholder='Numero de telefono'
+              placeholder={t('wallet.phone_number_placeholder', language())}
               value={sharePhone()}
               onInput={(e) => setSharePhone(e.currentTarget.value)}
             />
@@ -393,11 +393,11 @@ export function GarageApp() {
 
           <ModalActions>
             <ModalButton
-              label='Cancelar'
+              label={t('action.cancel', language())}
               onClick={() => setShowShareModal(false)}
             />
             <ModalButton
-              label='Compartir'
+              label={t('garage.share', language())}
               onClick={() => void shareLocation()}
               tone='primary'
               disabled={!sharePhone().trim()}

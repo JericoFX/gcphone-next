@@ -3,6 +3,7 @@ import { useRouter } from '../../Phone/PhoneFrame';
 import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { AppScaffold } from '../../shared/layout';
 import { ScreenState } from '../../shared/ui/ScreenState';
+import { getStoredLanguage, t } from '../../../i18n';
 import styles from './WeatherApp.module.scss';
 
 interface ForecastItem {
@@ -19,6 +20,7 @@ interface HourlyItem {
 
 export function WeatherApp() {
   const router = useRouter();
+  const language = () => getStoredLanguage();
   const [city] = createSignal('Los Santos');
   const [condition] = createSignal('Soleado');
   const [temperature] = createSignal('27°C');
@@ -57,8 +59,8 @@ export function WeatherApp() {
   });
 
   return (
-    <AppScaffold title="Clima" subtitle="Panorama rapido" onBack={() => router.goBack()}>
-      <ScreenState loading={loading()} empty={forecast().length === 0} emptyTitle="Sin clima" emptyDescription="No hay datos meteorologicos disponibles.">
+    <AppScaffold title={t('weather.title', language())} subtitle={t('weather.quick_outlook', language())} onBack={() => router.goBack()}>
+      <ScreenState loading={loading()} empty={forecast().length === 0} emptyTitle={t('weather.empty_title', language())} emptyDescription={t('weather.empty_desc', language())}>
         <div class={styles.hero}>
           <div class={styles.heroTopLine}>
             <div class={styles.city}>{city()}</div>
@@ -67,13 +69,13 @@ export function WeatherApp() {
           <div class={styles.temp}>{temperature()}</div>
           <div class={styles.condition}>{condition()}</div>
           <div class={styles.metricsGrid}>
-            <div class={styles.metricCard}><span>Humedad</span><strong>{humidity()}</strong></div>
-            <div class={styles.metricCard}><span>Viento</span><strong>{wind()}</strong></div>
-            <div class={styles.metricCard}><span>Lluvia</span><strong>{rainChance()}</strong></div>
+            <div class={styles.metricCard}><span>{t('weather.humidity', language())}</span><strong>{humidity()}</strong></div>
+            <div class={styles.metricCard}><span>{t('weather.wind', language())}</span><strong>{wind()}</strong></div>
+            <div class={styles.metricCard}><span>{t('weather.rain', language())}</span><strong>{rainChance()}</strong></div>
           </div>
         </div>
 
-        <div class="ios-section-title">Proximas horas</div>
+        <div class="ios-section-title">{t('weather.next_hours', language())}</div>
         <div class={styles.hourlyRail}>
           <For each={hourly()}>
             {(item) => (
@@ -86,7 +88,7 @@ export function WeatherApp() {
           </For>
         </div>
 
-        <div class="ios-section-title">Pronostico</div>
+        <div class="ios-section-title">{t('weather.forecast', language())}</div>
         <div class="ios-list">
           <For each={forecast()}>
             {(item) => (

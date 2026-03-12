@@ -1,5 +1,5 @@
 import { For, Show } from 'solid-js';
-import { getStoredLanguage, tl } from '../../../i18n';
+import { getStoredLanguage, t, tl } from '../../../i18n';
 import styles from './ActionSheet.module.scss';
 
 export interface ActionSheetAction {
@@ -45,7 +45,7 @@ export function ActionSheet(props: ActionSheetProps) {
           </div>
 
           <button class={styles.cancel} onClick={props.onClose}>
-            {tl('Cancelar', getStoredLanguage())}
+            {t('action.cancel', getStoredLanguage())}
           </button>
         </div>
       </div>

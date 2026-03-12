@@ -321,7 +321,7 @@ export function ControlCenter() {
             </div>
 
             <div class={styles.notificationList}>
-              <Show when={groupedNotifications().length > 0} fallback={<div class={styles.empty}>Sin notificaciones</div>}>
+              <Show when={groupedNotifications().length > 0} fallback={<div class={styles.empty}>{t('notifications.none_saved', language())}</div>}>
                 <For each={groupedNotifications()}>
                   {([appId, items]) => (
                     <div class={styles.notificationGroup}>
@@ -332,7 +332,7 @@ export function ControlCenter() {
                           class={styles.muteAppBtn}
                           onClick={() => notificationsActions.toggleMuteApp(appId)}
                         >
-                           {notificationsActions.isAppMuted(appId) ? 'Activar' : 'Silenciar'}
+                           {notificationsActions.isAppMuted(appId) ? t('notifications.enable', language()) : t('notifications.mute', language())}
                         </button>
                       </div>
                       <For each={visibleItemsForGroup(items)}>

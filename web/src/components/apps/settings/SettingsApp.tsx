@@ -449,19 +449,21 @@ export function SettingsApp() {
 
       <SectionHeader title={t('settings.language', language()).toUpperCase()} />
       <Group>
-        <For each={languages}>
-          {(lang) => (
-            <button
-              class={styles.langOption}
-              classList={{ [styles.selected]: language() === lang.code }}
-              onClick={() => phoneActions.setLanguage(lang.code as 'es' | 'en' | 'pt' | 'fr')}
-            >
-              <span class={styles.langFlag}>{lang.flag}</span>
-              <span class={styles.langName}>{lang.name}</span>
-              {language() === lang.code && <div class={styles.checkmark}>✓</div>}
-            </button>
-          )}
-        </For>
+        <div class={styles.langList}>
+          <For each={languages}>
+            {(lang) => (
+              <button
+                class={styles.langOption}
+                classList={{ [styles.selected]: language() === lang.code }}
+                onClick={() => phoneActions.setLanguage(lang.code as 'es' | 'en' | 'pt' | 'fr')}
+              >
+                <span class={styles.langFlag}>{lang.flag}</span>
+                <span class={styles.langName}>{lang.name}</span>
+                {language() === lang.code && <div class={styles.checkmark}>✓</div>}
+              </button>
+            )}
+          </For>
+        </div>
       </Group>
     </div>
   );

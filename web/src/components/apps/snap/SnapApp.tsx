@@ -1569,9 +1569,9 @@ export function SnapApp() {
       <div class={styles.snapApp}>
         <div class={styles.socialPanel}>
           <div class={styles.socialMeta}>
-            <strong>{myAccount()?.display_name || myAccount()?.username || 'Perfil'}</strong>
+            <strong>{myAccount()?.display_name || myAccount()?.username || t('chirp.profile', language())}</strong>
             <span>
-              {pendingRequests().length} pendientes · {sentRequests().length} enviadas
+              {pendingRequests().length} {t('snap.pending', language())} · {sentRequests().length} {t('snap.sent', language())}
             </span>
           </div>
           <div class={styles.socialActions}>
@@ -1800,7 +1800,7 @@ export function SnapApp() {
                     disabled={discoverLoadingMore()}
                     onClick={() => void loadMoreDiscover()}
                   >
-                    {discoverLoadingMore() ? 'Cargando...' : 'Cargar mas'}
+                    {discoverLoadingMore() ? t('state.loading', language()) : t('snap.load_more', language())}
                   </button>
                 </Show>
               </Show>
@@ -1810,17 +1810,17 @@ export function SnapApp() {
 
         <Show when={activeTab() === 'profile'}>
           <div class={styles.profileTab}>
-            <h4 class={styles.sectionTitle}>Perfil</h4>
+            <h4 class={styles.sectionTitle}>{t('chirp.profile', language())}</h4>
 
             <div class={styles.profileHelper}>
-              El nombre principal de Snap queda fijo desde la configuracion inicial del telefono.
+              {t('snap.profile_hint', language())}
             </div>
 
             <FormField
-              label="Nombre visible"
+              label={t('chirp.visible_name', language())}
               value={profileDisplayName()}
               onChange={(value) => setProfileDisplayName(sanitizeText(value, 50))}
-              placeholder="Tu nombre"
+              placeholder={t('chirp.your_name', language())}
               disabled
             />
 
@@ -1830,12 +1830,12 @@ export function SnapApp() {
                 checked={profilePrivate()}
                 onChange={(e) => setProfilePrivate(e.currentTarget.checked)}
               />
-              <span>Cuenta privada</span>
+              <span>{t('chirp.private', language())}</span>
             </label>
 
             <div class={styles.profileSaveRow}>
               <button class={styles.acceptBtn} onClick={() => void saveProfile()}>
-                Guardar perfil
+                {t('news.save_profile', language())}
               </button>
             </div>
           </div>
@@ -1848,7 +1848,7 @@ export function SnapApp() {
           class={styles.fab}
           icon="+"
           onClick={() => setShowActionSheet(true)}
-          tooltip="Crear"
+          tooltip={t('snap.create', language())}
           tooltipVisible={fabTooltipVisible()}
           onPointerDown={showFabTooltip}
           onPointerUp={hideFabTooltip}
@@ -1859,13 +1859,13 @@ export function SnapApp() {
       {/* Action Sheet */}
       <ActionSheet
         open={showActionSheet()}
-        title="Crear"
+        title={t('snap.create', language())}
         onClose={() => setShowActionSheet(false)}
         actions={[
-          { label: '📷 Camara', tone: 'primary', onClick: openCamera },
-          { label: '🖼 Galeria', tone: 'primary', onClick: () => { setShowActionSheet(false); setShowCreatePost(true); } },
-          { label: '✨ Subir Story', onClick: () => { setPostMode('story'); setShowActionSheet(false); setShowCreatePost(true); } },
-          { label: '🔴 Iniciar Live', onClick: () => void startLive() },
+          { label: `📷 ${t('chirp.camera', language())}`, tone: 'primary', onClick: openCamera },
+          { label: `🖼 ${t('chirp.gallery', language())}`, tone: 'primary', onClick: () => { setShowActionSheet(false); setShowCreatePost(true); } },
+          { label: `✨ ${t('snap.upload_story', language())}`, onClick: () => { setPostMode('story'); setShowActionSheet(false); setShowCreatePost(true); } },
+          { label: `🔴 ${t('snap.start_live', language())}`, onClick: () => void startLive() },
           { label: '🧪 Mock Live', onClick: () => void startMockLive() },
         ]}
       />
@@ -1873,12 +1873,12 @@ export function SnapApp() {
       {/* Create Post Modal */}
       <Modal
         open={showCreatePost()}
-        title={postMode() === 'story' ? 'Subir Story' : 'Nueva Publicacion'}
+        title={postMode() === 'story' ? t('snap.upload_story', language()) : t('snap.new_post', language())}
         onClose={() => { setShowCreatePost(false); setPostMedia(''); setPostCaption(''); }}
         size="md"
       >
         <div class={styles.createContent}>
-          <SheetIntro title="Crear contenido" description="Publica una foto o video en tu perfil, o comparte una story temporal." />
+          <SheetIntro title={t('snap.create', language())} description={t('snap.create_desc', language())} />
           <div class={styles.modeToggle}>
             <SegmentedTabs items={postModeTabs} active={postMode()} onChange={(id) => setPostMode(id as 'post' | 'story')} />
           </div>
@@ -1886,8 +1886,8 @@ export function SnapApp() {
           <Show when={!postMedia()}>
             <MediaActionButtons
               actions={[
-                { icon: '📷', label: 'Camara', onClick: openCamera },
-                { icon: '🖼', label: 'Galeria', onClick: attachFromGallery },
+                { icon: '📷', label: t('chirp.camera', language()), onClick: openCamera },
+                { icon: '🖼', label: t('chirp.gallery', language()), onClick: attachFromGallery },
               ]}
               variant="tiles"
             />
@@ -1899,7 +1899,7 @@ export function SnapApp() {
             <Show when={postMode() === 'post'}>
               <EmojiPickerButton value={postCaption()} onChange={setPostCaption} maxLength={2200} />
       <textarea class={styles.captionInput}
-                placeholder="Escribe un caption..."
+                placeholder={t('snap.caption', language())}
                 value={postCaption()}
                 onInput={(e) => setPostCaption(e.currentTarget.value)}
                 rows={3}
@@ -1909,9 +1909,9 @@ export function SnapApp() {
         </div>
 
         <ModalActions>
-          <ModalButton label="Cancelar" onClick={() => { setShowCreatePost(false); setPostMedia(''); setPostCaption(''); }} />
+          <ModalButton label={t('action.cancel', language())} onClick={() => { setShowCreatePost(false); setPostMedia(''); setPostCaption(''); }} />
           <ModalButton 
-            label={loading() ? 'Publicando...' : 'Publicar'}
+            label={loading() ? t('chirp.publishing', language()) : t('news.post', language())}
             onClick={() => void publishPost()}
             tone="primary"
             disabled={!postMedia() || loading()}
@@ -2001,7 +2001,7 @@ export function SnapApp() {
                 >
                   <span class={styles.liveAudioBadgeDot} />
                   <span>
-                    {!liveAudioTargetOnline() ? 'Sin emisor' : (liveAudioNear() ? 'Audio cercano' : 'Fuera de rango')}
+                    {!liveAudioTargetOnline() ? t('snap.no_broadcaster', language()) : (liveAudioNear() ? t('snap.audio_near', language()) : t('snap.out_of_range', language()))}
                   </span>
                   <Show when={liveAudioDistanceMeters() >= 0}>
                     <small>{Math.round(liveAudioDistanceMeters())}m</small>
@@ -2082,7 +2082,7 @@ export function SnapApp() {
             <Show when={liveChatOpen()}>
               <div class={styles.liveChatPanel}>
                 <div class={styles.liveChatHeader}>
-                  <strong>Chat en vivo</strong>
+                  <strong>{t('snap.live_chat', language())}</strong>
                   <span>{activeLive()?.display_name || activeLive()?.username || 'Live'} · max 20</span>
                 </div>
                 <div class={styles.liveChatList}>
@@ -2105,7 +2105,7 @@ export function SnapApp() {
                 </div>
 
                 <Show when={viewerMuted()}>
-                  <div class={styles.liveMutedBanner}>Estas silenciado en este live</div>
+                  <div class={styles.liveMutedBanner}>{t('snap.live_muted', language())}</div>
                 </Show>
 
                 <Show
@@ -2118,11 +2118,11 @@ export function SnapApp() {
                       value={liveMessageInput()}
                       onInput={(e) => setLiveMessageInput(sanitizeText(e.currentTarget.value, 300))}
                       onKeyDown={(e) => e.key === 'Enter' && void sendLiveMessage()}
-                      placeholder="Escribe en el live..."
+                      placeholder={t('snap.write_live', language())}
                       disabled={viewerMuted()}
                     />
                     <button onClick={() => void sendLiveMessage()} disabled={viewerMuted() || !liveMessageInput().trim()}>
-                      Enviar
+                      {t('mail.send', language())}
                     </button>
                   </div>
                 </Show>
@@ -2147,15 +2147,15 @@ export function SnapApp() {
 
       <Modal
         open={showRequestsModal()}
-        title="Solicitudes"
+        title={t('chirp.requests', language())}
         onClose={() => setShowRequestsModal(false)}
         size="lg"
       >
         <div class={styles.requestsBlock}>
-          <SheetIntro title="Solicitudes" description="Administra quien puede seguirte y revisa las peticiones que enviaste." />
-          <h4>Recibidas</h4>
-          <Show when={!requestsLoading()} fallback={<p>Cargando...</p>}>
-            <Show when={pendingRequests().length > 0} fallback={<EmptyState title="Sin pendientes" description="Las nuevas solicitudes apareceran aqui." />}>
+          <SheetIntro title={t('chirp.requests', language())} description={t('snap.requests_desc', language())} />
+          <h4>{t('chirp.requests_received', language())}</h4>
+          <Show when={!requestsLoading()} fallback={<p>{t('state.loading', language())}</p>}>
+            <Show when={pendingRequests().length > 0} fallback={<EmptyState title={t('snap.no_pending', language())} description={t('snap.no_pending_desc', language())} />}>
               <For each={pendingRequests()}>
                 {(request) => (
                   <div class={styles.requestRow}>
@@ -2164,8 +2164,8 @@ export function SnapApp() {
                       <span>@{request.username || request.from_identifier || 'user'}</span>
                     </div>
                     <div class={styles.requestActions}>
-                      <button onClick={() => void respondFollowRequest(request.id, false)}>Rechazar</button>
-                      <button class={styles.acceptBtn} onClick={() => void respondFollowRequest(request.id, true)}>Aceptar</button>
+                      <button onClick={() => void respondFollowRequest(request.id, false)}>{t('wallet.reject', language())}</button>
+                      <button class={styles.acceptBtn} onClick={() => void respondFollowRequest(request.id, true)}>{t('chirp.accept', language())}</button>
                     </div>
                   </div>
                 )}
@@ -2175,8 +2175,8 @@ export function SnapApp() {
         </div>
 
         <div class={styles.requestsBlock}>
-          <h4>Enviadas</h4>
-          <Show when={sentRequests().length > 0} fallback={<EmptyState title="Sin solicitudes enviadas" description="Cuando envies una solicitud podras seguirla desde aqui." />}>
+          <h4>{t('chirp.requests_sent', language())}</h4>
+          <Show when={sentRequests().length > 0} fallback={<EmptyState title={t('snap.no_sent', language())} description={t('snap.no_sent_desc', language())} />}>
             <For each={sentRequests()}>
               {(request) => (
                 <div class={styles.requestRow}>
@@ -2185,7 +2185,7 @@ export function SnapApp() {
                     <span>@{request.username || request.to_identifier || 'user'}</span>
                   </div>
                   <div class={styles.requestActions}>
-                    <button onClick={() => void cancelSentRequest(request.account_id)}>Cancelar</button>
+                    <button onClick={() => void cancelSentRequest(request.account_id)}>{t('action.cancel', language())}</button>
                   </div>
                 </div>
               )}
@@ -2196,14 +2196,14 @@ export function SnapApp() {
 
       <Modal
         open={deletePostId() !== null}
-        title="Eliminar publicacion"
+        title={t('snap.delete_post', language())}
         onClose={() => setDeletePostId(null)}
         size="sm"
       >
         <p>Esta accion no se puede deshacer.</p>
         <ModalActions>
-          <ModalButton label="Cancelar" onClick={() => setDeletePostId(null)} />
-          <ModalButton label="Eliminar" tone="danger" onClick={() => void confirmDeletePost()} />
+          <ModalButton label={t('action.cancel', language())} onClick={() => setDeletePostId(null)} />
+          <ModalButton label={t('action.delete', language())} tone="danger" onClick={() => void confirmDeletePost()} />
         </ModalActions>
       </Modal>
 

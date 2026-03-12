@@ -420,7 +420,7 @@ export function YellowPagesApp() {
                     </div>
                     <div class={styles.sellerInfo}>
                       <strong>{sellerInfo().seller_name || 'Vendedor'}</strong>
-                      <span class={styles.metaWithIcon}><img src="./img/icons_ios/ui-phone.svg" alt="" /> {sellerInfo().phone_number ? formatPhoneNumber(sellerInfo().phone_number, phoneState.framework || 'unknown') : 'Sin telefono'}</span>
+                      <span class={styles.metaWithIcon}><img src="./img/icons_ios/ui-phone.svg" alt="" /> {sellerInfo().phone_number ? formatPhoneNumber(sellerInfo().phone_number, phoneState.framework || 'unknown') : t('yellowpages.no_phone', language())}</span>
                     </div>
                   </div>
                 </div>
@@ -433,7 +433,7 @@ export function YellowPagesApp() {
                       onClick={() => setShowContactModal(true)}
                     >
                       <img src="./img/icons_ios/ui-phone.svg" alt="" />
-                      Contactar
+                        {t('yellowpages.contact_seller', language())}
                     </button>
                     <Show when={selectedListing()?.location_shared}>
                       <button 
@@ -441,7 +441,7 @@ export function YellowPagesApp() {
                         onClick={viewLocation}
                       >
                         <img src="./img/icons_ios/ui-location.svg" alt="" />
-                        Ver ubicacion
+                        {t('maps.share_location', language())}
                       </button>
                     </Show>
                   </div>
@@ -454,7 +454,7 @@ export function YellowPagesApp() {
         {/* Contact Modal */}
         <Modal
           open={showContactModal()}
-          title="Contactar Vendedor"
+          title={t('yellowpages.contact_seller', language())}
           onClose={() => setShowContactModal(false)}
           size="sm"
         >
@@ -462,22 +462,22 @@ export function YellowPagesApp() {
             <button class={styles.contactOption} onClick={() => contactSeller('call')}>
               <span class={styles.contactIcon}><img src="./img/icons_ios/ui-phone.svg" alt="" /></span>
               <div class={styles.contactInfo}>
-                <strong>Llamar</strong>
-                <span>{sellerInfo()?.phone_number ? formatPhoneNumber(sellerInfo()!.phone_number, phoneState.framework || 'unknown') : 'Sin telefono'}</span>
+                <strong>{t('calls.call', language())}</strong>
+                <span>{sellerInfo()?.phone_number ? formatPhoneNumber(sellerInfo()!.phone_number, phoneState.framework || 'unknown') : t('yellowpages.no_phone', language())}</span>
               </div>
             </button>
             
             <button class={styles.contactOption} onClick={() => contactSeller('message')}>
               <span class={styles.contactIcon}><img src="./img/icons_ios/ui-chat.svg" alt="" /></span>
               <div class={styles.contactInfo}>
-                <strong>Enviar mensaje</strong>
-                <span>Chat privado</span>
+                <strong>{t('contacts.send_message', language())}</strong>
+                <span>{t('yellowpages.private_chat', language())}</span>
               </div>
             </button>
           </div>
           
           <ModalActions>
-            <ModalButton label="Cancelar" onClick={() => setShowContactModal(false)} />
+            <ModalButton label={t('action.cancel', language())} onClick={() => setShowContactModal(false)} />
           </ModalActions>
         </Modal>
 
@@ -555,9 +555,9 @@ export function YellowPagesApp() {
           </div>
           
           <ModalActions>
-            <ModalButton label="Cancelar" onClick={() => setShowComposer(false)} />
+            <ModalButton label={t('action.cancel', language())} onClick={() => setShowComposer(false)} />
             <ModalButton 
-              label={loading() ? 'Publicando...' : 'Publicar'}
+              label={loading() ? t('chirp.publishing', language()) : t('news.post', language())}
               onClick={() => void publish()}
               tone="primary"
               disabled={!title().trim() || loading()}

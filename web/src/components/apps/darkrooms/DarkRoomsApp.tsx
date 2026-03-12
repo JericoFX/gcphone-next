@@ -12,6 +12,7 @@ import { SearchInput } from '../../shared/ui/SearchInput';
 import { SegmentedTabs } from '../../shared/ui/SegmentedTabs';
 import { SheetIntro } from '../../shared/ui/SheetIntro';
 import { FormCheckbox, FormField, FormSection, Modal, ModalActions, ModalButton } from '../../shared/ui/Modal';
+import { getStoredLanguage, t } from '../../../i18n';
 import styles from './DarkRoomsApp.module.scss';
 
 interface Room {
@@ -74,6 +75,7 @@ function MediaBlock(props: { url?: string; compact?: boolean; onOpen?: (url: str
 
 export function DarkRoomsApp() {
   const router = useRouter();
+  const language = () => getStoredLanguage();
   const cache = useAppCache('darkrooms');
 
   // View state
@@ -310,7 +312,7 @@ export function DarkRoomsApp() {
     setLoading(false);
 
     if (!payload?.success) {
-      uiAlert(`Publicar fallo: ${payload?.error || 'ERROR'}`);
+      uiAlert(`${t('news.post', language())} fallo: ${payload?.error || 'ERROR'}`);
       return;
     }
 
@@ -333,7 +335,7 @@ export function DarkRoomsApp() {
   const createComment = async () => {
     const post = selectedPost();
     if (!post || !commentText().trim()) {
-      uiAlert('El comentario no puede estar vacio');
+      uiAlert(t('darkrooms.comment_empty', language()));
       return;
     }
 
@@ -345,7 +347,7 @@ export function DarkRoomsApp() {
     }, { success: false });
 
     if (!payload?.success) {
-      uiAlert(`Comentar fallo: ${payload?.error || 'ERROR'}`);
+      uiAlert(`${t('chirp.comment', language())} fallo: ${payload?.error || 'ERROR'}`);
       return;
     }
 
@@ -383,7 +385,7 @@ export function DarkRoomsApp() {
           <SearchInput
             value={searchQuery()}
             onInput={setSearchQuery}
-            placeholder="Buscar salas..."
+            placeholder={t('darkrooms.search', language())}
             class={styles.searchInputRoot}
             inputClass={styles.searchInput}
           />
@@ -410,7 +412,7 @@ export function DarkRoomsApp() {
                     <span class={styles.roomLock}>🔒</span>
                   </Show>
                 </div>
-                <p class={styles.roomDescription}>{room.description || 'Sin descripcion'}</p>
+                <p class={styles.roomDescription}>{room.description || t('yellowpages.no_description', language())}</p>
                 <div class={styles.roomStats}>
                   <span>{Number(room.posts || 0)} posts</span>
                   <span class={styles.statDot}>·</span>
@@ -421,7 +423,7 @@ export function DarkRoomsApp() {
           )}
         </For>
         <Show when={filteredRooms().length === 0}>
-          <EmptyState class={styles.emptyState} title="No se encontraron salas" description="Prueba otra busqueda o crea una nueva comunidad." />
+          <EmptyState class={styles.emptyState} title={t('darkrooms.rooms_not_found', language())} description={t('darkrooms.rooms_not_found_desc', language())} />
         </Show>
       </div>
 
@@ -430,7 +432,7 @@ export function DarkRoomsApp() {
         class={styles.fab}
         icon="+"
         onClick={() => setShowCreateRoom(true)}
-        tooltip="Crear sala"
+          tooltip={t('darkrooms.create_room', language())}
         tooltipVisible={fabTooltipVisible()}
         onPointerDown={showFabTooltip}
         onPointerUp={hideFabTooltip}
@@ -448,7 +450,7 @@ export function DarkRoomsApp() {
       <div class={styles.roomInteriorView}>
         <div class={styles.roomInteriorHeader}>
           <button class={styles.backButton} onClick={backToRooms}>
-            ← Volver
+            ← {t('chirp.back', language())}
           </button>
           <div class={styles.roomTitleSection}>
             <span class={styles.roomIconSmall}>{room.icon || '🌙'}</span>
@@ -461,7 +463,7 @@ export function DarkRoomsApp() {
 
         <div class={styles.postsList}>
           <Show when={posts().length === 0}>
-            <EmptyState class={styles.emptyState} title="No hay posts en esta sala" description="Se el primero en publicar." />
+            <EmptyState class={styles.emptyState} title={t('darkrooms.no_posts', language())} description={t('darkrooms.no_posts_desc', language())} />
           </Show>
           
           <VirtualList items={posts} itemHeight={180} overscan={3}>
@@ -488,7 +490,7 @@ export function DarkRoomsApp() {
                   <h3 class={styles.postTitle}>{post.title}</h3>
                   <p class={styles.postExcerpt}>{post.content?.slice(0, 120)}{post.content && post.content.length > 120 ? '...' : ''}</p>
                   <div class={styles.postMeta}>
-                    <span>por {post.author_name}</span>
+                    <span>{t('darkrooms.by_author', language(), { name: post.author_name })}</span>
                     <span class={styles.metaDot}>·</span>
                     <span>{post.comments_count} comentarios</span>
                   </div>
@@ -503,7 +505,7 @@ export function DarkRoomsApp() {
           class={styles.fab}
           icon="✎"
           onClick={() => setShowCreatePost(true)}
-          tooltip="Nuevo post"
+          tooltip={t('darkrooms.post_title', language())}
           tooltipVisible={fabTooltipVisible()}
           onPointerDown={showFabTooltip}
           onPointerUp={hideFabTooltip}
@@ -522,7 +524,7 @@ export function DarkRoomsApp() {
       <div class={styles.postDetailView}>
         <div class={styles.postDetailHeader}>
           <button class={styles.backButton} onClick={backToRoom}>
-            ← Volver
+            ← {t('chirp.back', language())}
           </button>
           <span class={styles.postDetailTitle}>Post</span>
         </div>
@@ -550,7 +552,7 @@ export function DarkRoomsApp() {
             <div class={styles.postDetailBody}>
               <h2 class={styles.postDetailHeading}>{post.title}</h2>
               <div class={styles.postDetailMeta}>
-                <span>Publicado por {post.author_name}</span>
+                  <span>{t('darkrooms.published_by', language(), { name: post.author_name })}</span>
               </div>
               <p class={styles.postDetailText}>{post.content}</p>
               <MediaBlock url={post.media_url} onOpen={setViewerUrl} />
@@ -580,7 +582,7 @@ export function DarkRoomsApp() {
         <div class={styles.commentComposer}>
           <textarea
             class={styles.commentInput}
-            placeholder="Escribe un comentario..."
+            placeholder={t('chirp.comment_placeholder', language())}
             value={commentText()}
             onInput={(e) => setCommentText(e.currentTarget.value)}
             rows={3}
@@ -592,14 +594,14 @@ export function DarkRoomsApp() {
                 checked={commentAnonymous()}
                 onChange={(e) => setCommentAnonymous(e.currentTarget.checked)}
               />
-              <span>Anonimo</span>
+              <span>{t('darkrooms.anonymous', language())}</span>
             </label>
             <button 
               class={styles.sendButton}
               onClick={() => void createComment()}
               disabled={!commentText().trim()}
             >
-              Comentar
+              {t('chirp.comment', language())}
             </button>
           </div>
         </div>
@@ -628,7 +630,7 @@ export function DarkRoomsApp() {
       {/* Create Room Modal */}
       <Modal 
         open={showCreateRoom()} 
-        title="Crear Sala" 
+        title={t('darkrooms.create_room', language())} 
         onClose={() => setShowCreateRoom(false)}
         size="md"
       >
@@ -691,7 +693,7 @@ export function DarkRoomsApp() {
         </Show>
         
         <ModalActions>
-          <ModalButton label="Cancelar" onClick={() => setShowCreateRoom(false)} />
+          <ModalButton label={t('action.cancel', language())} onClick={() => setShowCreateRoom(false)} />
           <ModalButton label="Crear" onClick={() => void createRoom()} tone="primary" />
         </ModalActions>
       </Modal>
@@ -712,7 +714,7 @@ export function DarkRoomsApp() {
           type="text"
         />
         <ModalActions>
-          <ModalButton label="Cancelar" onClick={() => setJoinPasswordMode(null)} />
+          <ModalButton label={t('action.cancel', language())} onClick={() => setJoinPasswordMode(null)} />
           <ModalButton label="Entrar" onClick={() => void confirmJoinProtectedRoom()} tone="primary" />
         </ModalActions>
       </Modal>
@@ -720,7 +722,7 @@ export function DarkRoomsApp() {
       {/* Create Post Modal */}
       <Modal 
         open={showCreatePost()} 
-        title={`Publicar en ${roomTag(selectedRoom() || { slug: '', name: '' })}`}
+        title={`${t('news.post', language())} ${roomTag(selectedRoom() || { slug: '', name: '' })}`}
         onClose={() => setShowCreatePost(false)}
         size="lg"
       >
@@ -752,15 +754,15 @@ export function DarkRoomsApp() {
           <FormCheckbox
             checked={postAnonymous()}
             onChange={setPostAnonymous}
-            label="Publicar anonimamente"
+            label={t('darkrooms.publish_anonymously', language())}
             labelClass={styles.checkboxLabel}
           />
         </FormSection>
         
         <ModalActions>
-          <ModalButton label="Cancelar" onClick={() => setShowCreatePost(false)} />
+          <ModalButton label={t('action.cancel', language())} onClick={() => setShowCreatePost(false)} />
           <ModalButton 
-            label={loading() ? 'Publicando...' : 'Publicar'} 
+            label={loading() ? t('chirp.publishing', language()) : t('news.post', language())} 
             onClick={() => void createPost()} 
             tone="primary" 
             disabled={loading() || !postTitle().trim()}
