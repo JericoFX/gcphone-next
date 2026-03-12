@@ -5,6 +5,7 @@ local USE_SQL_CLEANUP_EVENTS = GetConvar('gcphone_sql_cleanup_events', '0') == '
 local ActiveLocationRecipients = {}
 local LastLiveLocationCleanupAt = 0
 local LIVE_LOCATION_CLEANUP_MS = 60000
+local LastLocationUpdateAt = {}
 
 local function RebuildRecipientCache()
     local rows = MySQL.query_async(
@@ -194,11 +195,19 @@ end)
 
 RegisterNetEvent('gcphone:liveLocation:updatePosition', function()
     local src = source
+    local now = GetGameTimer()
+    local lastUpdate = LastLocationUpdateAt[src] or 0
+    if now - lastUpdate < 1000 then return end
+    LastLocationUpdateAt[src] = now
+
     local identifier = GetIdentifier(src)
     if not identifier then return end
 
     local senderPhone = GetPhoneNumber(identifier)
     if not senderPhone then return end
+
+    local activeShares = ActiveLocationRecipients[senderPhone] or {}
+    if #activeShares == 0 then return end
 
     local coords = GetEntityCoords(GetPlayerPed(src))
     local x, y = coords.x, coords.y
@@ -207,8 +216,6 @@ RegisterNetEvent('gcphone:liveLocation:updatePosition', function()
         'UPDATE phone_live_locations SET x = ?, y = ?, updated_at = NOW() WHERE sender_phone = ? AND expires_at > NOW()',
         { x, y, senderPhone }
     )
-
-    local activeShares = ActiveLocationRecipients[senderPhone] or {}
 
     for _, recipientPhone in ipairs(activeShares) do
         local recipientSrc = GetPlayerByPhone(recipientPhone)
@@ -220,4 +227,8 @@ RegisterNetEvent('gcphone:liveLocation:updatePosition', function()
             })
         end
     end
+end)
+
+AddEventHandler('playerDropped', function()
+    LastLocationUpdateAt[source] = nil
 end)

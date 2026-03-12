@@ -1,6 +1,7 @@
 -- Creado/Modificado por JericoFX
 
 local PhoneExists
+local RESOURCE_NAME = GetCurrentResourceName()
 
 ---@class GCPhoneLookupOwner
 ---@field identifier string
@@ -22,14 +23,6 @@ local PhoneExists
 ---@field error? string
 ---@field phone? table<string, any>
 
-local function GenerateIMEI()
-    local imei = ''
-    for i = 1, 15 do
-        imei = imei .. math.random(0, 9)
-    end
-    return imei
-end
-
 local function GeneratePhoneNumber()
     local prefixes = Config.Phone and Config.Phone.NumberPrefix or { 555 }
     local prefix = prefixes[math.random(1, #prefixes)] or 555
@@ -48,21 +41,6 @@ local function GenerateUniquePhoneNumber()
     return nil
 end
 
-local function GenerateUniqueIMEI()
-    for _ = 1, 25 do
-        local imei = GenerateIMEI()
-        local exists = MySQL.scalar.await(
-            'SELECT 1 FROM phone_numbers WHERE imei = ? LIMIT 1',
-            { imei }
-        )
-        if not exists then
-            return imei
-        end
-    end
-
-    return nil
-end
-
 local function CanAccessIdentifierExport(identifier, requestSource)
     local src = tonumber(requestSource)
     if not src or src <= 0 or not identifier then
@@ -71,6 +49,20 @@ local function CanAccessIdentifierExport(identifier, requestSource)
 
     local ownerIdentifier = GetPhoneOwnerIdentifier and GetPhoneOwnerIdentifier(src, true) or GetIdentifier(src)
     return ownerIdentifier ~= nil and ownerIdentifier == identifier
+end
+
+local function IsAuthorizedPhoneExportCaller()
+    local invokingResource = type(GetInvokingResource) == 'function' and GetInvokingResource() or nil
+    if invokingResource == RESOURCE_NAME then
+        return true
+    end
+
+    local allowlist = Config.Phone and Config.Phone.ExportAllowlist or nil
+    if type(allowlist) ~= 'table' or not invokingResource then
+        return false
+    end
+
+    return allowlist[invokingResource] == true
 end
 
 local function SafeString(value, maxLen)
@@ -460,13 +452,16 @@ local function GetOrCreatePhone(source)
         end
 
         if type(phone.imei) ~= 'string' or not phone.imei:match('^%d%d%d%d%d%d%d%d%d%d%d%d%d%d%d$') then
-            local nextImei = GenerateUniqueIMEI()
-            if nextImei then
-                MySQL.update.await(
-                    'UPDATE phone_numbers SET imei = ? WHERE identifier = ?',
-                    { nextImei, identifier }
-                )
-                phone.imei = nextImei
+            local updated = MySQL.update.await(
+                'UPDATE phone_numbers SET imei = NULL WHERE identifier = ?',
+                { identifier }
+            )
+
+            if updated and updated > 0 then
+                phone = MySQL.single.await(
+                    'SELECT * FROM phone_numbers WHERE identifier = ?',
+                    { identifier }
+                ) or phone
             end
         end
 
@@ -485,17 +480,11 @@ local function GetOrCreatePhone(source)
         return nil
     end
 
-    local imei = GenerateUniqueIMEI()
-    if not imei then
-        return nil
-    end
-    
     MySQL.insert.await(
-        'INSERT INTO phone_numbers (identifier, phone_number, imei, wallpaper, ringtone, call_ringtone, notification_tone, message_tone, volume, lock_code, pin_hash, is_setup, theme, language, audio_profile, clips_username) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, NULL)',
+        'INSERT INTO phone_numbers (identifier, phone_number, wallpaper, ringtone, call_ringtone, notification_tone, message_tone, volume, lock_code, pin_hash, is_setup, theme, language, audio_profile, clips_username) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, NULL)',
         { 
             identifier, 
             phoneNumber, 
-            imei,
             Config.Phone.DefaultSettings.wallpaper,
             ResolveToneId(Config.Phone.DefaultSettings.ringtone, 'ringtone'),
             ResolveToneId(Config.Phone.DefaultSettings.callRingtone or Config.Phone.DefaultSettings.ringtone, 'ringtone'),
@@ -1232,6 +1221,13 @@ end)
 ---@param reporter? string
 ---@return GCPhoneStolenMutationResponse
 exports('MarkPhoneAsStolenByIMEI', function(imei, reason, reporter)
+    if not IsAuthorizedPhoneExportCaller() then
+        return {
+            success = false,
+            error = 'UNAUTHORIZED',
+        }
+    end
+
     local success, result = SetPhoneStolenStateByIMEI(imei, {
         isStolen = true,
         reason = reason,
@@ -1255,6 +1251,13 @@ end)
 ---@param imei string
 ---@return GCPhoneStolenMutationResponse
 exports('ClearPhoneStolenByIMEI', function(imei)
+    if not IsAuthorizedPhoneExportCaller() then
+        return {
+            success = false,
+            error = 'UNAUTHORIZED',
+        }
+    end
+
     local success, result = SetPhoneStolenStateByIMEI(imei, {
         isStolen = false,
     })
@@ -1359,6 +1362,13 @@ end
 ---@param imei string
 ---@return GCPhoneLookupResponse
 exports('GetPhoneOwnerByIMEI', function(imei)
+    if not IsAuthorizedPhoneExportCaller() then
+        return {
+            success = false,
+            error = 'UNAUTHORIZED',
+        }
+    end
+
     local phone, err = GetPhoneLookupRecordByIMEI(imei)
     if err then
         return {
@@ -1374,6 +1384,13 @@ end)
 ---@param phoneNumber string
 ---@return GCPhoneLookupResponse
 exports('GetPhoneOwnerByNumber', function(phoneNumber)
+    if not IsAuthorizedPhoneExportCaller() then
+        return {
+            success = false,
+            error = 'UNAUTHORIZED',
+        }
+    end
+
     local phone, err = GetPhoneLookupRecordByNumber(phoneNumber)
     if err then
         return {
@@ -1414,6 +1431,13 @@ end)
 ---@param reporter? string
 ---@return GCPhoneStolenMutationResponse
 exports('MarkPhoneAsStolenByNumber', function(phoneNumber, reason, reporter)
+    if not IsAuthorizedPhoneExportCaller() then
+        return {
+            success = false,
+            error = 'UNAUTHORIZED',
+        }
+    end
+
     local phone, err = GetPhoneLookupRecordByNumber(phoneNumber)
     if err then
         return {
@@ -1445,6 +1469,13 @@ end)
 ---@param phoneNumber string
 ---@return GCPhoneStolenMutationResponse
 exports('ClearPhoneStolenByNumber', function(phoneNumber)
+    if not IsAuthorizedPhoneExportCaller() then
+        return {
+            success = false,
+            error = 'UNAUTHORIZED',
+        }
+    end
+
     local phone, err = GetPhoneLookupRecordByNumber(phoneNumber)
     if err then
         return {

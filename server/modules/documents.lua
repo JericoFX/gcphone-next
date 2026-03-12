@@ -48,6 +48,28 @@ local function RequirePlayerIdentifier(source)
     return GetPhoneOwnerIdentifier(src, true)
 end
 
+local function IsWithinPlayerDistance(sourceA, sourceB, maxDistance)
+    sourceA = tonumber(sourceA)
+    sourceB = tonumber(sourceB)
+    maxDistance = tonumber(maxDistance) or 3.0
+    if not sourceA or sourceA <= 0 or not sourceB or sourceB <= 0 then return false, nil end
+
+    local pedA = GetPlayerPed(sourceA)
+    local pedB = GetPlayerPed(sourceB)
+    if not pedA or pedA <= 0 or not pedB or pedB <= 0 then return false, nil end
+
+    local coordsA = GetEntityCoords(pedA)
+    local coordsB = GetEntityCoords(pedB)
+    if not coordsA or not coordsB then return false, nil end
+
+    local dx = coordsA.x - coordsB.x
+    local dy = coordsA.y - coordsB.y
+    local dz = coordsA.z - coordsB.z
+    local distance = math.sqrt((dx * dx) + (dy * dy) + (dz * dz))
+
+    return distance <= maxDistance, distance
+end
+
 lib.callback.register('gcphone:documents:getList', function(source)
     local identifier = RequirePlayerIdentifier(source)
     if not identifier then return {} end
@@ -163,6 +185,14 @@ lib.callback.register('gcphone:documents:share', function(source, data)
         if not allowed then
             return { success = false, error = 'TARGET_UNAVAILABLE' }
         end
+    end
+
+    local shareDistance = tonumber(Config.Proximity and Config.Proximity.ShareDocumentDistance)
+        or tonumber(Config.Wallet and Config.Wallet.ProximityDistance)
+        or 2.0
+    local near = IsWithinPlayerDistance(source, targetServerId, shareDistance)
+    if not near then
+        return { success = false, error = 'TOO_FAR' }
     end
     
     local doc = MySQL.single.await(

@@ -1324,6 +1324,61 @@ local MIGRATIONS = {
             [[CREATE INDEX IF NOT EXISTS `idx_chirp_rechirps_created_content`
                 ON `phone_chirp_rechirps` (`created_at`, `account_id`)]]
         }
+    },
+
+    {
+        version = 18,
+        name = "phone_imei_db_generation",
+        description = "Generate IMEI values automatically in the database",
+        statements = {
+            -- Verified: MariaDB CREATE TRIGGER supports BEFORE INSERT/UPDATE and FOR EACH ROW
+            [[ALTER TABLE `phone_numbers`
+                MODIFY COLUMN `imei` VARCHAR(20) NULL DEFAULT NULL]],
+
+            [[CREATE TABLE IF NOT EXISTS `phone_imei_sequence` (
+                `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+                PRIMARY KEY (`id`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci]],
+
+            [[INSERT INTO `phone_imei_sequence` (`id`)
+                SELECT MAX(CAST(`imei` AS UNSIGNED))
+                FROM `phone_numbers`
+                WHERE `imei` REGEXP '^[0-9]{15}$'
+                HAVING MAX(CAST(`imei` AS UNSIGNED)) IS NOT NULL
+                  AND NOT EXISTS (
+                      SELECT 1
+                      FROM `phone_imei_sequence`
+                  )]],
+
+            [[DROP TRIGGER IF EXISTS `trg_phone_numbers_before_insert_imei`]],
+            [[DROP TRIGGER IF EXISTS `trg_phone_numbers_before_update_imei`]],
+
+            [[CREATE TRIGGER IF NOT EXISTS `trg_phone_numbers_before_insert_imei`
+                BEFORE INSERT ON `phone_numbers`
+                FOR EACH ROW
+                BEGIN
+                    IF NEW.`imei` IS NULL OR NEW.`imei` = '' OR NEW.`imei` NOT REGEXP '^[0-9]{15}$' THEN
+                        INSERT INTO `phone_imei_sequence` VALUES (NULL);
+                        SET NEW.`imei` = LPAD(LAST_INSERT_ID(), 15, '0');
+                    END IF;
+                END]],
+
+            [[CREATE TRIGGER IF NOT EXISTS `trg_phone_numbers_before_update_imei`
+                BEFORE UPDATE ON `phone_numbers`
+                FOR EACH ROW
+                BEGIN
+                    IF NEW.`imei` IS NULL OR NEW.`imei` = '' OR NEW.`imei` NOT REGEXP '^[0-9]{15}$' THEN
+                        INSERT INTO `phone_imei_sequence` VALUES (NULL);
+                        SET NEW.`imei` = LPAD(LAST_INSERT_ID(), 15, '0');
+                    END IF;
+                END]],
+
+            [[UPDATE `phone_numbers`
+                SET `imei` = NULL
+                WHERE `imei` IS NULL
+                   OR `imei` = ''
+                   OR `imei` NOT REGEXP '^[0-9]{15}$']]
+        }
     }
 }
 

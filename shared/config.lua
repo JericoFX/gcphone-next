@@ -286,6 +286,10 @@ Config.Phone = {
         MinPinLength = 4,
         MaxPinLength = 4,
     },
+
+    ExportAllowlist = {
+        -- ['resource_name'] = true,
+    },
 }
 
 Config.Contacts = {

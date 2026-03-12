@@ -1,6 +1,38 @@
 -- Creado/Modificado por JericoFX
 
 local USE_SQL_CLEANUP_EVENTS = GetConvar('gcphone_sql_cleanup_events', '0') == '1'
+local SecurityResource = GetCurrentResourceName()
+
+local function HitRateLimit(source, key, windowMs, maxHits)
+    local ok, blocked = pcall(function()
+        return exports[SecurityResource]:HitRateLimit(source, key, windowMs, maxHits)
+    end)
+
+    if not ok then return false end
+    return blocked == true
+end
+
+local function IsWithinPlayerDistance(sourceA, sourceB, maxDistance)
+    sourceA = tonumber(sourceA)
+    sourceB = tonumber(sourceB)
+    maxDistance = tonumber(maxDistance) or 3.0
+    if not sourceA or sourceA <= 0 or not sourceB or sourceB <= 0 then return false, nil end
+
+    local pedA = GetPlayerPed(sourceA)
+    local pedB = GetPlayerPed(sourceB)
+    if not pedA or pedA <= 0 or not pedB or pedB <= 0 then return false, nil end
+
+    local coordsA = GetEntityCoords(pedA)
+    local coordsB = GetEntityCoords(pedB)
+    if not coordsA or not coordsB then return false, nil end
+
+    local dx = coordsA.x - coordsB.x
+    local dy = coordsA.y - coordsB.y
+    local dz = coordsA.z - coordsB.z
+    local distance = math.sqrt((dx * dx) + (dy * dy) + (dz * dz))
+
+    return distance <= maxDistance, distance
+end
 
 lib.callback.register('gcphone:proximity:shareContact', function(source, data)
     local identifier = GetIdentifier(source)
@@ -16,6 +48,15 @@ lib.callback.register('gcphone:proximity:shareContact', function(source, data)
     local targetIdentifier = GetIdentifier(targetSource)
     if not targetIdentifier then
         return false, 'Target not found'
+    end
+
+    local nearby = IsWithinPlayerDistance(source, targetSource, tonumber(Config.Proximity and Config.Proximity.ShareContactDistance) or 3.0)
+    if not nearby then
+        return false, 'TOO_FAR'
+    end
+
+    if HitRateLimit(source, 'proximity_share_contact', 1500, 2) then
+        return false, 'RATE_LIMITED'
     end
     
     local name = GetName(source)
@@ -71,22 +112,35 @@ lib.callback.register('gcphone:proximity:shareLocation', function(source, data)
     if not targetIdentifier then
         return false, 'Target not found'
     end
+
+    local nearby = IsWithinPlayerDistance(source, targetSource, tonumber(Config.Proximity and Config.Proximity.ShareLocationDistance) or 5.0)
+    if not nearby then
+        return false, 'TOO_FAR'
+    end
+
+    if HitRateLimit(source, 'proximity_share_location', 2000, 2) then
+        return false, 'RATE_LIMITED'
+    end
     
     local name = GetName(source)
+    local sourceCoords = GetEntityCoords(GetPlayerPed(source))
+    if not sourceCoords then
+        return false, 'COORDS_UNAVAILABLE'
+    end
     
     local expiresAt = os.time() + 300
     
     MySQL.insert.await(
         'INSERT INTO phone_shared_locations (from_identifier, to_identifier, x, y, z, message, expires_at) VALUES (?, ?, ?, ?, ?, ?, FROM_UNIXTIME(?))',
-        { identifier, targetIdentifier, data.x, data.y, data.z, data.message, expiresAt }
+        { identifier, targetIdentifier, sourceCoords.x, sourceCoords.y, sourceCoords.z, data.message, expiresAt }
     )
     
     TriggerClientEvent('gcphone:receiveSharedLocation', targetSource, {
         from = name,
         fromServerId = source,
-        x = data.x,
-        y = data.y,
-        z = data.z,
+        x = sourceCoords.x,
+        y = sourceCoords.y,
+        z = sourceCoords.z,
         message = data.message or 'Ubicación compartida',
         expiresAt = expiresAt
     })
@@ -118,6 +172,15 @@ lib.callback.register('gcphone:proximity:sendFriendRequest', function(source, da
     local targetIdentifier = GetIdentifier(targetSource)
     if not targetIdentifier then
         return false, 'Target not found'
+    end
+
+    local nearby = IsWithinPlayerDistance(source, targetSource, tonumber(Config.Proximity and Config.Proximity.FriendRequestDistance) or 5.0)
+    if not nearby then
+        return false, 'TOO_FAR'
+    end
+
+    if HitRateLimit(source, 'proximity_friend_request', 2500, 2) then
+        return false, 'RATE_LIMITED'
     end
     
     if identifier == targetIdentifier then
@@ -249,6 +312,15 @@ lib.callback.register('gcphone:proximity:sharePost', function(source, data)
     local targetIdentifier = GetIdentifier(targetSource)
     if not targetIdentifier then
         return false, 'Target not found'
+    end
+
+    local nearby = IsWithinPlayerDistance(source, targetSource, tonumber(Config.Proximity and Config.Proximity.ShareContactDistance) or 3.0)
+    if not nearby then
+        return false, 'TOO_FAR'
+    end
+
+    if HitRateLimit(source, 'proximity_share_post', 1500, 2) then
+        return false, 'RATE_LIMITED'
     end
     
     local name = GetName(source)

@@ -212,6 +212,9 @@ local function ResolveInvoiceTarget(source, data)
             if not allowed then return nil, nil, nil, 'TARGET_UNAVAILABLE' end
         end
         if targetId == fromIdentifier then return nil, nil, nil, 'INVALID_TARGET' end
+        local distanceLimit = SafeNumber(Config.Wallet and Config.Wallet.ProximityDistance or nil, 1.0, 10.0) or 3.0
+        local near = IsWithinDistance(source, targetServerId, distanceLimit)
+        if not near then return nil, nil, nil, 'TOO_FAR' end
         return targetServerId, targetId, 'nfc'
     end
 
@@ -703,6 +706,11 @@ local function CreateInvoice(source, data)
     local amount = SafeNumber(data.amount, 1, Config.Wallet and Config.Wallet.MaxTransferAmount or 500000)
     local title = SafeString(data.title, 64) or 'Factura'
     if not amount then return { success = false, error = 'INVALID_AMOUNT' } end
+
+    local invoiceMs = (Config.Security and Config.Security.RateLimits and Config.Security.RateLimits.walletRequest) or 1300
+    if HitRateLimit(source, 'wallet_create_invoice', invoiceMs, 1) then
+        return { success = false, error = 'RATE_LIMITED' }
+    end
 
     local targetSource, toIdentifier, channel, targetErr = ResolveInvoiceTarget(source, data)
     if not targetSource then return { success = false, error = targetErr or 'INVALID_TARGET' } end

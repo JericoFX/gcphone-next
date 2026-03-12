@@ -1,7 +1,42 @@
 -- Creado/Modificado por JericoFX
 
 local PICKUP_DISTANCE = 2.0
+local DISCOVERY_DISTANCE = 25.0
+local SecurityResource = GetCurrentResourceName()
 local droppedPhones = {}
+
+local function HitRateLimit(source, key, windowMs, maxHits)
+    local ok, blocked = pcall(function()
+        return exports[SecurityResource]:HitRateLimit(source, key, windowMs, maxHits)
+    end)
+
+    if not ok then return false end
+    return blocked == true
+end
+
+local function GetPlayerCoords(source)
+    local ped = GetPlayerPed(source)
+    if not ped or ped <= 0 then return nil end
+
+    local coords = GetEntityCoords(ped)
+    if not coords then return nil end
+
+    return coords
+end
+
+local function IsWithinDropDistance(source, payload, maxDistance)
+    if not payload or not payload.coords then return false, nil end
+
+    local coords = GetPlayerCoords(source)
+    if not coords then return false, nil end
+
+    local dx = coords.x - payload.coords.x
+    local dy = coords.y - payload.coords.y
+    local dz = coords.z - payload.coords.z
+    local distance = math.sqrt((dx * dx) + (dy * dy) + (dz * dz))
+
+    return distance <= (maxDistance or PICKUP_DISTANCE), distance
+end
 
 local function BuildDroppedPhonePayload(row)
     if not row or not row.phone_id then return nil end
@@ -180,11 +215,14 @@ lib.callback.register('gcphone:dropPhone', function(source)
     }
 end)
 
-lib.callback.register('gcphone:getDroppedPhones', function()
+lib.callback.register('gcphone:getDroppedPhones', function(source)
     local list = {}
 
     for _, phoneData in pairs(droppedPhones) do
-        list[#list + 1] = phoneData
+        local near = IsWithinDropDistance(source, phoneData, DISCOVERY_DISTANCE)
+        if near then
+            list[#list + 1] = phoneData
+        end
     end
 
     return {
@@ -199,6 +237,16 @@ lib.callback.register('gcphone:pickupPhone', function(source, data)
         return { success = false, error = 'INVALID_PHONE_ID' }
     end
 
+    local dropPayload = droppedPhones[phoneId]
+    if not dropPayload then
+        return { success = false, error = 'PHONE_NOT_FOUND' }
+    end
+
+    local near = IsWithinDropDistance(source, dropPayload, PICKUP_DISTANCE)
+    if not near then
+        return { success = false, error = 'TOO_FAR' }
+    end
+
     local droppedPhone = MySQL.single.await(
         'SELECT owner_identifier, phone_number, imei FROM phone_dropped WHERE phone_id = ? AND picked_up = 0',
         { phoneId }
@@ -208,10 +256,14 @@ lib.callback.register('gcphone:pickupPhone', function(source, data)
         return { success = false, error = 'PHONE_NOT_FOUND' }
     end
 
-    MySQL.update.await(
-        'UPDATE phone_dropped SET picked_up = 1 WHERE phone_id = ?',
+    local updated = MySQL.update.await(
+        'UPDATE phone_dropped SET picked_up = 1 WHERE phone_id = ? AND picked_up = 0',
         { phoneId }
     )
+
+    if not updated or updated < 1 then
+        return { success = false, error = 'PHONE_NOT_FOUND' }
+    end
 
     droppedPhones[phoneId] = nil
     TriggerClientEvent('gcphone:phonePickedUp', -1, phoneId)
@@ -232,6 +284,16 @@ lib.callback.register('gcphone:getPhoneInfo', function(source, data)
     local phoneId = data and data.phoneId
     if not phoneId then
         return { success = false, error = 'INVALID_PHONE_ID' }
+    end
+
+    local dropPayload = droppedPhones[phoneId]
+    if not dropPayload then
+        return { success = false, error = 'PHONE_NOT_FOUND' }
+    end
+
+    local near = IsWithinDropDistance(source, dropPayload, PICKUP_DISTANCE)
+    if not near then
+        return { success = false, error = 'TOO_FAR' }
     end
 
     local droppedPhone = MySQL.single.await(
@@ -264,8 +326,26 @@ lib.callback.register('gcphone:unlockDroppedPhone', function(source, data)
         return { success = false, error = 'INVALID_PHONE_ID' }
     end
 
+    local dropPayload = droppedPhones[phoneId]
+    if not dropPayload then
+        return { success = false, error = 'PHONE_NOT_FOUND' }
+    end
+
+    local near = IsWithinDropDistance(source, dropPayload, PICKUP_DISTANCE)
+    if not near then
+        return { success = false, error = 'TOO_FAR' }
+    end
+
     if not pin:match('^%d%d%d%d$') then
         return { success = false, error = 'INVALID_PIN_FORMAT' }
+    end
+
+    if HitRateLimit(source, 'drop_unlock_global', 1500, 3) then
+        return { success = false, error = 'RATE_LIMITED' }
+    end
+
+    if HitRateLimit(source, 'drop_unlock:' .. tostring(phoneId), 30000, 5) then
+        return { success = false, error = 'PIN_LOCKED' }
     end
 
     local droppedPhone = MySQL.single.await(
