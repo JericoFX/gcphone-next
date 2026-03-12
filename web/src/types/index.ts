@@ -48,6 +48,8 @@ export interface PhoneSettings {
   messageTone?: string;
   volume: number;
   lockCode: string;
+  swipeUnlock?: boolean;
+  screenLockEnabled?: boolean;
   theme: 'auto' | 'light' | 'dark';
   language?: 'es' | 'en' | 'pt' | 'fr';
   audioProfile?: 'normal' | 'street' | 'vehicle' | 'silent';
@@ -74,6 +76,10 @@ export interface PhoneSetupState {
   hasClips?: boolean;
   hasMail?: boolean;
   mailDomain?: string;
+  emergencyContacts?: Array<{
+    label: string;
+    number: string;
+  }>;
 }
 
 export interface PhoneSetupPayload {

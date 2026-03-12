@@ -117,6 +117,12 @@ RegisterNUICallback('phoneVerifyPin', function(data, cb)
     end, data or {})
 end)
 
+RegisterNUICallback('phoneReportImeiViewed', function(data, cb)
+    lib.callback('gcphone:phone:reportImeiViewed', false, function(payload)
+        cb(payload or { success = false, error = 'NO_RESPONSE' })
+    end, data or {})
+end)
+
 RegisterNUICallback('notificationsGet', function(data, cb)
     lib.callback('gcphone:notifications:get', false, function(payload)
         cb(payload or { success = false, notifications = {}, unread = 0 })

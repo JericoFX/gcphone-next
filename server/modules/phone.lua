@@ -282,6 +282,28 @@ local function MailDomain()
     return domain:lower()
 end
 
+local function ResolveEmergencyContacts()
+    local setup = Config.Phone and Config.Phone.Setup or {}
+    local configured = type(setup.EmergencyContacts) == 'table' and setup.EmergencyContacts or {}
+    local contacts = {}
+
+    for i = 1, #configured do
+        local entry = configured[i]
+        if type(entry) == 'table' then
+            local label = SafeString(entry.label or entry.name or 'Emergencia', 32)
+            local number = SafeString(entry.number or '', 20)
+            if label and number then
+                contacts[#contacts + 1] = {
+                    label = label,
+                    number = number,
+                }
+            end
+        end
+    end
+
+    return contacts
+end
+
 local function SafeMailAlias(value)
     local alias = SafeString(value, (Config.Mail and Config.Mail.MaxAliasLength) or 24)
     if not alias then return nil end
@@ -350,6 +372,7 @@ local function ResolveSetupState(identifier)
         hasClips = hasClips,
         hasMail = hasMail,
         mailDomain = featureFlags.mail and MailDomain() or nil,
+        emergencyContacts = ResolveEmergencyContacts(),
     }
 end
 
@@ -911,6 +934,29 @@ lib.callback.register('gcphone:phone:completeSetup', function(source, data)
         return { success = false, error = 'SETUP_FAILED', detail = tostring(err) }
     end
 
+    if type(TriggerPhoneHook) == 'function' then
+        TriggerPhoneHook('phoneSetupCompleted', {
+            source = source,
+            identifier = identifier,
+            phoneNumber = GetPhoneNumber(identifier),
+            snapUsername = snapUsername,
+            chirpUsername = chirpUsername,
+            clipsUsername = clipsUsername,
+            mail = mailEmail,
+            language = language,
+        })
+
+        if mailEmail then
+            TriggerPhoneHook('mailAccountCreated', {
+                source = source,
+                identifier = identifier,
+                email = mailEmail,
+                alias = mailAlias,
+                domain = mailDomain,
+            })
+        end
+    end
+
     local setup = ResolveSetupState(identifier)
     return {
         success = true,
@@ -935,10 +981,43 @@ lib.callback.register('gcphone:phone:verifyPin', function(source, data)
         return { success = false, unlocked = false, error = err }
     end
 
+    if unlocked and type(TriggerPhoneHook) == 'function' then
+        local phone = GetPhoneByIdentifier(identifier)
+        TriggerPhoneHook('deviceUnlocked', {
+            source = source,
+            identifier = identifier,
+            imei = phone and phone.imei or nil,
+            phoneNumber = phone and phone.phone_number or GetPhoneNumber(identifier),
+        })
+    end
+
     return {
         success = true,
         unlocked = unlocked,
     }
+end)
+
+lib.callback.register('gcphone:phone:reportImeiViewed', function(source, data)
+    local identifier = GetPhoneOwnerIdentifier(source, true)
+    if not identifier then
+        return { success = false, error = 'MISSING_IDENTIFIER' }
+    end
+
+    local phone = GetPhoneByIdentifier(identifier)
+    if not phone then
+        return { success = false, error = 'PHONE_NOT_FOUND' }
+    end
+
+    if type(TriggerPhoneHook) == 'function' then
+        TriggerPhoneHook('imeiViewed', {
+            source = source,
+            identifier = identifier,
+            imei = phone.imei,
+            context = SafeString(type(data) == 'table' and data.context or nil, 24) or 'unknown',
+        })
+    end
+
+    return { success = true, imei = phone.imei }
 end)
 
 lib.callback.register('gcphone:setWallpaper', function(source, data)

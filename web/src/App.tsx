@@ -15,6 +15,14 @@ import { localeTagFromLanguage } from './i18n';
 import { setLiveKitRemoteAudioPriority, setLiveKitRemoteAudioVolume } from './utils/livekit';
 import './App.scss';
 
+interface MusicNotificationState {
+  isPlaying?: boolean;
+  isPaused?: boolean;
+  title?: string;
+  volume?: number;
+  distance?: number;
+}
+
 function PhoneContent() {
   const [phoneState] = usePhone();
   const [notifications, notificationsActions] = useNotifications();
@@ -32,6 +40,44 @@ function PhoneContent() {
     });
   });
 
+
+  onMount(() => {
+    const onMusicStateUpdated = (event: Event) => {
+      const detail = (event as CustomEvent<MusicNotificationState>).detail || {};
+      const title = typeof detail.title === 'string' ? detail.title.trim() : '';
+      const isPlaying = detail.isPlaying === true;
+      const isPaused = detail.isPaused === true;
+
+      window.localStorage.setItem('gcphone:musicSession', JSON.stringify({
+        isPlaying,
+        isPaused,
+        title,
+        volume: typeof detail.volume === 'number' ? detail.volume : undefined,
+        distance: typeof detail.distance === 'number' ? detail.distance : undefined,
+      }));
+
+      if (!isPlaying && !isPaused) {
+        notificationsActions.remove('music-now-playing');
+        return;
+      }
+
+      notificationsActions.receive({
+        id: 'music-now-playing',
+        appId: 'music',
+        title: 'Music',
+        message: `${isPaused ? 'Pausado' : 'Reproduciendo'}: ${title || 'Sin musica'}`,
+        durationMs: 2800,
+        priority: 'normal',
+        route: 'music',
+      });
+    };
+
+    window.addEventListener('musicStateUpdated', onMusicStateUpdated as EventListener);
+
+    onCleanup(() => {
+      window.removeEventListener('musicStateUpdated', onMusicStateUpdated as EventListener);
+    });
+  });
 
   onMount(() => {
     const onUiAlert = (event: Event) => {

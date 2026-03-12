@@ -266,6 +266,42 @@ exports['gcphone-next']:AddPersistentNotification(identifier, {
 })
 ```
 
+#### Como pensar `appId`, `route`, `data` y `meta`
+
+- `appId`: define a que app pertenece la notificacion para mute/unread/badges. Debe ser un id real del front como `messages`, `mail`, `bank`, `wavechat`, `news`, `yellowpages`.
+- `route`: define a que pantalla navega el telefono cuando el jugador toca la notificacion.
+- `data`: parametros opcionales de esa ruta. Ejemplo: abrir un chat concreto o centrar un mapa.
+- `meta`: payload persistente opcional guardado en DB; sirve para auditoria o contexto extra, pero la UI no navega con `meta`.
+
+Ejemplo para abrir una conversacion:
+
+```lua
+exports['gcphone-next']:AddPersistentNotification(identifier, {
+    appId = 'messages',
+    title = 'Mensajes',
+    message = 'Nuevo mensaje de Rafa',
+    route = 'messages',
+    data = {
+        phoneNumber = '555-1111'
+    }
+})
+```
+
+Ejemplo para abrir Maps con coordenadas:
+
+```lua
+exports['gcphone-next']:AddPersistentNotification(identifier, {
+    appId = 'maps',
+    title = 'GPS',
+    message = 'Nueva ubicacion recibida',
+    route = 'maps',
+    data = {
+        x = 123.4,
+        y = 456.7
+    }
+})
+```
+
 ### Sensitive exports and identifier ownership
 
 Los exports server-side que leen datos privados por `identifier` ahora exigen `requestSource` y validan ownership antes de devolver datos.

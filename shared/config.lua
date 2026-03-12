@@ -285,6 +285,11 @@ Config.Phone = {
         RequireOnFirstUse = true,
         MinPinLength = 4,
         MaxPinLength = 4,
+        EmergencyContacts = {
+            { label = 'Policia', number = '911' },
+            { label = 'EMS', number = '912' },
+            { label = 'Bomberos', number = '913' },
+        },
     },
 
     ExportAllowlist = {

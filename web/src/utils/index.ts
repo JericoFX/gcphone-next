@@ -1,6 +1,6 @@
 export { useNuiEvent, useNuiCustomEvent } from './useNui';
 export { fetchNui } from './fetchNui';
-export { debugData, mockPhoneInit, mockShowPhone, mockContacts } from './debugData';
+export { debugData, mockPhoneInit, mockShowPhone, mockContacts, mockMessages } from './debugData';
 export { cn, clsx } from './cn';
 export { 
   isEnvBrowser, 

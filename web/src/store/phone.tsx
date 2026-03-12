@@ -21,6 +21,7 @@ interface PhoneContextValue {
     hide: () => void;
     toggle: () => void;
     unlock: (code: string) => Promise<boolean>;
+    verifyPin: (code: string) => Promise<boolean>;
     lock: () => void;
     refreshSetupState: () => Promise<void>;
     completeSetup: (payload: PhoneSetupPayload) => Promise<{ success: boolean; error?: string }>;
@@ -34,6 +35,9 @@ interface PhoneContextValue {
     setLanguage: (language: 'es' | 'en' | 'pt' | 'fr') => void;
     setAudioProfile: (audioProfile: 'normal' | 'street' | 'vehicle' | 'silent') => void;
     setLockCode: (code: string) => void;
+    setSwipeUnlock: (enabled: boolean) => void;
+    setScreenLockEnabled: (enabled: boolean) => void;
+    unlockDirect: () => void;
     factoryReset: () => Promise<boolean>;
     loadAppLayout: () => Promise<void>;
     saveAppLayout: () => Promise<void>;
@@ -55,10 +59,21 @@ const defaultSettings: PhoneSettings = {
   messageTone: 'msg_1',
   volume: 0.5,
   lockCode: '0000',
+  swipeUnlock: false,
+  screenLockEnabled: true,
   theme: 'light',
   language: 'es',
   audioProfile: 'normal'
 };
+
+function readSwipeUnlockPreference() {
+  return window.localStorage.getItem('gcphone:swipeUnlock') === '1';
+}
+
+function readScreenLockPreference() {
+  const stored = window.localStorage.getItem('gcphone:screenLockEnabled');
+  return stored !== '0';
+}
 
 const defaultFeatureFlags: PhoneFeatureFlags = {
   appstore: true,
@@ -242,7 +257,7 @@ export const PhoneProvider: ParentComponent = (props) => {
     },
     hide: () => {
       setState('visible', false);
-      setState('locked', true);
+      setState('locked', state.settings.screenLockEnabled !== false);
     },
     toggle: () => {
       setState('visible', v => !v);
@@ -255,8 +270,15 @@ export const PhoneProvider: ParentComponent = (props) => {
       }
       return false;
     },
+    verifyPin: async (code: string) => {
+      const payload = await fetchNui<{ success?: boolean; unlocked?: boolean }>('phoneVerifyPin', { pin: code }, { success: false, unlocked: false });
+      return payload?.success === true && payload?.unlocked === true;
+    },
+    unlockDirect: () => {
+      setState('locked', false);
+    },
     lock: () => {
-      setState('locked', true);
+      setState('locked', state.settings.screenLockEnabled !== false);
     },
     refreshSetupState: async () => {
       const payload = await fetchNui<{ success?: boolean; requiresSetup?: boolean; setup?: PhoneSetupState }>(
@@ -353,12 +375,29 @@ export const PhoneProvider: ParentComponent = (props) => {
       setState('settings', 'lockCode', code);
       fetchNui('setLockCode', { code });
     },
+    setSwipeUnlock: (enabled: boolean) => {
+      if (isReadOnly()) return;
+      const next = enabled === true;
+      setState('settings', 'swipeUnlock', next);
+      window.localStorage.setItem('gcphone:swipeUnlock', next ? '1' : '0');
+    },
+    setScreenLockEnabled: (enabled: boolean) => {
+      if (isReadOnly()) return;
+      const next = enabled === true;
+      setState('settings', 'screenLockEnabled', next);
+      window.localStorage.setItem('gcphone:screenLockEnabled', next ? '1' : '0');
+      if (!next) {
+        setState('locked', false);
+      }
+    },
     factoryReset: async () => {
       if (isReadOnly()) return false;
       const response = await fetchNui<PhonePayload & { success?: boolean }>('factoryResetPhone', {}, { success: false } as PhonePayload & { success?: boolean });
       if (!response?.success) return false;
 
       window.localStorage.removeItem('gcphone:liveLocationInterval');
+      window.localStorage.removeItem('gcphone:swipeUnlock');
+      window.localStorage.removeItem('gcphone:screenLockEnabled');
 
       const flags = normalizeFeatureFlags(response.featureFlags);
       const enabledApps = ensureRequiredEnabledApps(Array.isArray(response.enabledApps) && response.enabledApps.length > 0
@@ -377,6 +416,8 @@ export const PhoneProvider: ParentComponent = (props) => {
           messageTone: response.messageTone || defaultSettings.messageTone,
           volume: response.volume ?? defaultSettings.volume,
           lockCode: '',
+          swipeUnlock: readSwipeUnlockPreference(),
+          screenLockEnabled: readScreenLockPreference(),
           theme: response.theme || defaultSettings.theme,
           language: normalizeLanguage(response.language || defaultSettings.language),
           audioProfile: response.audioProfile || defaultSettings.audioProfile,
@@ -461,6 +502,8 @@ export const PhoneProvider: ParentComponent = (props) => {
           messageTone: data.messageTone || defaultSettings.messageTone,
           volume: data.volume ?? defaultSettings.volume,
           lockCode: '',
+          swipeUnlock: readSwipeUnlockPreference(),
+          screenLockEnabled: readScreenLockPreference(),
           theme: data.theme || defaultSettings.theme,
           language: normalizeLanguage(data.language || window.localStorage.getItem('gcphone:language')),
           audioProfile: data.audioProfile || defaultSettings.audioProfile,
@@ -497,7 +540,7 @@ export const PhoneProvider: ParentComponent = (props) => {
       const needsSetup = data?.requiresSetup === true;
       const useLockScreen = data?.useLockScreen ?? state.locked;
       const forceLockScreen = data?.forceLockScreen === true;
-      const shouldLock = useLockScreen && (forceLockScreen || !isEnvBrowser()) && !needsSetup;
+      const shouldLock = state.settings.screenLockEnabled !== false && useLockScreen && (forceLockScreen || !isEnvBrowser()) && !needsSetup;
       setState('visible', true);
       setState('locked', shouldLock);
       setState('initialized', true);
@@ -513,7 +556,9 @@ export const PhoneProvider: ParentComponent = (props) => {
             messageTone: data.messageTone || state.settings.messageTone,
              volume: data.volume ?? state.settings.volume,
               lockCode: '',
-             theme: data.theme || state.settings.theme,
+              swipeUnlock: readSwipeUnlockPreference(),
+              screenLockEnabled: readScreenLockPreference(),
+              theme: data.theme || state.settings.theme,
              language: normalizeLanguage(data.language || state.settings.language || window.localStorage.getItem('gcphone:language')),
              audioProfile: data.audioProfile || state.settings.audioProfile,
           });
