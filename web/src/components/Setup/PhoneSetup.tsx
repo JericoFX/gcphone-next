@@ -1,23 +1,24 @@
 import { Show, createMemo, createSignal } from 'solid-js';
 import { usePhone } from '../../store/phone';
+import { t } from '../../i18n';
 import type { PhoneSetupPayload } from '../../types';
 import styles from './PhoneSetup.module.scss';
 
 const LANGUAGES = [
-  { code: 'es', label: 'Espanol', meta: 'Telefono y apps en espanol' },
-  { code: 'en', label: 'English', meta: 'Phone and apps in English' },
-  { code: 'pt', label: 'Portugues', meta: 'Telefone e apps em portugues' },
-  { code: 'fr', label: 'Francais', meta: 'Telephone et apps en francais' },
+  { code: 'es', labelKey: 'setup.language.es.label', metaKey: 'setup.language.es.meta' },
+  { code: 'en', labelKey: 'setup.language.en.label', metaKey: 'setup.language.en.meta' },
+  { code: 'pt', labelKey: 'setup.language.pt.label', metaKey: 'setup.language.pt.meta' },
+  { code: 'fr', labelKey: 'setup.language.fr.label', metaKey: 'setup.language.fr.meta' },
 ] as const;
 
 const AUDIO_PROFILES = [
-  { value: 'normal', label: 'Normal', meta: 'Uso general' },
-  { value: 'street', label: 'Calle', meta: 'Exterior ruidoso' },
-  { value: 'vehicle', label: 'Vehiculo', meta: 'En movimiento' },
-  { value: 'silent', label: 'Silencio', meta: 'Sin sonido' },
+  { value: 'normal', labelKey: 'setup.audio.normal.label', metaKey: 'setup.audio.normal.meta' },
+  { value: 'street', labelKey: 'setup.audio.street.label', metaKey: 'setup.audio.street.meta' },
+  { value: 'vehicle', labelKey: 'setup.audio.vehicle.label', metaKey: 'setup.audio.vehicle.meta' },
+  { value: 'silent', labelKey: 'setup.audio.silent.label', metaKey: 'setup.audio.silent.meta' },
 ] as const;
 
-const STEP_LABELS = ['Idioma', 'Seguridad', 'Identidad'] as const;
+const STEP_LABELS = ['setup.step.language', 'setup.step.security', 'setup.step.identity'] as const;
 
 function sanitizeUsername(value: string) {
   return value.toLowerCase().replace(/\s+/g, '').replace(/[^a-z0-9._-]/g, '').slice(0, 32);
@@ -35,23 +36,23 @@ function isValidMailAlias(value: string) {
   return value.length >= 3 && value.length <= 24 && !/^[._-]|[._-]$/.test(value) && !value.includes('..');
 }
 
-function humanizeError(code?: string) {
-  switch (code) {
+function humanizeError(code: string | undefined, language: 'es' | 'en' | 'pt' | 'fr') {
+    switch (code) {
     case 'SNAP_USERNAME_TAKEN':
-      return 'El username de Snap ya esta ocupado.';
+      return t('setup.error.snap_taken', language);
     case 'CHIRP_USERNAME_TAKEN':
-      return 'El username de Chirp ya esta ocupado.';
+      return t('setup.error.chirp_taken', language);
     case 'CLIPS_USERNAME_TAKEN':
-      return 'El username de Clips ya esta ocupado.';
+      return t('setup.error.clips_taken', language);
     case 'EMAIL_IN_USE':
-      return 'Ese alias de mail ya esta en uso.';
+      return t('setup.error.mail_taken', language);
     case 'INVALID_SETUP_DATA':
-      return 'Revisa el PIN, el alias de mail y los usernames.';
+      return t('setup.error.invalid_data', language);
     case 'SETUP_FAILED':
-      return 'No se pudo completar la configuracion inicial.';
+      return t('setup.error.failed', language);
     default:
-      return code || 'No se pudo completar el setup';
-  }
+      return code || t('setup.error.generic', language);
+    }
 }
 
 export function PhoneSetup() {
@@ -66,6 +67,7 @@ export function PhoneSetup() {
   const [audioProfile, setAudioProfile] = createSignal<'normal' | 'street' | 'vehicle' | 'silent'>(phoneState.settings.audioProfile || 'normal');
   const [error, setError] = createSignal('');
   const [loading, setLoading] = createSignal(false);
+  const currentLanguage = () => language();
 
   const mailEnabled = createMemo(() => phoneState.featureFlags.mail !== false);
   const mailDomain = createMemo(() => phoneState.setup.mailDomain || 'jericofx.gg');
@@ -84,19 +86,19 @@ export function PhoneSetup() {
 
     if (targetStep >= 1) {
       if (!draft.pin || draft.pin.length < 4 || draft.pin.length > 6) {
-        return 'Tu PIN debe tener entre 4 y 6 digitos.';
+        return t('setup.validation.pin_length', currentLanguage());
       }
 
       if (mailEnabled()) {
-        if (!draft.mailAlias) return 'El alias de mail es obligatorio.';
-        if (!isValidMailAlias(draft.mailAlias)) return 'El alias de mail debe tener entre 3 y 24 caracteres validos.';
+        if (!draft.mailAlias) return t('setup.validation.mail_required', currentLanguage());
+        if (!isValidMailAlias(draft.mailAlias)) return t('setup.validation.mail_invalid', currentLanguage());
       }
     }
 
     if (targetStep >= 2) {
-      if (!isValidHandle(draft.snapUsername)) return 'El username de Snap no es valido.';
-      if (!isValidHandle(draft.chirpUsername)) return 'El username de Chirp no es valido.';
-      if (!isValidHandle(draft.clipsUsername)) return 'El username de Clips no es valido.';
+      if (!isValidHandle(draft.snapUsername)) return t('setup.validation.snap_invalid', currentLanguage());
+      if (!isValidHandle(draft.chirpUsername)) return t('setup.validation.chirp_invalid', currentLanguage());
+      if (!isValidHandle(draft.clipsUsername)) return t('setup.validation.clips_invalid', currentLanguage());
     }
 
     return '';
@@ -133,7 +135,7 @@ export function PhoneSetup() {
     setLoading(false);
 
     if (!result.success) {
-      setError(humanizeError(result.error));
+      setError(humanizeError(result.error, currentLanguage()));
       return;
     }
 
@@ -145,9 +147,9 @@ export function PhoneSetup() {
     <div class={styles.setupRoot}>
       <div class={styles.card}>
         <div class={styles.hero}>
-          <p class={styles.eyebrow}>Bienvenido</p>
-          <h2>Deja tu telefono listo para salir a la calle</h2>
-          <p class={styles.lead}>Configura idioma, seguridad, mail y tus identidades sociales en una sola pasada.</p>
+          <p class={styles.eyebrow}>{t('setup.hero.eyebrow', currentLanguage())}</p>
+          <h2>{t('setup.hero.title', currentLanguage())}</h2>
+          <p class={styles.lead}>{t('setup.hero.lead', currentLanguage())}</p>
         </div>
 
         <div class={styles.progress}>
@@ -164,7 +166,7 @@ export function PhoneSetup() {
               }}
             >
               <span class={styles.progressIndex}>{index + 1}</span>
-              <span>{label}</span>
+              <span>{t(label, currentLanguage())}</span>
             </button>
           ))}
         </div>
@@ -173,8 +175,8 @@ export function PhoneSetup() {
         <Show when={step() === 0}>
           <section class={styles.section}>
             <div class={styles.sectionHeader}>
-              <h3>Elige tu idioma</h3>
-              <p>Este ajuste se aplica desde el primer desbloqueo y luego puedes cambiarlo en Settings.</p>
+              <h3>{t('setup.language.title', currentLanguage())}</h3>
+              <p>{t('setup.language.description', currentLanguage())}</p>
             </div>
 
             <div class={styles.optionGrid}>
@@ -185,10 +187,10 @@ export function PhoneSetup() {
                   classList={{ [styles.optionCardActive]: language() === option.code }}
                   onClick={() => setLanguage(option.code)}
                 >
-                  <strong>{option.label}</strong>
-                  <span>{option.meta}</span>
-                </button>
-              ))}
+                    <strong>{t(option.labelKey, currentLanguage())}</strong>
+                    <span>{t(option.metaKey, currentLanguage())}</span>
+                  </button>
+                ))}
             </div>
           </section>
         </Show>
@@ -196,25 +198,25 @@ export function PhoneSetup() {
         <Show when={step() === 1}>
           <section class={styles.section}>
             <div class={styles.sectionHeader}>
-              <h3>Protege tu telefono</h3>
-              <p>El PIN protege el bloqueo y tambien asegura tu mail inicial.</p>
+              <h3>{t('setup.security.title', currentLanguage())}</h3>
+              <p>{t('setup.security.description', currentLanguage())}</p>
             </div>
 
             <div class={styles.formGrid}>
               <label class={styles.field}>
-                <span>PIN</span>
+                <span>{t('setup.security.pin', currentLanguage())}</span>
                 <input
                   value={pin()}
                   onInput={(event) => setPin(event.currentTarget.value.replace(/\D/g, '').slice(0, 6))}
                   placeholder='0000'
                   inputmode='numeric'
                 />
-                <small>Usa entre 4 y 6 digitos.</small>
+                <small>{t('setup.security.pin_hint', currentLanguage())}</small>
               </label>
 
               <Show when={mailEnabled()}>
                 <label class={styles.field}>
-                  <span>Alias de Mail</span>
+                    <span>{t('setup.security.mail_alias', currentLanguage())}</span>
                   <div class={styles.inputWrap}>
                     <input
                       value={mailAlias()}
@@ -223,7 +225,7 @@ export function PhoneSetup() {
                     />
                     <span class={styles.domainBadge}>@{mailDomain()}</span>
                   </div>
-                  <small>Se crea como cuenta principal para la app Mail.</small>
+                  <small>{t('setup.security.mail_hint', currentLanguage())}</small>
                 </label>
               </Show>
             </div>
@@ -233,23 +235,23 @@ export function PhoneSetup() {
         <Show when={step() === 2}>
           <section class={styles.section}>
             <div class={styles.sectionHeader}>
-              <h3>Activa tu identidad</h3>
-              <p>Define tus perfiles sociales y el estilo general del telefono.</p>
+              <h3>{t('setup.identity.title', currentLanguage())}</h3>
+              <p>{t('setup.identity.description', currentLanguage())}</p>
             </div>
 
             <div class={styles.identityGrid}>
               <label class={styles.field}>
-                <span>Username Snap</span>
+                <span>{t('setup.identity.snap', currentLanguage())}</span>
                 <input value={snapUsername()} onInput={(event) => setSnapUsername(sanitizeUsername(event.currentTarget.value))} placeholder='snap.user' />
               </label>
 
               <label class={styles.field}>
-                <span>Username Chirp</span>
+                <span>{t('setup.identity.chirp', currentLanguage())}</span>
                 <input value={chirpUsername()} onInput={(event) => setChirpUsername(sanitizeUsername(event.currentTarget.value))} placeholder='chirp.user' />
               </label>
 
               <label class={styles.field}>
-                <span>Username Clips</span>
+                <span>{t('setup.identity.clips', currentLanguage())}</span>
                 <input value={clipsUsername()} onInput={(event) => setClipsUsername(sanitizeUsername(event.currentTarget.value))} placeholder='clips.user' />
               </label>
             </div>
@@ -257,8 +259,8 @@ export function PhoneSetup() {
             <div class={styles.preferenceStack}>
               <div class={styles.preferenceGroup}>
                 <div class={styles.preferenceHeader}>
-                  <strong>Perfil de audio</strong>
-                  <span>Ajusta el comportamiento base para tus llamadas y alertas.</span>
+                  <strong>{t('setup.audio.title', currentLanguage())}</strong>
+                  <span>{t('setup.audio.description', currentLanguage())}</span>
                 </div>
                 <div class={styles.optionGrid}>
                   {AUDIO_PROFILES.map((option) => (
@@ -268,10 +270,10 @@ export function PhoneSetup() {
                       classList={{ [styles.optionCardActive]: audioProfile() === option.value }}
                       onClick={() => setAudioProfile(option.value)}
                     >
-                      <strong>{option.label}</strong>
-                      <span>{option.meta}</span>
-                    </button>
-                  ))}
+                        <strong>{t(option.labelKey, currentLanguage())}</strong>
+                        <span>{t(option.metaKey, currentLanguage())}</span>
+                      </button>
+                    ))}
                 </div>
               </div>
             </div>
@@ -286,24 +288,24 @@ export function PhoneSetup() {
 
       <div class={styles.footer}>
         <p class={styles.hint}>
-          Paso {step() + 1} de {STEP_LABELS.length}
+          {t('setup.footer.step', currentLanguage(), { current: step() + 1, total: STEP_LABELS.length })}
         </p>
 
         <div class={styles.buttonRow}>
           <button type='button' class={styles.secondaryButton} onClick={goBack} disabled={step() === 0 || loading()}>
-            Atras
+            {t('setup.action.back', currentLanguage())}
           </button>
 
           <Show
             when={step() === STEP_LABELS.length - 1}
             fallback={
               <button type='button' class={styles.primaryButton} onClick={goNext} disabled={loading()}>
-                Continuar
+                {t('setup.action.next', currentLanguage())}
               </button>
             }
           >
             <button type='button' class={styles.primaryButton} onClick={() => void submitSetup()} disabled={loading()}>
-              {loading() ? 'Guardando...' : 'Finalizar'}
+              {loading() ? t('setup.action.saving', currentLanguage()) : t('setup.action.finish', currentLanguage())}
             </button>
           </Show>
         </div>

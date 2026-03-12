@@ -4,6 +4,8 @@ import { MediaActionButtons } from '../../shared/ui/MediaActionButtons';
 import { MediaAttachmentPreview } from '../../shared/ui/MediaAttachmentPreview';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { fetchNui } from '../../../utils/fetchNui';
+import { t } from '../../../i18n';
+import { usePhoneState } from '../../../store/phone';
 import { resolveMediaType, sanitizeMediaUrl } from '../../../utils/sanitize';
 import { uiAlert } from '../../../utils/uiAlert';
 import { uiPrompt } from '../../../utils/uiDialog';
@@ -55,6 +57,8 @@ interface MailActionResponse {
 
 export function MailApp() {
   const router = useRouter();
+  const phoneState = usePhoneState();
+  const language = () => phoneState.settings.language || 'es';
   const [loading, setLoading] = createSignal(false);
   const [error, setError] = createSignal('');
 
@@ -146,7 +150,7 @@ export function MailApp() {
     setDomain(payload?.domain || 'jericofx.gg');
 
     if (!payload?.success) {
-      setError(payload?.error || 'No se pudo cargar Mail');
+      setError(payload?.error || t('mail.error.load', language()));
       return;
     }
 
@@ -173,7 +177,7 @@ export function MailApp() {
     const password = passwordInput().trim();
 
     if (!alias || !password) {
-      setError('Alias y password son requeridos');
+      setError(t('mail.error.account_required', language()));
       return;
     }
 
@@ -191,7 +195,7 @@ export function MailApp() {
 
     setLoading(false);
     if (!payload?.success) {
-      setError(payload?.error || 'No se pudo crear la cuenta');
+      setError(payload?.error || t('mail.error.account_create', language()));
       return;
     }
 
@@ -208,7 +212,7 @@ export function MailApp() {
     const body = bodyInput().trim();
 
     if (!to || !body) {
-      setError('Destino y mensaje son requeridos');
+      setError(t('mail.error.compose_required', language()));
       return;
     }
 
@@ -228,7 +232,7 @@ export function MailApp() {
 
     setLoading(false);
     if (!payload?.success) {
-      setError(payload?.error || 'No se pudo enviar el mail');
+      setError(payload?.error || t('mail.error.send', language()));
       return;
     }
 
@@ -247,7 +251,7 @@ export function MailApp() {
   const addAttachment = () => {
     const url = attachmentType() === 'document' ? attachmentUrl().trim() : sanitizeMediaUrl(attachmentUrl().trim()) || attachmentUrl().trim();
     if (!url) {
-      setError('El adjunto requiere URL');
+      setError(t('mail.error.attachment_url', language()));
       return;
     }
 
@@ -268,7 +272,7 @@ export function MailApp() {
     const media = gallery?.find((entry) => entry?.url && ['image', 'video'].includes(resolveMediaType(entry.url)));
     const url = sanitizeMediaUrl(media?.url || '');
     if (!url) {
-      uiAlert('No se encontro una imagen o video para adjuntar');
+      uiAlert(t('mail.error.gallery_attachment', language()));
       return;
     }
 
@@ -301,7 +305,7 @@ export function MailApp() {
   };
 
   const attachLinkByPrompt = async () => {
-    const result = await uiPrompt('Pega la URL para adjuntarla al mail', { title: 'Adjuntar enlace' });
+    const result = await uiPrompt(t('mail.prompt.attach_link_message', language()), { title: t('mail.prompt.attach_link_title', language()) });
     const url = (result || '').trim();
     if (!url) return;
     setAttachments((prev) => [
@@ -366,7 +370,7 @@ export function MailApp() {
       }
       backToList();
     } else {
-      setError(res?.error || 'No se pudo eliminar el mensaje');
+      setError(res?.error || t('mail.error.delete', language()));
     }
   };
 
@@ -386,7 +390,7 @@ export function MailApp() {
   });
 
   return (
-    <AppScaffold title='Mail' subtitle='Correo y adjuntos' onBack={() => router.goBack()} bodyPadding='none'>
+    <AppScaffold title='Mail' subtitle={t('mail.subtitle', language())} onBack={() => router.goBack()} bodyPadding='none'>
       <div class={styles.root}>
         <Show when={!!error()}>
           <div class={styles.error}>{error()}</div>
@@ -400,10 +404,10 @@ export function MailApp() {
               <Show when={view() === 'list'}>
                 <div class={styles.accountBar}>
                   <div>
-                    <p class={styles.label}>Cuenta</p>
+                    <p class={styles.label}>{t('mail.account', language())}</p>
                     <strong>{account()?.email}</strong>
                   </div>
-                  <div class={styles.unreadBadge}>No leidos: {unread()}</div>
+                  <div class={styles.unreadBadge}>{t('mail.unread', language())}: {unread()}</div>
                 </div>
 
                 <div class={styles.folderTabs}>
@@ -419,7 +423,7 @@ export function MailApp() {
                     classList={{ [styles.tabActive]: folder() === 'sent' }}
                     onClick={() => setFolder('sent')}
                   >
-                    Enviados
+                    {t('mail.sent', language())}
                   </button>
                 </div>
 
@@ -441,7 +445,7 @@ export function MailApp() {
                               {folder() === 'inbox'
                                 ? entry.sender_alias ||
                                   entry.sender_email ||
-                                  'Remitente'
+                                  t('mail.sender', language())
                                 : entry.recipient_alias || entry.recipient_email}
                             </strong>
                             <span>
@@ -450,7 +454,7 @@ export function MailApp() {
                               ).toLocaleDateString()}
                             </span>
                           </div>
-                          <p>{entry.subject || '(Sin asunto)'}</p>
+                          <p>{entry.subject || t('mail.no_subject', language())}</p>
                         </button>
                       )}
                     </For>
@@ -459,15 +463,15 @@ export function MailApp() {
                   <div class={styles.preview}>
                     <Show
                       when={selectedMessage()}
-                      fallback={<p class={styles.empty}>Selecciona un mensaje</p>}
+                      fallback={<p class={styles.empty}>{t('mail.select_message', language())}</p>}
                     >
                       {(message) => (
                         <>
-                          <h4>{message().subject || '(Sin asunto)'}</h4>
+                          <h4>{message().subject || t('mail.no_subject', language())}</h4>
                           <p class={styles.previewMeta}>
                             {folder() === 'inbox'
-                              ? `De: ${message().sender_email || 'desconocido'}`
-                              : `Para: ${message().recipient_email}`}
+                              ? `${t('mail.from', language())}: ${message().sender_email || t('mail.unknown', language())}`
+                              : `${t('mail.to', language())}: ${message().recipient_email}`}
                           </p>
                           <pre class={styles.previewBody}>
                             {message().body}
@@ -476,7 +480,7 @@ export function MailApp() {
                             when={(message().attachments || []).length > 0}
                           >
                             <div class={styles.previewAttachments}>
-                              <h5>Adjuntos</h5>
+                              <h5>{t('mail.attachments', language())}</h5>
                               <For each={message().attachments || []}>
                                 {(entry) => (
                                   <div class={styles.previewAttachmentItem}>
@@ -503,7 +507,7 @@ export function MailApp() {
                 <button
                   class={styles.fab}
                   onClick={() => setView('compose')}
-                  title='Nuevo mensaje'
+                  title={t('mail.new_message', language())}
                 >
                   <svg
                     width='24'
@@ -531,17 +535,17 @@ export function MailApp() {
                           class={styles.backButton}
                           onClick={() => backToList()}
                         >
-                          ← Volver
+                          ← {t('mail.back', language())}
                         </button>
                         <h4 class={styles.detailTitle}>
-                          {message().subject || '(Sin asunto)'}
+                          {message().subject || t('mail.no_subject', language())}
                         </h4>
                         <div class={styles.detailActions}>
                           <button
                             class={styles.deleteButton}
                             onClick={() => void deleteMessage()}
                           >
-                            🗑 Eliminar
+                            🗑 {t('mail.delete', language())}
                           </button>
                         </div>
                       </div>
@@ -549,22 +553,22 @@ export function MailApp() {
                       <div class={styles.detailContent}>
                         <div class={styles.detailMeta}>
                           <div class={styles.metaRow}>
-                            <span class={styles.metaLabel}>De:</span>
+                              <span class={styles.metaLabel}>{t('mail.from', language())}:</span>
                             <span class={styles.metaValue}>
                               {message().sender_alias ||
                                 message().sender_email ||
-                                'Desconocido'}
+                                t('mail.unknown', language())}
                             </span>
                           </div>
                           <div class={styles.metaRow}>
-                            <span class={styles.metaLabel}>Para:</span>
+                              <span class={styles.metaLabel}>{t('mail.to', language())}:</span>
                             <span class={styles.metaValue}>
                               {message().recipient_alias ||
                                 message().recipient_email}
                             </span>
                           </div>
                           <div class={styles.metaRow}>
-                            <span class={styles.metaLabel}>Fecha:</span>
+                              <span class={styles.metaLabel}>{t('mail.date', language())}:</span>
                             <span class={styles.metaValue}>
                               {new Date(
                                 Number(message().created_at),
@@ -582,7 +586,7 @@ export function MailApp() {
                         >
                           <div class={styles.detailAttachments}>
                             <h5>
-                              Adjuntos ({(message().attachments || [])
+                              {t('mail.attachments', language())} ({(message().attachments || [])
                                 .length})
                             </h5>
                             <For each={message().attachments || []}>
@@ -618,9 +622,9 @@ export function MailApp() {
                       class={styles.backButton}
                       onClick={() => cancelCompose()}
                     >
-                      Cancelar
+                      {t('mail.cancel', language())}
                     </button>
-                    <h4 class={styles.composeTitle}>Nuevo mensaje</h4>
+                    <h4 class={styles.composeTitle}>{t('mail.new_message', language())}</h4>
                     <div class={styles.composeHeaderSpacer}></div>
                   </div>
 
@@ -629,28 +633,28 @@ export function MailApp() {
                       class={styles.input}
                       value={toInput()}
                       onInput={(e) => setToInput(e.currentTarget.value)}
-                      placeholder='Para: destino@dominio.gg'
+                      placeholder={t('mail.placeholder.to', language())}
                     />
                     <input
                       class={styles.input}
                       value={subjectInput()}
                       onInput={(e) => setSubjectInput(e.currentTarget.value)}
-                      placeholder='Asunto'
+                      placeholder={t('mail.placeholder.subject', language())}
                     />
                     <textarea
                       class={styles.textarea}
                       value={bodyInput()}
                       onInput={(e) => setBodyInput(e.currentTarget.value)}
-                      placeholder='Escribe tu mensaje...'
+                      placeholder={t('mail.placeholder.body', language())}
                     />
 
                     <div class={styles.attachmentsBox}>
-                      <h5>Adjuntos (opcional)</h5>
+                      <h5>{t('mail.attachments_optional', language())}</h5>
                       <MediaActionButtons
                         actions={[
-                          { icon: '🖼', label: 'Galeria', onClick: attachFromGallery },
-                          { icon: '📷', label: 'Camara', onClick: attachFromCamera },
-                          { icon: '🔗', label: 'Link', onClick: () => void attachLinkByPrompt() },
+                          { icon: '🖼', label: t('mail.gallery', language()), onClick: attachFromGallery },
+                          { icon: '📷', label: t('mail.camera', language()), onClick: attachFromCamera },
+                          { icon: '🔗', label: t('mail.link', language()), onClick: () => void attachLinkByPrompt() },
                         ]}
                         variant='compact'
                         class={styles.composeMediaButtons}
@@ -665,16 +669,16 @@ export function MailApp() {
                             )
                           }
                         >
-                          <option value='image'>Imagen</option>
-                          <option value='video'>Video</option>
-                          <option value='document'>Documento</option>
+                          <option value='image'>{t('mail.attachment.image', language())}</option>
+                          <option value='video'>{t('mail.attachment.video', language())}</option>
+                          <option value='document'>{t('mail.attachment.document', language())}</option>
                           <option value='link'>Link</option>
                         </select>
                         <input
                           class={styles.inputInline}
                           value={attachmentUrl()}
                           onInput={(e) => setAttachmentUrl(e.currentTarget.value)}
-                          placeholder='URL interna'
+                          placeholder={t('mail.placeholder.url', language())}
                         />
                       </div>
                       <MediaAttachmentPreview
@@ -686,10 +690,10 @@ export function MailApp() {
                           class={styles.inputInline}
                           value={attachmentName()}
                           onInput={(e) => setAttachmentName(e.currentTarget.value)}
-                          placeholder='Nombre (opcional)'
+                          placeholder={t('mail.placeholder.name', language())}
                         />
                         <button class={styles.attachButton} onClick={addAttachment}>
-                          Agregar
+                          {t('mail.add', language())}
                         </button>
                       </div>
 
@@ -702,7 +706,7 @@ export function MailApp() {
                                   {entry.type}: {entry.name || entry.url}
                                 </span>
                                 <button onClick={() => removeAttachment(index())}>
-                                  Quitar
+                                  {t('mail.remove', language())}
                                 </button>
                               </div>
                             )}
@@ -716,7 +720,7 @@ export function MailApp() {
                       onClick={() => void sendMail()}
                       disabled={loading()}
                     >
-                      Enviar
+                      {t('mail.send', language())}
                     </button>
                   </div>
                 </div>
@@ -725,9 +729,9 @@ export function MailApp() {
           }
         >
           <div class={styles.setupCard}>
-            <h3>Configura tu Mail</h3>
+            <h3>{t('mail.setup_title', language())}</h3>
             <p class={styles.setupHint}>
-              Crea tu alias y se asignara automaticamente:{' '}
+              {t('mail.setup_hint', language())}{' '}
               <strong>@{domain()}</strong>
             </p>
             <input
@@ -748,7 +752,7 @@ export function MailApp() {
               onClick={() => void createAccount()}
               disabled={loading()}
             >
-              Crear cuenta
+              {t('mail.create_account', language())}
             </button>
           </div>
         </Show>

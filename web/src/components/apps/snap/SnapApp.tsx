@@ -34,6 +34,7 @@ import { SheetIntro } from '../../shared/ui/SheetIntro';
 import { SocialOnboardingModal, type SocialOnboardingPayload } from '../../shared/ui/SocialOnboardingModal';
 import { VirtualList } from '../../shared/ui/VirtualList';
 import { useLiveFlashlight } from '../../../hooks/useLiveFlashlight';
+import { getStoredLanguage, t } from '../../../i18n';
 import styles from './SnapApp.module.scss';
 
 interface SnapPost {
@@ -234,6 +235,7 @@ const SNAP_MOCK_LINES = [
 
 export function SnapApp() {
   const router = useRouter();
+  const language = () => getStoredLanguage();
   const cache = useAppCache('snap');
   const DISCOVER_PAGE_SIZE = 30;
 
@@ -1494,7 +1496,7 @@ export function SnapApp() {
   const publishPost = async () => {
     const media = sanitizeMediaUrl(postMedia());
     if (!media) {
-      setStatusMessage('Selecciona una imagen o video para publicar.');
+      setStatusMessage(t('snap.select_media', language()));
       return;
     }
     setStatusMessage('');
@@ -1547,7 +1549,7 @@ export function SnapApp() {
       const clean = sanitizeMediaUrl(first.url);
       if (clean) {
         setProfileAvatar(clean);
-        setStatusMessage('Avatar cargado desde galeria');
+        setStatusMessage(t('snap.avatar_from_gallery', language()));
       }
     }
   };
@@ -1563,7 +1565,7 @@ export function SnapApp() {
   };
 
   return (
-    <AppScaffold title="Snap" subtitle="Comparte momentos" onBack={() => router.goBack()} bodyClass={styles.body}>
+    <AppScaffold title="Snap" subtitle={t('snap.subtitle', language())} onBack={() => router.goBack()} bodyClass={styles.body}>
       <div class={styles.snapApp}>
         <div class={styles.socialPanel}>
           <div class={styles.socialMeta}>
@@ -1580,7 +1582,7 @@ export function SnapApp() {
                 onClick={() => setActiveTab('discover')}
               >
                 <span class={styles.tabIcon}>🔍</span>
-                Descubrir
+                {t('snap.discover', language())}
               </button>
               <button
                 class={styles.tabButton}
@@ -1588,7 +1590,7 @@ export function SnapApp() {
                 onClick={() => setActiveTab('feed')}
               >
                 <span class={styles.tabIcon}>🏠</span>
-                Feed
+                {t('snap.feed', language())}
               </button>
               <button
                 class={styles.tabButton}
@@ -1596,7 +1598,7 @@ export function SnapApp() {
                 onClick={() => setActiveTab('profile')}
               >
                 <span class={styles.tabIcon}>👤</span>
-                Perfil
+                {t('chirp.profile', language())}
               </button>
             </div>
             <button
@@ -1605,7 +1607,7 @@ export function SnapApp() {
                 setShowRequestsModal(true);
                 void refreshFollowRequests();
               }}
-              aria-label="Solicitudes"
+              aria-label={t('chirp.requests', language())}
             >
               <span>🔔</span>
               <Show when={pendingRequests().length > 0}>
@@ -1627,7 +1629,7 @@ export function SnapApp() {
                   <div class={styles.storyAvatar} classList={{ [styles.hasStory]: false }}>
                     <span>+</span>
                   </div>
-                  <span class={styles.storyName}>Tu historia</span>
+                  <span class={styles.storyName}>{t('snap.your_story', language())}</span>
                 </button>
 
                 <For each={stories()}>
@@ -1640,7 +1642,7 @@ export function SnapApp() {
                           <span>{(story.display_name || story.username || 'U').charAt(0).toUpperCase()}</span>
                         )}
                       </div>
-                      <span class={styles.storyName}>{story.display_name || story.username || 'Usuario'}</span>
+                      <span class={styles.storyName}>{story.display_name || story.username || t('chirp.user', language())}</span>
                     </button>
                   )}
                 </For>
@@ -1649,7 +1651,7 @@ export function SnapApp() {
 
             <Show when={liveStreams().length > 0}>
               <div class={styles.liveSection}>
-                <h4 class={styles.sectionTitle}>En vivo</h4>
+                <h4 class={styles.sectionTitle}>{t('snap.live', language())}</h4>
                 <div class={styles.liveList}>
                   <For each={liveStreams()}>
                     {(live) => (
@@ -1663,7 +1665,7 @@ export function SnapApp() {
                           <span class={styles.liveBadge}>LIVE</span>
                         </div>
                         <span class={styles.liveName}>{live.display_name || live.username}</span>
-                        <span class={styles.liveViewers}>{live.live_viewers || 0} viendo</span>
+                        <span class={styles.liveViewers}>{live.live_viewers || 0} {t('snap.watching', language())}</span>
                       </button>
                     )}
                   </For>
@@ -1672,7 +1674,7 @@ export function SnapApp() {
             </Show>
 
             <div class={styles.postsSection}>
-              <h4 class={styles.sectionTitle}>Publicaciones</h4>
+              <h4 class={styles.sectionTitle}>{t('snap.posts', language())}</h4>
               <div class={styles.postsGrid}>
                 <For each={posts()}>
                   {(post) => (
@@ -1720,7 +1722,7 @@ export function SnapApp() {
               </div>
 
               <Show when={!loading() && posts().length === 0}>
-                <EmptyState class={styles.emptyState} title="No hay publicaciones" description="Se el primero en compartir algo con tu circulo." />
+                <EmptyState class={styles.emptyState} title={t('snap.empty_posts_title', language())} description={t('snap.empty_posts_desc', language())} />
               </Show>
             </div>
           </>
@@ -1728,17 +1730,17 @@ export function SnapApp() {
 
         <Show when={activeTab() === 'discover'}>
           <div class={styles.discoverSection}>
-            <h4 class={styles.sectionTitle}>Descubrir</h4>
+            <h4 class={styles.sectionTitle}>{t('snap.discover', language())}</h4>
             <SearchInput
               value={discoverQuery()}
               onInput={(value) => setDiscoverQuery(sanitizeText(value, 60))}
-              placeholder="Buscar por @usuario, nombre o caption"
+              placeholder={t('snap.search_placeholder', language())}
               class={styles.discoverSearchRoot}
               inputClass={styles.discoverSearch}
             />
 
-            <Show when={!discoverLoading()} fallback={<p class={styles.discoverHint}>Cargando descubrimiento...</p>}>
-              <Show when={discoverRows().length > 0} fallback={<p class={styles.discoverHint}>No hay publicaciones para mostrar.</p>}>
+            <Show when={!discoverLoading()} fallback={<p class={styles.discoverHint}>{t('snap.loading_discover', language())}</p>}>
+              <Show when={discoverRows().length > 0} fallback={<p class={styles.discoverHint}>{t('snap.no_discover_posts', language())}</p>}>
                 <VirtualList
                   items={discoverRows}
                   itemHeight={170}
@@ -1764,7 +1766,7 @@ export function SnapApp() {
                         </button>
 
                         <div class={styles.discoverMeta}>
-                          <strong>{post.display_name || post.username || 'Usuario'}</strong>
+                          <strong>{post.display_name || post.username || t('chirp.user', language())}</strong>
                           <span>@{post.username || 'usuario'}</span>
                           <Show when={post.caption}>
                             <p>{post.caption}</p>
@@ -1779,12 +1781,12 @@ export function SnapApp() {
                             onClick={() => void followAccountFromDiscover(post)}
                           >
                             {isFollowing
-                              ? 'Siguiendo'
+                              ? t('snap.following', language())
                               : requestedByMe
-                                ? 'Cancelar'
+                                ? t('action.cancel', language())
                                 : Number(post.is_private || 0) === 1
-                                  ? 'Solicitar'
-                                  : 'Seguir'}
+                                  ? t('snap.request_follow', language())
+                                  : t('snap.follow', language())}
                           </button>
                         </Show>
                       </div>

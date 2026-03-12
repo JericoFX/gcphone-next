@@ -704,7 +704,14 @@ local function CreateInvoice(source, data)
     if type(data) ~= 'table' then return { success = false, error = 'INVALID_DATA' } end
 
     local amount = SafeNumber(data.amount, 1, Config.Wallet and Config.Wallet.MaxTransferAmount or 500000)
-    local title = SafeString(data.title, 64) or 'Factura'
+    local invoiceTitles = {
+        es = 'Factura',
+        en = 'Invoice',
+        pt = 'Fatura',
+        fr = 'Facture',
+    }
+    local lang = type(GetPhoneLanguageForSource) == 'function' and GetPhoneLanguageForSource(source, true) or 'es'
+    local title = SafeString(data.title, 64) or invoiceTitles[lang] or invoiceTitles.es
     if not amount then return { success = false, error = 'INVALID_AMOUNT' } end
 
     local invoiceMs = (Config.Security and Config.Security.RateLimits and Config.Security.RateLimits.walletRequest) or 1300

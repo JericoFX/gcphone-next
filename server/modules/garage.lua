@@ -1,6 +1,13 @@
 -- Creado/Modificado por JericoFX
 -- Garage - Backend Mejorado
 
+local VehicleLocationMessages = {
+    es = 'Ubicacion del vehiculo',
+    en = 'Vehicle location',
+    pt = 'Localizacao do veiculo',
+    fr = 'Position du vehicule',
+}
+
 -- Get vehicles with location info
 lib.callback.register('gcphone:garage:getVehicles', function(source)
     local identifier = GetIdentifier(source)
@@ -146,7 +153,7 @@ lib.callback.register('gcphone:garage:shareLocation', function(source, data)
         x = location.location_x or data.x,
         y = location.location_y or data.y,
         z = location.location_z or data.z,
-        message = data.message or 'Ubicacion del vehiculo'
+        message = data.message or VehicleLocationMessages[type(GetPhoneLanguageForSource) == 'function' and GetPhoneLanguageForSource(source, true) or 'es'] or VehicleLocationMessages.es
     })
     
     return true
