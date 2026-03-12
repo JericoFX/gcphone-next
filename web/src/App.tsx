@@ -10,6 +10,7 @@ import { fetchNui } from './utils/fetchNui';
 import { setNuiAuthToken } from './utils/fetchNui';
 import { isEnvBrowser } from './utils/misc';
 import { setupBrowserMock } from './mock/browserMock';
+import { BrowserDevMenu } from './components/dev/BrowserDevMenu';
 import { localeTagFromLanguage } from './i18n';
 import { setLiveKitRemoteAudioPriority, setLiveKitRemoteAudioVolume } from './utils/livekit';
 import './App.scss';
@@ -121,7 +122,9 @@ function PhoneContent() {
             </Show>
           </PhoneFrame>
         }>
-          <LockScreen />
+          <PhoneFrame>
+            <LockScreen />
+          </PhoneFrame>
         </Show>
       </Show>
 
@@ -201,6 +204,7 @@ export function App() {
           <MessagesProvider>
             <PhoneAudioController />
             <PhoneContent />
+            <BrowserDevMenu />
           </MessagesProvider>
         </ContactsProvider>
       </NotificationsProvider>
