@@ -344,7 +344,7 @@ export function MapsApp() {
               setShowFabMenu(false);
               clearAllMarkers();
             }}>
-              <span class={styles.fabMenuIcon}>🗑️</span>
+              <span class={styles.fabMenuIcon}><img src="./img/icons_ios/ui-trash.svg" alt="" draggable={false} /></span>
               <span>Limpiar puntos</span>
             </button>
           </div>

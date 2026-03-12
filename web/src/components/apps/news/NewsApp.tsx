@@ -838,10 +838,10 @@ export function NewsApp() {
             <div class={styles.composeAttachments}>
               <MediaActionButtons
                 actions={[
-                  { icon: '🖼', label: 'Galeria', onClick: attachFromGallery },
-                  { icon: '📷', label: 'Camara', onClick: attachFromCamera },
-                  { icon: '🔗', label: 'URL', onClick: () => void attachByUrl() },
-                  ...(mediaUrl() ? [{ icon: '✕', label: 'Quitar', onClick: () => setMediaUrl(''), tone: 'danger' as const }] : []),
+                  { icon: './img/icons_ios/gallery.svg', label: 'Galeria', onClick: attachFromGallery },
+                  { icon: './img/icons_ios/camera.svg', label: 'Camara', onClick: attachFromCamera },
+                  { icon: './img/icons_ios/ui-link.svg', label: 'URL', onClick: () => void attachByUrl() },
+                  ...(mediaUrl() ? [{ icon: './img/icons_ios/ui-close.svg', label: 'Quitar', onClick: () => setMediaUrl(''), tone: 'danger' as const }] : []),
                 ]}
                 variant="compact"
                 class={styles.composeMediaButtons}
@@ -874,9 +874,9 @@ export function NewsApp() {
             <div class={styles.composeAttachments}>
               <MediaActionButtons
                 actions={[
-                  { icon: '🖼', label: 'Galeria', onClick: attachProfileFromGallery },
-                  { icon: '📷', label: 'Camara', onClick: attachProfileFromCamera },
-                  ...(profileAvatar() ? [{ icon: '✕', label: 'Quitar', onClick: () => setProfileAvatar(''), tone: 'danger' as const }] : []),
+                  { icon: './img/icons_ios/gallery.svg', label: 'Galeria', onClick: attachProfileFromGallery },
+                  { icon: './img/icons_ios/camera.svg', label: 'Camara', onClick: attachProfileFromCamera },
+                  ...(profileAvatar() ? [{ icon: './img/icons_ios/ui-close.svg', label: 'Quitar', onClick: () => setProfileAvatar(''), tone: 'danger' as const }] : []),
                 ]}
                 variant="compact"
                 class={styles.composeMediaButtons}
@@ -894,7 +894,7 @@ export function NewsApp() {
         <Show when={activeLive()}>
           <div class={styles.liveViewer}>
             <div class={styles.liveTopBar}>
-              <button class={styles.liveUtilityButton} onClick={closeLiveViewer}>✕</button>
+              <button class={styles.liveUtilityButton} onClick={closeLiveViewer}><img src="./img/icons_ios/ui-close.svg" alt="" draggable={false} /></button>
               <div class={styles.liveOwnerInfo}>
                 <strong>{articleAuthor(activeLive())}</strong>
                 <span>{activeLiveStatus()}</span>
@@ -911,7 +911,7 @@ export function NewsApp() {
                   lumensRange={liveFlashlight.lumensRange()}
                   theme="dark"
                   variant="circle"
-                  buttonLabel={<span>💡</span>}
+                  buttonLabel={<img src="./img/icons_ios/ui-flashlight.svg" alt="" draggable={false} />}
                   onPointerDown={liveFlashlight.beginPress}
                   onPointerUp={liveFlashlight.endPress}
                   onPointerLeave={liveFlashlight.cancelPress}
@@ -928,7 +928,7 @@ export function NewsApp() {
                     void liveFlashlight.applyPreset(kelvin, lumens);
                   }}
                 />
-                <button class={styles.liveUtilityButton} onClick={() => setLiveChatOpen((value) => !value)}>💬</button>
+                <button class={styles.liveUtilityButton} onClick={() => setLiveChatOpen((value) => !value)}><img src="./img/icons_ios/ui-chat.svg" alt="" draggable={false} /></button>
               </div>
             </div>
 
@@ -1001,8 +1001,8 @@ export function NewsApp() {
                         </div>
                         <Show when={canEditActiveLive() && entry.authorId && sanitizeText(myAccount()?.username || '', 40) !== sanitizeText(entry.user || '', 40)}>
                           <div class={styles.liveModerationCol}>
-                            <button onClick={() => void removeLiveMessage(entry.rawId || '')}>🗑</button>
-                            <button onClick={() => void muteLiveUser(entry)}>🚫</button>
+                            <button onClick={() => void removeLiveMessage(entry.rawId || '')}><img src="./img/icons_ios/ui-trash.svg" alt="" draggable={false} /></button>
+                            <button onClick={() => void muteLiveUser(entry)}><img src="./img/icons_ios/ui-block.svg" alt="" draggable={false} /></button>
                           </div>
                         </Show>
                         <small>{entry.at}</small>

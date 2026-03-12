@@ -1243,7 +1243,7 @@ function ConversationView(props: {
     <div class={styles.thread}>
       <div class={styles.nav}>
         <button class={styles.iconBtn} onClick={props.onBack}>
-          ‹
+          <img src="./img/icons_ios/ui-chevron-left.svg" alt="" draggable={false} />
         </button>
         <div class={styles.navTitle}>{props.contactName}</div>
         <button class={styles.deleteConversationBtn} onClick={props.onDeleteConversation}>Borrar</button>

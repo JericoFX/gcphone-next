@@ -228,9 +228,11 @@ export function LockScreen() {
 
       <div class={styles.bottomActions}>
         <button class={styles.bottomBtn} classList={{ [styles.bottomBtnActive]: flashlightEnabled() }} onClick={() => void toggleFlashlight()} disabled={!flashlightSupported()}>
-          🔦
+          <img src="./img/icons_ios/ui-flashlight.svg" alt="" draggable={false} />
         </button>
-        <button class={styles.bottomBtn} onClick={openCameraQuickAction}>📷</button>
+        <button class={styles.bottomBtn} onClick={openCameraQuickAction}>
+          <img src="./img/icons_ios/camera.svg" alt="" draggable={false} />
+        </button>
       </div>
     </div>
   );

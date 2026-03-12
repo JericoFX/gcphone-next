@@ -239,6 +239,12 @@
   font-size: 12px;
 }
 
+.videoIndicator img {
+  width: 12px;
+  height: 12px;
+  object-fit: contain;
+}
+
 .postOverlay {
   position: absolute;
   inset: 0;
@@ -300,6 +306,12 @@
   
   span:first-child {
     font-size: 14px;
+  }
+
+  span:first-child img {
+    width: 14px;
+    height: 14px;
+    object-fit: contain;
   }
   
   .count {
@@ -427,6 +439,12 @@
   }
 }
 
+.storyClose img {
+  width: 15px;
+  height: 15px;
+  object-fit: contain;
+}
+
 .storyNav {
   position: absolute;
   top: 50%;
@@ -458,6 +476,12 @@
     opacity: 0.3;
     pointer-events: none;
   }
+}
+
+.storyNav img {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
 }
 
 .storyProgress {
@@ -612,6 +636,12 @@
   &:hover {
     background: rgba(210, 223, 243, 0.96);
   }
+}
+
+.liveUtilityButton img {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
 }
 
 .liveViewerCount {
@@ -831,6 +861,12 @@
     color: #ffffff;
     cursor: pointer;
   }
+
+  button img {
+    width: 14px;
+    height: 14px;
+    object-fit: contain;
+  }
 }
 
 .liveMutedBanner {
@@ -959,7 +995,15 @@
 }
 
 .tabIcon {
-  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tabIcon img {
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
 }
 
 .notifyBtn {
@@ -987,6 +1031,12 @@
     background: rgba(0, 122, 255, 0.1);
     color: #007aff;
   }
+}
+
+.notifyBtn img {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
 }
 
 .notifyBadge {

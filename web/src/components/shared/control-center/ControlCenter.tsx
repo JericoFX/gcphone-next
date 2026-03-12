@@ -52,7 +52,7 @@ export function ControlCenter() {
       appId: 'wavechat',
         title: 'WaveChat',
        message: 'Mensaje nuevo de Alex: Estoy en Legion Square',
-      icon: '💬',
+      icon: './img/icons_ios/ui-chat.svg',
       route: 'wavechat',
       durationMs: 4200,
       priority: 'high',

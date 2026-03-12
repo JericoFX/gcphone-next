@@ -1587,7 +1587,7 @@ export function SnapApp() {
                 classList={{ [styles.activeTabBtn]: activeTab() === 'feed' }}
                 onClick={() => setActiveTab('feed')}
               >
-                <span class={styles.tabIcon}>🏠</span>
+                <span class={styles.tabIcon}><img src="./img/icons_ios/ui-grid.svg" alt="" draggable={false} /></span>
                 Feed
               </button>
               <button
@@ -1595,7 +1595,7 @@ export function SnapApp() {
                 classList={{ [styles.activeTabBtn]: activeTab() === 'profile' }}
                 onClick={() => setActiveTab('profile')}
               >
-                <span class={styles.tabIcon}>👤</span>
+                <span class={styles.tabIcon}><img src="./img/icons_ios/ui-user.svg" alt="" draggable={false} /></span>
                 Perfil
               </button>
             </div>
@@ -1607,7 +1607,7 @@ export function SnapApp() {
               }}
               aria-label="Solicitudes"
             >
-              <span>🔔</span>
+              <span><img src="./img/icons_ios/ui-bell.svg" alt="" draggable={false} /></span>
               <Show when={pendingRequests().length > 0}>
                 <span class={styles.notifyBadge}>{pendingRequests().length}</span>
               </Show>
@@ -1684,7 +1684,7 @@ export function SnapApp() {
                           <img src={post.media_url || './img/background/back001.jpg'} alt="" />
                         )}
                         {resolveMediaType(post.media_url) === 'video' && (
-                          <div class={styles.videoIndicator}>▶</div>
+                          <div class={styles.videoIndicator}><img src="./img/icons_ios/ui-play.svg" alt="" draggable={false} /></div>
                         )}
                       </div>
 
@@ -1705,7 +1705,7 @@ export function SnapApp() {
 
                           <Show when={post.is_own}>
                             <button class={styles.actionBtn} onClick={(e) => deletePost(e, post.id)}>
-                              <span>🗑</span>
+                              <span><img src="./img/icons_ios/ui-trash.svg" alt="" draggable={false} /></span>
                             </button>
                           </Show>
                         </div>
@@ -1860,11 +1860,11 @@ export function SnapApp() {
         title="Crear"
         onClose={() => setShowActionSheet(false)}
         actions={[
-          { label: '📷 Camara', tone: 'primary', onClick: openCamera },
-          { label: '🖼 Galeria', tone: 'primary', onClick: () => { setShowActionSheet(false); setShowCreatePost(true); } },
-          { label: '✨ Subir Story', onClick: () => { setPostMode('story'); setShowActionSheet(false); setShowCreatePost(true); } },
-          { label: '🔴 Iniciar Live', onClick: () => void startLive() },
-          { label: '🧪 Mock Live', onClick: () => void startMockLive() },
+          { label: 'Camara', tone: 'primary', onClick: openCamera },
+          { label: 'Galeria', tone: 'primary', onClick: () => { setShowActionSheet(false); setShowCreatePost(true); } },
+          { label: 'Subir Story', onClick: () => { setPostMode('story'); setShowActionSheet(false); setShowCreatePost(true); } },
+          { label: 'Iniciar Live', onClick: () => void startLive() },
+          { label: 'Mock Live', onClick: () => void startMockLive() },
         ]}
       />
 
@@ -1884,8 +1884,8 @@ export function SnapApp() {
           <Show when={!postMedia()}>
             <MediaActionButtons
               actions={[
-                { icon: '📷', label: 'Camara', onClick: openCamera },
-                { icon: '🖼', label: 'Galeria', onClick: attachFromGallery },
+                { icon: './img/icons_ios/camera.svg', label: 'Camara', onClick: openCamera },
+                { icon: './img/icons_ios/gallery.svg', label: 'Galeria', onClick: attachFromGallery },
               ]}
               variant="tiles"
             />
@@ -1924,7 +1924,7 @@ export function SnapApp() {
             class={styles.storyClose}
             onClick={() => setActiveStoryIndex(null)}
           >
-            ✕
+            <img src="./img/icons_ios/ui-close.svg" alt="" draggable={false} />
           </button>
           
           <button 
@@ -1932,7 +1932,7 @@ export function SnapApp() {
             classList={{ [styles.disabled]: (activeStoryIndex() || 0) <= 0 }}
             onClick={() => shiftStory(-1)}
           >
-            ‹
+            <img src="./img/icons_ios/ui-chevron-left.svg" alt="" draggable={false} />
           </button>
           
           <button 
@@ -1940,7 +1940,7 @@ export function SnapApp() {
             classList={{ [styles.next]: true, [styles.disabled]: (activeStoryIndex() || 0) >= stories().length - 1 }}
             onClick={() => shiftStory(1)}
           >
-            ›
+            <img src="./img/icons_ios/ui-chevron-right.svg" alt="" draggable={false} />
           </button>
 
           <div class={styles.storyProgress}>
@@ -1979,7 +1979,7 @@ export function SnapApp() {
       <Show when={activeLive()}>
         <div class={styles.liveViewer}>
           <div class={styles.liveTopBar}>
-            <button class={styles.liveUtilityButton} onClick={() => void closeLiveViewer()}>✕</button>
+            <button class={styles.liveUtilityButton} onClick={() => void closeLiveViewer()}><img src="./img/icons_ios/ui-close.svg" alt="" draggable={false} /></button>
             <div class={styles.liveOwnerInfo}>
               <strong>{activeLive()?.display_name || activeLive()?.username || 'Live'}</strong>
               <span>
@@ -2014,7 +2014,7 @@ export function SnapApp() {
                 lumens={liveFlashlight.lumens()}
                 kelvinRange={liveFlashlight.kelvinRange()}
                 lumensRange={liveFlashlight.lumensRange()}
-                buttonLabel={<span>🔦</span>}
+                buttonLabel={<img src="./img/icons_ios/ui-flashlight.svg" alt="" draggable={false} />}
                 buttonTitle="Linterna"
                 theme="dark"
                 variant="circle"
@@ -2034,7 +2034,7 @@ export function SnapApp() {
                   void liveFlashlight.applyPreset(kelvin, lumens);
                 }}
               />
-              <button class={styles.liveUtilityButton} onClick={() => setLiveChatOpen((prev) => !prev)}>💬</button>
+              <button class={styles.liveUtilityButton} onClick={() => setLiveChatOpen((prev) => !prev)}><img src="./img/icons_ios/ui-chat.svg" alt="" draggable={false} /></button>
             </div>
           </div>
 
@@ -2093,8 +2093,8 @@ export function SnapApp() {
                         </div>
                         <Show when={isLiveOwner() && message.username !== myAccount()?.username}>
                           <div class={styles.liveModerationCol}>
-                            <button onClick={() => void removeLiveMessage(message.id)}>🗑</button>
-                            <button onClick={() => void muteLiveUser(message.username)}>🚫</button>
+                            <button onClick={() => void removeLiveMessage(message.id)}><img src="./img/icons_ios/ui-trash.svg" alt="" draggable={false} /></button>
+                            <button onClick={() => void muteLiveUser(message.username)}><img src="./img/icons_ios/ui-block.svg" alt="" draggable={false} /></button>
                           </div>
                         </Show>
                       </div>

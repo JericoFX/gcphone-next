@@ -53,6 +53,14 @@ interface MailActionResponse {
   error?: string;
 }
 
+const MAIL_ICONS = {
+  trash: './img/icons_ios/ui-trash.svg',
+  gallery: './img/icons_ios/gallery.svg',
+  camera: './img/icons_ios/camera.svg',
+  link: './img/icons_ios/ui-link.svg',
+  compose: './img/icons_ios/mail.svg',
+} as const;
+
 export function MailApp() {
   const router = useRouter();
   const [loading, setLoading] = createSignal(false);
@@ -505,19 +513,7 @@ export function MailApp() {
                   onClick={() => setView('compose')}
                   title='Nuevo mensaje'
                 >
-                  <svg
-                    width='24'
-                    height='24'
-                    viewBox='0 0 24 24'
-                    fill='none'
-                    stroke='currentColor'
-                    stroke-width='2'
-                    stroke-linecap='round'
-                    stroke-linejoin='round'
-                  >
-                    <line x1='12' y1='5' x2='12' y2='19'></line>
-                    <line x1='5' y1='12' x2='19' y2='12'></line>
-                  </svg>
+                  <img src={MAIL_ICONS.compose} alt='' draggable={false} />
                 </button>
               </Show>
 
@@ -541,7 +537,8 @@ export function MailApp() {
                             class={styles.deleteButton}
                             onClick={() => void deleteMessage()}
                           >
-                            🗑 Eliminar
+                            <img src={MAIL_ICONS.trash} alt='' draggable={false} />
+                            <span>Eliminar</span>
                           </button>
                         </div>
                       </div>
@@ -648,9 +645,9 @@ export function MailApp() {
                       <h5>Adjuntos (opcional)</h5>
                       <MediaActionButtons
                         actions={[
-                          { icon: '🖼', label: 'Galeria', onClick: attachFromGallery },
-                          { icon: '📷', label: 'Camara', onClick: attachFromCamera },
-                          { icon: '🔗', label: 'Link', onClick: () => void attachLinkByPrompt() },
+                          { icon: MAIL_ICONS.gallery, label: 'Galeria', onClick: attachFromGallery },
+                          { icon: MAIL_ICONS.camera, label: 'Camara', onClick: attachFromCamera },
+                          { icon: MAIL_ICONS.link, label: 'Link', onClick: () => void attachLinkByPrompt() },
                         ]}
                         variant='compact'
                         class={styles.composeMediaButtons}

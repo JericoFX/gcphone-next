@@ -5,6 +5,7 @@ import { fetchNui } from '../../../utils/fetchNui';
 import { useNotifications } from '../../../store/notifications';
 import { usePhone } from '../../../store/phone';
 import { appName } from '../../../i18n';
+import { APP_BY_ID } from '../../../config/apps';
 import styles from './NotificationsApp.module.scss';
 
 interface InboxNotification {
@@ -77,6 +78,12 @@ export function NotificationsApp() {
     }
   };
 
+  const formatTime = (timestamp: number) => new Date(Number(timestamp) || Date.now()).toLocaleString();
+
+  const appLabel = (appId: string) => appName(appId, appId, language());
+
+  const appIcon = (appId: string) => APP_BY_ID[appId]?.icon || './img/icons_ios/ui-list.svg';
+
   createEffect(() => {
     void loadInbox();
   });
@@ -86,57 +93,93 @@ export function NotificationsApp() {
       title="Inbox"
       onBack={() => router.goBack()}
       headerRight={(
-        <button class="ios-action-btn" onClick={() => void markAllRead()} disabled={notifications().length === 0}>
+        <button class="ios-action-btn" onClick={() => void markAllRead()} disabled={notifications().length === 0 && recentItems().length === 0}>
           Leer todo
         </button>
       )}
     >
       <div class={styles.root}>
-        <div class={styles.topMeta}>
-          <span>Inbox: {unread()} · Centro: {localUnread()}</span>
-          <button onClick={() => void loadInbox()} disabled={loading()}>{loading() ? 'Cargando...' : 'Actualizar'}</button>
-        </div>
+        <section class={`ios-card ${styles.summaryCard}`}>
+          <div class={styles.summaryMain}>
+            <div>
+              <span class={styles.eyebrow}>RESUMEN</span>
+              <h3>{unread()} sin leer en inbox</h3>
+            </div>
+            <button class="ios-btn" onClick={() => void loadInbox()} disabled={loading()}>
+              {loading() ? 'Cargando...' : 'Actualizar'}
+            </button>
+          </div>
+          <div class={styles.summaryChips}>
+            <span class={`ios-chip ${styles.summaryChip}`}>Inbox {unread()}</span>
+            <span class={`ios-chip ${styles.summaryChip}`}>Centro {localUnread()}</span>
+          </div>
+        </section>
 
-        <div class={styles.quickBar}>
-          <button class={styles.quickToggle} classList={{ [styles.quickToggleActive]: notificationsState.doNotDisturb }} onClick={() => notificationsActions.setDoNotDisturb(!notificationsState.doNotDisturb)}>
-            {notificationsState.doNotDisturb ? 'No molestar activo' : 'No molestar apagado'}
-          </button>
-          <button class={styles.quickToggle} classList={{ [styles.quickToggleActive]: notificationsState.silentMode }} onClick={() => notificationsActions.setSilentMode(!notificationsState.silentMode)}>
-            {notificationsState.silentMode ? 'Silencio activo' : 'Silencio apagado'}
-          </button>
-        </div>
+        <section class={`ios-card ${styles.quickCard}`}>
+          <div class={styles.sectionHeader}>
+            <div>
+              <span class={styles.eyebrow}>ATAJOS</span>
+              <strong>Ajustes rapidos</strong>
+            </div>
+            <span>Control inmediato del telefono</span>
+          </div>
+
+          <div class={styles.quickBar}>
+            <button class={styles.quickToggle} classList={{ [styles.quickToggleActive]: notificationsState.doNotDisturb }} onClick={() => notificationsActions.setDoNotDisturb(!notificationsState.doNotDisturb)}>
+              <span>No molestar</span>
+              <strong>{notificationsState.doNotDisturb ? 'Activo' : 'Apagado'}</strong>
+            </button>
+            <button class={styles.quickToggle} classList={{ [styles.quickToggleActive]: notificationsState.silentMode }} onClick={() => notificationsActions.setSilentMode(!notificationsState.silentMode)}>
+              <span>Silencio</span>
+              <strong>{notificationsState.silentMode ? 'Activo' : 'Apagado'}</strong>
+            </button>
+          </div>
+        </section>
 
         <Show when={recentItems().length > 0}>
           <section class={styles.section}>
             <div class={styles.sectionHeader}>
-              <strong>Centro rapido</strong>
-              <span>Banner local y accesos rapidos por app</span>
+              <div>
+                <span class={styles.eyebrow}>CENTRO RAPIDO</span>
+                <strong>Actividad reciente</strong>
+              </div>
+              <span>Banner local por app</span>
             </div>
-            <For each={recentItems()}>
-              {(entry) => (
-                <div class={styles.localItem}>
-                  <button
-                    class={styles.localMain}
-                    onClick={() => {
-                      notificationsActions.markAppAsRead(entry.appId);
-                      if (entry.route) {
-                        router.navigate(entry.route, entry.data as Record<string, unknown> | undefined);
-                      }
-                    }}
-                  >
-                    <div class={styles.itemHeader}>
-                      <strong>{entry.title}</strong>
-                      <small>{new Date(Number(entry.createdAt) || Date.now()).toLocaleString()}</small>
-                    </div>
-                    <p>{entry.message}</p>
-                    <span>{appName(entry.appId, entry.appId, language())}</span>
-                  </button>
-                  <button class={styles.muteBtn} onClick={() => notificationsActions.toggleMuteApp(entry.appId)}>
-                    {notificationsActions.isAppMuted(entry.appId) ? 'Activar' : 'Silenciar'}
-                  </button>
-                </div>
-              )}
-            </For>
+
+            <div class={styles.feed}>
+              <For each={recentItems()}>
+                {(entry) => (
+                  <article class={`ios-card ${styles.itemCard}`}>
+                    <button
+                      class={styles.itemMain}
+                      onClick={() => {
+                        notificationsActions.markAppAsRead(entry.appId);
+                        if (entry.route) {
+                          router.navigate(entry.route, entry.data as Record<string, unknown> | undefined);
+                        }
+                      }}
+                    >
+                      <div class={styles.itemLead}>
+                        <div class={styles.iconWrap}>
+                          <img src={appIcon(entry.appId)} alt="" draggable={false} />
+                        </div>
+                        <div class={styles.itemText}>
+                          <div class={styles.itemHeader}>
+                            <strong>{entry.title}</strong>
+                            <small>{formatTime(Number(entry.createdAt))}</small>
+                          </div>
+                          <p>{entry.message}</p>
+                          <span class={styles.appMeta}>{appLabel(entry.appId)}</span>
+                        </div>
+                      </div>
+                    </button>
+                    <button class="ios-btn" onClick={() => notificationsActions.toggleMuteApp(entry.appId)}>
+                      {notificationsActions.isAppMuted(entry.appId) ? 'Activar' : 'Silenciar'}
+                    </button>
+                  </article>
+                )}
+              </For>
+            </div>
           </section>
         </Show>
 
@@ -146,25 +189,38 @@ export function NotificationsApp() {
 
         <section class={styles.section}>
           <div class={styles.sectionHeader}>
-            <strong>Inbox persistente</strong>
-            <span>Historial guardado del servidor</span>
+            <div>
+              <span class={styles.eyebrow}>INBOX PERSISTENTE</span>
+              <strong>Historial guardado</strong>
+            </div>
+            <span>Guardado por el servidor</span>
           </div>
+
           <Show when={notifications().length > 0} fallback={<p class={styles.empty}>Sin notificaciones guardadas</p>}>
-            <For each={notifications()}>
-              {(entry) => (
-                <div class={styles.item} classList={{ [styles.itemUnread]: Number(entry.is_read) === 0 }}>
-                  <button class={styles.itemMain} onClick={() => void markRead(entry.id)}>
-                    <div class={styles.itemHeader}>
-                      <strong>{entry.title}</strong>
-                      <small>{new Date(Number(entry.createdAt) || Date.now()).toLocaleString()}</small>
-                    </div>
-                    <p>{entry.content}</p>
-                    <span>{appName(entry.app_id, entry.app_id, language())}</span>
-                  </button>
-                  <button class={styles.deleteBtn} onClick={() => void deleteNotification(entry.id)}>Eliminar</button>
-                </div>
-              )}
-            </For>
+            <div class={styles.feed}>
+              <For each={notifications()}>
+                {(entry) => (
+                  <article class={`ios-card ${styles.itemCard}`} classList={{ [styles.itemUnread]: Number(entry.is_read) === 0 }}>
+                    <button class={styles.itemMain} onClick={() => void markRead(entry.id)}>
+                      <div class={styles.itemLead}>
+                        <div class={styles.iconWrap}>
+                          <img src={appIcon(entry.app_id)} alt="" draggable={false} />
+                        </div>
+                        <div class={styles.itemText}>
+                          <div class={styles.itemHeader}>
+                            <strong>{entry.title}</strong>
+                            <small>{formatTime(Number(entry.createdAt))}</small>
+                          </div>
+                          <p>{entry.content}</p>
+                          <span class={styles.appMeta}>{appLabel(entry.app_id)}</span>
+                        </div>
+                      </div>
+                    </button>
+                    <button class="ios-btn ios-btn-danger" onClick={() => void deleteNotification(entry.id)}>Eliminar</button>
+                  </article>
+                )}
+              </For>
+            </div>
           </Show>
         </section>
       </div>

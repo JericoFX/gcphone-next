@@ -61,8 +61,8 @@ export function HomeScreen() {
     const utilityApps = homeApps().filter((app) => utilitySet.has(app.id));
 
     return [
-      { id: 'social', name: t('home.folder.social', language()), icon: '💬', apps: socialApps },
-      { id: 'utility', name: t('home.folder.utility', language()), icon: '🧰', apps: utilityApps },
+      { id: 'social', name: t('home.folder.social', language()), icon: './img/icons_ios/ui-chat.svg', apps: socialApps },
+      { id: 'utility', name: t('home.folder.utility', language()), icon: './img/icons_ios/settings.svg', apps: utilityApps },
     ].filter((group) => group.apps.length > 0);
   });
 
@@ -324,7 +324,7 @@ export function HomeScreen() {
         <For each={folderGroups()}>
           {(group) => (
             <button class={styles.folderPill} onClick={() => setOpenFolderId(group.id)}>
-              <span>{group.icon}</span>
+              <img src={group.icon} alt="" draggable={false} />
               <strong>{group.name}</strong>
               <em>{group.apps.length}</em>
             </button>
@@ -396,13 +396,13 @@ export function HomeScreen() {
       </div>
 
       <div class={styles.desktopPager}>
-        <button class={styles.pageBtn} data-testid="desktop-page-prev" onClick={() => goToPage(desktopPage() - 1)}>‹</button>
+        <button class={styles.pageBtn} data-testid="desktop-page-prev" onClick={() => goToPage(desktopPage() - 1)}><img src="./img/icons_ios/ui-chevron-left.svg" alt="" draggable={false} /></button>
         <div class={styles.pageDots}>
           <For each={Array.from({ length: pageCount() })}>
             {(_, idx) => <span data-testid={`desktop-dot-${idx()}`} class={styles.dot} classList={{ [styles.activeDot]: desktopPage() === idx() }} />}
           </For>
         </div>
-        <button class={styles.pageBtn} data-testid="desktop-page-next" onClick={() => goToPage(desktopPage() + 1)}>›</button>
+        <button class={styles.pageBtn} data-testid="desktop-page-next" onClick={() => goToPage(desktopPage() + 1)}><img src="./img/icons_ios/ui-chevron-right.svg" alt="" draggable={false} /></button>
       </div>
 
       <Show when={openFolderId()}>
@@ -484,7 +484,7 @@ export function HomeScreen() {
                   <For each={searchResults().contacts}>
                     {(entry) => (
                       <button class={styles.searchItem} onClick={() => { closeSearch(); router.navigate('contacts'); }}>
-                        <div class={styles.searchDot}>👤</div>
+                        <div class={styles.searchDot}><img src="./img/icons_ios/ui-user.svg" alt="" draggable={false} /></div>
                         <div>
                           <strong>{entry.display}</strong>
                           <span>{entry.number}</span>
@@ -501,7 +501,7 @@ export function HomeScreen() {
                   <For each={searchResults().conversations}>
                     {(entry) => (
                       <button class={styles.searchItem} onClick={() => openMessagesThread(entry.number)}>
-                        <div class={styles.searchDot}>💬</div>
+                        <div class={styles.searchDot}><img src="./img/icons_ios/ui-chat.svg" alt="" draggable={false} /></div>
                         <div>
                           <strong>{entry.number}</strong>
                           <span>{entry.preview}</span>
@@ -518,7 +518,7 @@ export function HomeScreen() {
                   <For each={searchResults().calls}>
                     {(entry) => (
                       <button class={styles.searchItem} onClick={() => { closeSearch(); router.navigate('calls'); }}>
-                        <div class={styles.searchDot}>📞</div>
+                        <div class={styles.searchDot}><img src="./img/icons_ios/ui-phone.svg" alt="" draggable={false} /></div>
                         <div>
                           <strong>{entry.num}</strong>
                           <span>{timeAgo(new Date(entry.time))}</span>

@@ -392,7 +392,7 @@ export function CameraApp() {
               onClick={() => void closeCamera()}
               title="Cerrar"
             >
-              ✕
+              <img src="./img/icons_ios/ui-close.svg" alt="" draggable={false} />
             </button>
           </div>
 
@@ -407,7 +407,7 @@ export function CameraApp() {
               onClick={() => router.navigate('gallery')}
               title={t('camera.gallery', language())}
             >
-              🖼
+              <img src="./img/icons_ios/gallery.svg" alt="" draggable={false} />
             </button>
           </div>
         </div>
