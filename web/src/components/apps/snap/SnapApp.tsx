@@ -866,13 +866,13 @@ export function SnapApp() {
     });
 
     if (res?.success) {
-      setStatusMessage('Perfil actualizado');
+      setStatusMessage(t('snap.profile_updated', language()));
       setActiveTab('profile');
       await loadData();
       return;
     }
 
-    setStatusMessage('No se pudo actualizar el perfil');
+    setStatusMessage(t('snap.profile_update_failed', language()));
   };
 
   const createSnapAccount = async (payload: SocialOnboardingPayload) => {
@@ -912,7 +912,7 @@ export function SnapApp() {
     });
 
     if (res?.success) {
-      setStatusMessage(accept ? 'Solicitud aceptada' : 'Solicitud rechazada');
+      setStatusMessage(accept ? t('snap.request_accepted', language()) : t('snap.request_rejected', language()));
       await refreshFollowRequests();
     }
   };
@@ -923,7 +923,7 @@ export function SnapApp() {
     });
 
     if (res?.success) {
-      setStatusMessage('Solicitud cancelada');
+      setStatusMessage(t('snap.request_cancelled', language()));
       await refreshFollowRequests();
     }
   };
@@ -1065,7 +1065,7 @@ export function SnapApp() {
     const roomName = `snaplive-${live.id}`;
     const tokenPayload = await fetchLiveKitToken(roomName, owner, 1800);
     if (!tokenPayload?.success || !tokenPayload.token || !tokenPayload.url) {
-      setStatusMessage('No se pudo abrir el live');
+      setStatusMessage(t('snap.live_open_failed', language()));
       setActiveLive(null);
       return;
     }
@@ -1073,7 +1073,7 @@ export function SnapApp() {
     try {
       const auth = await fetchSocketToken({ liveId: live.id });
       if (!auth?.success || !auth.host || !auth.token) {
-        setStatusMessage('No se pudo abrir el chat del live');
+          setStatusMessage(t('snap.live_chat_open_failed', language()));
         setActiveLive(null);
         return;
       }
@@ -1114,17 +1114,17 @@ export function SnapApp() {
           setMutedUsers((prev) => (prev.includes(normalized) ? prev : [...prev, normalized]));
           if (normalized === sanitizeText(myAccount()?.username || '', 40).toLowerCase()) {
             setViewerMuted(true);
-            setStatusMessage('Estas silenciado en este live');
+            setStatusMessage(t('snap.live_muted', language()));
             setLiveKitRemoteAudioVolume(0);
           }
         },
         onDisconnect: () => {
-          setStatusMessage('Reconectando chat del live...');
+          setStatusMessage(t('snap.live_reconnecting', language()));
         },
         onReconnect: async () => {
           const joinResult = await joinSnapLiveRoom(String(live.id));
           if (!joinResult?.success) {
-            setStatusMessage('Sin conexion de chat live');
+            setStatusMessage(t('snap.live_chat_disconnected', language()));
             return;
           }
 
@@ -1149,13 +1149,13 @@ export function SnapApp() {
           }
         },
         onReconnectFailed: () => {
-          setStatusMessage('Sin conexion de chat live');
+          setStatusMessage(t('snap.live_chat_disconnected', language()));
         },
       });
 
       const joinResult = await joinSnapLiveRoom(String(live.id));
       if (!joinResult?.success) {
-        setStatusMessage('No se pudo abrir el chat del live');
+        setStatusMessage(t('snap.live_chat_open_failed', language()));
         disconnectSnapLiveSocket();
         setActiveLive(null);
         return;
@@ -1202,7 +1202,7 @@ export function SnapApp() {
       setLiveConnected(true);
       await startLiveAudioProximity(Number(live.id), owner);
     } catch (_err) {
-      setStatusMessage('No se pudo conectar al live');
+      setStatusMessage(t('snap.live_connect_failed', language()));
       disconnectSnapLiveSocket();
       setActiveLive(null);
       await stopLiveAudioProximity();

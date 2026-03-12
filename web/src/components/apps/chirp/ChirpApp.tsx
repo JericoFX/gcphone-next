@@ -578,7 +578,7 @@ export function ChirpApp() {
     }
 
     setShowProfileModal(false);
-    setStatusMessage('Perfil actualizado');
+      setStatusMessage(t('chirp.profile_updated', language()));
     cache.invalidate(`tweets:${currentTab()}`);
     await Promise.all([loadSocialState(), loadTweets()]);
   };
@@ -1184,12 +1184,12 @@ export function ChirpApp() {
 
       <Modal
         open={showProfileModal()}
-        title="Editar perfil"
+        title={t('chirp.edit_profile', language())}
         onClose={() => setShowProfileModal(false)}
         size="md"
       >
-        <SheetIntro title="Perfil de Chirp" description="La identidad de Chirp queda ligada al inicio del telefono." />
-        <FormField label="Nombre visible" value={profileDisplayName()} onChange={setProfileDisplayName} placeholder="Tu nombre" disabled />
+        <SheetIntro title={t('chirp.profile_title', language())} description={t('chirp.profile_desc', language())} />
+        <FormField label={t('chirp.visible_name', language())} value={profileDisplayName()} onChange={setProfileDisplayName} placeholder={t('chirp.your_name', language())} disabled />
         <label class={styles.privateToggle}>
           <input
             type="checkbox"
@@ -1199,34 +1199,34 @@ export function ChirpApp() {
           <span>Cuenta privada</span>
         </label>
         <ModalActions>
-          <ModalButton label="Cancelar" onClick={() => setShowProfileModal(false)} />
-          <ModalButton label="Guardar" tone="primary" onClick={() => void saveProfile()} />
+          <ModalButton label={t('action.cancel', language())} onClick={() => setShowProfileModal(false)} />
+          <ModalButton label={t('notes.save', language())} tone="primary" onClick={() => void saveProfile()} />
         </ModalActions>
       </Modal>
 
       <Modal
         open={deleteTweetId() !== null}
-        title="Eliminar chirp"
+        title={t('chirp.delete_chirp', language())}
         onClose={() => setDeleteTweetId(null)}
         size="sm"
       >
         <p>Esta accion no se puede deshacer.</p>
         <ModalActions>
-          <ModalButton label="Cancelar" onClick={() => setDeleteTweetId(null)} />
-          <ModalButton label="Eliminar" tone="danger" onClick={() => void confirmDeleteTweet()} />
+          <ModalButton label={t('action.cancel', language())} onClick={() => setDeleteTweetId(null)} />
+          <ModalButton label={t('action.delete', language())} tone="danger" onClick={() => void confirmDeleteTweet()} />
         </ModalActions>
       </Modal>
 
       <Modal
         open={deleteCommentId() !== null}
-        title="Eliminar comentario"
+        title={t('chirp.delete_comment', language())}
         onClose={() => setDeleteCommentId(null)}
         size="sm"
       >
         <p>Esta accion no se puede deshacer.</p>
         <ModalActions>
-          <ModalButton label="Cancelar" onClick={() => setDeleteCommentId(null)} />
-          <ModalButton label="Eliminar" tone="danger" onClick={() => void confirmDeleteComment()} />
+          <ModalButton label={t('action.cancel', language())} onClick={() => setDeleteCommentId(null)} />
+          <ModalButton label={t('action.delete', language())} tone="danger" onClick={() => void confirmDeleteComment()} />
         </ModalActions>
       </Modal>
 

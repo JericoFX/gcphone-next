@@ -16,6 +16,7 @@ import { SearchInput } from '../../shared/ui/SearchInput';
 import { ScreenState } from '../../shared/ui/ScreenState';
 import { LetterAvatar } from '../../shared/ui/LetterAvatar';
 import { SkeletonList } from '../../shared/ui/SkeletonList';
+import { t } from '../../../i18n';
 import styles from './ContactsApp.module.scss';
 
 export function ContactsApp() {
@@ -35,6 +36,7 @@ export function ContactsApp() {
   const [shareChannel, setShareChannel] = createSignal<'messages' | 'wavechat' | null>(null);
   const [tab, setTab] = createSignal<'todos' | 'favoritos'>('todos');
   const [recentCalls, setRecentCalls] = createSignal<string[]>([]);
+  const language = () => phoneState.settings.language || 'es';
 
   const filteredContacts = () => {
     const q = search().trim().toLowerCase();
@@ -155,36 +157,36 @@ export function ContactsApp() {
   };
 
   const shareToManualNumber = async () => {
-    const input = await uiPrompt('Numero para compartir contacto', { title: 'Compartir contacto' });
+    const input = await uiPrompt(t('contacts.share_number_prompt', language()), { title: t('contacts.share_contact', language()) });
     await sendSharedContact(typeof input === 'string' ? input : '');
   };
   
   return (
-    <AppScaffold title="Contactos" onBack={() => router.goBack()} action={isReadOnly() ? undefined : { icon: '+', onClick: openAddForm }}>
+    <AppScaffold title={t('contacts.title', language())} onBack={() => router.goBack()} action={isReadOnly() ? undefined : { icon: '+', onClick: openAddForm }}>
       <div class={styles.list}>
         <Show when={isReadOnly()}>
-          <InlineNotice title="Solo lectura" message={`Estas revisando los contactos de ${phoneState.accessOwnerName || 'otra persona'}.`} />
+          <InlineNotice title={t('contacts.readonly_title', language())} message={t('contacts.readonly_message', language(), { name: phoneState.accessOwnerName || t('common.other_person', language()) })} />
         </Show>
         <SearchInput
           class={styles.searchWrap}
           value={search()}
           onInput={setSearch}
-          placeholder="Buscar contacto"
+          placeholder={t('contacts.search', language())}
         />
 
         <div class={styles.sectionMeta}>
-          <span>{tab() === 'favoritos' ? 'Favoritos' : 'Contactos'}</span>
+          <span>{tab() === 'favoritos' ? t('contacts.favorites', language()) : t('contacts.title', language())}</span>
           <strong>{contactsCounter()}</strong>
         </div>
 
         <div class={styles.segmented}>
-          <button class={styles.segmentBtn} classList={{ [styles.active]: tab() === 'todos' }} onClick={() => setTab('todos')}>Todos</button>
-          <button class={styles.segmentBtn} classList={{ [styles.active]: tab() === 'favoritos' }} onClick={() => setTab('favoritos')}>Favoritos</button>
+          <button class={styles.segmentBtn} classList={{ [styles.active]: tab() === 'todos' }} onClick={() => setTab('todos')}>{t('contacts.all', language())}</button>
+          <button class={styles.segmentBtn} classList={{ [styles.active]: tab() === 'favoritos' }} onClick={() => setTab('favoritos')}>{t('contacts.favorites', language())}</button>
         </div>
 
         <Show when={tab() === 'todos' && recentCalls().length > 0}>
           <div class={styles.quickSection}>
-            <div class={styles.quickTitle}>Recientes</div>
+            <div class={styles.quickTitle}>{t('calls.tab.recents', language())}</div>
             <div class={styles.quickRow}>
               <For each={recentCalls()}>
                 {(number) => {
@@ -207,8 +209,8 @@ export function ContactsApp() {
             <ScreenState
               loading={false}
               empty={filteredContacts().length === 0}
-              emptyTitle="Sin contactos"
-              emptyDescription="Crea un contacto nuevo para comenzar."
+              emptyTitle={t('contacts.empty_title', language())}
+              emptyDescription={t('contacts.empty_desc', language())}
             >
               <Show when={!isReadOnly()}>
                 <div
@@ -219,7 +221,7 @@ export function ContactsApp() {
                   <div class={styles.avatar} classList={{ [styles.addAvatar]: true }}>
                     +
                   </div>
-                  <span class={styles.name}>Nuevo contacto</span>
+                  <span class={styles.name}>{t('contacts.new', language())}</span>
                 </div>
               </Show>
 
@@ -270,20 +272,20 @@ export function ContactsApp() {
       <Show when={showForm()}>
         <div class={styles.modal}>
           <div class={styles.modalContent}>
-            <h2>{editingContact() ? 'Editar contacto' : 'Nuevo contacto'}</h2>
+            <h2>{editingContact() ? t('contacts.edit_contact', language()) : t('contacts.new', language())}</h2>
             
             <div class={styles.formGroup}>
-              <label>Nombre</label>
+              <label>{t('contacts.field.name', language())}</label>
               <input
                 type="text"
-                placeholder="Nombre del contacto"
+                placeholder={t('contacts.name_placeholder', language())}
                 value={formName()}
                 onInput={(e) => setFormName(e.currentTarget.value)}
               />
             </div>
             
             <div class={styles.formGroup}>
-              <label>Número</label>
+              <label>{t('contacts.field.number', language())}</label>
               <input
                 type="tel"
                 placeholder="555-1234"
@@ -294,10 +296,10 @@ export function ContactsApp() {
             
             <div class={styles.modalActions}>
               <button class={styles.cancelBtn} onClick={() => setShowForm(false)}>
-                Cancelar
+                {t('action.cancel', language())}
               </button>
               <button class={styles.saveBtn} onClick={saveContact}>
-                Guardar
+                {t('notes.save', language())}
               </button>
             </div>
           </div>
@@ -310,7 +312,7 @@ export function ContactsApp() {
         onClose={() => setActionContact(null)}
         actions={[
           {
-            label: 'Enviar mensaje',
+            label: t('contacts.send_message', language()),
             tone: 'primary',
             onClick: () => {
               if (!actionContact()) return;
@@ -318,18 +320,18 @@ export function ContactsApp() {
             },
           },
           {
-            label: 'Editar',
+            label: t('notes.edit', language()),
             onClick: () => {
               if (!actionContact()) return;
               openEditForm(actionContact());
             },
           },
           {
-            label: 'Compartir contacto',
+            label: t('contacts.share_contact', language()),
             onClick: openShareContact,
           },
           {
-            label: 'Eliminar',
+            label: t('action.delete', language()),
             tone: 'danger',
             onClick: async () => {
               if (!actionContact()) return;
@@ -341,20 +343,20 @@ export function ContactsApp() {
 
       <ActionSheet
         open={!!shareContact() && !shareChannel()}
-        title="Compartir contacto por"
+        title={t('contacts.share_via', language())}
         onClose={() => {
           setShareContact(null);
           setShareChannel(null);
         }}
         actions={[
-          { label: 'Mensajes', tone: 'primary', onClick: () => { setShareChannel('messages'); } },
+          { label: t('messages.title', language()), tone: 'primary', onClick: () => { setShareChannel('messages'); } },
           { label: 'WaveChat', onClick: () => { setShareChannel('wavechat'); } },
         ]}
       />
 
       <ActionSheet
         open={!!shareContact() && !!shareChannel()}
-        title={shareChannel() === 'wavechat' ? 'Enviar en WaveChat' : 'Enviar en Mensajes'}
+        title={shareChannel() === 'wavechat' ? t('contacts.send_in_wavechat', language()) : t('contacts.send_in_messages', language())}
         onClose={() => {
           setShareContact(null);
           setShareChannel(null);
@@ -364,7 +366,7 @@ export function ContactsApp() {
             label: `${contact.display} (${contact.number})`,
             onClick: () => void sendSharedContact(contact.number),
           })),
-          { label: 'Ingresar numero', tone: 'primary' as const, onClick: () => void shareToManualNumber() },
+          { label: t('contacts.enter_number', language()), tone: 'primary' as const, onClick: () => void shareToManualNumber() },
         ]}
       />
     </AppScaffold>
