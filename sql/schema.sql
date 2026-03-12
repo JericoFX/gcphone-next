@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS `phone_numbers` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,
     `identifier` VARCHAR(50) NOT NULL,
     `phone_number` VARCHAR(15) NOT NULL UNIQUE,
-    `imei` VARCHAR(20) NOT NULL UNIQUE,
+    `imei` VARCHAR(20) NULL DEFAULT NULL UNIQUE,
     `wallpaper` VARCHAR(255) DEFAULT './img/background/back001.jpg',
     `ringtone` VARCHAR(50) DEFAULT 'ring.ogg',
     `call_ringtone` VARCHAR(64) DEFAULT 'ring.ogg',
@@ -27,6 +27,54 @@ CREATE TABLE IF NOT EXISTS `phone_numbers` (
     UNIQUE KEY `idx_identifier` (`identifier`),
     UNIQUE KEY `idx_phone_number` (`phone_number`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `phone_imei_sequence` (
+    `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT INTO `phone_imei_sequence` (`id`)
+SELECT MAX(CAST(`imei` AS UNSIGNED))
+FROM `phone_numbers`
+WHERE `imei` REGEXP '^[0-9]{15}$'
+HAVING MAX(CAST(`imei` AS UNSIGNED)) IS NOT NULL
+  AND NOT EXISTS (
+      SELECT 1
+      FROM `phone_imei_sequence`
+  );
+
+DROP TRIGGER IF EXISTS `trg_phone_numbers_before_insert_imei`;
+DROP TRIGGER IF EXISTS `trg_phone_numbers_before_update_imei`;
+
+DELIMITER $$
+
+CREATE TRIGGER `trg_phone_numbers_before_insert_imei`
+    BEFORE INSERT ON `phone_numbers`
+    FOR EACH ROW
+    BEGIN
+        IF NEW.`imei` IS NULL OR NEW.`imei` = '' OR NEW.`imei` NOT REGEXP '^[0-9]{15}$' THEN
+            INSERT INTO `phone_imei_sequence` VALUES (NULL);
+            SET NEW.`imei` = LPAD(LAST_INSERT_ID(), 15, '0');
+        END IF;
+    END$$
+
+CREATE TRIGGER `trg_phone_numbers_before_update_imei`
+    BEFORE UPDATE ON `phone_numbers`
+    FOR EACH ROW
+    BEGIN
+        IF NEW.`imei` IS NULL OR NEW.`imei` = '' OR NEW.`imei` NOT REGEXP '^[0-9]{15}$' THEN
+            INSERT INTO `phone_imei_sequence` VALUES (NULL);
+            SET NEW.`imei` = LPAD(LAST_INSERT_ID(), 15, '0');
+        END IF;
+    END$$
+
+DELIMITER ;
+
+UPDATE `phone_numbers`
+SET `imei` = NULL
+WHERE `imei` IS NULL
+   OR `imei` = ''
+   OR `imei` NOT REGEXP '^[0-9]{15}$';
 
 -- Contacts
 CREATE TABLE IF NOT EXISTS `phone_contacts` (
