@@ -776,6 +776,11 @@ lib.callback.register('gcphone:snap:toggleLike', function(source, data)
     local account = GetAccount(identifier)
     if not account then return false end
 
+    local snapMs = GetRateLimitWindow('snap', 1500)
+    if HitRateLimit(source, 'snap_like', snapMs, 4) then
+        return false, 'RATE_LIMITED'
+    end
+
     local existing = MySQL.scalar.await(
         'SELECT id FROM phone_snap_likes WHERE post_id = ? AND account_id = ? LIMIT 1',
         { postId, account.id }
@@ -811,6 +816,11 @@ end)
 lib.callback.register('gcphone:snap:deletePost', function(source, postId)
     local identifier = GetIdentifier(source)
     if not identifier then return false end
+
+    local snapMs = GetRateLimitWindow('snap', 1500)
+    if HitRateLimit(source, 'snap_delete', snapMs, 2) then
+        return false, 'RATE_LIMITED'
+    end
     
     local account = GetAccount(identifier)
     if not account then return false end
@@ -826,6 +836,11 @@ end)
 lib.callback.register('gcphone:snap:deleteStory', function(source, storyId)
     local identifier = GetIdentifier(source)
     if not identifier then return false end
+
+    local snapMs = GetRateLimitWindow('snap', 1500)
+    if HitRateLimit(source, 'snap_delete', snapMs, 2) then
+        return false, 'RATE_LIMITED'
+    end
 
     local account = GetAccount(identifier)
     if not account then return false end
@@ -919,6 +934,7 @@ lib.callback.register('gcphone:snap:joinLive', function(source, data)
     local identifier = GetIdentifier(source)
     if not identifier then return false, 'MISSING_IDENTIFIER' end
     if type(data) ~= 'table' then return false, 'INVALID_PAYLOAD' end
+    if HitRateLimit(source, 'snap_live_join', 1000, 4) then return false, 'RATE_LIMITED' end
 
     local liveId = tonumber(data.liveId)
     if not liveId or liveId < 1 then return false, 'INVALID_LIVE' end
@@ -951,6 +967,8 @@ lib.callback.register('gcphone:snap:joinLive', function(source, data)
 end)
 
 lib.callback.register('gcphone:snap:leaveLive', function(source, data)
+    if HitRateLimit(source, 'snap_live_leave', 750, 4) then return false, 'RATE_LIMITED' end
+
     local liveId = tonumber(type(data) == 'table' and data.liveId or data)
     if liveId and liveId > 0 then
         RemoveViewerFromLive(liveId, source)
@@ -1036,6 +1054,7 @@ lib.callback.register('gcphone:snap:removeLiveMessage', function(source, data)
     local identifier = GetIdentifier(source)
     if not identifier then return false, 'MISSING_IDENTIFIER' end
     if type(data) ~= 'table' then return false, 'INVALID_PAYLOAD' end
+    if HitRateLimit(source, 'snap_live_moderation', 1000, 5) then return false, 'RATE_LIMITED' end
 
     local liveId = tonumber(data.liveId)
     local messageId = SanitizeText(data.messageId, 80)
@@ -1061,6 +1080,7 @@ lib.callback.register('gcphone:snap:muteLiveUser', function(source, data)
     local identifier = GetIdentifier(source)
     if not identifier then return false, 'MISSING_IDENTIFIER' end
     if type(data) ~= 'table' then return false, 'INVALID_PAYLOAD' end
+    if HitRateLimit(source, 'snap_live_moderation', 1000, 5) then return false, 'RATE_LIMITED' end
 
     local liveId = tonumber(data.liveId)
     local targetIdentifier = SanitizeText(data.targetIdentifier, 80)

@@ -383,6 +383,7 @@ lib.callback.register('gcphone:news:joinLive', function(source, data)
     local identifier = GetIdentifier(source)
     if not identifier then return false, 'MISSING_IDENTIFIER' end
     if type(data) ~= 'table' then return false, 'INVALID_PAYLOAD' end
+    if HitRateLimit(source, 'news_live_join', 1000, 4) then return false, 'RATE_LIMITED' end
 
     local articleId = tonumber(data.articleId)
     if not articleId or articleId < 1 then return false, 'INVALID_LIVE' end
@@ -415,6 +416,8 @@ lib.callback.register('gcphone:news:joinLive', function(source, data)
 end)
 
 lib.callback.register('gcphone:news:leaveLive', function(source, data)
+    if HitRateLimit(source, 'news_live_leave', 750, 4) then return false, 'RATE_LIMITED' end
+
     local articleId = tonumber(type(data) == 'table' and data.articleId or data)
     if articleId and articleId > 0 then
         RemoveViewerFromLive(articleId, source)
@@ -493,6 +496,7 @@ lib.callback.register('gcphone:news:removeLiveMessage', function(source, data)
     local identifier = GetIdentifier(source)
     if not identifier then return false, 'MISSING_IDENTIFIER' end
     if type(data) ~= 'table' then return false, 'INVALID_PAYLOAD' end
+    if HitRateLimit(source, 'news_live_moderation', 1000, 5) then return false, 'RATE_LIMITED' end
 
     local articleId = tonumber(data.articleId)
     local messageId = SanitizeText(data.messageId, 80)
@@ -518,6 +522,7 @@ lib.callback.register('gcphone:news:muteLiveUser', function(source, data)
     local identifier = GetIdentifier(source)
     if not identifier then return false, 'MISSING_IDENTIFIER' end
     if type(data) ~= 'table' then return false, 'INVALID_PAYLOAD' end
+    if HitRateLimit(source, 'news_live_moderation', 1000, 5) then return false, 'RATE_LIMITED' end
 
     local articleId = tonumber(data.articleId)
     local targetIdentifier = SanitizeText(data.targetIdentifier, 80)
@@ -572,6 +577,7 @@ end)
 lib.callback.register('gcphone:news:endLive', function(source, articleId)
     local identifier = GetIdentifier(source)
     if not identifier then return false end
+    if HitRateLimit(source, 'news_live_end', 1000, 3) then return false end
 
     local id = tonumber(articleId)
     if not id or id < 1 then return false end
@@ -582,6 +588,7 @@ end)
 lib.callback.register('gcphone:news:deleteArticle', function(source, articleId)
     local identifier = GetIdentifier(source)
     if not identifier then return false end
+    if HitRateLimit(source, 'news_delete', 1000, 3) then return false end
 
     local id = tonumber(articleId)
     if not id or id < 1 then return false end
@@ -610,6 +617,7 @@ end)
 lib.callback.register('gcphone:news:viewArticle', function(source, articleId)
     local id = tonumber(articleId)
     if not id or id < 1 then return false end
+    if HitRateLimit(source, 'news_view', 600, 6) then return false end
 
     MySQL.update.await(
         'UPDATE phone_news SET views = views + 1 WHERE id = ?',

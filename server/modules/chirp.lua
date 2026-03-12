@@ -459,6 +459,11 @@ lib.callback.register('gcphone:chirp:toggleLike', function(source, data)
     
     local account = GetAccount(identifier)
     if not account then return false end
+
+    local chirpMs = GetRateLimitWindow('chirp', 1400)
+    if HitRateLimit(source, 'chirp_like', chirpMs, 4) then
+        return false, 'RATE_LIMITED'
+    end
     
     local existing = MySQL.scalar.await(
         'SELECT id FROM phone_chirp_likes WHERE tweet_id = ? AND account_id = ?',
@@ -495,6 +500,11 @@ lib.callback.register('gcphone:chirp:toggleRechirp', function(source, data)
     
     local account = GetAccount(identifier)
     if not account then return false end
+
+    local chirpMs = GetRateLimitWindow('chirp', 1400)
+    if HitRateLimit(source, 'chirp_rechirp', chirpMs, 3) then
+        return false, 'RATE_LIMITED'
+    end
     
     -- Check if already rechirped
     local existing = MySQL.scalar.await(
@@ -564,6 +574,11 @@ lib.callback.register('gcphone:chirp:addComment', function(source, data)
     
     local account = GetAccount(identifier)
     if not account then return false end
+
+    local chirpMs = GetRateLimitWindow('chirp', 1400)
+    if HitRateLimit(source, 'chirp_comment', chirpMs, 2) then
+        return false, 'RATE_LIMITED'
+    end
     
     local commentId = MySQL.insert.await(
         'INSERT INTO phone_chirp_comments (tweet_id, account_id, content) VALUES (?, ?, ?)',
@@ -583,6 +598,11 @@ end)
 lib.callback.register('gcphone:chirp:deleteComment', function(source, data)
     local identifier = GetIdentifier(source)
     if not identifier then return false end
+
+    local chirpMs = GetRateLimitWindow('chirp', 1400)
+    if HitRateLimit(source, 'chirp_delete', chirpMs, 3) then
+        return false, 'RATE_LIMITED'
+    end
 
     if type(data) ~= 'table' then return false end
     local commentId = tonumber(data.commentId)
@@ -610,6 +630,11 @@ end)
 lib.callback.register('gcphone:chirp:deleteTweet', function(source, tweetId)
     local identifier = GetIdentifier(source)
     if not identifier then return false end
+
+    local chirpMs = GetRateLimitWindow('chirp', 1400)
+    if HitRateLimit(source, 'chirp_delete', chirpMs, 3) then
+        return false, 'RATE_LIMITED'
+    end
     
     local account = GetAccount(identifier)
     if not account then return false end
