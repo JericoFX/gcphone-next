@@ -16,6 +16,13 @@ import { AppScaffold } from '../../shared/layout';
 import { t } from '../../../i18n';
 import styles from './GalleryApp.module.scss';
 
+const GALLERY_ICONS = {
+  close: './img/icons_ios/ui-close.svg',
+  left: './img/icons_ios/ui-chevron-left.svg',
+  right: './img/icons_ios/ui-chevron-right.svg',
+  options: './img/icons_ios/ui-more.svg',
+} as const;
+
 function PlainIconButton(props: {
   class?: string;
   onClick: () => void;
@@ -239,17 +246,20 @@ export function GalleryApp() {
 
       <Show when={selectedPhoto()}>
         <div class={styles.viewer}>
-          <PlainIconButton class={styles.closeBtn} onClick={() => setSelectedPhoto(null)} label={t('control.close', language())} icon="./img/icons_ios/ui-close.svg" />
+          <PlainIconButton class={styles.closeBtn} onClick={() => setSelectedPhoto(null)} label={t('control.close', language())} icon={GALLERY_ICONS.close} />
           <button class={styles.navBtn} classList={{ [styles.disabled]: currentPhotoIndex() <= 0 }} onClick={() => viewOffset(-1)}>
-            ‹
+            <img src={GALLERY_ICONS.left} alt="" draggable={false} />
           </button>
           <button class={styles.navBtn} classList={{ [styles.next]: true, [styles.disabled]: currentPhotoIndex() >= photos().length - 1 }} onClick={() => viewOffset(1)}>
-            ›
+            <img src={GALLERY_ICONS.right} alt="" draggable={false} />
           </button>
           <img src={selectedPhoto().url} alt="Photo" />
           <div class={styles.counter}>{Math.max(0, currentPhotoIndex() + 1)} / {visiblePhotos().length}</div>
           <div class={styles.actions}>
-            <button onClick={() => setShowActions(true)}>{t('gallery.options', language())}</button>
+            <button onClick={() => setShowActions(true)}>
+              <img src={GALLERY_ICONS.options} alt="" draggable={false} />
+              <span>{t('gallery.options', language())}</span>
+            </button>
           </div>
         </div>
       </Show>

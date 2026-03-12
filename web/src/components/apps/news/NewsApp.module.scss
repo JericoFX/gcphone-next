@@ -330,6 +330,12 @@
   place-items: center;
 }
 
+.liveUtilityButton img {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+}
+
 .liveOwnerInfo {
   gap: 2px;
 }
@@ -487,6 +493,12 @@
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.08);
   color: #fff;
+}
+
+.liveModerationCol button img {
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
 }
 
 .liveMutedBanner {

@@ -57,7 +57,7 @@ export function GlobalChatPanel(props: Props) {
       <div class={styles.globalChatPanel}>
         <div class={styles.globalChatHeader}>
           <h3>{t('snap.live_chat', language())}</h3>
-          <button class={styles.closeBtn} onClick={props.onClose}>✕</button>
+          <button class={styles.closeBtn} onClick={props.onClose}><img src="./img/icons_ios/ui-close.svg" alt="" draggable={false} /></button>
         </div>
         
         <div class={styles.globalChatMessages}>
@@ -86,10 +86,10 @@ export function GlobalChatPanel(props: Props) {
                 <Show when={props.isOwner && selectedMessage() === message.id}>
                   <div class={styles.moderationMenu}>
                     <button onClick={() => handleDelete(message.id)}>
-                      🗑 {t('wavechat.delete_message', language())}
+                      <img src="./img/icons_ios/ui-trash.svg" alt="" draggable={false} /><span>{t('wavechat.delete_message', language())}</span>
                     </button>
                     <button onClick={() => handleMute(message.username)}>
-                      🚫 {t('wavechat.mute_user', language())}
+                      <img src="./img/icons_ios/ui-block.svg" alt="" draggable={false} /><span>{t('wavechat.mute_user', language())}</span>
                     </button>
                   </div>
                 </Show>

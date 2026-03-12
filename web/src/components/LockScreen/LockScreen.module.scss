@@ -676,6 +676,15 @@
   border-radius: 50%;
   color: #fff;
   font-size: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bottom-btn img {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
 }
 
 .bottom-btn-active {

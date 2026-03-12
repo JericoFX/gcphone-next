@@ -667,13 +667,13 @@ export function ChirpApp() {
         </button>
 
         <button class={styles.actionBtn} onClick={props.onComment}>
-          <span class={styles.icon}>💬</span>
+          <span class={styles.icon}><img src="./img/icons_ios/ui-chat.svg" alt="" draggable={false} /></span>
           <span class={styles.count}>{tweet.replies || 0}</span>
         </button>
 
         <Show when={tweet.is_own && props.onDelete}>
           <button class={styles.actionBtn} onClick={(e) => props.onDelete?.(e, tweet.id)}>
-            <span class={styles.icon}>🗑</span>
+            <span class={styles.icon}><img src="./img/icons_ios/ui-trash.svg" alt="" draggable={false} /></span>
           </button>
         </Show>
       </div>
@@ -712,7 +712,7 @@ export function ChirpApp() {
           <div class={styles.tweetMeta}>
             <div class={styles.nameRow}>
               <strong>{tweet.display_name || 'Usuario'}</strong>
-              {tweet.verified && <span class={styles.verified}>✓</span>}
+              {tweet.verified && <span class={styles.verified}><img src="./img/icons_ios/ui-check.svg" alt="" draggable={false} /></span>}
               <span class={styles.username}>@{tweet.username || 'user'}</span>
             </div>
             <span class={styles.time}>{(tweet.activity_created_at || tweet.created_at) ? timeAgo(tweet.activity_created_at || tweet.created_at) : 'ahora'}</span>
@@ -857,7 +857,7 @@ export function ChirpApp() {
               <div class={styles.tweetMeta}>
                 <div class={styles.nameRow}>
                   <strong>{tweet.display_name || t('chirp.user', language())}</strong>
-                  {tweet.verified && <span class={styles.verified}>✓</span>}
+                  {tweet.verified && <span class={styles.verified}><img src="./img/icons_ios/ui-check.svg" alt="" draggable={false} /></span>}
                 </div>
                 <span class={styles.username}>@{tweet.username || 'user'}</span>
               </div>
@@ -1036,10 +1036,10 @@ export function ChirpApp() {
           <div class={styles.composerActions}>
             <MediaActionButtons
               actions={[
-                { icon: '📷', label: t('chirp.camera', language()), onClick: openCamera },
-                { icon: '🖼', label: t('chirp.gallery', language()), onClick: attachFromGallery },
-                { icon: '🔗', label: 'URL', onClick: attachByUrl },
-                ...(composerMedia() ? [{ icon: '✕', label: t('chirp.remove', language()), onClick: () => setComposerMedia(''), tone: 'danger' as const }] : []),
+                { icon: './img/icons_ios/camera.svg', label: t('chirp.camera', language()), onClick: openCamera },
+                { icon: './img/icons_ios/gallery.svg', label: t('chirp.gallery', language()), onClick: attachFromGallery },
+                { icon: './img/icons_ios/ui-link.svg', label: 'URL', onClick: attachByUrl },
+                ...(composerMedia() ? [{ icon: './img/icons_ios/ui-close.svg', label: t('chirp.remove', language()), onClick: () => setComposerMedia(''), tone: 'danger' as const }] : []),
               ]}
               variant="compact"
             />
@@ -1072,10 +1072,10 @@ export function ChirpApp() {
           <div class={styles.composerActions}>
             <MediaActionButtons
               actions={[
-                { icon: '📷', label: t('chirp.camera', language()), onClick: () => rechirpTarget() && openCamera('chirp-rechirp', getActionTweetId(rechirpTarget()!)) },
-                { icon: '🖼', label: t('chirp.gallery', language()), onClick: async () => { setAttachUrlTarget('rechirp'); await attachFromGallery(); } },
-                { icon: '🔗', label: 'URL', onClick: () => attachByUrl('rechirp') },
-                ...(rechirpMedia() ? [{ icon: '✕', label: t('chirp.remove', language()), onClick: () => setRechirpMedia(''), tone: 'danger' as const }] : []),
+                { icon: './img/icons_ios/camera.svg', label: t('chirp.camera', language()), onClick: () => rechirpTarget() && openCamera('chirp-rechirp', getActionTweetId(rechirpTarget()!)) },
+                { icon: './img/icons_ios/gallery.svg', label: t('chirp.gallery', language()), onClick: async () => { setAttachUrlTarget('rechirp'); await attachFromGallery(); } },
+                { icon: './img/icons_ios/ui-link.svg', label: 'URL', onClick: () => attachByUrl('rechirp') },
+                ...(rechirpMedia() ? [{ icon: './img/icons_ios/ui-close.svg', label: t('chirp.remove', language()), onClick: () => setRechirpMedia(''), tone: 'danger' as const }] : []),
               ]}
               variant="compact"
             />

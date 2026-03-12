@@ -65,10 +65,24 @@
 .icon {
   font-size: 20px;
   line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.icon img {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
 }
 
 .tiles .icon {
   font-size: 32px;
+}
+
+.tiles .icon img {
+  width: 28px;
+  height: 28px;
 }
 
 .label {

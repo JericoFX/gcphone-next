@@ -82,8 +82,13 @@
   border-radius: 8px;
   display: grid;
   place-items: center;
-  font-size: 16px;
   flex: 0 0 auto;
+}
+
+.cell-icon-image {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
 }
 
 .cell-text {
@@ -189,6 +194,18 @@
   margin-bottom: var(--s-3, 12px);
   font-size: var(--fs-body, 1rem);
   color: var(--text, #111111);
+}
+
+.brightness-title {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2, 8px);
+}
+
+.inline-icon {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
 }
 
 .brightness-value {
@@ -299,6 +316,12 @@
   }
 }
 
+.action-icon {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+}
+
 /* Custom URL Input */
 .custom-url {
   display: flex;
@@ -398,9 +421,15 @@
   width: 28px;
   height: 28px;
   border-radius: 8px;
-  display: grid;
-  place-items: center;
-  font-size: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-2, #F7F7FA);
+  border: 1px solid var(--border, rgba(0,0,0,.12));
+  font-size: var(--fs-caption1, 0.75rem);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--text-2, rgba(17,17,17,.72));
 }
 
 .lang-name {
@@ -410,8 +439,19 @@
 }
 
 .checkmark {
-  color: var(--tint, #007AFF);
-  font-weight: 600;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--tint, #007AFF) 14%, transparent);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.check-icon {
+  width: 12px;
+  height: 12px;
+  object-fit: contain;
 }
 
 /* Volume Section */
@@ -460,9 +500,20 @@
 }
 
 .profile-icon {
-  font-size: 20px;
   width: 28px;
-  text-align: center;
+  height: 28px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-2, #F7F7FA);
+  border: 1px solid var(--border, rgba(0,0,0,.12));
+}
+
+.profile-icon-image {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
 }
 
 .profile-info {
@@ -508,8 +559,13 @@
   border-radius: 8px;
   display: grid;
   place-items: center;
-  font-size: 14px;
   background: rgba(120, 120, 128, 0.16);
+}
+
+.ringtone-icon-image {
+  width: 15px;
+  height: 15px;
+  object-fit: contain;
 }
 
 .ringtone-name {
@@ -539,6 +595,12 @@
   &:hover {
     background: rgba(120, 120, 128, 0.24);
   }
+}
+
+.preview-icon {
+  width: 13px;
+  height: 13px;
+  object-fit: contain;
 }
 
 .select-btn {
@@ -646,6 +708,12 @@
   }
 }
 
+.keypad-icon {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+}
+
 .pin-message {
   margin-top: var(--s-4, 16px);
   padding: var(--s-3, 12px) var(--s-4, 16px);
@@ -737,6 +805,12 @@
   justify-content: center;
 }
 
+.ok-icon-image {
+  width: 12px;
+  height: 12px;
+  object-fit: contain;
+}
+
 .clear-btn {
   width: 100%;
   padding: var(--s-3, 12px);
@@ -823,12 +897,17 @@
   width: 64px;
   height: 64px;
   border-radius: var(--r-xl, 20px);
-  background: rgba(120, 120, 128, 0.16);
+  background: transparent;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 32px;
   margin-bottom: var(--s-2, 8px);
+}
+
+.about-icon-image {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
 }
 
 .about-name {

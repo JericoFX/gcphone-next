@@ -29,7 +29,7 @@ export function MediaAttachmentPreview(props: MediaAttachmentPreviewProps) {
 
         <Show when={props.removable && props.onRemove}>
           <button class={styles.removeButton} classList={{ [props.removeClass || '']: !!props.removeClass }} onClick={props.onRemove}>
-            {props.removeLabel || '✕'}
+            {props.removeLabel || <img src="./img/icons_ios/ui-close.svg" alt="" draggable={false} />}
           </button>
         </Show>
       </div>

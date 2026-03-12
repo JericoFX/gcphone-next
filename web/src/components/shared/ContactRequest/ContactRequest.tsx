@@ -71,7 +71,7 @@ export function ContactRequestNotification() {
       <Show when={contactRequest()}>
         {(request) => (
           <div class={styles.notification}>
-            <div class={styles.icon}>📱</div>
+            <div class={styles.icon}><img src="./img/icons_ios/ui-phone.svg" alt="" draggable={false} /></div>
             <div class={styles.content}>
               <div class={styles.title}>Solicitud de contacto</div>
               <div class={styles.message}>{request().fromPlayer} quiere compartir un contacto</div>
@@ -81,8 +81,8 @@ export function ContactRequestNotification() {
               </div>
             </div>
             <div class={styles.actions}>
-              <button class={styles.accept} onClick={handleAcceptContact}>✓</button>
-              <button class={styles.reject} onClick={handleRejectContact}>✕</button>
+              <button class={styles.accept} onClick={handleAcceptContact}><img src="./img/icons_ios/ui-check.svg" alt="" draggable={false} /></button>
+              <button class={styles.reject} onClick={handleRejectContact}><img src="./img/icons_ios/ui-close.svg" alt="" draggable={false} /></button>
             </div>
           </div>
         )}
@@ -91,14 +91,14 @@ export function ContactRequestNotification() {
       <Show when={friendRequest()}>
         {(request) => (
           <div class={styles.notification}>
-            <div class={styles.icon}>👥</div>
+            <div class={styles.icon}><img src="./img/icons_ios/ui-user.svg" alt="" draggable={false} /></div>
             <div class={styles.content}>
               <div class={styles.title}>Solicitud de amistad ({request().type})</div>
               <div class={styles.message}>{request().fromPlayer} quiere ser tu amigo</div>
             </div>
             <div class={styles.actions}>
-              <button class={styles.accept} onClick={handleAcceptFriend}>✓</button>
-              <button class={styles.reject} onClick={handleRejectFriend}>✕</button>
+              <button class={styles.accept} onClick={handleAcceptFriend}><img src="./img/icons_ios/ui-check.svg" alt="" draggable={false} /></button>
+              <button class={styles.reject} onClick={handleRejectFriend}><img src="./img/icons_ios/ui-close.svg" alt="" draggable={false} /></button>
             </div>
           </div>
         )}
@@ -107,7 +107,7 @@ export function ContactRequestNotification() {
       <Show when={sharedLocation()}>
         {(location) => (
           <div class={styles.notification}>
-            <div class={styles.icon}>📍</div>
+            <div class={styles.icon}><img src="./img/icons_ios/ui-location.svg" alt="" draggable={false} /></div>
             <div class={styles.content}>
               <div class={styles.title}>Ubicación compartida</div>
               <div class={styles.message}>{location().from} te ha compartido su ubicación</div>
@@ -120,9 +120,9 @@ export function ContactRequestNotification() {
                   setSharedLocation(null);
                 }}
               >
-                🗺️
+                <img src="./img/icons_ios/maps.svg" alt="" draggable={false} />
               </button>
-              <button class={styles.reject} onClick={() => setSharedLocation(null)}>✕</button>
+              <button class={styles.reject} onClick={() => setSharedLocation(null)}><img src="./img/icons_ios/ui-close.svg" alt="" draggable={false} /></button>
             </div>
           </div>
         )}
