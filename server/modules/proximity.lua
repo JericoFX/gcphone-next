@@ -2,6 +2,17 @@
 
 local USE_SQL_CLEANUP_EVENTS = GetConvar('gcphone_sql_cleanup_events', '0') == '1'
 local SecurityResource = GetCurrentResourceName()
+local SharedLocationLabels = {
+    es = 'Ubicacion compartida',
+    en = 'Shared location',
+    pt = 'Localizacao compartilhada',
+    fr = 'Position partagee',
+}
+
+local function LocaleText(source, labels, fallback)
+    local lang = type(GetPhoneLanguageForSource) == 'function' and GetPhoneLanguageForSource(source, true) or 'es'
+    return labels[lang] or labels.es or fallback
+end
 
 local function HitRateLimit(source, key, windowMs, maxHits)
     local ok, blocked = pcall(function()
@@ -141,7 +152,7 @@ lib.callback.register('gcphone:proximity:shareLocation', function(source, data)
         x = sourceCoords.x,
         y = sourceCoords.y,
         z = sourceCoords.z,
-        message = data.message or 'Ubicación compartida',
+        message = data.message or LocaleText(source, SharedLocationLabels, 'Ubicacion compartida'),
         expiresAt = expiresAt
     })
     

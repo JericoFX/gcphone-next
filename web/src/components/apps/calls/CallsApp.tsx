@@ -13,6 +13,7 @@ import { InlineNotice } from '../../shared/ui/InlineNotice';
 import { LetterAvatar } from '../../shared/ui/LetterAvatar';
 import { AppFAB, AppScaffold, AppTabs } from '../../shared/layout';
 import { useNotifications } from '../../../store/notifications';
+import { t } from '../../../i18n';
 import { fetchLiveKitToken } from '../../../utils/realtimeAuth';
 import { connectLiveKit, disconnectLiveKit, setLiveKitCameraEnabled, setLiveKitMicrophoneEnabled, getCallRemainingTime } from '../../../utils/livekit';
 import type { Call } from '../../../types';
@@ -44,6 +45,7 @@ export function CallsApp() {
   const [videoStatus, setVideoStatus] = createSignal('');
   const [videoParticipants, setVideoParticipants] = createSignal<string[]>([]);
   const [localVideoIdentity, setLocalVideoIdentity] = createSignal('');
+  const language = () => phoneState.settings.language || 'es';
   const mediaHosts = new Map<string, HTMLDivElement>();
   const participantTracks = new Map<string, MediaTrackEntry[]>();
   const isReadOnly = () => phoneState.accessMode === 'foreign-readonly';
@@ -330,9 +332,9 @@ export function CallsApp() {
       upsertParticipant(local);
       upsertParticipant(remote);
       setVideoMode(true);
-      setVideoStatus('Video activo');
+      setVideoStatus(t('calls.video_active', language()));
     } catch (_err) {
-      setVideoStatus('Error de conexion de video');
+      setVideoStatus(t('calls.video_error', language()));
       disconnectLiveKit();
     }
   };
@@ -385,10 +387,10 @@ export function CallsApp() {
   const keypadKeys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#'];
 
   const tabs: TabItem[] = [
-    { id: 'favorites', label: 'Favoritos', icon: './img/icons_ios/star-fill.svg' },
-    { id: 'recents', label: 'Recientes', icon: './img/icons_ios/clock.svg' },
-    { id: 'contacts', label: 'Contactos', icon: './img/icons_ios/person.svg' },
-    { id: 'keypad', label: 'Teclado', icon: './img/icons_ios/grid.svg' },
+    { id: 'favorites', label: t('calls.tab.favorites', language()), icon: './img/icons_ios/star-fill.svg' },
+    { id: 'recents', label: t('calls.tab.recents', language()), icon: './img/icons_ios/clock.svg' },
+    { id: 'contacts', label: t('calls.tab.contacts', language()), icon: './img/icons_ios/person.svg' },
+    { id: 'keypad', label: t('calls.tab.keypad', language()), icon: './img/icons_ios/grid.svg' },
   ];
   
   return (
@@ -396,14 +398,14 @@ export function CallsApp() {
       when={inCall()}
       fallback={
         <AppScaffold
-          title="Llamadas"
+          title={t('calls.title', language())}
           onBack={() => router.goBack()}
           footer={<AppTabs tabs={tabs} active={activeTab()} onChange={(id) => setActiveTab(id as TabType)} />}
           footerFixed
         >
           <div class={styles.content}>
             <Show when={isReadOnly()}>
-              <InlineNotice title="Solo lectura" message={`Estas viendo el historial de llamadas de ${phoneState.accessOwnerName || 'otra persona'}.`} />
+              <InlineNotice title={t('calls.readonly_title', language())} message={t('calls.readonly_message', language(), { name: phoneState.accessOwnerName || t('common.other_person', language()) })} />
             </Show>
             <Show when={activeTab() === 'keypad'}>
               <div class={styles.keypadView}>
@@ -429,13 +431,13 @@ export function CallsApp() {
                   onClick={() => dialNumber() && startCall(dialNumber())}
                    disabled={!dialNumber() || isReadOnly()}
                  >
-                  <img src="./img/icons_ios/phone-solid.svg" alt="Llamar" />
+                  <img src="./img/icons_ios/phone-solid.svg" alt={t('calls.call', language())} />
                 </button>
               </div>
             </Show>
             
             <Show when={activeTab() === 'recents'}>
-              <Show when={loading()} fallback={<ScreenState loading={false} empty={callHistory().length === 0} emptyTitle="Sin llamadas" emptyDescription="Tu historial aparecera aqui.">
+              <Show when={loading()} fallback={<ScreenState loading={false} empty={callHistory().length === 0} emptyTitle={t('calls.empty_history_title', language())} emptyDescription={t('calls.empty_history_desc', language())}>
               <div class={styles.historyList}>
                 <For each={callHistory()}>
                   {(call) => (
@@ -447,7 +449,7 @@ export function CallsApp() {
                           [styles.outgoing]: !call.incoming
                         }}
                       >
-                        <img src={getHistoryIcon(call)} alt="estado" />
+                        <img src={getHistoryIcon(call)} alt={t('calls.status', language())} />
                       </div>
                       <div class={styles.info}>
                         <span class={styles.number}>
@@ -460,14 +462,14 @@ export function CallsApp() {
                           onClick={() => startCall(call.num)}
                           disabled={isReadOnly()}
                         >
-                        <img src="./img/icons_ios/phone-solid.svg" alt="Llamar" />
+                        <img src="./img/icons_ios/phone-solid.svg" alt={t('calls.call', language())} />
                       </button>
                         <button
                           class={styles.callbackBtn}
                           onClick={() => startCall(call.num)}
                           disabled={isReadOnly()}
                         >
-                        Devolver
+                        {t('calls.callback', language())}
                       </button>
                     </div>
                   )}
@@ -480,12 +482,12 @@ export function CallsApp() {
             
             <Show when={activeTab() === 'favorites'}>
               <div class={styles.emptyState}>
-                <span>No hay favoritos</span>
+                <span>{t('calls.no_favorites', language())}</span>
               </div>
             </Show>
             
             <Show when={activeTab() === 'contacts'}>
-              <Show when={loading()} fallback={<ScreenState loading={false} empty={contacts().length === 0} emptyTitle="Sin contactos" emptyDescription="Agrega contactos para llamar rapido.">
+              <Show when={loading()} fallback={<ScreenState loading={false} empty={contacts().length === 0} emptyTitle={t('calls.empty_contacts_title', language())} emptyDescription={t('calls.empty_contacts_desc', language())}>
                 <div class={styles.historyList}>
                   <For each={contacts()}>
                     {(contact) => (
@@ -514,12 +516,12 @@ export function CallsApp() {
 
           <ActionSheet
             open={!isReadOnly() && showQuickActions()}
-            title="Nueva accion"
+            title={t('calls.new_action', language())}
             onClose={() => setShowQuickActions(false)}
             actions={[
-              { label: 'Nuevo numero', tone: 'primary', onClick: () => { setActiveTab('keypad'); } },
-              { label: 'Recientes', onClick: () => { setActiveTab('recents'); } },
-              { label: 'Contactos', onClick: () => { setActiveTab('contacts'); } },
+              { label: t('calls.new_number', language()), tone: 'primary', onClick: () => { setActiveTab('keypad'); } },
+              { label: t('calls.tab.recents', language()), onClick: () => { setActiveTab('recents'); } },
+              { label: t('calls.tab.contacts', language()), onClick: () => { setActiveTab('contacts'); } },
             ]}
           />
         </AppScaffold>
@@ -542,6 +544,8 @@ export function CallsApp() {
 }
 
 function ActiveCallView(props: { callInfo: any; framework: 'esx' | 'qbcore' | 'qbox' | 'unknown'; videoMode: boolean; videoStatus: string; videoParticipants: string[]; onMediaHost: (identity: string, element?: HTMLDivElement) => void; onStartVideo: () => void; onToggleMute: (nextMuted: boolean) => Promise<void>; onRejectWithMessage: () => void; onEnd: () => void }) {
+  const phoneState = usePhoneState();
+  const language = () => phoneState.settings.language || 'es';
   const [duration, setDuration] = createSignal(0);
   const [muted, setMuted] = createSignal(false);
   const [speaker, setSpeaker] = createSignal(false);
@@ -599,11 +603,11 @@ function ActiveCallView(props: { callInfo: any; framework: 'esx' | 'qbcore' | 'q
           {(props.callInfo?.displayName || props.callInfo?.receiverNum)?.charAt(0) || '?'}
         </div>
         <div class={styles.name}>
-          {props.callInfo?.displayName || (props.callInfo?.receiverNum ? formatPhoneNumber(props.callInfo.receiverNum, props.framework) : 'Llamando...')}
+          {props.callInfo?.displayName || (props.callInfo?.receiverNum ? formatPhoneNumber(props.callInfo.receiverNum, props.framework) : t('calls.calling', language()))}
         </div>
         <Show when={remainingTime() !== null && remainingTime()! > 0 && remainingTime()! <= 60 && props.videoMode}>
           <div class={styles.callTimer}>
-            <span class={styles.timerWarning}>Limite: {formatRemainingTime(remainingTime()!)}</span>
+            <span class={styles.timerWarning}>{t('calls.limit', language())}: {formatRemainingTime(remainingTime()!)}</span>
           </div>
         </Show>
         <div class={styles.status}>
@@ -620,37 +624,37 @@ function ActiveCallView(props: { callInfo: any; framework: 'esx' | 'qbcore' | 'q
             void props.onToggleMute(!muted())
           }}
         >
-          <span class={styles.icon}><img src="./img/icons_ios/mic-off.svg" alt="Silenciar" /></span>
-          <span class={styles.label}>Silenciar</span>
+          <span class={styles.icon}><img src="./img/icons_ios/mic-off.svg" alt={t('calls.mute', language())} /></span>
+          <span class={styles.label}>{t('calls.mute', language())}</span>
         </button>
         <button
           class={styles.actionBtn}
           classList={{ [styles.active]: speaker() }}
           onClick={() => setSpeaker(!speaker())}
         >
-          <span class={styles.icon}><img src="./img/icons_ios/speaker.svg" alt="Altavoz" /></span>
-          <span class={styles.label}>Altavoz</span>
+          <span class={styles.icon}><img src="./img/icons_ios/speaker.svg" alt={t('calls.speaker', language())} /></span>
+          <span class={styles.label}>{t('calls.speaker', language())}</span>
         </button>
         <button class={styles.actionBtn}>
-          <span class={styles.icon}><img src="./img/icons_ios/add-call.svg" alt="Añadir" /></span>
-          <span class={styles.label}>Añadir</span>
+          <span class={styles.icon}><img src="./img/icons_ios/add-call.svg" alt={t('calls.add', language())} /></span>
+          <span class={styles.label}>{t('calls.add', language())}</span>
         </button>
         <button class={styles.actionBtn} onClick={props.onStartVideo}>
           <span class={styles.icon}><img src="./img/icons_ios/video-call.svg" alt="Video" /></span>
-          <span class={styles.label}>Video</span>
+          <span class={styles.label}>{t('calls.video', language())}</span>
         </button>
       </div>
 
       <Show when={!props.videoMode}>
-        <button class={styles.startVideoBtn} onClick={props.onStartVideo}>Iniciar video</button>
+        <button class={styles.startVideoBtn} onClick={props.onStartVideo}>{t('calls.start_video', language())}</button>
       </Show>
 
       <Show when={props.callInfo?.incoming === true}>
-        <button class={styles.rejectMessageBtn} onClick={props.onRejectWithMessage}>Rechazar con mensaje</button>
+        <button class={styles.rejectMessageBtn} onClick={props.onRejectWithMessage}>{t('calls.reject_with_message', language())}</button>
       </Show>
 
       <button class={styles.endCallBtn} onClick={props.onEnd}>
-        <img src="./img/icons_ios/phone-end.svg" alt="Colgar" />
+        <img src="./img/icons_ios/phone-end.svg" alt={t('calls.hangup', language())} />
       </button>
     </div>
   )

@@ -618,6 +618,14 @@ function GetPhoneOwnerIdentifier(source, allowForeign)
     return GetIdentifier(source)
 end
 
+function GetPhoneLanguageForSource(source, allowForeign)
+    local identifier = GetPhoneOwnerIdentifier(source, allowForeign)
+    if not identifier then return 'es' end
+
+    local phone = GetPhoneByIdentifier(identifier)
+    return SafeLanguage(phone and phone.language) or 'es'
+end
+
 function IsPhoneReadOnly(source)
     local context = GetPhoneAccessContext(source)
     return context and context.readOnly == true or false

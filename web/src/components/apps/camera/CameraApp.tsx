@@ -165,11 +165,11 @@ export function CameraApp() {
     const mediaUrl = sanitizeMediaUrl(result?.url);
     if (!mediaUrl) {
       setBusy(false);
-      if (result?.error === 'upload_not_configured') {
-        setError('Subida no configurada');
-      } else {
-        setError('Captura cancelada');
-      }
+        if (result?.error === 'upload_not_configured') {
+          setError(t('camera.error.upload_not_configured', language()));
+        } else {
+          setError(t('camera.error.capture_cancelled', language()));
+        }
       return;
     }
 
@@ -195,14 +195,14 @@ export function CameraApp() {
       router.navigate('clips', { avatarMedia: mediaUrl, openProfile: '1' });
     } else if (target() === 'chirp') {
       await fetchNui('chirpPublishTweet', {
-        content: 'Nueva foto',
+        content: t('camera.new_photo', language()),
         mediaUrl,
       });
       router.navigate('chirp');
     } else if (target() === 'chirp-rechirp') {
       router.navigate('chirp', { rechirpMedia: mediaUrl, openRechirp: '1', rechirpTweetId: String(router.params().rechirpTweetId || '') });
     } else if (target() === 'clips') {
-      setError('Clips requiere video');
+      setError(t('camera.error.clips_requires_video', language()));
     }
 
     setBusy(false);
@@ -232,18 +232,18 @@ export function CameraApp() {
     const mediaUrl = sanitizeMediaUrl(lastUrl());
     if (!mediaUrl) return;
     await fetchNui('chirpPublishTweet', {
-      content: 'Nueva foto',
+      content: t('camera.new_photo', language()),
       mediaUrl,
     });
     router.navigate('chirp');
   };
 
   const publishClipFromUrl = async () => {
-    const input = await uiPrompt('URL del video (mp4/webm/mov)', { title: 'Publicar clip' });
+    const input = await uiPrompt(t('camera.prompt.video_url', language()), { title: t('camera.publish_clip', language()) });
     const videoUrl = sanitizeMediaUrl(input);
     if (!videoUrl || resolveMediaType(videoUrl) !== 'video') {
       if (input && input.trim()) {
-        setError('URL invalida');
+        setError(t('camera.error.invalid_url', language()));
       }
       return false;
     }
@@ -258,7 +258,7 @@ export function CameraApp() {
       return true;
     }
 
-    setError('No se pudo publicar');
+    setError(t('camera.error.publish_failed', language()));
     return false;
   };
 
@@ -283,7 +283,7 @@ export function CameraApp() {
       return true;
     }
 
-    setError('No se pudo publicar');
+    setError(t('camera.error.publish_failed', language()));
     return false;
   };
 
@@ -312,11 +312,11 @@ export function CameraApp() {
         if (!galleryOk) {
           const urlOk = await publishClipFromUrl();
           if (!urlOk) {
-            setError('Grabacion no disponible; usa galeria o URL');
+            setError(t('camera.error.recording_unavailable', language()));
           }
         }
       } else {
-        setError('Error al grabar');
+        setError(t('camera.error.record_failed', language()));
       }
       return;
     }
@@ -331,7 +331,7 @@ export function CameraApp() {
       return;
     }
 
-    setError('No se pudo publicar');
+    setError(t('camera.error.publish_failed', language()));
   };
 
   const cycleEffect = () => {
@@ -390,7 +390,7 @@ export function CameraApp() {
             <button
               class={styles.iconBtn}
               onClick={() => void closeCamera()}
-              title="Cerrar"
+              title={t('control.close', language())}
             >
               ✕
             </button>
@@ -414,10 +414,10 @@ export function CameraApp() {
 
         <div class={styles.minimalRow}>
           <button class={styles.minimalBtn} classList={{ [styles.minimalBtnActive]: flash() }} onClick={() => setFlash((v) => !v)}>
-            Flash
+            {t('camera.flash', language())}
           </button>
           <button class={styles.minimalBtn} classList={{ [styles.minimalBtnActive]: selfie() }} onClick={() => setSelfie((v) => !v)}>
-            Selfie
+            {t('camera.selfie', language())}
           </button>
           <button class={styles.minimalBtn} onClick={() => void cycleZoom()}>{currentZoomLabel()}</button>
           <button class={styles.minimalBtn} onClick={cycleEffect}>{EFFECTS.find((item) => item.id === effect())?.label || 'Normal'}</button>
@@ -425,7 +425,7 @@ export function CameraApp() {
 
         <Show when={target() === 'clips'}>
           <div class={styles.clipsRow}>
-            <Show when={videoSupported()} fallback={<button class={styles.clipsBtn} disabled>Video no disponible</button>}>
+            <Show when={videoSupported()} fallback={<button class={styles.clipsBtn} disabled>{t('camera.video_unavailable', language())}</button>}>
               <button class={`${styles.clipsBtn} ${styles.clipsBtnPrimary}`} onClick={() => void publishClipFromRecording()}>
                 {t('camera.record_clip', language())}
               </button>
@@ -456,10 +456,10 @@ export function CameraApp() {
 
       <Show when={lastUrl()}>
         <div class={styles.lastRow}>
-          <img src={lastUrl()} alt="Última" />
+          <img src={lastUrl()} alt={t('camera.last_capture', language())} />
           <div class={styles.lastActions}>
-            <button onClick={() => void shareSnapPost()}>Snap Post</button>
-            <button onClick={() => void shareSnapStory()}>Snap Story</button>
+            <button onClick={() => void shareSnapPost()}>{t('camera.snap_post', language())}</button>
+            <button onClick={() => void shareSnapStory()}>{t('camera.snap_story', language())}</button>
             <button onClick={() => void shareChirp()}>Chirp</button>
           </div>
         </div>

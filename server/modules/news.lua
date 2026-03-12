@@ -1,6 +1,12 @@
 -- Creado/Modificado por JericoFX
 
 local Utils = GcPhoneUtils
+local LiveNewsDefaults = {
+    es = { title = 'Transmision en vivo', content = 'Cobertura en vivo' },
+    en = { title = 'Live broadcast', content = 'Live coverage' },
+    pt = { title = 'Transmissao ao vivo', content = 'Cobertura ao vivo' },
+    fr = { title = 'Diffusion en direct', content = 'Couverture en direct' },
+}
 
 local function SanitizeText(value, maxLength)
     return Utils.SanitizeText(value, maxLength or 3000, true)
@@ -346,8 +352,10 @@ lib.callback.register('gcphone:news:startLive', function(source, data)
     local title = SanitizeText(data.title, 200)
     local content = SanitizeText(data.content, 3000)
     local category = SanitizeText(data.category, 30)
-    if title == '' then title = 'Transmision en vivo' end
-    if content == '' then content = 'Cobertura en vivo' end
+    local lang = type(GetPhoneLanguageForSource) == 'function' and GetPhoneLanguageForSource(source, true) or 'es'
+    local defaults = LiveNewsDefaults[lang] or LiveNewsDefaults.es
+    if title == '' then title = defaults.title end
+    if content == '' then content = defaults.content end
     if category == '' then category = 'general' end
 
     local scaleform = SanitizeScaleform(data.scaleform)

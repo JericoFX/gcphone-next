@@ -118,7 +118,7 @@ export function SettingsApp() {
       const response = await fetchNui<{ success?: boolean }>('stopLiveLocation', {}, { success: false });
       if (response?.success) {
         setLiveLocationEnabled(false);
-        setLiveLocationStatus('Ubicación activa desactivada');
+        setLiveLocationStatus(t('settings.live_disabled', language()));
       }
       return;
     }
@@ -129,7 +129,7 @@ export function SettingsApp() {
       .filter((value) => value.length > 0);
 
     if (recipients.length === 0) {
-      setLiveLocationStatus('No tienes contactos para compartir');
+      setLiveLocationStatus(t('settings.no_contacts_share', language()));
       return;
     }
 
@@ -142,18 +142,18 @@ export function SettingsApp() {
 
     if (response?.success) {
       setLiveLocationEnabled(true);
-      setLiveLocationStatus(`Ubicación activa cada ${liveLocationInterval()}s`);
+      setLiveLocationStatus(t('settings.live_enabled_every', language(), { seconds: liveLocationInterval() }));
       return;
     }
 
-    setLiveLocationStatus(response?.error || 'No se pudo activar ubicación');
+    setLiveLocationStatus(response?.error || t('settings.live_enable_failed', language()));
   };
 
   const handleFactoryReset = async () => {
     if (resettingPhone()) return;
 
-    const confirmed = await uiConfirm('Esto borrará la configuración y los datos del teléfono para empezar desde cero. ¿Continuar?', {
-      title: 'Restablecer teléfono',
+    const confirmed = await uiConfirm(t('settings.reset_confirm_message', language()), {
+      title: t('settings.reset_title', language()),
     });
     if (!confirmed) return;
 
@@ -162,8 +162,8 @@ export function SettingsApp() {
     const success = await phoneActions.factoryReset();
     setResettingPhone(false);
     setResetStatus(success
-      ? { type: 'ok', text: 'Teléfono restablecido. Completa el setup inicial otra vez.' }
-      : { type: 'error', text: 'No se pudo restablecer el teléfono.' });
+      ? { type: 'ok', text: t('settings.reset_success', language()) }
+      : { type: 'error', text: t('settings.reset_failed', language()) });
   };
 
   const randomWallpaper = () => {
@@ -213,7 +213,7 @@ export function SettingsApp() {
     const confirm = pinConfirm();
 
     if (code !== confirm) {
-      setStatus({ type: 'error', text: 'Los PIN no coinciden' });
+      setStatus({ type: 'error', text: t('settings.pin_mismatch', language()) });
       setPinStep(1);
       setPinCode('');
       setPinConfirm('');
@@ -221,7 +221,7 @@ export function SettingsApp() {
     }
 
     phoneActions.setLockCode(code);
-    setStatus({ type: 'ok', text: 'PIN guardado correctamente' });
+    setStatus({ type: 'ok', text: t('settings.pin_saved', language()) });
     setTimeout(() => {
       setPinStep(1);
       setPinCode('');
@@ -303,55 +303,55 @@ export function SettingsApp() {
   // MAIN VIEW
   const renderMain = () => (
     <div class={styles.content}>
-      <SectionHeader title="GENERAL" />
+      <SectionHeader title={t('settings.group.general', language())} />
       <Group>
         <Cell 
           icon="🎨" 
           iconBg="iconBlue"
-          title="Apariencia" 
-          subtitle="Fondo, idioma, tema"
+          title={t('settings.appearance', language())} 
+          subtitle={t('settings.subtitle.appearance', language())}
           right="chevron"
           onClick={() => setSection('appearance')}
         />
         <Cell 
           icon="🔊" 
           iconBg="iconOrange"
-          title="Sonido" 
-          subtitle="Volumen, tono, perfil"
+          title={t('settings.tab.sound', language())} 
+          subtitle={t('settings.subtitle.sound', language())}
           right="chevron"
           onClick={() => setSection('sound')}
         />
         <Cell 
           icon="🔒" 
           iconBg="iconRed"
-          title="Seguridad" 
-          subtitle="PIN de desbloqueo"
+          title={t('settings.tab.security', language())} 
+          subtitle={t('settings.subtitle.security', language())}
           right="chevron"
           onClick={() => setSection('security')}
         />
       </Group>
 
-      <SectionHeader title="SISTEMA" />
+      <SectionHeader title={t('settings.system', language()).toUpperCase()} />
       <Group>
         <Cell 
           icon="🔔" 
           iconBg="iconRed"
-          title="Notificaciones" 
+          title={t('control.notifications', language())} 
           right="chevron"
           onClick={() => setSection('notifications')}
         />
         <Cell 
           icon="📍" 
           iconBg="iconBlue"
-          title="Ubicación en tiempo real" 
-          subtitle={liveLocationEnabled() ? 'Activo' : 'Inactivo'}
+          title={t('settings.live_location', language())} 
+          subtitle={liveLocationEnabled() ? t('settings.active', language()) : t('settings.inactive', language())}
           right="chevron"
           onClick={() => setSection('system')}
         />
         <Cell 
           icon="✈️" 
           iconBg="iconOrange"
-          title="Modo avión" 
+          title={t('settings.airplane', language())} 
           right="switch"
           switchValue={notifications.airplaneMode}
           onSwitch={() => notificationsActions.setAirplaneMode(!notifications.airplaneMode)}
@@ -359,7 +359,7 @@ export function SettingsApp() {
         <Cell 
           icon="🌙" 
           iconBg="iconPurple"
-          title="No molestar" 
+          title={t('settings.dnd', language())} 
           right="switch"
           switchValue={notifications.doNotDisturb}
           onSwitch={() => notificationsActions.setDoNotDisturb(!notifications.doNotDisturb)}
@@ -367,7 +367,7 @@ export function SettingsApp() {
         <Cell 
           icon="🔇" 
           iconBg="iconGray"
-          title="Modo silencio" 
+          title={t('settings.silent', language())} 
           right="switch"
           switchValue={notifications.silentMode}
           onSwitch={() => notificationsActions.setSilentMode(!notifications.silentMode)}
@@ -377,7 +377,7 @@ export function SettingsApp() {
       <div class={styles.brightnessSection}>
         <div class={styles.brightnessHeader}>
           <span>☀️</span>
-          <span>Brillo</span>
+           <span>{t('settings.brightness', language())}</span>
           <span class={styles.brightnessValue}>{Math.round(notifications.brightness * 100)}%</span>
         </div>
         <input
@@ -390,12 +390,12 @@ export function SettingsApp() {
         />
       </div>
 
-      <SectionHeader title="INFORMACIÓN" />
+      <SectionHeader title={t('settings.info_group', language())} />
       <Group>
         <Cell 
           icon="ℹ️" 
           iconBg="iconGreen"
-          title="Acerca de GCPhone" 
+          title={t('settings.about_gcphone', language())} 
           right="chevron"
           onClick={() => setSection('about')}
         />
@@ -406,7 +406,7 @@ export function SettingsApp() {
   // APPEARANCE VIEW
   const renderAppearance = () => (
     <div class={styles.content}>
-      <SectionHeader title="FONDO DE PANTALLA" />
+      <SectionHeader title={t('settings.wallpapers', language()).toUpperCase()} />
       <Group>
         <Show when={phoneState.settings.wallpaper}>
           <div class={styles.wallpaperPreview}>
@@ -430,10 +430,10 @@ export function SettingsApp() {
 
       <div class={styles.quickActions}>
         <button class={styles.actionBtn} onClick={() => fetchNui('openGallery', { selectWallpaper: true })}>
-          📷 Galería
+          📷 {t('camera.gallery', language())}
         </button>
         <button class={styles.actionBtn} onClick={randomWallpaper}>
-          🎲 Aleatorio
+          🎲 {t('settings.random_api', language())}
         </button>
       </div>
 
@@ -444,10 +444,10 @@ export function SettingsApp() {
           value={urlInput()}
           onInput={(e) => setUrlInput(e.currentTarget.value)}
         />
-        <button onClick={applyUrlWallpaper}>Aplicar</button>
+        <button onClick={applyUrlWallpaper}>{t('settings.apply', language())}</button>
       </div>
 
-      <SectionHeader title="IDIOMA" />
+      <SectionHeader title={t('settings.language', language()).toUpperCase()} />
       <Group>
         <For each={languages}>
           {(lang) => (
@@ -469,7 +469,7 @@ export function SettingsApp() {
   // SOUND VIEW
   const renderSound = () => (
     <div class={styles.content}>
-      <SectionHeader title="VOLUMEN" />
+      <SectionHeader title={t('settings.volume', language()).toUpperCase()} />
       <div class={styles.volumeSection}>
         <div class={styles.volumeLabels}>
           <span>🔇</span>
@@ -486,7 +486,7 @@ export function SettingsApp() {
         />
       </div>
 
-      <SectionHeader title="PERFIL DE AUDIO" />
+      <SectionHeader title={t('settings.audio_profile', language()).toUpperCase()} />
       <Group>
         <For each={audioProfiles}>
           {(profile) => (
@@ -506,20 +506,20 @@ export function SettingsApp() {
         </For>
       </Group>
 
-      <SectionHeader title="TONOS" />
+      <SectionHeader title={t('settings.ringtone', language()).toUpperCase()} />
       <div class={styles.customUrl}>
         <div class={styles.customUrlInfo}>
           <div class={styles.customUrlTitle}>
-            Biblioteca publica
+             {t('settings.public_library', language())}
           </div>
           <div class={styles.customUrlText}>
-            Fuente recomendada: {toneCatalog().source?.name || 'Pixabay Sound Effects'} - licencia {toneCatalog().source?.license || 'royalty-free'}. El preview actual usa audio web/NUI; el audio nativo queda pendiente hasta convertir los bancos finales.
+             {t('settings.public_library_desc', language(), { source: toneCatalog().source?.name || 'Pixabay Sound Effects', license: toneCatalog().source?.license || 'royalty-free' })}
           </div>
         </div>
-        <button onClick={() => window.open(toneCatalog().source?.downloadPage || 'https://pixabay.com/sound-effects/', '_blank')}>Descargar</button>
+        <button onClick={() => window.open(toneCatalog().source?.downloadPage || 'https://pixabay.com/sound-effects/', '_blank')}>{t('settings.download', language())}</button>
       </div>
 
-      <SectionHeader title="TONO DE LLAMADA" />
+      <SectionHeader title={t('settings.call_ringtone', language()).toUpperCase()} />
       <Group>
         <For each={toneCatalog().categories?.ringtones || []}>
           {(ringtone) => (
@@ -532,7 +532,7 @@ export function SettingsApp() {
                 <button
                   class={styles.previewBtn}
                   onClick={() => playRingtonePreview(ringtone.id, 'ringtone')}
-                  title="Escuchar"
+                  title={t('settings.listen', language())}
                 >
                   {previewToneId() === ringtone.id ? '⏹️' : '▶️'}
                 </button>
@@ -540,7 +540,7 @@ export function SettingsApp() {
                   class={`${styles.selectBtn} ${(phoneState.settings.callRingtone || phoneState.settings.ringtone) === ringtone.id ? styles.selected : ''}`}
                   onClick={() => phoneActions.setCallRingtone(ringtone.id)}
                 >
-                  {(phoneState.settings.callRingtone || phoneState.settings.ringtone) === ringtone.id ? '✓' : 'Seleccionar'}
+                  {(phoneState.settings.callRingtone || phoneState.settings.ringtone) === ringtone.id ? '✓' : t('settings.select', language())}
                 </button>
               </div>
             </div>
@@ -548,7 +548,7 @@ export function SettingsApp() {
         </For>
       </Group>
 
-      <SectionHeader title="TONO DE NOTIFICACIONES" />
+      <SectionHeader title={t('settings.notification_ringtone', language()).toUpperCase()} />
       <Group>
         <For each={toneCatalog().categories?.notifications || []}>
           {(tone) => (
@@ -558,14 +558,14 @@ export function SettingsApp() {
                 <span class={styles.ringtoneName}>{tone.name}</span>
               </div>
               <div class={styles.ringtoneActions}>
-                <button class={styles.previewBtn} onClick={() => playRingtonePreview(tone.id, 'notification')} title="Escuchar">
+                <button class={styles.previewBtn} onClick={() => playRingtonePreview(tone.id, 'notification')} title={t('settings.listen', language())}>
                   {previewToneId() === tone.id ? '⏹️' : '▶️'}
                 </button>
                 <button
                   class={`${styles.selectBtn} ${phoneState.settings.notificationTone === tone.id ? styles.selected : ''}`}
                   onClick={() => phoneActions.setNotificationTone(tone.id)}
                 >
-                  {phoneState.settings.notificationTone === tone.id ? '✓' : 'Seleccionar'}
+                  {phoneState.settings.notificationTone === tone.id ? '✓' : t('settings.select', language())}
                 </button>
               </div>
             </div>
@@ -573,7 +573,7 @@ export function SettingsApp() {
         </For>
       </Group>
 
-      <SectionHeader title="TONO DE MENSAJES" />
+      <SectionHeader title={t('settings.message_ringtone', language()).toUpperCase()} />
       <Group>
         <For each={toneCatalog().categories?.messages || []}>
           {(tone) => (
@@ -583,14 +583,14 @@ export function SettingsApp() {
                 <span class={styles.ringtoneName}>{tone.name}</span>
               </div>
               <div class={styles.ringtoneActions}>
-                <button class={styles.previewBtn} onClick={() => playRingtonePreview(tone.id, 'message')} title="Escuchar">
+                <button class={styles.previewBtn} onClick={() => playRingtonePreview(tone.id, 'message')} title={t('settings.listen', language())}>
                   {previewToneId() === tone.id ? '⏹️' : '▶️'}
                 </button>
                 <button
                   class={`${styles.selectBtn} ${phoneState.settings.messageTone === tone.id ? styles.selected : ''}`}
                   onClick={() => phoneActions.setMessageTone(tone.id)}
                 >
-                  {phoneState.settings.messageTone === tone.id ? '✓' : 'Seleccionar'}
+                  {phoneState.settings.messageTone === tone.id ? '✓' : t('settings.select', language())}
                 </button>
               </div>
             </div>
@@ -605,7 +605,7 @@ export function SettingsApp() {
     <div class={styles.content}>
       <div class={styles.pinContainer}>
         <div class={styles.pinTitle}>
-          {pinStep() === 1 ? 'Ingresa un PIN de 4 dígitos' : 'Confirma tu PIN'}
+          {pinStep() === 1 ? t('settings.pin_enter', language()) : t('settings.pin_confirm_title', language())}
         </div>
 
         <div class={styles.pinDots}>
@@ -650,7 +650,7 @@ export function SettingsApp() {
   // NOTIFICATIONS VIEW
   const renderNotifications = () => (
     <div class={styles.content}>
-      <SectionHeader title="APPS" />
+      <SectionHeader title={t('home.section_apps', language()).toUpperCase()} />
       <Group>
         <For each={APP_DEFINITIONS.filter((app) => phoneState.enabledApps.includes(app.id))}>
           {(app) => {
@@ -662,7 +662,7 @@ export function SettingsApp() {
                 </div>
                 <div class={styles.appInfo}>
                   <div class={styles.appName}>{appName(app.id, app.name, language())}</div>
-                  <div class={styles.appStatus}>{unreadCount > 0 ? `${unreadCount} sin leer` : 'Al día'}</div>
+                  <div class={styles.appStatus}>{unreadCount > 0 ? t('settings.unread_count', language(), { count: unreadCount }) : t('settings.up_to_date', language())}</div>
                 </div>
                 {unreadCount > 0 ? (
                   <div class={styles.badge}>{unreadCount}</div>
@@ -683,7 +683,7 @@ export function SettingsApp() {
           }
         }}
       >
-        Marcar todas como leídas
+        {t('settings.mark_all_read', language())}
       </button>
     </div>
   );
@@ -691,14 +691,14 @@ export function SettingsApp() {
   // SYSTEM VIEW
   const renderSystem = () => (
     <div class={styles.content}>
-      <SectionHeader title="UBICACIÓN EN TIEMPO REAL" />
+      <SectionHeader title={t('settings.live_location', language()).toUpperCase()} />
       <Group>
         <div class={styles.locationRow}>
           <div class={styles.locationLeft}>
             <div class={`${styles.cellIcon} ${styles.iconBlue}`}>📍</div>
             <div>
-              <div class={styles.cellTitle}>Compartir ubicación</div>
-              <div class={styles.cellSubtitle}>{liveLocationEnabled() ? 'Activo' : 'Inactivo'}</div>
+              <div class={styles.cellTitle}>{t('settings.share_location', language())}</div>
+              <div class={styles.cellSubtitle}>{liveLocationEnabled() ? t('settings.active', language()) : t('settings.inactive', language())}</div>
             </div>
           </div>
           <div 
@@ -714,7 +714,7 @@ export function SettingsApp() {
 
       <Show when={liveLocationEnabled()}>
         <div class={styles.freqRow}>
-          <button class={styles.freqBtn} onClick={() => void updateLiveLocationInterval(10)}>Cada 10s (fijo)</button>
+          <button class={styles.freqBtn} onClick={() => void updateLiveLocationInterval(10)}>{t('settings.every_ten_seconds', language())}</button>
         </div>
       </Show>
 
@@ -724,18 +724,18 @@ export function SettingsApp() {
         </div>
       </Show>
 
-      <SectionHeader title="RESTABLECER" />
+      <SectionHeader title={t('settings.reset_group', language())} />
       <Group>
         <Cell
           icon="🧹"
           iconBg="iconRed"
-          title="Borrar teléfono"
-          subtitle="Limpia datos, cuentas y vuelve al setup inicial"
+          title={t('settings.erase_phone', language())}
+          subtitle={t('settings.erase_phone_desc', language())}
         />
       </Group>
 
       <button class={styles.clearBtn} onClick={() => void handleFactoryReset()} disabled={resettingPhone()}>
-        {resettingPhone() ? 'Restableciendo...' : 'Restablecer teléfono'}
+        {resettingPhone() ? t('settings.resetting', language()) : t('settings.reset_title', language())}
       </button>
 
       <Show when={resetStatus()}>
@@ -754,20 +754,20 @@ export function SettingsApp() {
       <div class={styles.aboutHeader}>
         <div class={styles.aboutIcon}>📱</div>
         <div class={styles.aboutName}>GCPhone Next</div>
-        <div class={styles.aboutVersion}>Versión 2.1.0</div>
+        <div class={styles.aboutVersion}>{t('settings.version_label', language())} 2.1.0</div>
       </div>
 
       <Group>
         <div class={styles.infoRow}>
-          <span class={styles.infoLabel}>Número</span>
-          <span class={styles.infoValue}>{phoneState.settings.phoneNumber ? formatPhoneNumber(phoneState.settings.phoneNumber, phoneState.framework || 'unknown') : 'No asignado'}</span>
+          <span class={styles.infoLabel}>{t('settings.number', language())}</span>
+          <span class={styles.infoValue}>{phoneState.settings.phoneNumber ? formatPhoneNumber(phoneState.settings.phoneNumber, phoneState.framework || 'unknown') : t('settings.unassigned', language())}</span>
         </div>
         <div class={styles.infoRow}>
-          <span class={styles.infoLabel}>Framework</span>
+          <span class={styles.infoLabel}>{t('settings.visual_framework', language())}</span>
           <span class={styles.infoValue}>{phoneState.framework || 'unknown'}</span>
         </div>
         <div class={styles.infoRow}>
-          <span class={styles.infoLabel}>Plataforma</span>
+          <span class={styles.infoLabel}>{t('settings.platform', language())}</span>
           <span class={styles.infoValue}>FiveM</span>
         </div>
       </Group>
@@ -776,12 +776,12 @@ export function SettingsApp() {
 
   const getTitle = () => {
     switch (section()) {
-      case 'appearance': return 'Apariencia';
-      case 'sound': return 'Sonido';
-      case 'security': return 'Seguridad';
-      case 'notifications': return 'Notificaciones';
-      case 'system': return 'Sistema';
-      case 'about': return 'Acerca de';
+      case 'appearance': return t('settings.appearance', language());
+      case 'sound': return t('settings.tab.sound', language());
+      case 'security': return t('settings.tab.security', language());
+      case 'notifications': return t('control.notifications', language());
+      case 'system': return t('settings.system', language());
+      case 'about': return t('settings.about_gcphone', language());
       default: return t('settings.title', language());
     }
   };
@@ -797,8 +797,8 @@ export function SettingsApp() {
       <Show when={phoneState.accessMode === 'foreign-readonly'}>
         <div class={styles.content}>
           <InlineNotice
-            title="Telefono ajeno"
-            message={`Estas viendo el telefono de ${phoneState.accessOwnerName || 'otra persona'} en modo solo lectura.`}
+            title={t('settings.foreign_phone', language())}
+            message={t('settings.foreign_phone_desc', language(), { name: phoneState.accessOwnerName || t('common.other_person', language()) })}
           />
         </div>
       </Show>

@@ -9,6 +9,7 @@ import { AppScaffold } from '../../shared/layout';
 import { useAppCache } from '../../../hooks';
 import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { usePhoneState } from '../../../store/phone';
+import { t } from '../../../i18n';
 import { FormCheckbox, FormSection, Modal, ModalActions, ModalButton } from '../../shared/ui/Modal';
 import { EmptyState } from '../../shared/ui/EmptyState';
 import { InlineNotice } from '../../shared/ui/InlineNotice';
@@ -77,6 +78,7 @@ export function DocumentsApp() {
   const router = useRouter();
   const phoneState = usePhoneState();
   const cache = useAppCache('documents');
+  const language = () => phoneState.settings.language || 'es';
   const [documents, setDocuments] = createSignal<Document[]>([]);
   const [docTypes, setDocTypes] = createSignal<DocType[]>([]);
   const [scanHistory, setScanHistory] = createSignal<ScanHistory[]>([]);
@@ -210,13 +212,13 @@ export function DocumentsApp() {
       setComposerExpires('');
       await loadData();
     } else {
-      uiAlert(result?.error || 'Error al crear documento');
+      uiAlert(result?.error || t('documents.error.create', language()));
     }
   };
 
   const deleteDocument = async (id: number) => {
     if (isReadOnly()) return;
-    if (!(await uiConfirm('¿Eliminar este documento?', { title: 'Eliminar documento' }))) return;
+    if (!(await uiConfirm(t('documents.confirm.delete_message', language()), { title: t('documents.confirm.delete_title', language()) }))) return;
     
     await fetchNui('documentsDelete', { documentId: id });
     await loadData();
@@ -246,7 +248,7 @@ export function DocumentsApp() {
       setShowDocPicker(false);
       setDocPickerTarget(null);
     } else {
-      uiAlert(result?.error || 'Error al compartir documento');
+      uiAlert(result?.error || t('documents.error.share', language()));
     }
   };
 
@@ -255,16 +257,16 @@ export function DocumentsApp() {
     const typeInfo = getDocTypeInfo(doc.doc_type);
     const lines = [
       `${typeInfo.name}: ${doc.title}`,
-      `Titular: ${doc.holder_name || 'N/D'}`,
-      doc.holder_number ? `Numero: ${doc.holder_number}` : '',
-      doc.expires_at ? `Vencimiento: ${doc.expires_at}` : '',
-      `Codigo de verificacion: ${doc.verification_code}`,
+      `${t('documents.field.holder', language())}: ${doc.holder_name || 'N/D'}`,
+      doc.holder_number ? `${t('documents.field.number', language())}: ${doc.holder_number}` : '',
+      doc.expires_at ? `${t('documents.field.expiry', language())}: ${doc.expires_at}` : '',
+      `${t('documents.field.verification_code', language())}: ${doc.verification_code}`,
     ].filter(Boolean);
 
     setSelectedDoc(null);
     router.navigate('mail', {
       compose: '1',
-      subject: `Documento: ${doc.title}`,
+      subject: `${t('documents.mail_subject', language())}: ${doc.title}`,
       body: lines.join('\n'),
       attachmentType: 'document',
       attachmentUrl: `DOC:${doc.id}:${doc.verification_code}`,
@@ -273,10 +275,10 @@ export function DocumentsApp() {
   };
 
   return (
-    <AppScaffold title="Documentos" subtitle="Tus documentos digitales" onBack={() => router.goBack()} bodyClass={styles.body}>
+    <AppScaffold title={t('documents.title', language())} subtitle={t('documents.subtitle', language())} onBack={() => router.goBack()} bodyClass={styles.body}>
       <div class={styles.documentsApp}>
         <Show when={isReadOnly()}>
-          <InlineNotice title="Solo lectura" message={`Estas viendo los documentos de ${phoneState.accessOwnerName || 'otra persona'}.`} />
+          <InlineNotice title={t('documents.readonly_title', language())} message={t('documents.readonly_message', language(), { name: phoneState.accessOwnerName || t('common.other_person', language()) })} />
         </Show>
         <div class={styles.tabs}>
           <SegmentedTabs items={tabs} active={activeTab()} onChange={(id) => setActiveTab(id as 'my' | 'nfc' | 'history')} />
@@ -285,7 +287,7 @@ export function DocumentsApp() {
         <Show when={activeTab() === 'my'}>
           <div class={styles.documentsList}>
             <Show when={loading() && documents().length === 0}>
-              <div class={styles.loading}>Cargando...</div>
+              <div class={styles.loading}>{t('state.loading', language())}</div>
             </Show>
             
             <For each={documents()}>
@@ -303,12 +305,12 @@ export function DocumentsApp() {
                       
                       <Show when={doc.expires_at}>
                         <span class={styles.docExpiry} classList={{ [styles.expired]: expired }}>
-                          {expired ? 'EXPIRADO' : 'Valido hasta ' + doc.expires_at}
+                          {expired ? t('documents.expired', language()) : `${t('documents.valid_until', language())} ${doc.expires_at}`}
                         </span>
                       </Show>
                       
                       <Show when={doc.nfc_enabled}>
-                        <span class={styles.nfcBadge}>NFC Activo</span>
+                        <span class={styles.nfcBadge}>{t('documents.nfc_active', language())}</span>
                       </Show>
                     </div>
                     
@@ -319,7 +321,7 @@ export function DocumentsApp() {
             </For>
             
             <Show when={!loading() && documents().length === 0}>
-              <EmptyState class={styles.emptyState} title="No tienes documentos" description="Crea tu primer documento digital." />
+              <EmptyState class={styles.emptyState} title={t('documents.empty_title', language())} description={t('documents.empty_desc', language())} />
             </Show>
           </div>
 

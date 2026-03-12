@@ -3,6 +3,12 @@
 
 local ActiveLives = {}
 local MutedUsers = {}
+local MutedMessages = {
+    es = 'Estas silenciado',
+    en = 'You are muted',
+    pt = 'Voce esta silenciado',
+    fr = 'Vous etes muet',
+}
 
 local function SanitizeText(value, maxLength)
     if type(value) ~= 'string' then return '' end
@@ -90,7 +96,8 @@ AddEventHandler('gcphone:live:message', function(clipId, content)
     
     -- Check if user is muted
     if MutedUsers[source] and MutedUsers[source][clipId] then
-        TriggerClientEvent('gcphone:live:error', source, 'Estás silenciado')
+        local lang = type(GetPhoneLanguageForSource) == 'function' and GetPhoneLanguageForSource(source, true) or 'es'
+        TriggerClientEvent('gcphone:live:error', source, MutedMessages[lang] or MutedMessages.es)
         return
     end
     
