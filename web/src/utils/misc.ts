@@ -1,5 +1,18 @@
-export const isEnvBrowser = (): boolean => 
-  !(window as any).invokeNative;
+export const isEnvBrowser = (): boolean =>
+  typeof window !== 'undefined' && !(window as any).invokeNative;
+
+export const normalizeAppLanguage = (value?: string | null): 'es' | 'en' | 'pt' | 'fr' => {
+  if (!value) return 'es';
+
+  const normalized = String(value).trim().toLowerCase().replace('-', '_');
+
+  if (normalized === 'en' || normalized === 'en_us') return 'en';
+  if (normalized === 'pt' || normalized === 'pt_br') return 'pt';
+  if (normalized === 'fr' || normalized === 'fr_fr') return 'fr';
+  if (normalized === 'es' || normalized === 'es_es') return 'es';
+
+  return 'es';
+};
 
 export const noop = () => {};
 

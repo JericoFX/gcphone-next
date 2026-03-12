@@ -432,6 +432,10 @@ lib.callback.register('gcphone:wavechatCreateGroup', function(source, data)
     if not identifier then return false, 'Invalid source' end
     if type(data) ~= 'table' then return false, 'Invalid data' end
 
+    if HitRateLimit(source, 'wavechat_create_group', 4000, 1) then
+        return false, 'RATE_LIMITED'
+    end
+
     local name = SanitizeText(data.name, 80)
     if name == '' then return false, 'Name required' end
 
@@ -507,6 +511,10 @@ lib.callback.register('gcphone:wavechatRespondInvite', function(source, data)
     local identifier = GetIdentifier(source)
     if not identifier then return false, 'Invalid source' end
     if type(data) ~= 'table' then return false, 'Invalid data' end
+
+    if HitRateLimit(source, 'wavechat_invite_response', 1500, 2) then
+        return false, 'RATE_LIMITED'
+    end
 
     local inviteId = ToPositiveInt(data.inviteId)
     local accept = data.accept == true
@@ -702,6 +710,7 @@ lib.callback.register('gcphone:wavechatMarkStatusViewed', function(source, statu
     local identifier = GetIdentifier(source)
     local id = ToPositiveInt(statusId)
     if not identifier or not id then return false end
+    if HitRateLimit(source, 'wavechat_status_view', 1000, 8) then return false end
     if not ShouldCountStatusView(identifier, id) then return true end
 
     MySQL.update.await(

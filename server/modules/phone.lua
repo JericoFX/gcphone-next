@@ -238,9 +238,14 @@ local function GetFeatureFlags()
 end
 
 local function SafeLanguage(value)
-    if value == 'es' or value == 'en' or value == 'pt' or value == 'fr' then
-        return value
-    end
+    if type(value) ~= 'string' then return nil end
+
+    local normalized = value:lower():gsub('%-', '_')
+    if normalized == 'es' or normalized == 'es_es' then return 'es' end
+    if normalized == 'en' or normalized == 'en_us' then return 'en' end
+    if normalized == 'pt' or normalized == 'pt_br' then return 'pt' end
+    if normalized == 'fr' or normalized == 'fr_fr' then return 'fr' end
+
     return nil
 end
 

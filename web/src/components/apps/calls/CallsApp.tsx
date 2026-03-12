@@ -525,11 +525,12 @@ export function CallsApp() {
         </AppScaffold>
       }
     >
-        <ActiveCallView 
-          callInfo={callInfo()}
-          videoMode={videoMode()}
-          videoStatus={videoStatus()}
-          videoParticipants={videoParticipants()}
+          <ActiveCallView
+            callInfo={callInfo()}
+            framework={phoneState.framework || 'unknown'}
+            videoMode={videoMode()}
+            videoStatus={videoStatus()}
+            videoParticipants={videoParticipants()}
           onMediaHost={setMediaHost}
           onStartVideo={startVideoCall}
           onToggleMute={handleMuteToggle}
@@ -540,7 +541,7 @@ export function CallsApp() {
   );
 }
 
-function ActiveCallView(props: { callInfo: any; videoMode: boolean; videoStatus: string; videoParticipants: string[]; onMediaHost: (identity: string, element?: HTMLDivElement) => void; onStartVideo: () => void; onToggleMute: (nextMuted: boolean) => Promise<void>; onRejectWithMessage: () => void; onEnd: () => void }) {
+function ActiveCallView(props: { callInfo: any; framework: 'esx' | 'qbcore' | 'qbox' | 'unknown'; videoMode: boolean; videoStatus: string; videoParticipants: string[]; onMediaHost: (identity: string, element?: HTMLDivElement) => void; onStartVideo: () => void; onToggleMute: (nextMuted: boolean) => Promise<void>; onRejectWithMessage: () => void; onEnd: () => void }) {
   const [duration, setDuration] = createSignal(0);
   const [muted, setMuted] = createSignal(false);
   const [speaker, setSpeaker] = createSignal(false);
@@ -598,7 +599,7 @@ function ActiveCallView(props: { callInfo: any; videoMode: boolean; videoStatus:
           {(props.callInfo?.displayName || props.callInfo?.receiverNum)?.charAt(0) || '?'}
         </div>
         <div class={styles.name}>
-          {props.callInfo?.displayName || (props.callInfo?.receiverNum ? formatPhoneNumber(props.callInfo.receiverNum, phoneState.framework || 'unknown') : 'Llamando...')}
+          {props.callInfo?.displayName || (props.callInfo?.receiverNum ? formatPhoneNumber(props.callInfo.receiverNum, props.framework) : 'Llamando...')}
         </div>
         <Show when={remainingTime() !== null && remainingTime()! > 0 && remainingTime()! <= 60 && props.videoMode}>
           <div class={styles.callTimer}>
