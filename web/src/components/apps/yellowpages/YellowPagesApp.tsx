@@ -16,6 +16,7 @@ import { SearchInput } from '../../shared/ui/SearchInput';
 import { SegmentedTabs } from '../../shared/ui/SegmentedTabs';
 import { SheetIntro } from '../../shared/ui/SheetIntro';
 import { FormRow, FormSection, Modal, ModalActions, ModalButton } from '../../shared/ui/Modal';
+import { t } from '../../../i18n';
 import styles from './YellowPagesApp.module.scss';
 
 interface Listing {
@@ -70,6 +71,7 @@ export function YellowPagesApp() {
   const router = useRouter();
   const cache = useAppCache('yellowpages');
   const [phoneState] = usePhone();
+  const language = () => phoneState.settings.language || 'es';
 
   // Data
   const [listings, setListings] = createSignal<Listing[]>([]);
@@ -226,7 +228,7 @@ export function YellowPagesApp() {
     setLoading(false);
     
     if (!result?.success) {
-      uiAlert('Error al publicar');
+      uiAlert(t('yellowpages.error.publish', language()));
       return;
     }
 
@@ -243,7 +245,7 @@ export function YellowPagesApp() {
   };
 
   const deleteListing = async (id: number) => {
-    if (!(await uiConfirm('¿Eliminar este anuncio?', { title: 'Eliminar anuncio' }))) return;
+    if (!(await uiConfirm(t('yellowpages.confirm_delete_message', language()), { title: t('yellowpages.confirm_delete_title', language()) }))) return;
     
     await fetchNui('yellowpagesDeleteListing', id);
     cache.invalidate();
@@ -265,10 +267,10 @@ export function YellowPagesApp() {
   };
 
   return (
-    <AppScaffold title="Paginas Amarillas" subtitle="Compra, vende, conecta" onBack={() => router.goBack()} bodyClass={styles.body}>
+    <AppScaffold title={t('yellowpages.title', language())} subtitle={t('yellowpages.subtitle', language())} onBack={() => router.goBack()} bodyClass={styles.body}>
       <div class={styles.yellowpagesApp}>
         <Show when={isReadOnly()}>
-          <InlineNotice title="Solo lectura" message={`Estas viendo los anuncios de ${phoneState.accessOwnerName || 'otra persona'}.`} />
+          <InlineNotice title={t('yellowpages.readonly_title', language())} message={t('yellowpages.readonly_message', language(), { name: phoneState.accessOwnerName || t('common.other_person', language()) })} />
         </Show>
 
         {/* Header with Search */}
@@ -277,7 +279,7 @@ export function YellowPagesApp() {
             <SearchInput
               value={searchQuery()}
               onInput={setSearchQuery}
-              placeholder="Buscar anuncios..."
+              placeholder={t('yellowpages.search', language())}
               class={styles.searchInputRoot}
               inputClass={styles.searchInput}
             />
@@ -311,7 +313,7 @@ export function YellowPagesApp() {
         {/* Listings */}
         <div class={styles.listingsGrid}>
           <Show when={loading() && listings().length === 0}>
-            <div class={styles.loading}>Cargando...</div>
+            <div class={styles.loading}>{t('state.loading', language())}</div>
           </Show>
           
           <For each={listings()}>
@@ -336,7 +338,7 @@ export function YellowPagesApp() {
                 
                 <div class={styles.cardContent}>
                   <h3 class={styles.cardTitle}>{listing.title}</h3>
-                  <p class={styles.cardDesc}>{listing.description || 'Sin descripcion'}</p>
+                  <p class={styles.cardDesc}>{listing.description || t('yellowpages.no_description', language())}</p>
                   
                   <div class={styles.cardMeta}>
                     <span class={styles.price}>${listing.price.toLocaleString()}</span>
@@ -353,7 +355,7 @@ export function YellowPagesApp() {
           </For>
           
           <Show when={!loading() && listings().length === 0}>
-            <EmptyState class={styles.emptyState} title="No hay anuncios" description="Se el primero en publicar" />
+            <EmptyState class={styles.emptyState} title={t('yellowpages.no_listings', language())} description={t('yellowpages.no_listings_desc', language())} />
           </Show>
         </div>
 
@@ -380,7 +382,7 @@ export function YellowPagesApp() {
                     onClick={() => setViewerUrl(selectedListing().photos[0])}
                   />
                   <Show when={selectedListing().photos.length > 1}>
-                    <div class={styles.photoCount}>+{selectedListing().photos.length - 1} fotos</div>
+                    <div class={styles.photoCount}>+{selectedListing().photos.length - 1} {t('yellowpages.photos', language())}</div>
                   </Show>
                 </div>
               </Show>
@@ -390,10 +392,10 @@ export function YellowPagesApp() {
                   <img src={getCategoryIcon(selectedListing().category)} alt="" /> {getCategoryName(selectedListing().category)}
                 </span>
                 <h2 class={styles.detailTitle}>{selectedListing().title}</h2>
-                <p class={styles.detailDesc}>{selectedListing().description || 'Sin descripcion'}</p>
+                <p class={styles.detailDesc}>{selectedListing().description || t('yellowpages.no_description', language())}</p>
                 
                 <div class={styles.detailPrice}>
-                  <span class={styles.priceLabel}>Precio</span>
+                  <span class={styles.priceLabel}>{t('yellowpages.price', language())}</span>
                   <span class={styles.priceValue}>${selectedListing().price.toLocaleString()}</span>
                 </div>
                 

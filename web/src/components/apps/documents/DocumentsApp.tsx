@@ -361,7 +361,7 @@ export function DocumentsApp() {
         <Show when={activeTab() === 'history'}>
           <div class={styles.historyList}>
             <Show when={scanHistory().length === 0}>
-              <EmptyState class={styles.emptyState} title="Sin historial" description="Los escaneos apareceran aqui." />
+                <EmptyState class={styles.emptyState} title={t('documents.no_history', language())} description={t('documents.no_history_desc', language())} />
             </Show>
             
             <For each={scanHistory()}>
@@ -448,10 +448,10 @@ export function DocumentsApp() {
                     <Show when={!isReadOnly()}>
                       <div class={styles.detailActions}>
                         <button class={styles.mailBtn} onClick={() => shareDocumentByMail(doc)}>
-                          Compartir por Mail
+                          {t('documents.share_by_mail', language())}
                         </button>
                         <button class={styles.deleteBtn} onClick={() => deleteDocument(doc.id)}>
-                          Eliminar Documento
+                          {t('documents.delete_document', language())}
                         </button>
                       </div>
                     </Show>
@@ -463,13 +463,13 @@ export function DocumentsApp() {
 
         <Modal
           open={!isReadOnly() && showComposer()}
-          title="Nuevo Documento"
+          title={t('documents.new', language())}
           onClose={() => setShowComposer(false)}
           size="md"
         >
           <div class={styles.composerContent}>
             <SheetIntro title="Nuevo documento" description="Crea una version digital clara y activa NFC solo cuando tenga sentido compartirlo de cerca." />
-            <FormSection class={styles.formField} label="Tipo de Documento">
+            <FormSection class={styles.formField} label={t('documents.type', language())}>
               <div class={styles.typeGrid}>
                 <For each={docTypes()}>
                   {(type) => (
@@ -505,7 +505,7 @@ export function DocumentsApp() {
               />
             </FormSection>
             
-            <FormSection class={styles.formField} label="Numero de Documento">
+            <FormSection class={styles.formField} label={t('documents.document_number', language())}>
               <input
                 type="text"
                 placeholder="Opcional"
@@ -533,7 +533,7 @@ export function DocumentsApp() {
           </div>
           
           <ModalActions>
-            <ModalButton label="Cancelar" onClick={() => setShowComposer(false)} />
+            <ModalButton label={t('action.cancel', language())} onClick={() => setShowComposer(false)} />
             <ModalButton
               label={loading() ? 'Creando...' : 'Crear'}
               onClick={() => void createDocument()}
@@ -545,13 +545,13 @@ export function DocumentsApp() {
 
         <Modal
           open={!isReadOnly() && showDocPicker()}
-          title="Seleccionar Documento"
+          title={t('documents.select', language())}
           onClose={() => { setShowDocPicker(false); setDocPickerTarget(null); }}
           size="md"
         >
           <div class={styles.docPickerContent}>
             <SheetIntro title="Seleccionar documento" description="Solo aparecen los documentos que tienen NFC activado para compartir rapido." />
-            <p>Selecciona un documento para mostrar:</p>
+            <p>{t('documents.select_to_show', language())}</p>
             <div class={styles.docPickerList}>
               <For each={documents().filter(d => d.nfc_enabled)}>
                 {(doc) => {
@@ -577,7 +577,7 @@ export function DocumentsApp() {
           </div>
           
           <ModalActions>
-            <ModalButton label="Cancelar" onClick={() => { setShowDocPicker(false); setDocPickerTarget(null); }} />
+            <ModalButton label={t('action.cancel', language())} onClick={() => { setShowDocPicker(false); setDocPickerTarget(null); }} />
           </ModalActions>
         </Modal>
 

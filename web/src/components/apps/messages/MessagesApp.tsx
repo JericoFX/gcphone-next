@@ -18,6 +18,7 @@ import { SkeletonList } from '../../shared/ui/SkeletonList';
 import { VirtualList } from '../../shared/ui/VirtualList';
 import { EmojiPickerButton } from '../../shared/ui/EmojiPicker';
 import { AppFAB, AppScaffold } from '../../shared/layout';
+import { getStoredLanguage, t } from '../../../i18n';
 import styles from './MessagesApp.module.scss';
 
 function extractCoords(text?: string): { x: number; y: number } | null {
@@ -43,6 +44,7 @@ export function MessagesApp() {
   const [search, setSearch] = createSignal('');
   const [showUnreadOnly, setShowUnreadOnly] = createSignal(false);
   const [routeConversationName, setRouteConversationName] = createSignal('');
+  const language = () => phoneState.settings.language || 'es';
 
   const getMediaUrl = (msg: any): string | undefined => sanitizeMediaUrl(msg.mediaUrl || msg.media_url) || undefined;
   const isReadOnly = createMemo(() => phoneState.accessMode === 'foreign-readonly');
@@ -207,13 +209,13 @@ export function MessagesApp() {
 
   const attachByUrl = async () => {
     if (isReadOnly()) return;
-    const input = await uiPrompt('Pega URL de imagen, video o audio', { title: 'Adjuntar' });
+    const input = await uiPrompt(t('messages.prompt.media_url', language()), { title: t('messages.attach', language()) });
     const nextUrl = sanitizeMediaUrl(input);
     if (nextUrl) {
       setAttachmentUrl(nextUrl);
       return;
     }
-    if (input && input.trim()) uiAlert('URL invalida o formato no permitido');
+    if (input && input.trim()) uiAlert(t('messages.error.invalid_media_url', language()));
   };
   
   const getContactName = (number: string) => {
@@ -226,23 +228,23 @@ export function MessagesApp() {
   const addContactFromMessage = async (display: string, number: string) => {
     if (isReadOnly()) return;
     if (isKnownContact(number)) {
-      uiAlert('El contacto ya existe');
+      uiAlert(t('messages.contact_exists', language()));
       return;
     }
     const added = await contactsActions.add(display, number);
-    uiAlert(added ? 'Contacto agregado' : 'No se pudo agregar el contacto');
+    uiAlert(added ? t('messages.contact_added', language()) : t('messages.contact_add_failed', language()));
   };
 
   const getPreviewText = (message: any) => {
-    if (getMediaUrl(message)) return 'Adjunto multimedia';
+    if (getMediaUrl(message)) return t('messages.media_attachment', language());
     const shared = parseSharedContactMessage(message?.message);
     if (shared) return `Contacto: ${shared.display}`;
-    return sanitizeText(message?.message || '', 80) || 'Mensaje';
+    return sanitizeText(message?.message || '', 80) || t('messages.message_placeholder', language());
   };
 
   const openNewChat = async () => {
     if (isReadOnly()) return;
-    const input = await uiPrompt('Numero para iniciar chat', { title: 'Nuevo chat' });
+    const input = await uiPrompt(t('messages.prompt.new_chat_number', language()), { title: t('messages.new_chat', language()) });
     const number = sanitizePhone(input);
     if (!number) return;
     setSelectedConversation(number);
@@ -253,10 +255,10 @@ export function MessagesApp() {
     if (isReadOnly()) return;
     const number = selectedConversation();
     if (!number) return;
-    const x = Number(await uiPrompt('Coordenada X', { title: 'Compartir ubicacion' }));
-    const y = Number(await uiPrompt('Coordenada Y', { title: 'Compartir ubicacion' }));
+    const x = Number(await uiPrompt(t('messages.prompt.coord_x', language()), { title: t('maps.share_location', language()) }));
+    const y = Number(await uiPrompt(t('messages.prompt.coord_y', language()), { title: t('maps.share_location', language()) }));
     if (!Number.isFinite(x) || !Number.isFinite(y)) return;
-    await messagesActions.send(number, `📍 Ubicacion compartida LOC:${x.toFixed(2)},${y.toFixed(2)}`);
+    await messagesActions.send(number, `📍 ${t('maps.share_location', language())} LOC:${x.toFixed(2)},${y.toFixed(2)}`);
   };
   
   return (
@@ -290,10 +292,10 @@ export function MessagesApp() {
         readOnlyOwnerName={phoneState.accessOwnerName}
       />
     }>
-        <AppScaffold title="Mensajes" subtitle="Tus conversaciones" onBack={() => router.goBack()} bodyPadding="none">
+        <AppScaffold title={t('messages.title', language())} subtitle={t('messages.subtitle', language())} onBack={() => router.goBack()} bodyPadding="none">
           <div class={styles.messagesApp}>
             <Show when={isReadOnly()}>
-              <InlineNotice title="Solo lectura" message={`Estas viendo los mensajes de ${phoneState.accessOwnerName || 'otra persona'}.`} />
+              <InlineNotice title={t('messages.readonly_title', language())} message={t('messages.readonly_message', language(), { name: phoneState.accessOwnerName || t('common.other_person', language()) })} />
             </Show>
             <div class={styles.conversationList}>
               <Show
@@ -321,7 +323,7 @@ export function MessagesApp() {
                         </div>
                         <Show when={!isReadOnly()}>
                           <button class={styles.deleteConversationBtn} onClick={(e) => { e.stopPropagation(); void deleteConversation(convo.number); }}>
-                            Borrar
+                            {t('messages.delete', language())}
                           </button>
                         </Show>
                       </div>
@@ -367,6 +369,7 @@ function ConversationView(props: {
   readOnly?: boolean;
   readOnlyOwnerName?: string;
 }) {
+  const language = () => getStoredLanguage();
   let messagesEnd: HTMLDivElement | undefined;
   const [showAttachSheet, setShowAttachSheet] = createSignal(false);
   
@@ -387,10 +390,10 @@ function ConversationView(props: {
       onBack={props.onBack}
       bodyClass={styles.conversationView}
       bodyPadding="none"
-      headerRight={props.readOnly ? undefined : <button class={styles.deleteConversationBtn} onClick={props.onDeleteConversation}>Borrar</button>}
+      headerRight={props.readOnly ? undefined : <button class={styles.deleteConversationBtn} onClick={props.onDeleteConversation}>{t('messages.delete', language())}</button>}
     >
       <Show when={props.readOnly}>
-        <InlineNotice title="Solo lectura" message={`No puedes responder ni borrar la conversación de ${props.readOnlyOwnerName || 'este telefono'}.`} />
+        <InlineNotice title={t('messages.readonly_title', language())} message={t('messages.readonly_conversation', language(), { name: props.readOnlyOwnerName || t('messages.this_phone', language()) })} />
       </Show>
       <div class={styles.messagesList}>
         <For each={props.messages}>
@@ -408,7 +411,7 @@ function ConversationView(props: {
                   <Show when={extractCoords(msg.message)}>
                     {(coords) => (
                       <button class={styles.mapBtn} onClick={() => props.onOpenCoords(coords().x, coords().y)}>
-                        Abrir en mapa
+                        {t('messages.open_map', language())}
                       </button>
                     )}
                   </Show>
@@ -416,7 +419,7 @@ function ConversationView(props: {
               }>
                 {(shared) => (
                   <div class={styles.contactCard}>
-                    <div class={styles.contactCardLabel}>Contacto compartido</div>
+                    <div class={styles.contactCardLabel}>{t('messages.shared_contact', language())}</div>
                     <div class={styles.contactCardName}>{shared().display}</div>
                     <div class={styles.contactCardNumber}>{formatPhoneNumber(shared().number, props.framework || 'unknown')}</div>
                     <Show when={!props.readOnly}>
@@ -425,7 +428,7 @@ function ConversationView(props: {
                         disabled={props.isKnownContact(shared().number)}
                         onClick={() => props.onAddContact(shared().display, shared().number)}
                       >
-                        {props.isKnownContact(shared().number) ? 'Ya agregado' : 'Agregar contacto'}
+                         {props.isKnownContact(shared().number) ? t('messages.already_added', language()) : t('messages.add_contact', language())}
                       </button>
                     </Show>
                   </div>
@@ -433,7 +436,7 @@ function ConversationView(props: {
               </Show>
               <Show when={props.getMediaUrl(msg)}>
                 <Show when={resolveMediaType(props.getMediaUrl(msg)) === 'image'}>
-                  <img class={styles.messageImage} src={props.getMediaUrl(msg)!} alt="adjunto" onClick={() => props.onOpenViewer(props.getMediaUrl(msg) || null)} />
+                  <img class={styles.messageImage} src={props.getMediaUrl(msg)!} alt={t('messages.attach', language())} onClick={() => props.onOpenViewer(props.getMediaUrl(msg) || null)} />
                 </Show>
                 <Show when={resolveMediaType(props.getMediaUrl(msg)) === 'video'}>
                   <video class={styles.messageImage} src={props.getMediaUrl(msg)!} controls playsinline preload="metadata" />
@@ -452,7 +455,7 @@ function ConversationView(props: {
       <Show when={props.attachmentUrl && !props.readOnly}>
         <div class={styles.attachmentPreview}>
           <Show when={resolveMediaType(props.attachmentUrl || undefined) === 'image'}>
-            <img src={props.attachmentUrl!} alt="adjunto" onClick={() => props.onOpenViewer(props.attachmentUrl)} />
+            <img src={props.attachmentUrl!} alt={t('messages.attach', language())} onClick={() => props.onOpenViewer(props.attachmentUrl)} />
           </Show>
           <Show when={resolveMediaType(props.attachmentUrl || undefined) === 'video'}>
             <video src={props.attachmentUrl!} controls playsinline preload="metadata" />
@@ -460,7 +463,7 @@ function ConversationView(props: {
           <Show when={resolveMediaType(props.attachmentUrl || undefined) === 'audio'}>
             <audio class={styles.messageAudio} src={props.attachmentUrl!} controls preload="metadata" />
           </Show>
-          <button onClick={props.onClearAttachment}>Quitar</button>
+          <button onClick={props.onClearAttachment}>{t('messages.remove', language())}</button>
         </div>
       </Show>
 
@@ -470,7 +473,7 @@ function ConversationView(props: {
           <button class={styles.attachBtn} onClick={() => setShowAttachSheet(true)}>＋</button>
           <input
             type="text"
-            placeholder="Mensaje"
+            placeholder={t('messages.message_placeholder', language())}
             value={props.messageInput}
             onInput={(e) => props.onInput(e.currentTarget.value)}
             onKeyPress={(e) => e.key === 'Enter' && props.onSend()}
@@ -483,14 +486,14 @@ function ConversationView(props: {
 
       <ActionSheet
         open={!props.readOnly && showAttachSheet()}
-        title="Adjuntar"
+        title={t('messages.attach', language())}
         onClose={() => setShowAttachSheet(false)}
         actions={[
-          { label: 'Foto desde galeria', tone: 'primary', onClick: props.onAttachGallery },
-          { label: 'Tomar foto con camara', onClick: props.onAttachCamera },
-          { label: 'Pegar URL multimedia', onClick: props.onAttachUrl },
-          { label: 'Compartir ubicacion', onClick: props.onSendLocation },
-          { label: 'Quitar adjunto', tone: 'danger', onClick: props.onClearAttachment },
+          { label: t('messages.attach_gallery', language()), tone: 'primary', onClick: props.onAttachGallery },
+          { label: t('messages.attach_camera', language()), onClick: props.onAttachCamera },
+          { label: t('messages.attach_url', language()), onClick: props.onAttachUrl },
+          { label: t('maps.share_location', language()), onClick: props.onSendLocation },
+          { label: t('messages.remove_attachment', language()), tone: 'danger', onClick: props.onClearAttachment },
         ]}
       />
     </AppScaffold>

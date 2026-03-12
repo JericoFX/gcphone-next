@@ -8,6 +8,7 @@ import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { AppScaffold } from '../../shared/layout';
 import { EmptyState } from '../../shared/ui/EmptyState';
 import { FormField, FormSection, Modal, ModalActions, ModalButton } from '../../shared/ui/Modal';
+import { t } from '../../../i18n';
 import styles from './WalletApp.module.scss';
 
 interface WalletCard {
@@ -69,12 +70,13 @@ export function WalletApp() {
   const [proximityPhoneInput, setProximityPhoneInput] = createSignal('');
   const [proximityAmountInput, setProximityAmountInput] = createSignal('');
   const [proximityTitleInput, setProximityTitleInput] = createSignal('');
+  const language = () => phoneState.settings.language || 'es';
 
   const targetModes: { id: TargetMode; label: string; helper: string }[] = [
-    { id: 'nearby', label: 'Cercano', helper: 'Cobro inmediato por NFC' },
-    { id: 'contact', label: 'Contacto', helper: 'Usa tu agenda guardada' },
-    { id: 'phone', label: 'Numero', helper: 'Escribe un numero manualmente' },
-    { id: 'identifier', label: 'ID', helper: 'Usa un identifier directo' },
+    { id: 'nearby', label: t('wallet.mode.nearby', language()), helper: t('wallet.mode.nearby_helper', language()) },
+    { id: 'contact', label: t('wallet.mode.contact', language()), helper: t('wallet.mode.contact_helper', language()) },
+    { id: 'phone', label: t('wallet.mode.phone', language()), helper: t('wallet.mode.phone_helper', language()) },
+    { id: 'identifier', label: 'ID', helper: t('wallet.mode.identifier_helper', language()) },
   ];
 
   const sanitizedCardLast4 = createMemo(() => cardLast4Input().replace(/\D/g, '').slice(0, 4));
@@ -92,7 +94,7 @@ export function WalletApp() {
   });
   const selectedNearbyLabel = createMemo(() => {
     const selected = nearbyPlayers().find((player) => player.serverId === targetServerId());
-    if (!selected) return 'Nadie seleccionado';
+    if (!selected) return t('wallet.none_selected', language());
     return `${selected.name} (${selected.distance}m)`;
   });
 
@@ -159,16 +161,16 @@ export function WalletApp() {
     }
 
     if (result.error === 'TOO_FAR') {
-      uiAlert(`Debes acercarte mas (${(result.maxDistance || 3).toFixed(1)}m max). Distancia: ${(result.distance || 0).toFixed(2)}m`);
+      uiAlert(t('wallet.error.too_far', language(), { max: (result.maxDistance || 3).toFixed(1), distance: (result.distance || 0).toFixed(2) }));
       return;
     }
 
     if (result.error === 'TARGET_OFFLINE') {
-      uiAlert('La persona debe estar conectada y cerca para pago NFC');
+      uiAlert(t('wallet.error.target_offline', language()));
       return;
     }
 
-    uiAlert(result.error || 'Pago de proximidad fallido');
+    uiAlert(result.error || t('wallet.error.proximity_failed', language()));
   };
 
   const removeCard = async (cardId: number) => {
@@ -182,7 +184,7 @@ export function WalletApp() {
 
     const payload: Record<string, unknown> = {
       amount,
-      title: nfcTitle().trim() || 'Factura',
+      title: nfcTitle().trim() || t('wallet.invoice', language()),
     };
 
     if (targetMode() === 'nearby') {
@@ -202,15 +204,15 @@ export function WalletApp() {
 
     const result = await fetchNui<{ success?: boolean; error?: string; channel?: 'nfc' | 'remote' }>('walletCreateInvoice', payload, { success: false });
     if (!result?.success) {
-      uiAlert(result?.error || 'No se pudo crear la factura');
+      uiAlert(result?.error || t('wallet.error.create_invoice', language()));
       return;
     }
 
     setShowCreateInvoice(false);
     setNfcAmount('');
-    setNfcTitle('Factura');
+      setNfcTitle(t('wallet.invoice', language()));
     if (result.channel === 'remote') {
-      uiAlert('Factura remota enviada. Le aparecera en Banco al destinatario.');
+      uiAlert(t('wallet.remote_invoice_sent', language()));
     }
   };
 
@@ -225,7 +227,7 @@ export function WalletApp() {
     }, { success: false });
 
     if (!result?.success && accept) {
-      uiAlert(result?.error || 'No se pudo completar el pago');
+      uiAlert(result?.error || t('wallet.error.payment_failed', language()));
       return;
     }
 
@@ -306,26 +308,26 @@ export function WalletApp() {
   });
 
   return (
-    <AppScaffold title="Wallet" subtitle="Tu dinero y facturas" onBack={() => router.goBack()} bodyClass={styles.walletApp}>
+    <AppScaffold title={t('wallet.title', language())} subtitle={t('wallet.subtitle', language())} onBack={() => router.goBack()} bodyClass={styles.walletApp}>
       <div class={styles.walletApp}>
         <div class={styles.balanceSection}>
-          <div class={styles.balanceLabel}>Saldo Wallet</div>
+          <div class={styles.balanceLabel}>{t('wallet.balance', language())}</div>
           <div class={styles.balanceAmount}>{formatMoney(balance())}</div>
           <div class={styles.balanceActions}>
-            <button class={styles.actionBtn} onClick={() => void openInvoiceModal()}>Factura</button>
-            <button class={styles.actionBtn} onClick={openAddCardModal}>Agregar tarjeta</button>
+            <button class={styles.actionBtn} onClick={() => void openInvoiceModal()}>{t('wallet.invoice', language())}</button>
+            <button class={styles.actionBtn} onClick={openAddCardModal}>{t('wallet.add_card', language())}</button>
           </div>
           <div class={styles.quickPayRow}>
-            <button class={styles.quickPayBtn} onClick={openProximityModal}>Pago NFC</button>
+            <button class={styles.quickPayBtn} onClick={openProximityModal}>{t('wallet.nfc_payment', language())}</button>
           </div>
         </div>
 
-        <button class={styles.nfcHintBtn} onClick={() => void openInvoiceModal()}>Crear factura: NFC o remota</button>
+        <button class={styles.nfcHintBtn} onClick={() => void openInvoiceModal()}>{t('wallet.create_invoice_hint', language())}</button>
 
         <div class={styles.section}>
-          <div class={styles.sectionTitle}>Tarjetas</div>
-          <Show when={!loading()} fallback={<EmptyState class={styles.emptyState} title="Cargando..." />}>
-            <Show when={cards().length > 0} fallback={<EmptyState class={styles.emptyState} title="Sin tarjetas" description="Agrega una tarjeta para verla aqui" />}>
+          <div class={styles.sectionTitle}>{t('wallet.cards', language())}</div>
+          <Show when={!loading()} fallback={<EmptyState class={styles.emptyState} title={t('state.loading', language())} />}>
+            <Show when={cards().length > 0} fallback={<EmptyState class={styles.emptyState} title={t('wallet.no_cards', language())} description={t('wallet.no_cards_desc', language())} />}>
               <div class={styles.cardsList}>
                 <For each={cards()}>
                   {(card) => (
@@ -349,14 +351,14 @@ export function WalletApp() {
         </div>
 
         <div class={styles.section}>
-          <div class={styles.sectionTitle}>Actividad reciente</div>
-          <Show when={tx().length > 0} fallback={<EmptyState class={styles.emptyState} title="Sin movimientos" description="Tus transacciones apareceran aqui" />}>
+          <div class={styles.sectionTitle}>{t('wallet.recent_activity', language())}</div>
+          <Show when={tx().length > 0} fallback={<EmptyState class={styles.emptyState} title={t('wallet.no_transactions', language())} description={t('wallet.no_transactions_desc', language())} />}>
             <div class={styles.transactionsList}>
               <For each={tx()}>
                 {(item) => (
                   <div class={styles.transactionItem}>
                     <div class={styles.transactionInfo}>
-                      <div class={styles.transactionTitle}>{item.title || 'Movimiento'}</div>
+                        <div class={styles.transactionTitle}>{item.title || t('wallet.transaction', language())}</div>
                       <div class={styles.transactionDate}>{new Date(item.created_at).toLocaleString('es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</div>
                     </div>
                     <div class={styles.transactionAmount} classList={{ [styles.in]: item.type === 'in', [styles.out]: item.type === 'out', [styles.adjust]: item.type === 'adjust' }}>
@@ -372,31 +374,31 @@ export function WalletApp() {
 
         <button class={styles.addCardFab} onClick={openAddCardModal}>+</button>
 
-        <Modal open={showAddCardModal()} title="Agregar tarjeta" onClose={closeAddCardModal} size="md">
+        <Modal open={showAddCardModal()} title={t('wallet.add_card', language())} onClose={closeAddCardModal} size="md">
           <div class={styles.modalBody}>
-            <p class={styles.modalIntro}>Guarda una referencia rapida para pagar sin usar prompts.</p>
+            <p class={styles.modalIntro}>{t('wallet.add_card_desc', language())}</p>
 
             <FormField
-              label="Nombre"
+              label={t('contacts.field.name', language())}
               value={cardLabelInput()}
               onChange={setCardLabelInput}
               placeholder="Ej: Visa principal"
             />
 
             <FormField
-              label="Ultimos 4 digitos"
+              label={t('wallet.last_four', language())}
               type="tel"
               value={sanitizedCardLast4()}
               onChange={(value) => setCardLast4Input(value.replace(/\D/g, '').slice(0, 4))}
               placeholder="1234"
             />
 
-            <div class={styles.helperText}>Solo se muestra como referencia visual dentro de Wallet.</div>
+            <div class={styles.helperText}>{t('wallet.card_helper', language())}</div>
           </div>
 
           <ModalActions>
-            <ModalButton label="Cancelar" onClick={closeAddCardModal} />
-            <ModalButton label="Guardar" tone="primary" onClick={() => void addCard()} disabled={!canAddCard()} />
+            <ModalButton label={t('action.cancel', language())} onClick={closeAddCardModal} />
+            <ModalButton label={t('notes.save', language())} tone="primary" onClick={() => void addCard()} disabled={!canAddCard()} />
           </ModalActions>
         </Modal>
 

@@ -6,6 +6,7 @@ import { AppScaffold } from '../../shared/layout';
 import { EmptyState } from '../../shared/ui/EmptyState';
 import { ScreenState } from '../../shared/ui/ScreenState';
 import { SkeletonList } from '../../shared/ui/SkeletonList';
+import { getStoredLanguage, t } from '../../../i18n';
 import styles from './BankApp.module.scss';
 
 interface BankInvoice {
@@ -18,6 +19,7 @@ interface BankInvoice {
 
 export function BankApp() {
   const router = useRouter();
+  const language = () => getStoredLanguage();
   const [balance, setBalance] = createSignal(0);
   const [transactions, setTransactions] = createSignal<any[]>([]);
   const [showTransfer, setShowTransfer] = createSignal(false);
@@ -133,32 +135,32 @@ export function BankApp() {
   };
   
   return (
-    <AppScaffold title="Banco" subtitle="Tu cuenta bancaria" onBack={() => router.goBack()} bodyClass={styles.bankApp}>
+    <AppScaffold title={t('app.bank', language())} subtitle={t('bank.subtitle', language())} onBack={() => router.goBack()} bodyClass={styles.bankApp}>
       <div class={styles.bankApp}>
         {/* Balance Section */}
         <div class={styles.balanceSection}>
-          <div class={styles.balanceLabel}>Saldo disponible</div>
+          <div class={styles.balanceLabel}>{t('bank.available_balance', language())}</div>
           <div class={styles.balanceAmount}>{formatMoney(balance())}</div>
           <div class={styles.balanceActions}>
             <button class={styles.actionBtn} onClick={() => setShowTransfer(true)}>
-              Transferir
+              {t('bank.transfer', language())}
             </button>
           </div>
         </div>
 
         {/* Transactions Section */}
         <div class={styles.section}>
-          <div class={styles.sectionTitle}>Movimientos</div>
+          <div class={styles.sectionTitle}>{t('bank.movements', language())}</div>
           <Show when={loading()} fallback={
             <Show when={transactions().length > 0} fallback={
-              <EmptyState class={styles.emptyState} title="Sin movimientos" description="Tus transferencias apareceran aqui" />
+              <EmptyState class={styles.emptyState} title={t('bank.no_movements', language())} description={t('bank.no_movements_desc', language())} />
             }>
               <div class={styles.transactionsList}>
                 <For each={transactions()}>
                   {(tx) => (
                     <div class={styles.transactionItem}>
                       <div class={styles.transactionInfo}>
-                        <div class={styles.transactionTitle}>{tx.description || 'Transferencia'}</div>
+                        <div class={styles.transactionTitle}>{tx.description || t('bank.transfer', language())}</div>
                         <div class={styles.transactionDate}>{tx.time}</div>
                       </div>
                       <div 
@@ -184,15 +186,15 @@ export function BankApp() {
         <Show when={showTransfer()}>
           <div class={styles.modalOverlay} onClick={() => setShowTransfer(false)}>
             <div class={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-              <h2 class={styles.modalTitle}>Nueva transferencia</h2>
+              <h2 class={styles.modalTitle}>{t('bank.new_transfer', language())}</h2>
               
               <div class={styles.formGroup}>
-                <label>Destinatario</label>
+                <label>{t('bank.recipient', language())}</label>
                 <select 
                   value={transferTarget()}
                   onChange={(e) => setTransferTarget(e.currentTarget.value)}
                 >
-                  <option value="">Seleccionar contacto</option>
+                  <option value="">{t('bank.select_contact', language())}</option>
                   <For each={contacts()}>
                     {(contact) => (
                       <option value={contact.number}>{contact.display}</option>
@@ -202,7 +204,7 @@ export function BankApp() {
               </div>
               
               <div class={styles.formGroup}>
-                <label>Monto</label>
+                <label>{t('wallet.amount', language())}</label>
                 <input
                   type="number"
                   placeholder="0.00"
@@ -219,10 +221,10 @@ export function BankApp() {
               
               <div class={styles.modalActions}>
                 <button class={styles.cancelBtn} onClick={() => setShowTransfer(false)}>
-                  Cancelar
+                  {t('action.cancel', language())}
                 </button>
                 <button class={styles.sendBtn} onClick={handleTransfer}>
-                  Enviar
+                  {t('mail.send', language())}
                 </button>
               </div>
             </div>
@@ -232,26 +234,26 @@ export function BankApp() {
         <Show when={incomingInvoice()}>
           <div class={styles.modalOverlay}>
             <div class={styles.modalContent}>
-              <h2 class={styles.modalTitle}>Factura remota</h2>
+              <h2 class={styles.modalTitle}>{t('bank.remote_invoice', language())}</h2>
               <div class={styles.formGroup}>
-                <label>Emisor</label>
+                <label>{t('bank.sender', language())}</label>
                 <input type="text" value={incomingInvoice()?.fromName || ''} disabled />
               </div>
               <div class={styles.formGroup}>
-                <label>Concepto</label>
+                <label>{t('wallet.concept', language())}</label>
                 <input type="text" value={incomingInvoice()?.title || ''} disabled />
               </div>
               <div class={styles.formGroup}>
-                <label>Monto</label>
+                <label>{t('wallet.amount', language())}</label>
                 <input type="text" value={formatMoney(incomingInvoice()?.amount || 0)} disabled />
               </div>
 
               <div class={styles.modalActions}>
                 <button class={styles.cancelBtn} onClick={() => void respondInvoice(false)}>
-                  Rechazar
+                  {t('wallet.reject', language())}
                 </button>
                 <button class={styles.sendBtn} onClick={() => void respondInvoice(true)}>
-                  Pagar banco
+                  {t('wallet.pay_bank', language())}
                 </button>
               </div>
             </div>
