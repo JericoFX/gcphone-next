@@ -20,6 +20,15 @@ export default defineConfig({
         chunkFileNames: 'assets/[name].js',
         assetFileNames: 'assets/[name].[ext]',
         manualChunks(id) {
+          if (id.includes('livekit-client')) {
+            return 'vendor-livekit';
+          }
+          if (id.includes('socket.io-client')) {
+            return 'vendor-socket';
+          }
+          if (id.includes('/leaflet/') || id.includes('\\leaflet\\')) {
+            return 'vendor-leaflet';
+          }
           if (id.includes('node_modules')) {
             return 'vendor';
           }
