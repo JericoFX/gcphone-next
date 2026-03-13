@@ -144,18 +144,23 @@ function MusicPanel(props: Pick<LockScreenWidgetsProps, 'musicState' | 'musicSta
 }
 
 export function LockScreenWidgets(props: LockScreenWidgetsProps) {
-  const compactNotificationListClass = `${styles.notificationList} ${styles.notificationListCompact}`;
+  const notificationListClass = props.compact
+    ? `${styles.notificationList} ${styles.notificationListCompact}`
+    : styles.notificationList;
+  const compactRows = () => props.hasNotifications
+    ? 'repeat(3, minmax(0, 104px))'
+    : 'repeat(2, minmax(0, 104px))';
 
   if (props.compact) {
     return (
-      <div class={styles.widgetStack}>
+      <div class={styles.widgetStack} style={{ 'grid-template-rows': compactRows() }}>
         <Show when={props.hasNotifications}>
-          <section class={`${styles.notificationCenter} ${styles.primaryPanel}`}>
+          <section class={`${styles.notificationCenter} ${styles.primaryPanel} ${styles.compactPanel}`}>
             <NotificationPanel visibleNotifications={props.visibleNotifications} onNotificationClick={props.onNotificationClick} />
           </section>
         </Show>
 
-        <section class={styles.widgetPanel}>
+        <section class={`${styles.widgetPanel} ${styles.compactPanel}`}>
           <DevicePanel
             deviceOwnerName={props.deviceOwnerName}
             phoneNumber={props.phoneNumber}
@@ -165,7 +170,7 @@ export function LockScreenWidgets(props: LockScreenWidgetsProps) {
           />
         </section>
 
-        <section class={`${styles.widgetPanel} ${styles.musicPanel}`}>
+        <section class={`${styles.widgetPanel} ${styles.musicPanel} ${styles.compactPanel}`}>
           <MusicPanel
             musicState={props.musicState}
             musicStatusLabel={props.musicStatusLabel}
@@ -189,7 +194,7 @@ export function LockScreenWidgets(props: LockScreenWidgetsProps) {
               <span class={styles.widgetLabel}>Notificaciones</span>
               <span class={styles.widgetMeta}>{props.visibleNotifications.length}</span>
             </div>
-            <div class={compactNotificationListClass}>
+            <div class={notificationListClass}>
               <For each={props.visibleNotifications}>
                 {(item) => (
                   <button
