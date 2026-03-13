@@ -272,6 +272,7 @@ local function SafeUsername(value)
     username = username:gsub('[^a-z0-9._-]', '')
     if username == '' then return nil end
     if #username < 3 or #username > 32 then return nil end
+    if not username:match('%a') then return nil end
     if username:match('^[._-]') or username:match('[._-]$') then return nil end
     return username
 end
@@ -310,6 +311,7 @@ local function SafeMailAlias(value)
 
     alias = alias:lower()
     if not alias:match('^[a-z0-9._-]+$') then return nil end
+    if not alias:match('%a') then return nil end
     if alias:match('^[._-]') or alias:match('[._-]$') then return nil end
     if alias:find('..', 1, true) then return nil end
 

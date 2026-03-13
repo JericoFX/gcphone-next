@@ -676,6 +676,7 @@ const state: BrowserMockState = {
     },
   ],
   airplaneMode: false,
+  emergencyContacts: [{ label: 'Emergencias', number: '911' }],
   flashlightEnabled: false,
   flashlightKelvin: 5200,
   flashlightLumens: 1200,
@@ -1437,7 +1438,11 @@ export async function handleBrowserNui<T = unknown>(eventName: string, data?: un
     const nextAudioProfile = String(payload.audioProfile || state.audioProfile);
     const handles = [payload.snapUsername, payload.chirpUsername, payload.clipsUsername].map((value) => String(value || '').trim().toLowerCase());
 
-    if (pin.length < 4 || handles.some((value) => !/^[a-z0-9._-]{3,32}$/.test(value)) || !/^[a-z0-9._-]{3,24}$/.test(mailAlias)) {
+    if (
+      pin.length < 4 ||
+      handles.some((value) => !/^(?=.*[a-z])[a-z0-9._-]{3,32}$/.test(value)) ||
+      !/^(?=.*[a-z])[a-z0-9._-]{3,24}$/.test(mailAlias)
+    ) {
       return { success: false, error: 'INVALID_SETUP_DATA' } as T;
     }
 

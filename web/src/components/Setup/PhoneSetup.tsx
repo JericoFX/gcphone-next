@@ -23,12 +23,27 @@ function sanitizeMailAlias(value: string) {
   return value.toLowerCase().replace(/\s+/g, '').replace(/[^a-z0-9._-]/g, '').slice(0, 24);
 }
 
+function hasAlphaCharacter(value: string) {
+  return /[a-z]/.test(value);
+}
+
 function isValidHandle(value: string) {
-  return value.length >= 3 && value.length <= 32 && !/^[._-]|[._-]$/.test(value);
+  return (
+    value.length >= 3 &&
+    value.length <= 32 &&
+    hasAlphaCharacter(value) &&
+    !/^[._-]|[._-]$/.test(value)
+  );
 }
 
 function isValidMailAlias(value: string) {
-  return value.length >= 3 && value.length <= 24 && !/^[._-]|[._-]$/.test(value) && !value.includes('..');
+  return (
+    value.length >= 3 &&
+    value.length <= 24 &&
+    hasAlphaCharacter(value) &&
+    !/^[._-]|[._-]$/.test(value) &&
+    !value.includes('..')
+  );
 }
 
 function humanizeError(code: string | undefined, language: 'es' | 'en' | 'pt' | 'fr') {

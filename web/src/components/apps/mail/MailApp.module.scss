@@ -253,7 +253,7 @@
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-1);
   padding: var(--space-4);
-  margin: var(--space-3) var(--space-4);
+   margin: var(--space-3) var(--space-4) var(--space-4);
   animation: fadeInUp var(--dur-normal) var(--ease-standard);
 }
 
@@ -266,11 +266,16 @@
 
 /* Attachments Box */
 .attachmentsBox {
-  margin-top: var(--space-4);
+  position: absolute;
+  right: var(--space-4);
+  bottom: calc(92px + var(--phone-bottom-ui-gap, 0px));
+  width: min(280px, calc(100% - (var(--space-4) * 2)));
   padding: var(--space-4);
   background: var(--mail-surface-2);
   border: 1px solid var(--mail-border);
   border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-2);
+  z-index: 25;
 }
 
 .attachmentsBox h5 {
@@ -741,6 +746,13 @@
   flex-direction: column;
   height: 100%;
   overflow: hidden;
+  position: relative;
+}
+
+.composeScroll {
+  flex: 1;
+  overflow-y: auto;
+  padding-bottom: calc(116px + var(--phone-bottom-ui-gap, 0px));
 }
 
 .composeHeader {
@@ -779,6 +791,151 @@
   border-radius: var(--radius-sm);
   transition: background-color var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard), border-color var(--dur-fast) var(--ease-standard), opacity var(--dur-fast) var(--ease-standard), transform var(--dur-fast) var(--ease-standard), box-shadow var(--dur-fast) var(--ease-standard);
   min-width: 70px;
+}
+
+.composeError {
+  margin-bottom: var(--space-3);
+  background: rgba(255, 59, 48, 0.12);
+  border: 1px solid rgba(255, 59, 48, 0.28);
+  color: #D32F2F;
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.attachmentsSummary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+  padding: var(--space-3);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(135deg, rgba(0, 122, 255, 0.08), rgba(96, 165, 250, 0.18));
+  border: 1px solid rgba(0, 122, 255, 0.12);
+}
+
+.attachmentsLabel {
+  margin: 0 0 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--mail-text-2);
+}
+
+.attachmentsCount {
+  display: block;
+  font-size: 24px;
+  line-height: 1;
+  color: var(--mail-text);
+}
+
+.attachmentsToggle {
+  appearance: none;
+  border: none;
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: var(--radius-pill);
+  background: var(--mail-surface);
+  color: var(--mail-tint);
+  font-size: 13px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  box-shadow: inset 0 0 0 1px rgba(0, 122, 255, 0.12);
+}
+
+.composeFooter {
+  display: grid;
+  grid-template-columns: 1fr 1.3fr;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4) calc(var(--space-3) + var(--phone-bottom-ui-gap, 0px));
+  background: color-mix(in srgb, var(--mail-surface) 92%, transparent);
+  border-top: 1px solid var(--mail-separator);
+  backdrop-filter: blur(12px);
+  z-index: 20;
+}
+
+.composeFooterSecondary,
+.composeFooterPrimary {
+  appearance: none;
+  border: none;
+  min-height: 48px;
+  border-radius: var(--radius-pill);
+  font-size: 15px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard), opacity var(--dur-fast) var(--ease-standard), transform var(--dur-fast) var(--ease-standard), box-shadow var(--dur-fast) var(--ease-standard);
+}
+
+.composeFooterSecondary {
+  background: rgba(0, 122, 255, 0.08);
+  color: var(--mail-tint);
+}
+
+.composeFooterPrimary {
+  background: var(--mail-tint);
+  color: #fff;
+  box-shadow: 0 8px 18px rgba(0, 122, 255, 0.25);
+}
+
+.composeFooterSecondary:disabled,
+.composeFooterPrimary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.composeFab {
+  right: var(--space-4);
+  bottom: calc(84px + var(--phone-bottom-ui-gap, 0px));
+  width: 54px;
+  height: 54px;
+  background: linear-gradient(135deg, #0A84FF, #5FAEFF);
+  border: none;
+  box-shadow: 0 16px 30px rgba(10, 132, 255, 0.3);
+}
+
+.composeFab img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+}
+
+.composeFabBadge {
+  position: absolute;
+  right: calc(var(--space-4) - 2px);
+  bottom: calc(132px + var(--phone-bottom-ui-gap, 0px));
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: #FF453A;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 26;
+  box-shadow: 0 8px 18px rgba(255, 69, 58, 0.32);
+}
+
+@media (max-width: 380px) {
+  .attachRow {
+    grid-template-columns: 1fr;
+  }
+
+  .attachmentsBox {
+    left: var(--space-4);
+    right: var(--space-4);
+    width: auto;
+  }
+
+  .composeFooter {
+    grid-template-columns: 1fr;
+  }
 }
 
 .backButton:hover {
