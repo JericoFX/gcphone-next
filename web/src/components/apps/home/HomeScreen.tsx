@@ -5,7 +5,6 @@ import { useRouter } from '../../Phone/PhoneFrame';
 import { APP_BY_ID } from '../../../config/apps';
 import { appName, formatDate as formatDateI18n, formatTime as formatTimeI18n, t } from '../../../i18n';
 import { fetchNui } from '../../../utils/fetchNui';
-import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { timeAgo } from '../../../utils/misc';
 import styles from './HomeScreen.module.scss';
 

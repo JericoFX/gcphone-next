@@ -32,6 +32,9 @@ export default defineConfig({
           if (id.includes('components/apps/')) {
             const match = id.match(/components\/apps\/([^/]+)/);
             if (match) {
+              if (match[1] === 'home') {
+                return undefined;
+              }
               return `app-${match[1]}`;
             }
           }
