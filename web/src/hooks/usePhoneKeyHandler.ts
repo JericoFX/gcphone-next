@@ -1,5 +1,5 @@
-import { createEffect, onCleanup } from 'solid-js';
 import { useRouter } from '@/components/Phone/PhoneFrame';
+import { useInternalEvent } from '@/utils/internalEvents';
 
 export interface PhoneKeyHandlers {
   Backspace?: () => void;
@@ -15,41 +15,34 @@ export interface PhoneKeyHandlers {
 export function usePhoneKeyHandler(handlers: PhoneKeyHandlers) {
   const router = useRouter();
 
-  createEffect(() => {
-    const handleKeyEvent = (e: CustomEvent<string>) => {
-      const key = e.detail;
-      const handler = handlers[key];
-      
-      if (handler) {
-        handler();
-        return;
-      }
+  const handleKeyEvent = (key: string) => {
+    const handler = handlers[key];
 
-      if (key === 'Backspace' && !handlers.Backspace) {
-        router.goBack();
-      }
-    };
+    if (handler) {
+      handler();
+      return;
+    }
 
-    window.addEventListener('phone:keyUp', handleKeyEvent as EventListener);
-    onCleanup(() => window.removeEventListener('phone:keyUp', handleKeyEvent as EventListener));
-  });
+    if (key === 'Backspace' && !handlers.Backspace) {
+      router.goBack();
+    }
+  };
+
+  useInternalEvent('phone:keyUp', handleKeyEvent);
 }
 
 export function useBackspaceKey(onBack?: () => void) {
   const router = useRouter();
 
-  createEffect(() => {
-    const handleBackspaceKey = (e: CustomEvent<string>) => {
-      if (e.detail === 'Backspace') {
-        if (onBack) {
-          onBack();
-        } else {
-          router.goBack();
-        }
+  const handleBackspaceKey = (key: string) => {
+    if (key === 'Backspace') {
+      if (onBack) {
+        onBack();
+      } else {
+        router.goBack();
       }
-    };
+    }
+  };
 
-    window.addEventListener('phone:keyUp', handleBackspaceKey as EventListener);
-    onCleanup(() => window.removeEventListener('phone:keyUp', handleBackspaceKey as EventListener));
-  });
+  useInternalEvent('phone:keyUp', handleBackspaceKey);
 }

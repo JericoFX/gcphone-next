@@ -1,10 +1,9 @@
 import { For, Show, batch, createEffect, createMemo, createSignal, onCleanup, onMount } from 'solid-js';
 import { usePhone } from '../../store/phone';
 import { useNotifications } from '../../store/notifications';
-import { formatPhoneNumber } from '../../utils/misc';
 import { fetchNui } from '../../utils/fetchNui';
 import { formatDate, formatTime, t } from '../../i18n';
-import { useWindowEvent } from '../../hooks';
+import { emitInternalEvent, useInternalEvent } from '../../utils/internalEvents';
 import { LockScreenWidgets } from './LockScreenWidgets';
 import styles from './LockScreen.module.scss';
 
@@ -115,8 +114,8 @@ export function LockScreen() {
     })();
   });
 
-  useWindowEvent<CustomEvent<Partial<MusicSessionState>>>('musicStateUpdated', (event) => {
-    applyMusicState(event.detail || {});
+  useInternalEvent<Partial<MusicSessionState>>('musicStateUpdated', (detail) => {
+    applyMusicState(detail || {});
   });
 
   onCleanup(() => {
@@ -133,7 +132,7 @@ export function LockScreen() {
     });
     if (destination?.route) {
       window.setTimeout(() => {
-        window.dispatchEvent(new CustomEvent('phone:openRoute', { detail: { route: destination.route, data: destination.data || {} } }));
+        emitInternalEvent('phone:openRoute', { route: destination.route, data: destination.data || {} });
       }, 60);
     }
   };
