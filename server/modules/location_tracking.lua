@@ -78,11 +78,9 @@ end
 RebuildRecipientCache()
 
 if not USE_SQL_CLEANUP_EVENTS then
-    CreateThread(function()
-        while true do
-            Wait(60000)
-            CleanExpiredLocations()
-        end
+    -- Verified: CommunityOX ox_lib Cron/Server supports recurring minutely cleanup jobs
+    lib.cron.new('* * * * *', function()
+        CleanExpiredLocations()
     end)
 end
 

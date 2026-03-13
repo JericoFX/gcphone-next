@@ -33,13 +33,10 @@ local function IsPublishJobAllowed(source)
         return false
     end
 
-    for _, allowed in ipairs(rules) do
-        if tostring(allowed):lower() == jobName then
-            return true
-        end
-    end
-
-    return false
+    -- Verified: CommunityOX ox_lib Table/Shared exposes lib.table.contains(tbl, value)
+    return lib.table.contains(lib.array.map(rules, function(allowed)
+        return tostring(allowed):lower()
+    end), jobName)
 end
 
 local function SanitizeScaleform(data)
@@ -642,14 +639,13 @@ end)
 CreateThread(function()
     MySQL.execute.await('DELETE FROM phone_news WHERE is_live = 1')
 
-    while true do
-        Wait(60000)
-        
+    -- Verified: CommunityOX ox_lib Cron/Server exposes lib.cron.new(expression, job, options)
+    lib.cron.new('* * * * *', function()
         for articleId, liveData in pairs(ActiveLiveNews) do
             local currentTime = os.time()
             if currentTime - liveData.startTime > Config.News.MaxLiveDuration then
                 DeleteLiveArticle(articleId)
             end
         end
-    end
+    end)
 end)

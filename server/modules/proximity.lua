@@ -347,13 +347,10 @@ lib.callback.register('gcphone:proximity:sharePost', function(source, data)
 end)
 
 if not USE_SQL_CLEANUP_EVENTS then
-    CreateThread(function()
-        while true do
-            Wait(60000)
-
-            MySQL.execute.await(
-                'DELETE FROM phone_shared_locations WHERE expires_at IS NOT NULL AND expires_at < NOW()'
-            )
-        end
+    -- Verified: CommunityOX ox_lib Cron/Server runs cron expressions with minute precision
+    lib.cron.new('* * * * *', function()
+        MySQL.execute.await(
+            'DELETE FROM phone_shared_locations WHERE expires_at IS NOT NULL AND expires_at < NOW()'
+        )
     end)
 end

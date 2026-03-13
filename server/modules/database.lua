@@ -1428,19 +1428,29 @@ end
 
 -- Main migration runner
 local function RunMigrations()
-    -- Wait for MySQL to be ready
-    local attempts = 0
-    while GetResourceState('oxmysql') ~= 'started' and attempts < 30 do
-        Wait(100)
-        attempts = attempts + 1
-    end
-    
-    if GetResourceState('oxmysql') ~= 'started' then
+    -- Verified: CommunityOX ox_lib WaitFor/Shared defaults to frame polling and returns nil on timeout
+    local started = lib.waitFor(function()
+        if GetResourceState('oxmysql') == 'started' then
+            return true
+        end
+    end, nil, 3000)
+
+    if not started then
         print('^1[gcphone-next] ERROR: oxmysql not started, cannot run migrations^7')
         return
     end
-    
-    Wait(500) -- Give oxmysql time to fully initialize
+
+    local ready = lib.waitFor(function()
+        local ok = pcall(MySQL.query.await, 'SELECT 1')
+        if ok then
+            return true
+        end
+    end, nil, 2000)
+
+    if not ready then
+        print('^1[gcphone-next] ERROR: oxmysql did not finish initializing in time^7')
+        return
+    end
     
     -- Create migrations tracking table
     local success, errorMsg = pcall(function()
