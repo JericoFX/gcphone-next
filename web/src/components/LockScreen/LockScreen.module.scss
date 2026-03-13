@@ -68,8 +68,8 @@
 }
 
 .date {
-  margin-top: 4px;
-  font-size: 14px;
+  margin-top: var(--s-1);
+  font-size: var(--fs-footnote);
   text-transform: capitalize;
   color: var(--ls-text-soft);
 }
@@ -78,7 +78,7 @@
   flex: 1;
   min-height: 0;
   display: grid;
-  gap: 8px;
+  gap: var(--s-2);
   align-content: stretch;
   overflow: hidden;
 }
@@ -86,7 +86,7 @@
 .widget-carousel,
 .widget-stack {
   display: grid;
-  gap: 8px;
+  gap: var(--s-2);
   min-height: 0;
 }
 
@@ -107,6 +107,11 @@
 
 .primary-panel {
   min-height: 124px;
+}
+
+.widget-viewport > section {
+  min-height: 124px;
+  max-height: 124px;
 }
 
 .compact-panel {
@@ -162,9 +167,11 @@
 
 .widget-panel {
   display: grid;
-  gap: 10px;
-  padding: 12px 14px;
-  border-radius: 22px;
+  gap: var(--s-3);
+  padding: var(--s-3) 14px;
+  border-radius: var(--r-xl);
+  min-height: 146px;
+  grid-template-rows: auto minmax(0, 1fr);
 }
 
 .widget-header,
@@ -189,21 +196,21 @@
 }
 
 .widget-label {
-  font-size: 10px;
+  font-size: var(--fs-caption2);
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: rgba(218, 232, 255, 0.78);
 }
 
 .widget-meta {
-  font-size: 11px;
+  font-size: var(--fs-caption1);
   color: var(--ls-text-muted);
 }
 
 .widget-title {
   display: block;
-  font-size: 15px;
-  line-height: 1.4;
+  font-size: var(--fs-subhead);
+  line-height: var(--lh-normal);
   color: #fff;
 }
 
@@ -218,24 +225,24 @@
 
 .device-info-rows {
   display: grid;
-  gap: 8px;
+  gap: var(--s-2);
 }
 
 .device-identity-row {
-  gap: 8px;
-  font-size: 11px;
+  gap: var(--s-2);
+  font-size: var(--fs-caption1);
   color: var(--ls-text-soft);
 }
 
 .device-identity-row strong {
-  font-size: 11px;
+  font-size: var(--fs-caption1);
   color: #fff;
   text-align: right;
   word-break: break-all;
 }
 
 .music-controls {
-  gap: 10px;
+  gap: var(--s-2);
   justify-content: center;
 }
 
@@ -256,9 +263,9 @@
 .expand-keypad-btn,
 .sheet-actions button {
   height: 36px;
-  border-radius: 12px;
+  border-radius: var(--r-md);
   padding: 0 12px;
-  font-size: 12px;
+  font-size: var(--fs-footnote);
   font-weight: 700;
   color: #fff;
   background: var(--ls-surface);
@@ -266,7 +273,8 @@
 }
 
 .music-panel {
-  gap: 12px;
+  gap: var(--s-3);
+  align-content: start;
 }
 
 .music-icon-btn {
@@ -296,7 +304,7 @@
 }
 
 .volume-controls {
-  gap: 8px;
+  gap: var(--s-2);
 }
 
 .volume-btn {
@@ -326,7 +334,7 @@
 .carousel-dots {
   display: flex;
   justify-content: center;
-  gap: 8px;
+  gap: var(--s-2);
 }
 
 .dot-btn {
@@ -343,17 +351,17 @@
 
 .notification-center {
   min-height: 0;
-  border-radius: 22px;
-  padding: 12px;
+  border-radius: var(--r-xl);
+  padding: var(--s-3);
   display: grid;
-  gap: 10px;
+  gap: var(--s-2);
   align-content: start;
 }
 
 .notification-list {
   min-height: 0;
   display: grid;
-  gap: 8px;
+  gap: var(--s-2);
   align-content: start;
   overflow-y: auto;
 }
@@ -366,7 +374,7 @@
   width: 100%;
   text-align: left;
   padding: 11px 12px;
-  border-radius: 18px;
+  border-radius: var(--r-lg);
   border: 1px solid rgba(255, 255, 255, 0.16);
   background: rgba(255, 255, 255, 0.18);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
@@ -374,7 +382,7 @@
 
 .notification-card p {
   margin: 5px 0 0;
-  font-size: 12px;
+  font-size: var(--fs-footnote);
   color: rgba(232, 241, 255, 0.9);
   line-height: 1.4;
   display: -webkit-box;
@@ -396,27 +404,27 @@
 }
 
 .notification-top strong {
-  font-size: 12px;
+  font-size: var(--fs-footnote);
   color: #fff;
 }
 
 .notification-top span {
-  font-size: 10px;
+  font-size: var(--fs-caption2);
   color: var(--ls-text-muted);
 }
 
 .notification-empty {
   padding: 18px 10px;
   text-align: center;
-  border-radius: 18px;
+  border-radius: var(--r-lg);
   background: rgba(255, 255, 255, 0.14);
   color: rgba(232, 241, 255, 0.72);
-  font-size: 12px;
+  font-size: var(--fs-footnote);
 }
 
 .unlock-sheet,
 .unlock-sheet-collapsed {
-  border-radius: 24px 24px 20px 20px;
+  border-radius: var(--r-2xl) var(--r-2xl) var(--r-xl) var(--r-xl);
 }
 
 .emergency-sheet-overlay,
@@ -433,7 +441,7 @@
 .emergency-sheet,
 .imei-modal-card {
   width: 100%;
-  border-radius: 24px;
+  border-radius: var(--r-2xl);
   border: 1px solid var(--ls-border);
   background: color-mix(in srgb, rgba(20, 24, 34, 0.94) 84%, transparent);
   box-shadow: 0 22px 40px rgba(0, 0, 0, 0.36);
@@ -442,7 +450,7 @@
 .emergency-sheet {
   padding: 14px;
   display: grid;
-  gap: 10px;
+  gap: var(--s-2);
 }
 
 .emergency-header,
@@ -450,7 +458,7 @@
 .emergency-tag-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--s-2);
 }
 
 .emergency-header {
@@ -481,7 +489,7 @@
 .emergency-tag {
   border-radius: 999px;
   padding: 8px 12px;
-  font-size: 12px;
+  font-size: var(--fs-footnote);
   font-weight: 700;
   color: #eef5ff;
   background: var(--ls-surface-strong);
@@ -499,7 +507,7 @@
 .emergency-keypad {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  gap: var(--s-2);
 }
 
 .emergency-key {
@@ -547,7 +555,7 @@
 .unlock-sheet {
   padding: 10px 10px 12px;
   display: grid;
-  gap: 8px;
+  gap: var(--s-2);
 }
 
 .sheet-handle {
@@ -583,18 +591,18 @@
 .code-container {
   display: grid;
   justify-items: center;
-  gap: 8px;
+  gap: var(--s-2);
 }
 
 .unlock-title {
-  font-size: 13px;
+  font-size: var(--fs-footnote);
   font-weight: 700;
   color: #fdfefe;
 }
 
 .dots {
   display: flex;
-  gap: 12px;
+  gap: var(--s-3);
 }
 
 .dot {
@@ -616,7 +624,7 @@
 }
 
 .error-msg {
-  font-size: 12px;
+  font-size: var(--fs-footnote);
   color: #ffb7b7;
 }
 
@@ -649,7 +657,7 @@
 
 .sheet-actions {
   justify-content: space-between;
-  gap: 10px;
+  gap: var(--s-2);
 }
 
 .sheet-actions button {
@@ -673,7 +681,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: var(--s-2);
   padding: 0 8px;
   touch-action: none;
 }
