@@ -173,7 +173,7 @@ export function App() {
     }
   });
 
-  useWindowEvent('message', (event) => {
+  useWindowEvent<MessageEvent>('message', (event) => {
     const payload = event.data as {
       action?: string;
       data?: unknown;
@@ -205,7 +205,7 @@ export function App() {
     }
   });
 
-  useWindowEvent('keydown', (event) => {
+  useWindowEvent<KeyboardEvent>('keydown', (event) => {
     if (event.key === 'Escape') {
       fetchNui('closePhone');
     }

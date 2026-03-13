@@ -10,12 +10,17 @@ interface MessageEntry {
   owner: number;
   receiver: string;
   transmitter: string;
-  time: string;
+  time: string | Date;
   isRead?: boolean;
 }
 
 interface WaveStatus {
+  id: number;
   phone_number: string;
+  media_url: string;
+  media_type: 'image' | 'video';
+  created_at?: string;
+  contact_name?: string;
 }
 
 export function useWaveChatDerivedData(params: {
