@@ -58,8 +58,8 @@
   inset: 0;
   z-index: 90;
   background:
-    radial-gradient(130% 65% at 50% -8%, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0) 58%),
-    linear-gradient(180deg, rgba(236, 241, 251, 0.8), rgba(222, 232, 249, 0.82));
+    radial-gradient(130% 65% at 50% -8%, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0) 58%),
+    linear-gradient(180deg, rgba(242, 244, 250, 0.82), rgba(229, 235, 246, 0.86));
 }
 
 .sheet {
@@ -116,10 +116,10 @@
 
 .summaryCard {
   min-height: 52px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.72);
-  border: 1px solid rgba(255, 255, 255, 0.62);
-  box-shadow: 0 8px 20px rgba(17, 30, 52, 0.12);
+  border-radius: var(--r-lg, 16px);
+  background: var(--color-surface-translucent, rgba(255, 255, 255, 0.72));
+  border: 1px solid color-mix(in srgb, var(--border, rgba(0,0,0,.12)) 80%, transparent);
+  box-shadow: var(--shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.08));
   display: grid;
   align-content: center;
   justify-items: start;
@@ -206,14 +206,14 @@
 
 .notification-item {
   border: none;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.72);
+  border-radius: var(--r-lg, 16px);
+  background: var(--color-surface-translucent, rgba(255, 255, 255, 0.72));
   color: #132139;
   text-align: left;
   padding: 8px 10px;
   display: grid;
   gap: 2px;
-  box-shadow: 0 8px 18px rgba(18, 34, 58, 0.12), inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+  box-shadow: var(--shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.08)), inset 0 0 0 1px rgba(255, 255, 255, 0.5);
   transition: transform 120ms ease, background 120ms ease;
 
   &:active {

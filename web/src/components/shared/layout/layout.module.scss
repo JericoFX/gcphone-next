@@ -12,6 +12,8 @@
 
 .header {
   flex-shrink: 0;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--surface) 92%, transparent), color-mix(in srgb, var(--surface-2) 88%, transparent));
+  border-bottom: 1px solid var(--separator, rgba(0, 0, 0, 0.1));
   
   &.transparent {
     background: transparent;
@@ -45,6 +47,7 @@
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
+  background: radial-gradient(120% 100% at 50% 0%, color-mix(in srgb, var(--surface) 72%, var(--bg)), var(--bg) 62%);
   
   &.paddingNone {
     padding: 0;
@@ -58,7 +61,7 @@
 .footer {
   flex-shrink: 0;
   padding: 8px 12px;
-  background: var(--surface, #ffffff);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--surface) 92%, transparent), color-mix(in srgb, var(--surface-2) 90%, transparent));
   border-top: 1px solid var(--separator, rgba(0, 0, 0, 0.1));
   
   &.transparent {
@@ -161,7 +164,7 @@
   display: flex;
   gap: 0;
   padding: 0;
-  background: var(--surface-2, #f7f7fa);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--surface-2) 96%, transparent), color-mix(in srgb, var(--surface-3) 92%, transparent));
   border-top: 1px solid var(--separator, rgba(0, 0, 0, 0.1));
   flex-shrink: 0;
 }
@@ -183,9 +186,25 @@
   cursor: pointer;
   transition: color var(--dur-2, 180ms) var(--ease-standard, cubic-bezier(0.2, 0.8, 0.2, 1));
   position: relative;
+
+  &::after {
+    content: '';
+    position: absolute;
+    left: 18px;
+    right: 18px;
+    bottom: 2px;
+    height: 3px;
+    border-radius: 999px;
+    background: transparent;
+    transition: background var(--dur-2, 180ms) var(--ease-standard, cubic-bezier(0.2, 0.8, 0.2, 1));
+  }
   
   &.tabActive {
     color: var(--tint, #007aff);
+
+    &::after {
+      background: color-mix(in srgb, var(--tint, #007aff) 82%, white);
+    }
   }
   
   &:active {
@@ -231,4 +250,5 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: 0 4px 12px rgba(255, 59, 48, 0.22);
 }
