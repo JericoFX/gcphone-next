@@ -5,7 +5,7 @@
   background:
     radial-gradient(120% 120% at 0% 0%, rgba(52, 199, 89, 0.09), transparent 45%),
     radial-gradient(90% 120% at 100% 0%, rgba(10, 132, 255, 0.1), transparent 42%),
-    #F2F2F7;
+    var(--bg);
   overflow: hidden;
 }
 
@@ -13,7 +13,7 @@
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: #FFFFFF;
+  background: var(--surface);
   overflow: hidden;
 }
 
@@ -21,9 +21,9 @@
   height: 56px;
   display: flex;
   align-items: center;
-  padding: 0 12px;
+  padding: 0 var(--s-3);
   border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-  background: #FFFFFF;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--surface) 94%, transparent), color-mix(in srgb, var(--surface-2) 90%, transparent));
   flex-shrink: 0;
 }
 
@@ -33,7 +33,7 @@
   padding: 0;
   border: none;
   border-radius: 999px;
-  background: rgba(0, 122, 255, 0.1);
+  background: var(--color-surface-translucent);
   color: #007AFF;
   font-size: 20px;
   display: flex;
@@ -57,7 +57,7 @@
 .nav-title {
   flex: 1;
   text-align: center;
-  font-size: 17px;
+  font-size: var(--fs-title3);
   font-weight: 700;
   color: #111111;
 }
@@ -65,24 +65,28 @@
 .tabs {
   margin: 8px 12px;
   flex-shrink: 0;
+  background: var(--color-surface-translucent);
+  border-radius: var(--r-lg);
+  padding: 4px;
+  box-shadow: var(--shadow-sm);
 }
 
 .tab-btn {
   border: none;
-  border-radius: 8px;
+  border-radius: var(--r-sm);
   background: transparent;
   color: rgba(60, 60, 67, 0.6);
   height: 32px;
-  font-size: 13px;
+  font-size: var(--fs-footnote);
   font-weight: 600;
   cursor: pointer;
   transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, opacity 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .tab-active {
-  background: #FFFFFF;
+  background: var(--surface);
   color: #007AFF;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-sm);
 }
 
 .list {
@@ -95,15 +99,15 @@
 
 .emptyState {
   margin: 12px;
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.84);
+  border-radius: var(--r-xl);
+  background: var(--color-surface-translucent);
   border: 1px solid rgba(15, 23, 42, 0.06);
 }
 
 .conversation-item {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--s-3);
   padding: 12px 16px;
   border-bottom: 1px solid rgba(0, 0, 0, 0.05);
   background: #FFFFFF;
@@ -111,7 +115,7 @@
   transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, opacity 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
 
   &:hover {
-    background: #F2F2F7;
+    background: var(--surface-2);
   }
 
   &.selected {
@@ -146,7 +150,7 @@
 }
 
 .name {
-  font-size: 15px;
+  font-size: var(--fs-subhead);
   font-weight: 700;
   color: #111111;
   white-space: nowrap;
@@ -169,7 +173,7 @@
 
 .preview-text {
   flex: 1;
-  font-size: 13px;
+  font-size: var(--fs-footnote);
   color: rgba(60, 60, 67, 0.6);
   white-space: nowrap;
   overflow: hidden;
@@ -180,27 +184,27 @@
 .call-item {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--s-3);
   padding: 12px 16px;
   border-bottom: 1px solid rgba(0, 0, 0, 0.05);
   background: #FFFFFF;
   cursor: pointer;
-  border-radius: 20px;
+  border-radius: var(--r-xl);
   border: 1px solid rgba(15, 23, 42, 0.06);
   box-shadow: 0 10px 22px rgba(15, 23, 42, 0.04);
 }
 
 .status-panel {
   display: grid;
-  gap: 10px;
+  gap: var(--s-3);
   padding: 10px 12px 18px;
 }
 
 .status-hero {
   display: grid;
-  gap: 14px;
+  gap: var(--s-4);
   padding: 18px;
-  border-radius: 24px;
+  border-radius: var(--r-2xl);
   background: linear-gradient(135deg, rgba(10, 132, 255, 0.98), rgba(52, 199, 89, 0.88));
   color: #FFFFFF;
   box-shadow: 0 22px 50px rgba(10, 132, 255, 0.2);
@@ -213,7 +217,7 @@
 
   h3 {
     margin: 4px 0 6px;
-    font-size: 24px;
+    font-size: var(--fs-title2);
     line-height: 1.05;
   }
 
@@ -221,14 +225,14 @@
     margin: 0;
     max-width: 280px;
     color: rgba(255, 255, 255, 0.84);
-    font-size: 13px;
+    font-size: var(--fs-footnote);
     line-height: 1.45;
   }
 }
 
 .status-hero-eyebrow {
   display: inline-block;
-  font-size: 11px;
+  font-size: var(--fs-caption1);
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -238,7 +242,7 @@
 .status-hero-stats {
   min-width: 76px;
   padding: 12px 14px;
-  border-radius: 18px;
+  border-radius: var(--r-xl);
   background: rgba(255, 255, 255, 0.16);
   border: 1px solid rgba(255, 255, 255, 0.18);
   text-align: center;
@@ -252,7 +256,7 @@
   span {
     display: block;
     margin-top: 4px;
-    font-size: 11px;
+    font-size: var(--fs-caption1);
     text-transform: uppercase;
     letter-spacing: 0.08em;
     color: rgba(255, 255, 255, 0.72);
@@ -261,14 +265,14 @@
 
 .status-composer {
   display: flex;
-  gap: 8px;
+  gap: var(--s-2);
   padding: 0;
   flex-wrap: wrap;
 }
 
 .status-section-title {
   padding: 10px 4px 0;
-  font-size: 12px;
+  font-size: var(--fs-caption1);
   font-weight: 700;
   color: #8E8E93;
   text-transform: uppercase;
@@ -278,7 +282,7 @@
 .status-empty {
   padding: 18px 16px;
   color: #8E8E93;
-  font-size: 13px;
+  font-size: var(--fs-footnote);
 }
 
 .status-ring {
@@ -295,7 +299,7 @@
   padding: 0 14px;
   background: #007AFF;
   color: #FFFFFF;
-  font-size: 13px;
+  font-size: var(--fs-footnote);
   font-weight: 600;
   cursor: pointer;
   transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, opacity 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
@@ -321,7 +325,7 @@
   border-radius: 999px;
   background: rgba(10, 132, 255, 0.1);
   color: #007aff;
-  font-size: 11px;
+  font-size: var(--fs-caption1);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -329,12 +333,12 @@
 
 .delete-conversation-btn {
   border: none;
-  border-radius: 8px;
+  border-radius: var(--r-sm);
   height: 28px;
   padding: 0 12px;
   background: rgba(255, 59, 48, 0.1);
   color: #FF3B30;
-  font-size: 12px;
+  font-size: var(--fs-footnote);
   font-weight: 600;
   cursor: pointer;
   transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, opacity 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
