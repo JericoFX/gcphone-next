@@ -1,6 +1,7 @@
 -- Creado/Modificado por JericoFX
 
 local USE_SQL_CLEANUP_EVENTS = GetConvar('gcphone_sql_cleanup_events', '0') == '1'
+local RetentionTimer = nil
 
 local function ClampNumber(value, minValue, maxValue, fallback)
     local num = tonumber(value)
@@ -77,6 +78,18 @@ local function PurgeOldRows()
     MySQL.query_async('DELETE FROM phone_social_notifications WHERE created_at < (NOW() - INTERVAL ? DAY)', { days })
 end
 
+local function ScheduleRetentionPurge()
+    if USE_SQL_CLEANUP_EVENTS then
+        return
+    end
+
+    -- Verified: CommunityOX ox_lib Timer/Shared exposes lib.timer(time, onEnd, async)
+    RetentionTimer = lib.timer(GetIntervalMs(), function()
+        PurgeOldRows()
+        ScheduleRetentionPurge()
+    end, true)
+end
+
 CreateThread(function()
     Wait(3000)
     EnsureRetentionIndexes()
@@ -85,8 +98,11 @@ CreateThread(function()
         return
     end
 
-    while true do
-        PurgeOldRows()
-        Wait(GetIntervalMs())
-    end
+    PurgeOldRows()
+    ScheduleRetentionPurge()
+end)
+
+AddEventHandler('onResourceStop', function(resourceName)
+    if resourceName ~= cache.resource or not RetentionTimer then return end
+    RetentionTimer:forceEnd(false)
 end)

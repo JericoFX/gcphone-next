@@ -26,12 +26,17 @@ local function ensureESXPhoneColumn()
 end
 
 CreateThread(function()
-    if GetResourceState('es_extended') == 'started' then
-        ESX = exports['es_extended']:getSharedObject()
-        Framework = 'esx'
-        ensureESXPhoneColumn()
-        print(('[gcphone-next] Framework detected: %s'):format(Framework))
-    end
+    -- Verified: CommunityOX ox_lib WaitFor/Shared repeats the callback until it returns non-nil
+    lib.waitFor(function()
+        if GetResourceState('es_extended') == 'started' then
+            return true
+        end
+    end, 'gcphone-next failed to initialize ESX bridge', false)
+
+    ESX = exports['es_extended']:getSharedObject()
+    Framework = 'esx'
+    ensureESXPhoneColumn()
+    print(('[gcphone-next] Framework detected: %s'):format(Framework))
 end)
 
 local function IsTruthy(value)

@@ -1,19 +1,8 @@
 local NearbyVoiceSession = nil
 local NearbyVoiceLastState = nil
 local NearbyVoiceLastVolume = nil
-
-local function RoundToStep(value, step)
-    local num = tonumber(value) or 0.0
-    local precision = tonumber(step) or 0.1
-    return math.floor((num / precision) + 0.5) * precision
-end
-
-local function ClampNumber(value, minValue, maxValue)
-    local num = tonumber(value) or minValue
-    if num < minValue then return minValue end
-    if num > maxValue then return maxValue end
-    return num + 0.0
-end
+-- Verified: CommunityOX ox_lib Math/Shared exposes lib.math.clamp and lib.math.round
+local libmath = lib.math
 
 local function ComputeVoiceVolume(distance, maxDistance, minVolume, maxVolume, curve)
     if not distance or distance < 0.0 or distance >= maxDistance then
@@ -22,11 +11,11 @@ local function ComputeVoiceVolume(distance, maxDistance, minVolume, maxVolume, c
 
     local ratio = 1.0 - (distance / maxDistance)
     local shaped = ratio ^ curve
-    return ClampNumber(minVolume + ((maxVolume - minVolume) * shaped), 0.0, 1.0)
+    return libmath.clamp(minVolume + ((maxVolume - minVolume) * shaped), 0.0, 1.0)
 end
 
 local function SmoothVolume(previous, target, factor)
-    local clampedFactor = ClampNumber(factor, 0.0, 1.0)
+    local clampedFactor = libmath.clamp(tonumber(factor) or 0.0, 0.0, 1.0)
     return previous + ((target - previous) * clampedFactor)
 end
 
@@ -60,7 +49,7 @@ local function PushNearbyVoiceState()
         return
     end
 
-    local roundedDistance = session.distance and RoundToStep(session.distance, 0.1) or -1
+    local roundedDistance = session.distance and libmath.round(session.distance, 1) or -1
     local stateKey = ('%s|%s|%s|%s'):format(
         tostring(session.peerId),
         tostring(session.listening == true),
@@ -87,7 +76,7 @@ end
 
 local function PushNearbyVoiceVolume(volume)
     local session = NearbyVoiceSession
-    local roundedVolume = RoundToStep(ClampNumber(volume or 0.0, 0.0, 1.0), 0.01)
+    local roundedVolume = libmath.round(libmath.clamp(tonumber(volume) or 0.0, 0.0, 1.0), 2)
     local volumeKey = ('%s|%s'):format(tostring(session and session.peerId or false), tostring(roundedVolume))
     if volumeKey == NearbyVoiceLastVolume then
         return
@@ -140,14 +129,14 @@ RegisterNUICallback('setListeningPeerId', function(data, cb)
     NearbyVoiceSession = {
         peerId = peerId,
         targetServerId = targetServerId,
-        listenDistance = ClampNumber(type(data) == 'table' and data.listenDistance or nil, 5.0, 40.0),
-        leaveBuffer = ClampNumber(type(data) == 'table' and data.leaveBuffer or nil, 0.0, 10.0),
-        minVolume = ClampNumber(type(data) == 'table' and data.minVolume or nil, 0.0, 1.0),
-        maxVolume = ClampNumber(type(data) == 'table' and data.maxVolume or nil, 0.0, 1.0),
-        distanceCurve = ClampNumber(type(data) == 'table' and data.distanceCurve or nil, 0.5, 4.0),
-        volumeSmoothing = ClampNumber(type(data) == 'table' and data.volumeSmoothing or nil, 0.05, 1.0),
+        listenDistance = libmath.clamp(tonumber(type(data) == 'table' and data.listenDistance or nil) or 5.0, 5.0, 40.0),
+        leaveBuffer = libmath.clamp(tonumber(type(data) == 'table' and data.leaveBuffer or nil) or 0.0, 0.0, 10.0),
+        minVolume = libmath.clamp(tonumber(type(data) == 'table' and data.minVolume or nil) or 0.0, 0.0, 1.0),
+        maxVolume = libmath.clamp(tonumber(type(data) == 'table' and data.maxVolume or nil) or 1.0, 0.0, 1.0),
+        distanceCurve = libmath.clamp(tonumber(type(data) == 'table' and data.distanceCurve or nil) or 1.0, 0.5, 4.0),
+        volumeSmoothing = libmath.clamp(tonumber(type(data) == 'table' and data.volumeSmoothing or nil) or 0.1, 0.05, 1.0),
         useMumbleRangeClamp = type(data) == 'table' and data.useMumbleRangeClamp ~= false or true,
-        updateIntervalMs = math.floor(ClampNumber(type(data) == 'table' and data.updateIntervalMs or nil, 80.0, 1500.0)),
+        updateIntervalMs = math.floor(libmath.clamp(tonumber(type(data) == 'table' and data.updateIntervalMs or nil) or 80.0, 80.0, 1500.0)),
         currentVolume = 0.0,
         listening = false,
         targetOnline = false,

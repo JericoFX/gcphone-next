@@ -513,15 +513,14 @@ lib.callback.register('gcphone:wallet:getPendingRequests', function(source)
         { identifier }
     ) or {}
 
-    local incomingPayload = {}
-    for _, row in ipairs(incoming) do
-        incomingPayload[#incomingPayload + 1] = BuildWalletRequestPayload(row)
-    end
+    -- Verified: CommunityOX ox_lib Array/Shared exposes lib.array.map(arr, fn)
+    local incomingPayload = lib.array.map(incoming, function(row)
+        return BuildWalletRequestPayload(row)
+    end)
 
-    local outgoingPayload = {}
-    for _, row in ipairs(outgoing) do
-        outgoingPayload[#outgoingPayload + 1] = BuildWalletRequestPayload(row)
-    end
+    local outgoingPayload = lib.array.map(outgoing, function(row)
+        return BuildWalletRequestPayload(row)
+    end)
 
     return {
         incoming = incomingPayload,
