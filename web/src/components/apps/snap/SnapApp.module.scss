@@ -4,7 +4,7 @@
   background:
     radial-gradient(120% 90% at 0% -10%, rgba(240, 148, 51, 0.12), transparent 50%),
     radial-gradient(120% 90% at 100% 0%, rgba(220, 39, 67, 0.12), transparent 46%),
-    linear-gradient(180deg, #fbfbfd 0%, #f3f5f9 100%);
+    linear-gradient(180deg, color-mix(in srgb, var(--surface) 96%, #fbfbfd), color-mix(in srgb, var(--surface-2) 94%, #f3f5f9));
 }
 
 .snapApp {
@@ -16,15 +16,15 @@
 
 // Stories Section
 .storiesSection {
-  background: #ffffff;
-  border-bottom: 1px solid #e5e5ea;
-  padding: 12px 0;
+  background: var(--color-surface-elevated);
+  border-bottom: 1px solid var(--separator);
+  padding: var(--s-3) 0;
 }
 
 .storiesList {
   display: flex;
-  gap: 16px;
-  padding: 0 16px;
+  gap: var(--s-4);
+  padding: 0 var(--s-4);
   overflow-x: auto;
   scrollbar-width: none;
   
@@ -83,8 +83,8 @@
 }
 
 .storyName {
-  font-size: 12px;
-  color: #1a1a1a;
+  font-size: var(--fs-caption1);
+  color: var(--text);
   max-width: 68px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -93,21 +93,21 @@
 
 // Live Section
 .liveSection {
-  background: #ffffff;
-  border-bottom: 1px solid #e5e5ea;
-  padding: 16px;
+  background: var(--color-surface-elevated);
+  border-bottom: 1px solid var(--separator);
+  padding: var(--s-4);
 }
 
 .sectionTitle {
-  font-size: 17px;
+  font-size: var(--fs-title3);
   font-weight: 600;
-  color: #1a1a1a;
-  margin: 0 0 12px 0;
+  color: var(--text);
+  margin: 0 0 var(--s-3) 0;
 }
 
 .liveList {
   display: flex;
-  gap: 12px;
+  gap: var(--s-3);
   overflow-x: auto;
 }
 
@@ -167,8 +167,8 @@
 }
 
 .liveName {
-  font-size: 12px;
-  color: #1a1a1a;
+  font-size: var(--fs-caption1);
+  color: var(--text);
   max-width: 56px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -176,40 +176,41 @@
 }
 
 .liveViewers {
-  font-size: 10px;
-  color: #8e8e93;
+  font-size: var(--fs-caption2);
+  color: var(--text-3);
 }
 
 // Posts Section
 .postsSection {
   flex: 1;
   overflow-y: auto;
-  padding: 16px;
+  padding: var(--s-4);
 }
 
 .statusBanner {
-  margin-bottom: 8px;
-  padding: 8px 12px;
-  border-radius: 12px;
+  margin-bottom: var(--s-2);
+  padding: var(--s-2) var(--s-3);
+  border-radius: var(--r-md);
   background: rgba(255, 159, 10, 0.12);
   border: 1px solid rgba(255, 159, 10, 0.18);
   color: #7a4a00;
-  font-size: 12px;
+  font-size: var(--fs-footnote);
 }
 
 .postsGrid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
+  gap: var(--s-3);
 }
 
 .postCard {
   position: relative;
   aspect-ratio: 1;
-  border-radius: 12px;
+  border-radius: var(--r-md);
   overflow: hidden;
   cursor: pointer;
-  background: #e5e5ea;
+  background: var(--surface-3);
+  box-shadow: var(--shadow-sm);
 }
 
 .postMedia {
@@ -252,7 +253,7 @@
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  padding: 12px;
+  padding: var(--s-3);
   opacity: 0;
   transition: opacity 150ms ease;
   
@@ -267,7 +268,7 @@
 }
 
 .postAuthor {
-  font-size: 12px;
+  font-size: var(--fs-footnote);
   font-weight: 600;
   color: #ffffff;
   text-shadow: 0 1px 2px rgba(0,0,0,0.3);
@@ -275,20 +276,20 @@
 
 .postActions {
   display: flex;
-  gap: 12px;
+  gap: var(--s-3);
   align-items: center;
 }
 
 .actionBtn {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--s-1);
   padding: 6px 10px;
   border: none;
-  border-radius: 20px;
+  border-radius: 999px;
   background: rgba(255, 255, 255, 0.2);
   color: #ffffff;
-  font-size: 13px;
+  font-size: var(--fs-footnote);
   cursor: pointer;
   transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
   
@@ -321,7 +322,7 @@
 }
 
 .postCaption {
-  font-size: 12px;
+  font-size: var(--fs-footnote);
   color: rgba(255, 255, 255, 0.9);
   margin: 0;
   overflow: hidden;
@@ -335,16 +336,16 @@
 .emptyState {
   text-align: center;
   padding: 60px 20px;
-  color: #8e8e93;
+  color: var(--text-3);
   grid-column: 1 / -1;
   
   p {
     margin: 0;
-    font-size: 16px;
+    font-size: var(--fs-body);
   }
   
   .emptyHint {
-    font-size: 14px;
+    font-size: var(--fs-footnote);
     margin-top: 8px;
     opacity: 0.7;
   }
@@ -363,7 +364,7 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: 0 4px 14px rgba(220, 39, 67, 0.4);
+  box-shadow: var(--shadow-lg);
   transition: transform 200ms cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 200ms cubic-bezier(0.2, 0.8, 0.2, 1);
   user-select: none;
   
