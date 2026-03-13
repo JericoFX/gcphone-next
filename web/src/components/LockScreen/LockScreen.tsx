@@ -52,7 +52,6 @@ export function LockScreen() {
   const [error, setError] = createSignal(false);
   const [attempts, setAttempts] = createSignal(0);
   const [currentTime, setCurrentTime] = createSignal(new Date());
-  const [keypadExpanded, setKeypadExpanded] = createSignal(true);
   const [flashlightSupported, setFlashlightSupported] = createSignal(false);
   const [flashlightEnabled, setFlashlightEnabled] = createSignal(false);
   const [pendingDestination, setPendingDestination] = createSignal<PendingDestination | null>(null);
@@ -73,9 +72,8 @@ export function LockScreen() {
   const visibleNotifications = createMemo(() => (
     notifications.history
       .filter((item) => item.id !== 'music-now-playing')
-      .slice(0, keypadExpanded() ? 3 : 5)
+      .slice(0, 5)
   ));
-  const hasNotifications = createMemo(() => visibleNotifications().length > 0);
   const emergencyContacts = createMemo(() => phoneState.setup.emergencyContacts || []);
   const matchedEmergencyContact = createMemo(() => emergencyContacts().find((entry) => entry.number === emergencyDial().trim()));
 
@@ -101,7 +99,6 @@ export function LockScreen() {
 
   onMount(() => {
     timer = window.setInterval(() => setCurrentTime(new Date()), 1000);
-    setKeypadExpanded(true);
     setMusicState(readStoredMusicSession());
 
     void (async () => {
@@ -156,18 +153,7 @@ export function LockScreen() {
   });
 
   createEffect(() => {
-    if (phoneState.locked) {
-      setKeypadExpanded(true);
-    }
-  });
-
-  createEffect(() => {
-    if (hasNotifications()) {
-      setActiveWidget(0);
-      return;
-    }
-
-    if (activeWidget() > 1) {
+    if (activeWidget() > 2) {
       setActiveWidget(0);
     }
   });
@@ -188,7 +174,6 @@ export function LockScreen() {
 
   const requestUnlockForRoute = (route: string, data?: Record<string, unknown>) => {
     setPendingDestination({ route, data });
-    setKeypadExpanded(true);
     setError(false);
     setSwipeUnlockProgress(0);
   };
@@ -314,7 +299,7 @@ export function LockScreen() {
   const formatClockTime = (date: Date) => formatTime(date, language(), { hour: '2-digit', minute: '2-digit' });
   const formatClockDate = (date: Date) => formatDate(date, language(), { weekday: 'long', day: 'numeric', month: 'long' });
   const keypadKeys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', 'del'];
-  const totalCarouselItems = () => (hasNotifications() ? 3 : 2);
+  const totalCarouselItems = () => 3;
 
   return (
     <div class={styles.lockScreen}>
@@ -332,8 +317,8 @@ export function LockScreen() {
 
       <div class={styles.contentArea}>
         <LockScreenWidgets
-          compact={!keypadExpanded()}
-          hasNotifications={hasNotifications()}
+          compact={false}
+          hasNotifications={visibleNotifications().length > 0}
           activeWidget={activeWidget()}
           visibleNotifications={visibleNotifications()}
           totalCarouselItems={totalCarouselItems()}
@@ -354,21 +339,8 @@ export function LockScreen() {
         />
       </div>
 
-      <Show
-        when={keypadExpanded()}
-        fallback={(
-          <div class={styles.unlockSheetCollapsed}>
-            <button class={styles.expandKeypadBtn} onClick={() => setKeypadExpanded(true)}>
-              Mostrar teclado
-            </button>
-            <Show when={pendingDestination()?.route}>
-              <span class={styles.pendingHint}>Desbloquea para continuar</span>
-            </Show>
-          </div>
-        )}
-      >
-        <div class={styles.unlockSheet}>
-          <button class={styles.sheetHandle} onClick={() => setKeypadExpanded(false)} aria-label="Minimizar teclado" />
+      <div class={styles.unlockSheet}>
+        <div class={styles.sheetHandle} aria-hidden="true" />
           <div class={styles.codeContainer}>
             <span class={styles.unlockTitle}>{pendingDestination()?.route === 'camera' ? 'Abrir camara' : 'Desbloquear Gcphone-Next'}</span>
             <div class={styles.dots}>
@@ -394,16 +366,14 @@ export function LockScreen() {
           </div>
 
           <div class={styles.sheetActions}>
-            <button onClick={() => {
-              setPendingDestination(null);
-              setCode('');
-              setError(false);
-              setKeypadExpanded(false);
-            }}>{t('lock.cancel', language())}</button>
-            <button onClick={() => void submitUnlock()}>{t('lock.unlock', language())}</button>
+              <button onClick={() => {
+                setPendingDestination(null);
+                setCode('');
+                setError(false);
+              }}>{t('lock.cancel', language())}</button>
+              <button onClick={() => void submitUnlock()}>{t('lock.unlock', language())}</button>
           </div>
-        </div>
-      </Show>
+      </div>
 
       <Show when={emergencySheetOpen()}>
         <div class={styles.emergencySheetOverlay} onClick={() => setEmergencySheetOpen(false)}>

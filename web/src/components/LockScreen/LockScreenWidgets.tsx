@@ -55,6 +55,18 @@ interface LockScreenWidgetsProps {
 }
 
 function NotificationPanel(props: Pick<LockScreenWidgetsProps, 'visibleNotifications' | 'onNotificationClick'>) {
+  if (props.visibleNotifications.length === 0) {
+    return (
+      <>
+        <div class={styles.notificationCenterHeader}>
+          <span class={styles.widgetLabel}>Notificaciones</span>
+          <span class={styles.widgetMeta}>0</span>
+        </div>
+        <div class={styles.notificationEmpty}>No hay notificaciones</div>
+      </>
+    );
+  }
+
   return (
     <>
       <div class={styles.notificationCenterHeader}>
@@ -147,75 +159,17 @@ export function LockScreenWidgets(props: LockScreenWidgetsProps) {
   const notificationListClass = props.compact
     ? `${styles.notificationList} ${styles.notificationListCompact}`
     : styles.notificationList;
-  const compactRows = () => props.hasNotifications
-    ? 'repeat(3, minmax(0, 104px))'
-    : 'repeat(2, minmax(0, 104px))';
-
-  if (props.compact) {
-    return (
-      <div class={styles.widgetStack} style={{ 'grid-template-rows': compactRows() }}>
-        <Show when={props.hasNotifications}>
-          <section class={`${styles.notificationCenter} ${styles.primaryPanel} ${styles.compactPanel}`}>
-            <NotificationPanel visibleNotifications={props.visibleNotifications} onNotificationClick={props.onNotificationClick} />
-          </section>
-        </Show>
-
-        <section class={`${styles.widgetPanel} ${styles.compactPanel}`}>
-          <DevicePanel
-            deviceOwnerName={props.deviceOwnerName}
-            phoneNumber={props.phoneNumber}
-            imei={props.imei}
-            framework={props.framework}
-            isStolen={props.isStolen}
-          />
-        </section>
-
-        <section class={`${styles.widgetPanel} ${styles.musicPanel} ${styles.compactPanel}`}>
-          <MusicPanel
-            musicState={props.musicState}
-            musicStatusLabel={props.musicStatusLabel}
-            musicVolumePercent={props.musicVolumePercent}
-            onPauseResume={props.onPauseResume}
-            onStop={props.onStop}
-            onVolumeDown={props.onVolumeDown}
-            onVolumeUp={props.onVolumeUp}
-          />
-        </section>
-      </div>
-    );
-  }
 
   return (
     <div class={styles.widgetCarousel}>
       <div class={styles.widgetViewport}>
-        <Show when={props.hasNotifications && props.activeWidget === 0}>
+        <Show when={props.activeWidget === 0}>
           <section class={`${styles.widgetPanel} ${styles.primaryPanel}`}>
-            <div class={styles.notificationCenterHeader}>
-              <span class={styles.widgetLabel}>Notificaciones</span>
-              <span class={styles.widgetMeta}>{props.visibleNotifications.length}</span>
-            </div>
-            <div class={notificationListClass}>
-              <For each={props.visibleNotifications}>
-                {(item) => (
-                  <button
-                    class={styles.notificationCard}
-                    classList={{ [styles.notificationCardInteractive]: !!item.route }}
-                    onClick={() => props.onNotificationClick(item.route, item.data)}
-                    disabled={!item.route}
-                  >
-                    <div class={styles.notificationTop}>
-                      <strong>{item.title}</strong>
-                      <span>{item.appId}</span>
-                    </div>
-                    <p>{item.message}</p>
-                  </button>
-                )}
-              </For>
-            </div>
+            <NotificationPanel visibleNotifications={props.visibleNotifications} onNotificationClick={props.onNotificationClick} />
           </section>
         </Show>
 
-        <Show when={props.activeWidget === (props.hasNotifications ? 1 : 0)}>
+        <Show when={props.activeWidget === 1}>
           <section class={styles.widgetPanel}>
             <DevicePanel
               deviceOwnerName={props.deviceOwnerName}
@@ -227,7 +181,7 @@ export function LockScreenWidgets(props: LockScreenWidgetsProps) {
           </section>
         </Show>
 
-        <Show when={props.activeWidget === (props.hasNotifications ? 2 : 1)}>
+        <Show when={props.activeWidget === 2}>
           <section class={`${styles.widgetPanel} ${styles.musicPanel}`}>
             <MusicPanel
               musicState={props.musicState}
