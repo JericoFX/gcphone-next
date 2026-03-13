@@ -1,9 +1,10 @@
-import { For, Show, createEffect, createMemo, createSignal, onCleanup, onMount } from 'solid-js';
+import { For, Show, createMemo, createSignal, onMount } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { usePhone } from '../../../store/phone';
 import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { t } from '../../../i18n';
 import { fetchNui } from '../../../utils/fetchNui';
+import { useNuiEvent } from '../../../utils/useNui';
 import { AppScaffold } from '../../shared/layout';
 import styles from './MusicApp.module.scss';
 
@@ -105,18 +106,9 @@ export function MusicApp() {
     },
   });
 
-  createEffect(() => {
-    const onMessage = (event: MessageEvent<{ action?: string; data?: MusicStatePayload }>) => {
-      if (event?.data?.action !== 'musicStateUpdated') return;
-      applyServerState(event.data.data);
-      setBusyAction(false);
-    };
-
-    window.addEventListener('message', onMessage as EventListener);
-
-    onCleanup(() => {
-      window.removeEventListener('message', onMessage as EventListener);
-    });
+  useNuiEvent<MusicStatePayload>('musicStateUpdated', (payload) => {
+    applyServerState(payload);
+    setBusyAction(false);
   });
 
   onMount(() => {

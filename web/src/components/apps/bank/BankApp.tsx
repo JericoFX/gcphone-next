@@ -1,6 +1,7 @@
-import { createMemo, createSignal, Show, createEffect, onCleanup, For, onMount } from 'solid-js';
+import { createMemo, createSignal, Show, createEffect, For, onMount } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { fetchNui } from '../../../utils/fetchNui';
+import { useNuiActions } from '../../../utils/useNui';
 import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { AppScaffold } from '../../shared/layout';
 import { EmptyState } from '../../shared/ui/EmptyState';
@@ -75,19 +76,22 @@ export function BankApp() {
     }
   });
 
-  createEffect(() => {
-    const onBankEvent = (event: MessageEvent) => {
-      if ((event?.data?.action === 'bankInvoiceReceived' || event?.data?.action === 'bankTransferReceived') && event.data.data) {
-        setIncomingInvoice(event.data.data as BankInvoice);
-      }
-
-      if (event?.data?.action === 'bankInvoiceResult') {
-        void loadData();
-      }
-    };
-
-    window.addEventListener('message', onBankEvent);
-    onCleanup(() => window.removeEventListener('message', onBankEvent));
+  useNuiActions<{
+    bankInvoiceReceived: BankInvoice;
+    bankTransferReceived: BankInvoice;
+    bankInvoiceResult: unknown;
+  }>({
+    bankInvoiceReceived: (payload) => {
+      if (!payload || typeof payload !== 'object') return;
+      setIncomingInvoice(payload);
+    },
+    bankTransferReceived: (payload) => {
+      if (!payload || typeof payload !== 'object') return;
+      setIncomingInvoice(payload);
+    },
+    bankInvoiceResult: () => {
+      void loadData();
+    },
   });
 
   const respondInvoice = async (accept: boolean) => {
