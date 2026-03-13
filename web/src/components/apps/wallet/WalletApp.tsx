@@ -1,6 +1,7 @@
-import { For, Show, createEffect, createMemo, createSignal, onCleanup, onMount } from 'solid-js';
+import { For, Show, createEffect, createMemo, createSignal, onMount } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { fetchNui } from '../../../utils/fetchNui';
+import { useNuiActions } from '../../../utils/useNui';
 import { formatPhoneNumber } from '../../../utils/misc';
 import { usePhone } from '../../../store/phone';
 import { uiAlert } from '../../../utils/uiAlert';
@@ -290,17 +291,17 @@ export function WalletApp() {
     }
   });
 
-  createEffect(() => {
-    const onWalletEvent = (event: MessageEvent) => {
-      if (event?.data?.action === 'walletNfcInvoiceReceived' && event.data.data) {
-        setIncomingInvoice(event.data.data as InvoicePayload);
-      }
-      if (event?.data?.action === 'walletNfcInvoiceResult') {
-        void load();
-      }
-    };
-    window.addEventListener('message', onWalletEvent);
-    onCleanup(() => window.removeEventListener('message', onWalletEvent));
+  useNuiActions<{
+    walletNfcInvoiceReceived: InvoicePayload;
+    walletNfcInvoiceResult: unknown;
+  }>({
+    walletNfcInvoiceReceived: (payload) => {
+      if (!payload || typeof payload !== 'object') return;
+      setIncomingInvoice(payload);
+    },
+    walletNfcInvoiceResult: () => {
+      void load();
+    },
   });
 
   onMount(() => {
