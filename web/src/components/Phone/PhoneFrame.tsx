@@ -10,6 +10,7 @@ import { APP_BY_ID } from '../../config/apps';
 import { appName } from '../../i18n';
 import { isEnvBrowser } from '../../utils/misc';
 import { useWindowEvent } from '../../hooks';
+import { useInternalEvent } from '../../utils/internalEvents';
 import styles from './PhoneFrame.module.scss';
 
 type AppRoute = string;
@@ -135,21 +136,19 @@ export const PhoneFrame: ParentComponent & { Router: () => JSX.Element } = (prop
     closeApp,
   };
 
-  useWindowEvent('phone:openRoute', (event) => {
-    const detail = (event as CustomEvent<{ route: string; data?: Record<string, unknown> }>).detail;
+  useInternalEvent<{ route: string; data?: Record<string, unknown> }>('phone:openRoute', (detail) => {
     if (!detail?.route) return;
     navigate(detail.route, detail.data || {});
   });
 
-  useWindowEvent('phone:uiDialogRequest', (event) => {
-    const detail = (event as CustomEvent<{
+  useInternalEvent<{
       type?: 'prompt' | 'confirm';
       title?: string;
       message?: string;
       placeholder?: string;
       defaultValue?: string;
       resolve?: (value: unknown) => void;
-    }>).detail;
+    }>('phone:uiDialogRequest', (detail) => {
 
     if (!detail || typeof detail.resolve !== 'function' || !detail.message) return;
 

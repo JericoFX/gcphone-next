@@ -1,6 +1,7 @@
 import type { JSX, ParentComponent, ParentProps } from 'solid-js';
 import { Show } from 'solid-js';
 import { getStoredLanguage, tl } from '../../../i18n';
+import { emitInternalEvent } from '../../../utils/internalEvents';
 import styles from './layout.module.scss';
 
 const isAssetIcon = (icon?: string) => !!icon && /\.(svg|png|webp|jpg|jpeg)$/i.test(icon);
@@ -45,7 +46,7 @@ export const AppHeader: ParentComponent<AppHeaderProps> = (props) => {
   const subtitle = () => props.subtitle ? tl(props.subtitle, getStoredLanguage()) : '';
   const router = {
     goBack: () => {
-      window.dispatchEvent(new CustomEvent('phone:keyUp', { detail: 'Backspace' }));
+      emitInternalEvent('phone:keyUp', 'Backspace');
     },
   };
 

@@ -1,5 +1,5 @@
 import { onCleanup } from 'solid-js';
-import { isEnvBrowser } from './misc';
+import { useInternalEvent } from './internalEvents';
 
 interface NuiMessageData<T = unknown> {
   action: string;
@@ -29,13 +29,5 @@ export function useNuiCustomEvent<T = unknown>(
   eventName: string,
   handler: (data: T) => void
 ): void {
-  const customEventListener = (event: CustomEvent<T>) => {
-    handler(event.detail);
-  };
-  
-  window.addEventListener(eventName, customEventListener as EventListener);
-  
-  onCleanup(() => {
-    window.removeEventListener(eventName, customEventListener as EventListener);
-  });
+  useInternalEvent(eventName, handler);
 }

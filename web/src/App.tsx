@@ -14,6 +14,7 @@ import { BrowserDevMenu } from './components/dev/BrowserDevMenu';
 import { localeTagFromLanguage } from './i18n';
 import { setLiveKitRemoteAudioPriority, setLiveKitRemoteAudioVolume } from './utils/livekit';
 import { useWindowEvent } from './hooks';
+import { emitInternalEvent, useInternalEvent } from './utils/internalEvents';
 import './App.scss';
 
 interface MusicNotificationState {
@@ -42,18 +43,18 @@ function PhoneContent() {
   });
 
 
-  useWindowEvent('musicStateUpdated', (event) => {
-    const detail = (event as CustomEvent<MusicNotificationState>).detail || {};
-    const title = typeof detail.title === 'string' ? detail.title.trim() : '';
-    const isPlaying = detail.isPlaying === true;
-    const isPaused = detail.isPaused === true;
+  useInternalEvent<MusicNotificationState>('musicStateUpdated', (detail) => {
+    const safeDetail = detail || {};
+    const title = typeof safeDetail.title === 'string' ? safeDetail.title.trim() : '';
+    const isPlaying = safeDetail.isPlaying === true;
+    const isPaused = safeDetail.isPaused === true;
 
     window.localStorage.setItem('gcphone:musicSession', JSON.stringify({
       isPlaying,
       isPaused,
       title,
-      volume: typeof detail.volume === 'number' ? detail.volume : undefined,
-      distance: typeof detail.distance === 'number' ? detail.distance : undefined,
+      volume: typeof safeDetail.volume === 'number' ? safeDetail.volume : undefined,
+      distance: typeof safeDetail.distance === 'number' ? safeDetail.distance : undefined,
     }));
 
     if (!isPlaying && !isPaused) {
@@ -72,8 +73,7 @@ function PhoneContent() {
     });
   });
 
-  useWindowEvent('phone:uiAlert', (event) => {
-    const detail = (event as CustomEvent<{ title?: string; message?: string }>).detail;
+  useInternalEvent<{ title?: string; message?: string }>('phone:uiAlert', (detail) => {
     const message = typeof detail?.message === 'string' ? detail.message.trim() : '';
     if (!message) return;
 
@@ -87,8 +87,7 @@ function PhoneContent() {
     });
   });
 
-  useWindowEvent('gcphone:nearbyVoiceState', (event) => {
-    const detail = (event as CustomEvent<{ active?: boolean; listening?: boolean; peerId?: string | null }>).detail;
+  useInternalEvent<{ active?: boolean; listening?: boolean; peerId?: string | null }>('gcphone:nearbyVoiceState', (detail) => {
     const peerId = typeof detail?.peerId === 'string' ? detail.peerId.trim() : '';
 
     if (!detail?.active || !peerId) {
@@ -103,8 +102,7 @@ function PhoneContent() {
     });
   });
 
-  useWindowEvent('gcphone:nearbyVoiceVolume', (event) => {
-    const detail = (event as CustomEvent<{ active?: boolean; volume?: number }>).detail;
+  useInternalEvent<{ active?: boolean; volume?: number }>('gcphone:nearbyVoiceVolume', (detail) => {
     if (!detail?.active) {
       setLiveKitRemoteAudioVolume(1);
       return;
@@ -183,7 +181,7 @@ export function App() {
     };
 
     if (payload.keyUp) {
-      window.dispatchEvent(new CustomEvent('phone:keyUp', { detail: payload.keyUp }));
+      emitInternalEvent('phone:keyUp', payload.keyUp);
     }
 
     if (payload.action) {
@@ -191,19 +189,19 @@ export function App() {
         const token = (payload.data as { nuiAuthToken?: string }).nuiAuthToken;
         setNuiAuthToken(token);
       }
-      window.dispatchEvent(new CustomEvent(payload.action, { detail: payload.data }));
+      emitInternalEvent(payload.action, payload.data);
     }
 
     if (payload.action === 'initPhone') {
-      window.dispatchEvent(new CustomEvent('phone:init', { detail: payload.data }));
+      emitInternalEvent('phone:init', payload.data);
     }
 
     if (payload.action === 'showPhone') {
-      window.dispatchEvent(new CustomEvent('phone:show', { detail: payload.data }));
+      emitInternalEvent('phone:show', payload.data);
     }
 
     if (payload.action === 'hidePhone') {
-      window.dispatchEvent(new CustomEvent('phone:hide'));
+      emitInternalEvent('phone:hide');
     }
   });
 
