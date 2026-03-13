@@ -13,6 +13,7 @@ import { setupBrowserMock } from './mock/browserMock';
 import { BrowserDevMenu } from './components/dev/BrowserDevMenu';
 import { localeTagFromLanguage } from './i18n';
 import { setLiveKitRemoteAudioPriority, setLiveKitRemoteAudioVolume } from './utils/livekit';
+import { useWindowEvent } from './hooks';
 import './App.scss';
 
 interface MusicNotificationState {
@@ -41,103 +42,80 @@ function PhoneContent() {
   });
 
 
-  onMount(() => {
-    const onMusicStateUpdated = (event: Event) => {
-      const detail = (event as CustomEvent<MusicNotificationState>).detail || {};
-      const title = typeof detail.title === 'string' ? detail.title.trim() : '';
-      const isPlaying = detail.isPlaying === true;
-      const isPaused = detail.isPaused === true;
+  useWindowEvent('musicStateUpdated', (event) => {
+    const detail = (event as CustomEvent<MusicNotificationState>).detail || {};
+    const title = typeof detail.title === 'string' ? detail.title.trim() : '';
+    const isPlaying = detail.isPlaying === true;
+    const isPaused = detail.isPaused === true;
 
-      window.localStorage.setItem('gcphone:musicSession', JSON.stringify({
-        isPlaying,
-        isPaused,
-        title,
-        volume: typeof detail.volume === 'number' ? detail.volume : undefined,
-        distance: typeof detail.distance === 'number' ? detail.distance : undefined,
-      }));
+    window.localStorage.setItem('gcphone:musicSession', JSON.stringify({
+      isPlaying,
+      isPaused,
+      title,
+      volume: typeof detail.volume === 'number' ? detail.volume : undefined,
+      distance: typeof detail.distance === 'number' ? detail.distance : undefined,
+    }));
 
-      if (!isPlaying && !isPaused) {
-        notificationsActions.remove('music-now-playing');
-        return;
-      }
+    if (!isPlaying && !isPaused) {
+      notificationsActions.remove('music-now-playing');
+      return;
+    }
 
-      notificationsActions.receive({
-        id: 'music-now-playing',
-        appId: 'music',
-        title: 'Music',
-        message: `${isPaused ? 'Pausado' : 'Reproduciendo'}: ${title || 'Sin musica'}`,
-        durationMs: 2800,
-        priority: 'normal',
-        route: 'music',
-      });
-    };
-
-    window.addEventListener('musicStateUpdated', onMusicStateUpdated as EventListener);
-
-    onCleanup(() => {
-      window.removeEventListener('musicStateUpdated', onMusicStateUpdated as EventListener);
+    notificationsActions.receive({
+      id: 'music-now-playing',
+      appId: 'music',
+      title: 'Music',
+      message: `${isPaused ? 'Pausado' : 'Reproduciendo'}: ${title || 'Sin musica'}`,
+      durationMs: 2800,
+      priority: 'normal',
+      route: 'music',
     });
   });
 
-  onMount(() => {
-    const onUiAlert = (event: Event) => {
-      const detail = (event as CustomEvent<{ title?: string; message?: string }>).detail;
-      const message = typeof detail?.message === 'string' ? detail.message.trim() : '';
-      if (!message) return;
+  useWindowEvent('phone:uiAlert', (event) => {
+    const detail = (event as CustomEvent<{ title?: string; message?: string }>).detail;
+    const message = typeof detail?.message === 'string' ? detail.message.trim() : '';
+    if (!message) return;
 
-      notificationsActions.receive({
-        id: `ui-alert-${Date.now()}`,
-        appId: 'system',
-        title: detail?.title || 'Aviso',
-        message,
-        durationMs: 3200,
-        priority: 'normal',
-      });
-    };
-
-    window.addEventListener('phone:uiAlert', onUiAlert as EventListener);
-
-    onCleanup(() => {
-      window.removeEventListener('phone:uiAlert', onUiAlert as EventListener);
+    notificationsActions.receive({
+      id: `ui-alert-${Date.now()}`,
+      appId: 'system',
+      title: detail?.title || 'Aviso',
+      message,
+      durationMs: 3200,
+      priority: 'normal',
     });
   });
 
-  onMount(() => {
-    const onNearbyVoiceState = (event: Event) => {
-      const detail = (event as CustomEvent<{ active?: boolean; listening?: boolean; peerId?: string | null }>).detail;
-      const peerId = typeof detail?.peerId === 'string' ? detail.peerId.trim() : '';
+  useWindowEvent('gcphone:nearbyVoiceState', (event) => {
+    const detail = (event as CustomEvent<{ active?: boolean; listening?: boolean; peerId?: string | null }>).detail;
+    const peerId = typeof detail?.peerId === 'string' ? detail.peerId.trim() : '';
 
-      if (!detail?.active || !peerId) {
-        setLiveKitRemoteAudioPriority(null);
-        setLiveKitRemoteAudioVolume(1);
-        return;
-      }
-
-      setLiveKitRemoteAudioPriority(peerId, {
-        priorityScale: detail.listening ? 1 : 0.7,
-        othersScale: detail.listening ? 0.35 : 0.18,
-      });
-    };
-
-    const onNearbyVoiceVolume = (event: Event) => {
-      const detail = (event as CustomEvent<{ active?: boolean; volume?: number }>).detail;
-      if (!detail?.active) {
-        setLiveKitRemoteAudioVolume(1);
-        return;
-      }
-
-      setLiveKitRemoteAudioVolume(typeof detail.volume === 'number' ? detail.volume : 1);
-    };
-
-    window.addEventListener('gcphone:nearbyVoiceState', onNearbyVoiceState as EventListener);
-    window.addEventListener('gcphone:nearbyVoiceVolume', onNearbyVoiceVolume as EventListener);
-
-    onCleanup(() => {
-      window.removeEventListener('gcphone:nearbyVoiceState', onNearbyVoiceState as EventListener);
-      window.removeEventListener('gcphone:nearbyVoiceVolume', onNearbyVoiceVolume as EventListener);
+    if (!detail?.active || !peerId) {
       setLiveKitRemoteAudioPriority(null);
       setLiveKitRemoteAudioVolume(1);
+      return;
+    }
+
+    setLiveKitRemoteAudioPriority(peerId, {
+      priorityScale: detail.listening ? 1 : 0.7,
+      othersScale: detail.listening ? 0.35 : 0.18,
     });
+  });
+
+  useWindowEvent('gcphone:nearbyVoiceVolume', (event) => {
+    const detail = (event as CustomEvent<{ active?: boolean; volume?: number }>).detail;
+    if (!detail?.active) {
+      setLiveKitRemoteAudioVolume(1);
+      return;
+    }
+
+    setLiveKitRemoteAudioVolume(typeof detail.volume === 'number' ? detail.volume : 1);
+  });
+
+  onCleanup(() => {
+    setLiveKitRemoteAudioPriority(null);
+    setLiveKitRemoteAudioVolume(1);
   });
 
   const themeClass = createMemo(() => {
@@ -175,7 +153,7 @@ function PhoneContent() {
       </Show>
 
       <Show when={!phoneState.visible && notifications.current}>
-        <div class="notification-preview-shell">
+        <div class="notification-preview-shell" aria-live="polite" aria-atomic="true">
           <div class="notification-preview-phone">
             <div class="notification-preview-screen">
               <div class="notification-preview-banner-wrap">
@@ -192,55 +170,47 @@ function PhoneContent() {
 
 export function App() {
   onMount(() => {
-    const handleNuiMessage = (event: MessageEvent) => {
-      const payload = event.data as {
-        action?: string;
-        data?: unknown;
-        keyUp?: string;
-      };
-
-      if (payload.keyUp) {
-        window.dispatchEvent(new CustomEvent('phone:keyUp', { detail: payload.keyUp }));
-      }
-
-      if (payload.action) {
-        if ((payload.action === 'initPhone' || payload.action === 'showPhone') && payload.data && typeof payload.data === 'object') {
-          const token = (payload.data as { nuiAuthToken?: string }).nuiAuthToken;
-          setNuiAuthToken(token);
-        }
-        window.dispatchEvent(new CustomEvent(payload.action, { detail: payload.data }));
-      }
-
-      if (payload.action === 'initPhone') {
-        window.dispatchEvent(new CustomEvent('phone:init', { detail: payload.data }));
-      }
-
-      if (payload.action === 'showPhone') {
-        window.dispatchEvent(new CustomEvent('phone:show', { detail: payload.data }));
-      }
-
-      if (payload.action === 'hidePhone') {
-        window.dispatchEvent(new CustomEvent('phone:hide'));
-      }
-    };
-
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        fetchNui('closePhone');
-      }
-    };
-
-    window.addEventListener('message', handleNuiMessage);
-    window.addEventListener('keydown', handleEscape);
-
     if (isEnvBrowser()) {
       setupBrowserMock();
     }
+  });
 
-    onCleanup(() => {
-      window.removeEventListener('message', handleNuiMessage);
-      window.removeEventListener('keydown', handleEscape);
-    });
+  useWindowEvent('message', (event) => {
+    const payload = event.data as {
+      action?: string;
+      data?: unknown;
+      keyUp?: string;
+    };
+
+    if (payload.keyUp) {
+      window.dispatchEvent(new CustomEvent('phone:keyUp', { detail: payload.keyUp }));
+    }
+
+    if (payload.action) {
+      if ((payload.action === 'initPhone' || payload.action === 'showPhone') && payload.data && typeof payload.data === 'object') {
+        const token = (payload.data as { nuiAuthToken?: string }).nuiAuthToken;
+        setNuiAuthToken(token);
+      }
+      window.dispatchEvent(new CustomEvent(payload.action, { detail: payload.data }));
+    }
+
+    if (payload.action === 'initPhone') {
+      window.dispatchEvent(new CustomEvent('phone:init', { detail: payload.data }));
+    }
+
+    if (payload.action === 'showPhone') {
+      window.dispatchEvent(new CustomEvent('phone:show', { detail: payload.data }));
+    }
+
+    if (payload.action === 'hidePhone') {
+      window.dispatchEvent(new CustomEvent('phone:hide'));
+    }
+  });
+
+  useWindowEvent('keydown', (event) => {
+    if (event.key === 'Escape') {
+      fetchNui('closePhone');
+    }
   });
 
   return (

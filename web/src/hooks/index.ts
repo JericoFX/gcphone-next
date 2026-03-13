@@ -11,3 +11,4 @@ export { useListNavigation } from './useListNavigation';
 export type { UseListNavigationOptions } from './useListNavigation';
 
 export { useAppCache } from './useAppCache';
+export { useWindowEvent } from './useWindowEvent';
