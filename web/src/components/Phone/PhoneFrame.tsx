@@ -161,7 +161,7 @@ export const PhoneFrame: ParentComponent & { Router: () => JSX.Element } = (prop
     setDialogOpen(true);
   });
 
-  useWindowEvent('keydown', (event) => {
+  useWindowEvent<KeyboardEvent>('keydown', (event) => {
     if (event.key !== 'Escape') return;
 
     if (dialogOpen()) {

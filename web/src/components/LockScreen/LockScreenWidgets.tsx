@@ -43,7 +43,7 @@ interface LockScreenWidgetsProps {
   deviceOwnerName?: string;
   phoneNumber?: string;
   imei?: string;
-  framework?: string;
+  framework?: 'esx' | 'qbcore' | 'qbox' | 'unknown';
   isStolen?: boolean;
   musicState: MusicSessionState;
   musicStatusLabel: string;
