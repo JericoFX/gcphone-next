@@ -4,36 +4,13 @@ import { useNotifications } from '../../store/notifications';
 import { formatPhoneNumber } from '../../utils/misc';
 import { fetchNui } from '../../utils/fetchNui';
 import { formatDate, formatTime, t } from '../../i18n';
+import { useWindowEvent } from '../../hooks';
+import { LockScreenWidgets } from './LockScreenWidgets';
 import styles from './LockScreen.module.scss';
 
 interface PendingDestination {
   route: string;
   data?: Record<string, unknown>;
-}
-
-function PauseIcon() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <rect x="6" y="5" width="4" height="14" rx="1.5" fill="currentColor" />
-      <rect x="14" y="5" width="4" height="14" rx="1.5" fill="currentColor" />
-    </svg>
-  );
-}
-
-function PlayIcon() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M8 6.5C8 5.72 8.85 5.24 9.52 5.64L18.1 10.64C18.76 11.03 18.76 11.97 18.1 12.36L9.52 17.36C8.85 17.76 8 17.28 8 16.5V6.5Z" fill="currentColor" />
-    </svg>
-  );
-}
-
-function StopIcon() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor" />
-    </svg>
-  );
 }
 
 interface MusicSessionState {
@@ -128,12 +105,6 @@ export function LockScreen() {
     setKeypadExpanded(true);
     setMusicState(readStoredMusicSession());
 
-    const onMusicStateUpdated = (event: Event) => {
-      applyMusicState((event as CustomEvent<Partial<MusicSessionState>>).detail || {});
-    };
-
-    window.addEventListener('musicStateUpdated', onMusicStateUpdated as EventListener);
-
     void (async () => {
       const capabilities = await fetchNui<{ flashlight?: boolean; flashlightEnabled?: boolean }>('cameraGetCapabilities', undefined, {
         flashlight: false,
@@ -142,10 +113,10 @@ export function LockScreen() {
       setFlashlightSupported(capabilities?.flashlight === true);
       setFlashlightEnabled(capabilities?.flashlightEnabled === true);
     })();
+  });
 
-    onCleanup(() => {
-      window.removeEventListener('musicStateUpdated', onMusicStateUpdated as EventListener);
-    });
+  useWindowEvent<CustomEvent<Partial<MusicSessionState>>>('musicStateUpdated', (event) => {
+    applyMusicState(event.detail || {});
   });
 
   onCleanup(() => {
@@ -361,185 +332,27 @@ export function LockScreen() {
       </div>
 
       <div class={styles.contentArea}>
-        <Show
-          when={!keypadExpanded()}
-          fallback={(
-            <div class={styles.widgetCarousel}>
-              <div class={styles.widgetViewport}>
-                <Show when={hasNotifications() && activeWidget() === 0}>
-                  <section class={`${styles.widgetPanel} ${styles.primaryPanel}`}>
-                    <div class={styles.notificationCenterHeader}>
-                      <span class={styles.widgetLabel}>Notificaciones</span>
-                      <span class={styles.widgetMeta}>{visibleNotifications().length}</span>
-                    </div>
-                    <div class={`${styles.notificationList} ${styles.notificationListCompact}`}>
-                      <For each={visibleNotifications()}>
-                        {(item) => (
-                          <button
-                            class={styles.notificationCard}
-                            classList={{ [styles.notificationCardInteractive]: !!item.route }}
-                            onClick={() => handleNotificationClick(item.route, item.data)}
-                            disabled={!item.route}
-                          >
-                            <div class={styles.notificationTop}>
-                              <strong>{item.title}</strong>
-                              <span>{item.appId}</span>
-                            </div>
-                            <p>{item.message}</p>
-                          </button>
-                        )}
-                      </For>
-                    </div>
-                  </section>
-                </Show>
-
-                <Show when={activeWidget() === (hasNotifications() ? 1 : 0)}>
-                  <section class={styles.widgetPanel}>
-                    <div class={styles.widgetHeader}>
-                      <span class={styles.widgetLabel}>Device Info</span>
-                      <Show when={phoneState.isStolen}>
-                        <span class={styles.widgetFlag}>Reportado</span>
-                      </Show>
-                    </div>
-                    <div class={styles.deviceInfoRows}>
-                      <Show when={phoneState.deviceOwnerName}>
-                        <div class={styles.deviceIdentityRow}>
-                          <span>Propietario</span>
-                          <strong>{phoneState.deviceOwnerName}</strong>
-                        </div>
-                      </Show>
-                      <Show when={phoneState.settings.phoneNumber}>
-                        <div class={styles.deviceIdentityRow}>
-                          <span>Numero</span>
-                          <strong>{formatPhoneNumber(phoneState.settings.phoneNumber, phoneState.framework || 'unknown')}</strong>
-                        </div>
-                      </Show>
-                      <Show when={phoneState.imei}>
-                        <div class={styles.deviceIdentityRow}>
-                          <span>IMEI</span>
-                          <strong>{phoneState.imei}</strong>
-                        </div>
-                      </Show>
-                    </div>
-                  </section>
-                </Show>
-
-                <Show when={activeWidget() === (hasNotifications() ? 2 : 1)}>
-                  <section class={`${styles.widgetPanel} ${styles.musicPanel}`}>
-                    <div class={styles.widgetHeader}>
-                      <span class={styles.widgetLabel}>Musica</span>
-                      <span class={styles.widgetMeta}>{musicVolumePercent()}%</span>
-                    </div>
-                    <strong class={styles.widgetTitle}>{musicStatusLabel()}</strong>
-                    <div class={styles.musicControls}>
-                      <button class={styles.musicIconBtn} onClick={() => void (musicState().isPaused ? resumeMusic() : pauseMusic())} disabled={!musicState().isPlaying} aria-label={musicState().isPaused ? 'Reanudar musica' : 'Pausar musica'}>
-                        <Show when={musicState().isPaused} fallback={<PauseIcon />}>
-                          <PlayIcon />
-                        </Show>
-                      </button>
-                      <button class={styles.musicIconBtn} onClick={() => void stopMusic()} disabled={!musicState().isPlaying} aria-label="Detener musica">
-                        <StopIcon />
-                      </button>
-                    </div>
-                    <div class={styles.volumeControls}>
-                      <button class={styles.volumeBtn} onClick={() => void updateMusicVolume(-0.1)} disabled={!musicState().isPlaying}>-</button>
-                      <div class={styles.volumeBar}><span style={{ width: `${musicVolumePercent()}%` }} /></div>
-                      <button class={styles.volumeBtn} onClick={() => void updateMusicVolume(0.1)} disabled={!musicState().isPlaying}>+</button>
-                    </div>
-                  </section>
-                </Show>
-              </div>
-              <div class={styles.carouselDots}>
-                <For each={Array.from({ length: totalCarouselItems() }, (_, index) => index)}>
-                  {(index) => (
-                    <button class={styles.dotBtn} classList={{ [styles.dotBtnActive]: activeWidget() === index }} onClick={() => setActiveWidget(index)} aria-label={`Widget ${index + 1}`} />
-                  )}
-                </For>
-              </div>
-            </div>
-          )}
-        >
-          <div class={styles.widgetStack}>
-            <Show when={hasNotifications()}>
-              <section class={`${styles.notificationCenter} ${styles.primaryPanel}`}>
-                <div class={styles.notificationCenterHeader}>
-                  <span class={styles.widgetLabel}>Notificaciones</span>
-                  <span class={styles.widgetMeta}>{visibleNotifications().length}</span>
-                </div>
-                <div class={styles.notificationList}>
-                  <For each={visibleNotifications()}>
-                    {(item) => (
-                      <button
-                        class={styles.notificationCard}
-                        classList={{ [styles.notificationCardInteractive]: !!item.route }}
-                        onClick={() => handleNotificationClick(item.route, item.data)}
-                        disabled={!item.route}
-                      >
-                        <div class={styles.notificationTop}>
-                          <strong>{item.title}</strong>
-                          <span>{item.appId}</span>
-                        </div>
-                        <p>{item.message}</p>
-                      </button>
-                    )}
-                  </For>
-                </div>
-              </section>
-            </Show>
-
-            <section class={styles.widgetPanel}>
-              <div class={styles.widgetHeader}>
-                <span class={styles.widgetLabel}>Device Info</span>
-                <Show when={phoneState.isStolen}>
-                  <span class={styles.widgetFlag}>Reportado</span>
-                </Show>
-              </div>
-              <div class={styles.deviceInfoRows}>
-                <Show when={phoneState.deviceOwnerName}>
-                  <div class={styles.deviceIdentityRow}>
-                    <span>Propietario</span>
-                    <strong>{phoneState.deviceOwnerName}</strong>
-                  </div>
-                </Show>
-                <Show when={phoneState.settings.phoneNumber}>
-                  <div class={styles.deviceIdentityRow}>
-                    <span>Numero</span>
-                    <strong>{formatPhoneNumber(phoneState.settings.phoneNumber, phoneState.framework || 'unknown')}</strong>
-                  </div>
-                </Show>
-                <Show when={phoneState.imei}>
-                  <div class={styles.deviceIdentityRow}>
-                    <span>IMEI</span>
-                    <strong>{phoneState.imei}</strong>
-                  </div>
-                </Show>
-              </div>
-            </section>
-
-            <section class={`${styles.widgetPanel} ${styles.musicPanel}`}>
-              <div class={styles.widgetHeader}>
-                <span class={styles.widgetLabel}>Musica</span>
-                <span class={styles.widgetMeta}>{musicVolumePercent()}%</span>
-              </div>
-              <strong class={styles.widgetTitle}>{musicStatusLabel()}</strong>
-              <div class={styles.musicControls}>
-                <button class={styles.musicIconBtn} onClick={() => void (musicState().isPaused ? resumeMusic() : pauseMusic())} disabled={!musicState().isPlaying} aria-label={musicState().isPaused ? 'Reanudar musica' : 'Pausar musica'}>
-                  <Show when={musicState().isPaused} fallback={<PauseIcon />}>
-                    <PlayIcon />
-                  </Show>
-                </button>
-                <button class={styles.musicIconBtn} onClick={() => void stopMusic()} disabled={!musicState().isPlaying} aria-label="Detener musica">
-                  <StopIcon />
-                </button>
-              </div>
-              <div class={styles.volumeControls}>
-                <button class={styles.volumeBtn} onClick={() => void updateMusicVolume(-0.1)} disabled={!musicState().isPlaying}>-</button>
-                <div class={styles.volumeBar}><span style={{ width: `${musicVolumePercent()}%` }} /></div>
-                <button class={styles.volumeBtn} onClick={() => void updateMusicVolume(0.1)} disabled={!musicState().isPlaying}>+</button>
-              </div>
-            </section>
-          </div>
-        </Show>
+        <LockScreenWidgets
+          compact={!keypadExpanded()}
+          hasNotifications={hasNotifications()}
+          activeWidget={activeWidget()}
+          visibleNotifications={visibleNotifications()}
+          totalCarouselItems={totalCarouselItems()}
+          onSelectWidget={setActiveWidget}
+          onNotificationClick={handleNotificationClick}
+          deviceOwnerName={phoneState.deviceOwnerName}
+          phoneNumber={phoneState.settings.phoneNumber}
+          imei={phoneState.imei}
+          framework={phoneState.framework}
+          isStolen={phoneState.isStolen}
+          musicState={musicState()}
+          musicStatusLabel={musicStatusLabel()}
+          musicVolumePercent={musicVolumePercent()}
+          onPauseResume={() => void (musicState().isPaused ? resumeMusic() : pauseMusic())}
+          onStop={() => void stopMusic()}
+          onVolumeDown={() => void updateMusicVolume(-0.1)}
+          onVolumeUp={() => void updateMusicVolume(0.1)}
+        />
       </div>
 
       <Show
