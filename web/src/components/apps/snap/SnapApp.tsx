@@ -311,6 +311,53 @@ export function SnapApp() {
   let liveAudioWatchdogTimer: number | undefined;
   let liveAudioRetryTimer: number | undefined;
 
+  const clearFloatingTimers = () => {
+    clearFloatingTimers();
+  };
+
+  const pushLiveMessage = (message: SnapLiveSocketMessage) => {
+    setLiveMessages((prev) => [...prev.slice(-19), message]);
+    setLiveFloating((prev) => [...prev.slice(-3), message]);
+
+    const timer = window.setTimeout(() => {
+      setLiveFloating((prev) => prev.filter((entry) => entry.id !== message.id));
+      floatingTimers.delete(message.id);
+    }, 4200);
+
+    floatingTimers.set(message.id, timer);
+  };
+
+  const pushLiveReaction = (reaction: SnapLiveReaction) => {
+    setLiveReactions((prev) => [...prev.slice(-10), reaction]);
+    window.setTimeout(() => {
+      setLiveReactions((prev) => prev.filter((entry) => entry.id !== reaction.id));
+    }, 2600);
+  };
+
+  const updateLiveViewerCount = (liveId: number, viewers: number) => {
+    if (liveId < 1 || viewers < 0) return;
+
+    setLiveStreams((prev) => prev.map((entry) => (
+      Number(entry.id) === liveId ? { ...entry, live_viewers: viewers } : entry
+    )));
+    setActiveLive((prev) => (
+      prev && Number(prev.id) === liveId ? { ...prev, live_viewers: viewers } : prev
+    ));
+  };
+
+  const resetLiveAudioState = () => {
+    setLiveAudioProximityEnabled(false);
+    setLiveAudioHeartbeatAt(0);
+    setLiveAudioWatchdogMs(2400);
+    setLiveAudioNear(false);
+    setLiveAudioTargetOnline(true);
+    setLiveAudioDistanceMeters(-1);
+  };
+
+  const loadFollowRequests = async () => {
+    await loadFollowRequests();
+  };
+
   const getPreferredLiveIdentity = () => {
     const entries = Array.from(liveParticipantTracks.entries());
     if (entries.length === 0) return null;
@@ -475,10 +522,7 @@ export function SnapApp() {
 
   const refreshFollowRequests = async () => {
     setRequestsLoading(true);
-    const incoming = await fetchNui<SnapFollowRequest[]>('snapGetPendingFollowRequests', {}, []);
-    const outgoing = await fetchNui<SnapFollowRequest[]>('snapGetSentFollowRequests', {}, []);
-    setPendingRequests(incoming || []);
-    setSentRequests(outgoing || []);
+    await loadFollowRequests();
     setRequestsLoading(false);
   };
 
@@ -604,12 +648,7 @@ export function SnapApp() {
     const viewers = Number(payload?.viewers ?? -1);
     if (liveId < 1 || viewers < 0) return;
 
-    setLiveStreams((prev) => prev.map((entry) => (
-      Number(entry.id) === liveId ? { ...entry, live_viewers: viewers } : entry
-    )));
-    setActiveLive((prev) => (
-      prev && Number(prev.id) === liveId ? { ...prev, live_viewers: viewers } : prev
-    ));
+    updateLiveViewerCount(liveId, viewers);
   });
 
   useNuiEvent<{ liveId?: number; message?: SnapLiveSocketMessage }>('gcphone:snap:liveMessage', (payload) => {
@@ -619,23 +658,14 @@ export function SnapApp() {
     const safeMessage = normalizeLiveMessage(payload.message);
     if (!safeMessage) return;
 
-    setLiveMessages((prev) => [...prev.slice(-19), safeMessage]);
-    setLiveFloating((prev) => [...prev.slice(-3), safeMessage]);
-    const timer = window.setTimeout(() => {
-      setLiveFloating((prev) => prev.filter((entry) => entry.id !== safeMessage.id));
-      floatingTimers.delete(safeMessage.id);
-    }, 4200);
-    floatingTimers.set(safeMessage.id, timer);
+    pushLiveMessage(safeMessage);
   });
 
   useNuiEvent<{ liveId?: number; reaction?: SnapLiveReaction }>('gcphone:snap:liveReaction', (payload) => {
     const liveId = Number(payload?.liveId || 0);
     if (liveId < 1 || activeLive()?.id !== liveId || !payload?.reaction) return;
 
-    setLiveReactions((prev) => [...prev.slice(-10), payload.reaction as SnapLiveReaction]);
-    window.setTimeout(() => {
-      setLiveReactions((prev) => prev.filter((entry) => entry.id !== payload.reaction?.id));
-    }, 2600);
+    pushLiveReaction(payload.reaction as SnapLiveReaction);
   });
 
   useNuiEvent<{ liveId?: number; messageId?: string }>('gcphone:snap:liveMessageRemoved', (payload) => {
@@ -711,11 +741,7 @@ export function SnapApp() {
     if (!live) return;
     if (Number(payload?.liveId) !== Number(live.id)) return;
 
-    setLiveAudioProximityEnabled(false);
-    setLiveAudioHeartbeatAt(0);
-    setLiveAudioNear(false);
-    setLiveAudioTargetOnline(true);
-    setLiveAudioDistanceMeters(-1);
+    resetLiveAudioState();
     setLiveKitRemoteAudioVolume(0);
 
     const reason = String(payload?.reason || '');
@@ -751,10 +777,7 @@ export function SnapApp() {
   });
 
   onCleanup(() => {
-    for (const timer of floatingTimers.values()) {
-      window.clearTimeout(timer);
-    }
-    floatingTimers.clear();
+    clearFloatingTimers();
     if (liveAudioRetryTimer) {
       window.clearTimeout(liveAudioRetryTimer);
       liveAudioRetryTimer = undefined;
@@ -960,12 +983,7 @@ export function SnapApp() {
       liveAudioRetryTimer = undefined;
     }
 
-    setLiveAudioProximityEnabled(false);
-    setLiveAudioHeartbeatAt(0);
-    setLiveAudioWatchdogMs(2400);
-    setLiveAudioNear(false);
-    setLiveAudioTargetOnline(true);
-    setLiveAudioDistanceMeters(-1);
+    resetLiveAudioState();
     setLiveKitRemoteAudioPriority(null);
 
     if (owner || liveId < 1) {
@@ -1082,28 +1100,15 @@ export function SnapApp() {
         onMessage: (message) => {
           const safeMessage = normalizeLiveMessage(message);
           if (!safeMessage) return;
-          setLiveMessages((prev) => [...prev.slice(-19), safeMessage]);
-          setLiveFloating((prev) => [...prev.slice(-3), safeMessage]);
-          const timer = window.setTimeout(() => {
-            setLiveFloating((prev) => prev.filter((entry) => entry.id !== safeMessage.id));
-            floatingTimers.delete(safeMessage.id);
-          }, 4200);
-          floatingTimers.set(safeMessage.id, timer);
+          pushLiveMessage(safeMessage);
         },
         onReaction: (reaction) => {
-          setLiveReactions((prev) => [...prev.slice(-10), reaction]);
-          window.setTimeout(() => {
-            setLiveReactions((prev) => prev.filter((entry) => entry.id !== reaction.id));
-          }, 2600);
+          pushLiveReaction(reaction);
         },
         onViewersUpdated: ({ liveId, viewers }) => {
           const nextId = Number(liveId || 0);
           const nextViewers = Number(viewers ?? -1);
-          if (nextId < 1 || nextViewers < 0) return;
-          setActiveLive((prev) => (prev && Number(prev.id) === nextId ? { ...prev, live_viewers: nextViewers } : prev));
-          setLiveStreams((prev) => prev.map((entry) => (
-            Number(entry.id) === nextId ? { ...entry, live_viewers: nextViewers } : entry
-          )));
+          updateLiveViewerCount(nextId, nextViewers);
         },
         onMessageDeleted: ({ messageId }) => {
           setLiveMessages((prev) => prev.filter((entry) => entry.id !== messageId));
@@ -1134,9 +1139,7 @@ export function SnapApp() {
           setLiveMessages(initialMessages.slice(-20));
 
           const nextViewers = Number(joinResult.viewers ?? -1);
-          if (nextViewers >= 0) {
-            setActiveLive((prev) => (prev ? { ...prev, live_viewers: nextViewers } : prev));
-          }
+          updateLiveViewerCount(Number(live.id), nextViewers);
 
           setStatusMessage('');
           if (!liveAudioProximityEnabled() && !owner) {
@@ -1162,12 +1165,7 @@ export function SnapApp() {
       }
 
       const initialViewers = Number(joinResult.viewers ?? -1);
-      if (initialViewers >= 0) {
-        setActiveLive((prev) => (prev ? { ...prev, live_viewers: initialViewers } : prev));
-        setLiveStreams((prev) => prev.map((entry) => (
-          Number(entry.id) === Number(live.id) ? { ...entry, live_viewers: initialViewers } : entry
-        )));
-      }
+      updateLiveViewerCount(Number(live.id), initialViewers);
 
       const initialMessages = Array.isArray(joinResult.messages)
         ? joinResult.messages.map((entry) => normalizeLiveMessage(entry)).filter((entry): entry is SnapLiveSocketMessage => Boolean(entry))
@@ -1229,10 +1227,7 @@ export function SnapApp() {
     stopSnapMockFeed?.();
     stopSnapMockFeed = undefined;
 
-    for (const timer of floatingTimers.values()) {
-      window.clearTimeout(timer);
-    }
-    floatingTimers.clear();
+    clearFloatingTimers();
 
     await stopLiveAudioProximity();
     disconnectSnapLiveSocket();
@@ -1314,13 +1309,7 @@ export function SnapApp() {
       };
       const safeMessage = normalizeLiveMessage(message);
       if (!safeMessage) return;
-      setLiveMessages((prev) => [...prev.slice(-19), safeMessage]);
-      setLiveFloating((prev) => [...prev.slice(-3), safeMessage]);
-      const timer = window.setTimeout(() => {
-        setLiveFloating((prev) => prev.filter((entry) => entry.id !== safeMessage.id));
-        floatingTimers.delete(safeMessage.id);
-      }, 4200);
-      floatingTimers.set(safeMessage.id, timer);
+      pushLiveMessage(safeMessage);
       setLiveMessageInput('');
       return;
     }
@@ -1351,10 +1340,7 @@ export function SnapApp() {
         reaction,
         createdAt: Date.now(),
       };
-      setLiveReactions((prev) => [...prev.slice(-10), payload]);
-      window.setTimeout(() => {
-        setLiveReactions((prev) => prev.filter((entry) => entry.id !== payload.id));
-      }, 2600);
+      pushLiveReaction(payload);
       return;
     }
     const response = await sendSnapLiveReaction(String(stream.id), reaction);
@@ -1464,13 +1450,7 @@ export function SnapApp() {
         };
         const safeMessage = normalizeLiveMessage(message);
         if (!safeMessage) return;
-        setLiveMessages((prev) => [...prev.slice(-19), safeMessage]);
-        setLiveFloating((prev) => [...prev.slice(-3), safeMessage]);
-        const timer = window.setTimeout(() => {
-          setLiveFloating((prev) => prev.filter((msg) => msg.id !== safeMessage.id));
-          floatingTimers.delete(safeMessage.id);
-        }, 4200);
-        floatingTimers.set(safeMessage.id, timer);
+        pushLiveMessage(safeMessage);
       },
       onReaction: (entry) => {
         const payload: SnapLiveReaction = {
@@ -1480,10 +1460,7 @@ export function SnapApp() {
           reaction: entry.reaction,
           createdAt: entry.createdAt,
         };
-        setLiveReactions((prev) => [...prev.slice(-10), payload]);
-        window.setTimeout(() => {
-          setLiveReactions((prev) => prev.filter((it) => it.id !== payload.id));
-        }, 2600);
+        pushLiveReaction(payload);
       },
     });
 
