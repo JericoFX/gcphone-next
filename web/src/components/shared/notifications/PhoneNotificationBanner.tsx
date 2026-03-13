@@ -1,4 +1,4 @@
-import { Show, createEffect, createSignal, onCleanup } from 'solid-js';
+import { Show, createEffect, createSignal, onCleanup, createUniqueId } from 'solid-js';
 import type { PhoneNotification } from '../../../types';
 import { useNotifications } from '../../../store/notifications';
 import { getStoredLanguage, t } from '../../../i18n';
@@ -16,6 +16,8 @@ export function PhoneNotificationBanner(props: Props) {
   const [peekOpen, setPeekOpen] = createSignal(false);
   const [displayed, setDisplayed] = createSignal<PhoneNotification | null>(null);
   const [phase, setPhase] = createSignal<'idle' | 'enter' | 'exit'>('idle');
+  const titleId = createUniqueId();
+  const messageId = createUniqueId();
   let swapTimer: number | undefined;
 
   const clearSwapTimer = () => {
@@ -84,31 +86,44 @@ export function PhoneNotificationBanner(props: Props) {
           <button
             class={styles.pulseLine}
             classList={{ [styles.preview]: !!props.preview }}
+            type="button"
             onClick={() => setPeekOpen((value) => !value)}
             aria-label={t('notify.open', getStoredLanguage())}
           />
           <Show when={peekOpen() || !!props.preview}>
-            <button class={styles.peekCard} classList={{ [styles.preview]: !!props.preview, [styles.enter]: phase() === 'enter', [styles.exit]: phase() === 'exit' }} onClick={openNotification}>
+            <div
+              class={styles.peekCard}
+              classList={{ [styles.preview]: !!props.preview, [styles.enter]: phase() === 'enter', [styles.exit]: phase() === 'exit' }}
+              role="status"
+              aria-live="polite"
+              aria-atomic="true"
+              aria-labelledby={titleId}
+              aria-describedby={messageId}
+            >
               <div class={styles.icon}>
                 <Show when={isAssetIcon(notification().icon)} fallback={notification().icon || '•'}>
                   <img src={notification().icon} alt="" draggable={false} />
                 </Show>
               </div>
-              <div class={styles.content}>
-                <div class={styles.title}>{notification().title}</div>
-                <div class={styles.message}>{notification().message}</div>
-              </div>
-              <span
+              <button class={styles.contentButton} type="button" onClick={openNotification}>
+                <div class={styles.content}>
+                  <div id={titleId} class={styles.title}>{notification().title}</div>
+                  <div id={messageId} class={styles.message}>{notification().message}</div>
+                </div>
+              </button>
+              <button
                 class={styles.close}
+                type="button"
+                aria-label="Descartar notificacion"
                 onClick={(event) => {
                   event.stopPropagation();
                   notificationsActions.dismissCurrent();
                   setPeekOpen(false);
                 }}
-                >
-                  <img src="./img/icons_ios/ui-close.svg" alt="" draggable={false} />
-                </span>
-            </button>
+              >
+                <img src="./img/icons_ios/ui-close.svg" alt="" draggable={false} />
+              </button>
+            </div>
           </Show>
         </div>
       )}

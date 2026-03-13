@@ -26,6 +26,11 @@ button {
   }
 }
 
+:focus-visible {
+  outline: 2px solid rgba(10, 132, 255, 0.9);
+  outline-offset: 2px;
+}
+
 input, textarea {
   font-family: inherit;
   
