@@ -110,8 +110,6 @@
   border: 1px solid var(--ls-border);
   background: var(--ls-material);
   box-shadow: var(--ls-shadow);
-  backdrop-filter: blur(22px) saturate(1.18);
-  -webkit-backdrop-filter: blur(22px) saturate(1.18);
 }
 
 .widget-panel,
@@ -424,8 +422,6 @@
   border: 1px solid var(--ls-border);
   background: color-mix(in srgb, rgba(20, 24, 34, 0.94) 84%, transparent);
   box-shadow: 0 22px 40px rgba(0, 0, 0, 0.36);
-  backdrop-filter: blur(28px) saturate(1.16);
-  -webkit-backdrop-filter: blur(28px) saturate(1.16);
 }
 
 .emergency-sheet {
