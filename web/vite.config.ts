@@ -20,6 +20,16 @@ export default defineConfig({
         chunkFileNames: 'assets/[name].js',
         assetFileNames: 'assets/[name].[ext]',
         manualChunks(id) {
+          if (
+            id.includes('MediaLightbox')
+            || id.includes('EmojiPicker')
+            || id.includes('MediaAttachmentPreview')
+            || id.includes('MediaActionButtons')
+            || id.includes('SocialOnboardingModal')
+            || id.includes('LiveFlashlightControl')
+          ) {
+            return 'shared-social';
+          }
           if (id.includes('livekit-client')) {
             return 'vendor-livekit';
           }
