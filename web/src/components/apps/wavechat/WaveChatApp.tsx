@@ -25,6 +25,8 @@ import { VirtualList } from '../../shared/ui/VirtualList';
 import { EmojiPickerButton } from '../../shared/ui/EmojiPicker';
 import { AppScaffold } from '../../shared/layout';
 import { getStoredLanguage, t } from '../../../i18n';
+import { useWaveChatDerivedData } from './hooks/useWaveChatDerivedData';
+import { useWaveChatRouteSync } from './hooks/useWaveChatRouteSync';
 import styles from './WaveChatApp.module.scss';
 
 interface GifResult {
@@ -141,33 +143,20 @@ export function WaveChatApp() {
   let mediaStream: MediaStream | null = null;
   let recordingInterval: number | undefined;
   const typingTimers = new Map<string, number>();
+  const myNumber = createMemo(() => phoneState.settings.phoneNumber || '');
 
-  const contactDisplayByNumber = createMemo(() => {
-    const map = new Map<string, string>();
-    for (const contact of contactsState.contacts) {
-      map.set(contact.number, contact.display || contact.number);
-    }
-    return map;
-  });
-
-  const knownContactNumbers = createMemo(() => {
-    const set = new Set<string>();
-    for (const contact of contactsState.contacts) {
-      set.add(contact.number);
-    }
-    return set;
-  });
-
-  const selectableContacts = createMemo(() => {
-    const search = sanitizeText(groupContactSearch(), 80).toLowerCase();
-    const ownNumber = sanitizePhone(phoneState.settings.phoneNumber || '');
-    return contactsState.contacts
-      .filter((contact) => sanitizePhone(contact.number) && sanitizePhone(contact.number) !== ownNumber)
-      .filter((contact) => {
-        if (!search) return true;
-        return contact.display.toLowerCase().includes(search) || contact.number.includes(search);
-      })
-      .sort((a, b) => a.display.localeCompare(b.display, 'es'));
+  const {
+    contactDisplayByNumber,
+    knownContactNumbers,
+    selectableContacts,
+    conversations,
+    statusRows,
+  } = useWaveChatDerivedData({
+    contacts: () => contactsState.contacts,
+    messages: () => messagesState.messages,
+    statuses,
+    groupContactSearch,
+    ownNumber: myNumber,
   });
 
   const getMediaUrl = (msg: any): string | undefined => sanitizeMediaUrl(msg.mediaUrl || msg.media_url) || undefined;
@@ -350,37 +339,6 @@ export function WaveChatApp() {
     }
   };
 
-  const conversations = createMemo(() => {
-    const convos: Map<string, { number: string; display: string; lastMessage: any; unread: number }> = new Map();
-
-    for (const msg of messagesState.messages) {
-      const number = msg.owner === 1 ? msg.receiver : msg.transmitter;
-
-      if (!convos.has(number)) {
-        const display = contactDisplayByNumber().get(number) || number;
-        convos.set(number, {
-          number,
-          display,
-          lastMessage: msg,
-          unread: 0,
-        });
-      }
-
-      const convo = convos.get(number)!;
-      if (new Date(msg.time) > new Date(convo.lastMessage.time)) {
-        convo.lastMessage = msg;
-      }
-
-      if (!msg.isRead && msg.owner === 0) {
-        convo.unread++;
-      }
-    }
-
-    return Array.from(convos.values()).sort(
-      (a, b) => new Date(b.lastMessage.time).getTime() - new Date(a.lastMessage.time).getTime(),
-    );
-  });
-
   const isSelectedConversationIndex = createSelector(selectedIndex);
   const isSelectedGroup = createSelector(selectedGroupId);
 
@@ -402,28 +360,6 @@ export function WaveChatApp() {
     return groupTyping()[groupId] || [];
   });
 
-  const myNumber = createMemo(() => phoneState.settings.phoneNumber || '');
-
-  const statusRows = createMemo(() => {
-    const mine: WaveStatus[] = [];
-    const others: WaveStatus[] = [];
-    const seen = new Set<string>();
-
-    for (const status of statuses()) {
-      if (!status.phone_number) continue;
-      if (status.phone_number === myNumber()) {
-        mine.push(status);
-        continue;
-      }
-
-      if (seen.has(status.phone_number)) continue;
-      seen.add(status.phone_number);
-      others.push(status);
-    }
-
-    return { mine, others };
-  });
-
   createEffect(() => {
     const maxIndex = conversations().length - 1;
     if (maxIndex < 0) {
@@ -436,22 +372,13 @@ export function WaveChatApp() {
     }
   });
 
-  createEffect(() => {
-    const params = router.params();
-    const number = sanitizePhone(typeof params.phoneNumber === 'string' ? params.phoneNumber : typeof params.number === 'string' ? params.number : '');
-    const display = sanitizeText(
-      typeof params.display === 'string' ? params.display : typeof params.displayName === 'string' ? params.displayName : '',
-      80,
-    );
-    const mediaUrl = sanitizeMediaUrl(typeof params.attachmentUrl === 'string' ? params.attachmentUrl : '');
-    if (!number) return;
-    setSelectedConversation(number);
-    setRouteConversationName(display || '');
-    setActiveTab('chats');
-    if (mediaUrl) {
-      setAttachmentUrl(mediaUrl);
-    }
-    messagesActions.markAsRead(number);
+  useWaveChatRouteSync({
+    routeParams: router.params,
+    setSelectedConversation,
+    setRouteConversationName,
+    setActiveTab,
+    setAttachmentUrl,
+    markAsRead: messagesActions.markAsRead,
   });
 
   const searchGifs = async () => {
