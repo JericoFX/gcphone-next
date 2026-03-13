@@ -11,4 +11,5 @@ export { useListNavigation } from './useListNavigation';
 export type { UseListNavigationOptions } from './useListNavigation';
 
 export { useAppCache } from './useAppCache';
+export { usePollingTask } from './usePollingTask';
 export { useWindowEvent } from './useWindowEvent';

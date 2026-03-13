@@ -1,4 +1,4 @@
-import { createContext, useContext, ParentComponent, batch, onMount } from 'solid-js';
+import { createContext, useContext, ParentComponent, batch, createMemo, onMount } from 'solid-js';
 import { createStore } from 'solid-js/store';
 import { fetchNui } from '../utils/fetchNui';
 import { useNuiCustomEvent } from '../utils/useNui';
@@ -39,6 +39,27 @@ export const MessagesProvider: ParentComponent = (props) => {
     loading: false,
     unreadCount: 0
   });
+
+  const conversationMap = createMemo(() => {
+    const map = new Map<string, Message[]>();
+
+    for (const message of state.messages) {
+      const phoneNumber = message.owner === 1 ? message.receiver : message.transmitter;
+      const list = map.get(phoneNumber);
+
+      if (list) {
+        list.push(message);
+      } else {
+        map.set(phoneNumber, [message]);
+      }
+    }
+
+    for (const [phoneNumber, messages] of map.entries()) {
+      map.set(phoneNumber, messages.slice().sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime()));
+    }
+
+    return map;
+  });
   
   const actions: MessagesActions = {
     fetch: async () => {
@@ -54,9 +75,7 @@ export const MessagesProvider: ParentComponent = (props) => {
     },
     
     getConversation: (phoneNumber: string) => {
-      return state.messages
-        .filter(m => m.transmitter === phoneNumber || m.receiver === phoneNumber)
-        .sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime());
+      return conversationMap().get(phoneNumber) || [];
     },
     
     send: async (phoneNumber: string, message: string, mediaUrl?: string) => {

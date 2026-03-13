@@ -1,10 +1,11 @@
-import { For, Show, createEffect, createMemo, createSignal, onCleanup, onMount } from 'solid-js';
+import { For, Show, createEffect, createMemo, createSignal, onMount } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { fetchNui } from '../../../utils/fetchNui';
 import { ActionSheet } from '../../shared/ui/ActionSheet';
 import { AppScaffold } from '../../shared/layout';
 import { sanitizeText } from '../../../utils/sanitize';
 import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
+import { usePollingTask, useWindowEvent } from '../../../hooks';
 import { LeafletMap } from './LeafletMap';
 import styles from './MapsApp.module.scss';
 
@@ -61,8 +62,25 @@ export function MapsApp() {
   const [showManualGpsSheet, setShowManualGpsSheet] = createSignal(false);
   const [showLocationsSheet, setShowLocationsSheet] = createSignal(false);
   const [showMarkerSheet, setShowMarkerSheet] = createSignal(false);
+  const [documentVisible, setDocumentVisible] = createSignal(typeof document === 'undefined' ? true : document.visibilityState !== 'hidden');
 
   const routeParams = () => router.params();
+  const routeKey = createMemo(() => {
+    const params = routeParams();
+    const x = Number(params.x);
+    const y = Number(params.y);
+    const action = typeof params.action === 'string' ? params.action : '';
+
+    if (Number.isFinite(x) && Number.isFinite(y)) {
+      return `coords:${x.toFixed(4)}:${y.toFixed(4)}`;
+    }
+
+    if (action) {
+      return `action:${action}`;
+    }
+
+    return '';
+  });
   let lastRouteKey = '';
 
   usePhoneKeyHandler({
@@ -95,34 +113,35 @@ export function MapsApp() {
 
   onMount(() => {
     void loadContactsAndGroups();
-    void loadLiveLocations();
-
-    const timer = window.setInterval(() => {
-      void loadLiveLocations();
-    }, 8000);
-
-    onCleanup(() => window.clearInterval(timer));
   });
 
+  useWindowEvent('visibilitychange', () => {
+    setDocumentVisible(document.visibilityState !== 'hidden');
+  });
+
+  usePollingTask(loadLiveLocations, () => 8000, () => documentVisible());
+
   createEffect(() => {
+    const key = routeKey();
+    if (!key || key === lastRouteKey) return;
+
     const params = routeParams();
     const x = Number(params.x);
     const y = Number(params.y);
-    if (!Number.isFinite(x) || !Number.isFinite(y)) return;
 
-    const key = `${x.toFixed(4)}:${y.toFixed(4)}`;
-    if (key === lastRouteKey) return;
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return;
     lastRouteKey = key;
     addManualMarker(x, y, 'Punto compartido');
   });
 
   createEffect(() => {
+    const key = routeKey();
+    if (!key || key === lastRouteKey) return;
+
     const params = routeParams();
     const action = typeof params.action === 'string' ? params.action : '';
     if (action !== 'my-location') return;
 
-    const key = `action:${action}`;
-    if (key === lastRouteKey) return;
     lastRouteKey = key;
     void getMyLocation();
   });
