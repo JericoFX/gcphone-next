@@ -1,89 +1,158 @@
-.hero {
-  border-radius: var(--r-xl);
-  padding: 20px;
-  background: linear-gradient(135deg, #58a2ff, #8ecbff);
+.body {
+  background:
+    radial-gradient(110% 80% at 50% 0%, rgba(118, 196, 255, 0.34), transparent 56%),
+    linear-gradient(180deg, #65b9ff 0%, #4a8df7 45%, #355dc9 100%);
+}
+
+.screen {
+  min-height: 100%;
+  position: relative;
+  overflow: hidden;
   color: #fff;
-  margin-bottom: 10px;
-  border: 1px solid color-mix(in srgb, #58a2ff 55%, #bfe0ff);
-  box-shadow: var(--shadow-2);
 }
 
-.hero-top-line {
+.glow {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(58% 38% at 18% 16%, rgba(255, 255, 255, 0.28), transparent 70%),
+    radial-gradient(42% 28% at 82% 12%, rgba(255, 242, 165, 0.42), transparent 75%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent 30%);
+  pointer-events: none;
+}
+
+.hero {
+  min-height: 100%;
   display: flex;
+  flex-direction: column;
   justify-content: space-between;
-  align-items: center;
-  gap: 12px;
+  padding: 24px 20px calc(22px + var(--phone-bottom-ui-gap, 0px));
+  position: relative;
+  z-index: 1;
 }
 
-.hero-icon {
-  font-size: 28px;
+.topMeta {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.eyebrow {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.74);
+}
+
+.heroIcon {
+  font-size: 54px;
+  line-height: 1;
+  filter: drop-shadow(0 16px 28px rgba(15, 47, 128, 0.32));
 }
 
 .city {
-  font-size: 16px;
-  font-weight: 700;
+  margin: 0;
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
 }
 
 .temp {
-  font-size: 48px;
+  margin-top: auto;
+  font-size: clamp(78px, 22vw, 116px);
   font-weight: 800;
-  line-height: 1;
-  margin-top: 6px;
+  line-height: 0.9;
+  letter-spacing: -0.06em;
+  text-shadow: 0 18px 40px rgba(17, 42, 110, 0.22);
+}
+
+.conditionRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
 }
 
 .condition {
-  margin-top: 6px;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }
 
-.metrics-grid {
+.updatedAt {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  font-size: 12px;
+  font-weight: 700;
+  backdrop-filter: blur(10px);
+}
+
+.metricsGrid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-  margin-top: 14px;
+  gap: 10px;
+  margin-top: 18px;
 }
 
-.metric-card {
+.metricCard {
   display: grid;
-  gap: 4px;
-  padding: 10px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.16);
-}
-
-.metric-card span {
-  font-size: 11px;
-  opacity: 0.8;
-}
-
-.metric-card strong {
-  font-size: 14px;
-}
-
-.hourly-rail {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 8px;
-  margin-bottom: 10px;
-}
-
-.hour-card {
-  display: grid;
-  justify-items: center;
   gap: 6px;
-  padding: 10px 8px;
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.92);
-  box-shadow: var(--shadow-1);
+  padding: 12px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 12px 28px rgba(15, 47, 128, 0.14);
 }
 
-.hour-card span,
-.hour-card small {
+.metricCard span {
   font-size: 11px;
-  color: var(--text-soft);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.68);
 }
 
-.hour-card strong {
-  font-size: 20px;
+.metricCard strong {
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.currentFocus {
+  display: grid;
+  gap: 8px;
+  margin-top: 18px;
+  padding: 18px;
+  border-radius: 24px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.08));
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(16px);
+}
+
+.focusLabel {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.68);
+}
+
+.currentFocus strong {
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.currentFocus span {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.8);
 }

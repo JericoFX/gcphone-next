@@ -1,4 +1,5 @@
 import { For, Show, createEffect, createMemo, createSelector, createSignal, onMount } from 'solid-js';
+import { AppFAB } from '../../shared/layout/AppLayout';
 import { AppScaffold } from '../../shared/layout/AppScaffold';
 import { MediaActionButtons } from '../../shared/ui/MediaActionButtons';
 import { MediaAttachmentPreview } from '../../shared/ui/MediaAttachmentPreview';
@@ -92,6 +93,10 @@ export function MailApp() {
   const [attachmentUrl, setAttachmentUrl] = createSignal('');
   const [attachmentName, setAttachmentName] = createSignal('');
   const [lastComposeRouteKey, setLastComposeRouteKey] = createSignal('');
+  const [showAttachmentComposer, setShowAttachmentComposer] = createSignal(false);
+
+  let toFieldRef: HTMLInputElement | undefined;
+  let bodyFieldRef: HTMLTextAreaElement | undefined;
 
   const selectedMessage = createMemo(() => {
     const id = selectedId();
@@ -104,6 +109,7 @@ export function MailApp() {
     folder() === 'inbox' ? inbox() : sent(),
   );
   const isSelectedMessage = createSelector(selectedId);
+  const hasComposeError = createMemo(() => view() === 'compose' && !!error());
 
   createEffect(() => {
     const params = router.params();
@@ -219,8 +225,15 @@ export function MailApp() {
     const subject = subjectInput().trim();
     const body = bodyInput().trim();
 
-    if (!to || !body) {
+    if (!to) {
       setError(t('mail.error.compose_required', language()));
+      toFieldRef?.focus();
+      return;
+    }
+
+    if (!body) {
+      setError(t('mail.error.compose_required', language()));
+      bodyFieldRef?.focus();
       return;
     }
 
@@ -251,6 +264,7 @@ export function MailApp() {
     setAttachmentType('document');
     setAttachmentUrl('');
     setAttachmentName('');
+    setShowAttachmentComposer(false);
     await loadState();
     setFolder('sent');
     setView('list');
@@ -273,6 +287,8 @@ export function MailApp() {
     ]);
     setAttachmentUrl('');
     setAttachmentName('');
+    setError('');
+    setShowAttachmentComposer(false);
   };
 
   const attachFromGallery = async () => {
@@ -292,6 +308,8 @@ export function MailApp() {
         name: 'Adjunto de galeria',
       },
     ]);
+    setError('');
+    setShowAttachmentComposer(false);
   };
 
   const attachFromCamera = async () => {
@@ -310,6 +328,8 @@ export function MailApp() {
         name: 'Captura de camara',
       },
     ]);
+    setError('');
+    setShowAttachmentComposer(false);
   };
 
   const attachLinkByPrompt = async () => {
@@ -324,6 +344,8 @@ export function MailApp() {
         name: 'Enlace',
       },
     ]);
+    setError('');
+    setShowAttachmentComposer(false);
   };
 
   const removeAttachment = (index: number) => {
@@ -391,6 +413,8 @@ export function MailApp() {
     setAttachmentType('document');
     setAttachmentUrl('');
     setAttachmentName('');
+    setShowAttachmentComposer(false);
+    setError('');
   };
 
   onMount(() => {
@@ -400,7 +424,7 @@ export function MailApp() {
   return (
     <AppScaffold title='Mail' subtitle={t('mail.subtitle', language())} onBack={() => router.goBack()} bodyPadding='none'>
       <div class={styles.root}>
-        <Show when={!!error()}>
+        <Show when={!!error() && view() !== 'compose'}>
           <div class={styles.error}>{error()}</div>
         </Show>
 
@@ -625,72 +649,51 @@ export function MailApp() {
                     <div class={styles.composeHeaderSpacer}></div>
                   </div>
 
-                  <div class={styles.composeCard}>
-                    <input
-                      class={styles.input}
-                      value={toInput()}
-                      onInput={(e) => setToInput(e.currentTarget.value)}
-                      placeholder={t('mail.placeholder.to', language())}
-                    />
-                    <input
-                      class={styles.input}
-                      value={subjectInput()}
-                      onInput={(e) => setSubjectInput(e.currentTarget.value)}
-                      placeholder={t('mail.placeholder.subject', language())}
-                    />
-                    <textarea
-                      class={styles.textarea}
-                      value={bodyInput()}
-                      onInput={(e) => setBodyInput(e.currentTarget.value)}
-                      placeholder={t('mail.placeholder.body', language())}
-                    />
+                  <div class={styles.composeScroll}>
+                    <div class={styles.composeCard}>
+                      <Show when={hasComposeError()}>
+                        <div class={styles.composeError}>{error()}</div>
+                      </Show>
 
-                    <div class={styles.attachmentsBox}>
-                      <h5>{t('mail.attachments_optional', language())}</h5>
-                      <MediaActionButtons
-                        actions={[
-                          { icon: MAIL_ICONS.gallery, label: t('mail.gallery', language()), onClick: attachFromGallery },
-                          { icon: MAIL_ICONS.camera, label: t('mail.camera', language()), onClick: attachFromCamera },
-                          { icon: MAIL_ICONS.link, label: t('mail.link', language()), onClick: () => void attachLinkByPrompt() },
-                        ]}
-                        variant='compact'
-                        class={styles.composeMediaButtons}
+                      <input
+                        ref={toFieldRef}
+                        class={styles.input}
+                        value={toInput()}
+                        onInput={(e) => {
+                          setToInput(e.currentTarget.value);
+                          if (error()) setError('');
+                        }}
+                        placeholder={t('mail.placeholder.to', language())}
                       />
-                      <div class={styles.attachRow}>
-                        <select
-                          class={styles.select}
-                          value={attachmentType()}
-                          onChange={(e) =>
-                            setAttachmentType(
-                              e.currentTarget.value as MailAttachment['type'],
-                            )
-                          }
+                      <input
+                        class={styles.input}
+                        value={subjectInput()}
+                        onInput={(e) => setSubjectInput(e.currentTarget.value)}
+                        placeholder={t('mail.placeholder.subject', language())}
+                      />
+                      <textarea
+                        ref={bodyFieldRef}
+                        class={styles.textarea}
+                        value={bodyInput()}
+                        onInput={(e) => {
+                          setBodyInput(e.currentTarget.value);
+                          if (error()) setError('');
+                        }}
+                        placeholder={t('mail.placeholder.body', language())}
+                      />
+
+                      <div class={styles.attachmentsSummary}>
+                        <div>
+                          <p class={styles.attachmentsLabel}>{t('mail.attachments_optional', language())}</p>
+                          <strong class={styles.attachmentsCount}>
+                            {attachments().length === 0 ? '0' : attachments().length}
+                          </strong>
+                        </div>
+                        <button
+                          class={styles.attachmentsToggle}
+                          onClick={() => setShowAttachmentComposer((prev) => !prev)}
                         >
-                          <option value='image'>{t('mail.attachment.image', language())}</option>
-                          <option value='video'>{t('mail.attachment.video', language())}</option>
-                          <option value='document'>{t('mail.attachment.document', language())}</option>
-                          <option value='link'>Link</option>
-                        </select>
-                        <input
-                          class={styles.inputInline}
-                          value={attachmentUrl()}
-                          onInput={(e) => setAttachmentUrl(e.currentTarget.value)}
-                          placeholder={t('mail.placeholder.url', language())}
-                        />
-                      </div>
-                      <MediaAttachmentPreview
-                        url={attachmentUrl()}
-                        mediaClass={styles.composePreviewMedia}
-                      />
-                      <div class={styles.attachRow}>
-                        <input
-                          class={styles.inputInline}
-                          value={attachmentName()}
-                          onInput={(e) => setAttachmentName(e.currentTarget.value)}
-                          placeholder={t('mail.placeholder.name', language())}
-                        />
-                        <button class={styles.attachButton} onClick={addAttachment}>
-                          {t('mail.add', language())}
+                          {showAttachmentComposer() ? t('mail.cancel', language()) : t('mail.add', language())}
                         </button>
                       </div>
 
@@ -712,14 +715,88 @@ export function MailApp() {
                       </Show>
                     </div>
 
+                    <Show when={showAttachmentComposer()}>
+                      <div class={styles.attachmentsBox}>
+                        <h5>{t('mail.attachments_optional', language())}</h5>
+                        <MediaActionButtons
+                          actions={[
+                            { icon: MAIL_ICONS.gallery, label: t('mail.gallery', language()), onClick: attachFromGallery },
+                            { icon: MAIL_ICONS.camera, label: t('mail.camera', language()), onClick: attachFromCamera },
+                            { icon: MAIL_ICONS.link, label: t('mail.link', language()), onClick: () => void attachLinkByPrompt() },
+                          ]}
+                          variant='compact'
+                          class={styles.composeMediaButtons}
+                        />
+                        <div class={styles.attachRow}>
+                          <select
+                            class={styles.select}
+                            value={attachmentType()}
+                            onChange={(e) =>
+                              setAttachmentType(
+                                e.currentTarget.value as MailAttachment['type'],
+                              )
+                            }
+                          >
+                            <option value='image'>{t('mail.attachment.image', language())}</option>
+                            <option value='video'>{t('mail.attachment.video', language())}</option>
+                            <option value='document'>{t('mail.attachment.document', language())}</option>
+                            <option value='link'>Link</option>
+                          </select>
+                          <input
+                            class={styles.inputInline}
+                            value={attachmentUrl()}
+                            onInput={(e) => setAttachmentUrl(e.currentTarget.value)}
+                            placeholder={t('mail.placeholder.url', language())}
+                          />
+                        </div>
+                        <MediaAttachmentPreview
+                          url={attachmentUrl()}
+                          mediaClass={styles.composePreviewMedia}
+                        />
+                        <div class={styles.attachRow}>
+                          <input
+                            class={styles.inputInline}
+                            value={attachmentName()}
+                            onInput={(e) => setAttachmentName(e.currentTarget.value)}
+                            placeholder={t('mail.placeholder.name', language())}
+                          />
+                          <button class={styles.attachButton} onClick={addAttachment}>
+                            {t('mail.add', language())}
+                          </button>
+                        </div>
+                      </div>
+                    </Show>
+                  </div>
+
+                  <div class={styles.composeFooter}>
                     <button
-                      class={styles.button}
+                      class={styles.composeFooterSecondary}
+                      onClick={() => cancelCompose()}
+                      disabled={loading()}
+                    >
+                      {t('mail.cancel', language())}
+                    </button>
+                    <button
+                      class={styles.composeFooterPrimary}
                       onClick={() => void sendMail()}
                       disabled={loading()}
                     >
                       {t('mail.send', language())}
                     </button>
                   </div>
+
+                  <AppFAB
+                    class={styles.composeFab}
+                    title={t('mail.attachments_optional', language())}
+                    tooltip={attachments().length > 0 ? `${attachments().length} ${t('mail.attachments_optional', language())}` : t('mail.attachments_optional', language())}
+                    tooltipVisible={showAttachmentComposer()}
+                    icon={<img src={MAIL_ICONS.gallery} alt='' draggable={false} />}
+                    onClick={() => setShowAttachmentComposer((prev) => !prev)}
+                  />
+
+                  <Show when={attachments().length > 0}>
+                    <div class={styles.composeFabBadge}>{attachments().length}</div>
+                  </Show>
                 </div>
               </Show>
             </>
