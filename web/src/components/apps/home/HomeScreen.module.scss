@@ -26,8 +26,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 4px 16px 0;
-  font-size: 13px;
+  padding: 4px var(--s-4) 0;
+  font-size: var(--fs-footnote);
   font-weight: 680;
   letter-spacing: 0.01em;
   text-shadow: 0 4px 12px rgba(0, 0, 0, 0.55);
@@ -48,22 +48,22 @@
   border: none;
   border-radius: 999px;
   padding: 5px 12px;
-  font-size: 10px;
+  font-size: var(--fs-caption2);
   font-weight: 700;
   color: #fff;
-  background: rgba(14, 22, 38, 0.46);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.24);
+  background: var(--color-surface-translucent);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.24), var(--shadow-sm);
 }
 
 .search-btn {
   border: none;
   border-radius: 999px;
   padding: 5px 12px;
-  font-size: 10px;
+  font-size: var(--fs-caption2);
   font-weight: 700;
   color: #fff;
-  background: rgba(8, 36, 72, 0.52);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--tint) 58%, transparent), color-mix(in srgb, var(--tint-2) 44%, transparent));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22), var(--shadow-sm);
 }
 
 .home-time {
@@ -72,7 +72,7 @@
   display: grid;
   justify-items: center;
   align-content: center;
-  min-height: 188px;
+  min-height: 184px;
   text-shadow: 0 10px 24px rgba(0, 0, 0, 0.42);
 
   .time-large {
@@ -83,7 +83,7 @@
   }
 
   .date {
-    font-size: 16px;
+    font-size: var(--fs-subhead);
     font-weight: 540;
     text-transform: capitalize;
     opacity: 0.96;
@@ -96,7 +96,7 @@
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   grid-auto-rows: 102px;
-  padding: 8px 8px 0;
+  padding: var(--s-2) var(--s-2) 0;
   gap: 2px 0;
   flex: 1;
   align-content: start;
@@ -162,39 +162,37 @@
   z-index: 2;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-  padding: 0 12px 8px;
+  gap: var(--s-2);
+  padding: 0 var(--s-3) var(--s-2);
 }
 
 .widget-card {
   min-height: 70px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 14px;
-  background:
-    radial-gradient(140% 100% at 0% 0%, rgba(255, 255, 255, 0.24), transparent 70%),
-    rgba(10, 17, 30, 0.46);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: var(--r-lg);
+  background: var(--color-surface-translucent);
   color: #f3f8ff;
   text-align: left;
-  padding: 9px 10px;
+  padding: 10px 12px;
   display: grid;
-  gap: 2px;
-  box-shadow: 0 12px 24px rgba(7, 11, 20, 0.28);
+  gap: 4px;
+  box-shadow: var(--shadow-md);
 
   strong {
-    font-size: 12px;
+      font-size: var(--fs-footnote);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
   small {
-    font-size: 10px;
-    color: rgba(232, 242, 255, 0.8);
+      font-size: var(--fs-caption2);
+      color: rgba(232, 242, 255, 0.8);
+    }
   }
-}
 
 .widget-label {
-  font-size: 10px;
+  font-size: var(--fs-caption2);
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: rgba(210, 228, 255, 0.86);
@@ -204,9 +202,9 @@
   position: relative;
   z-index: 2;
   display: flex;
-  gap: 8px;
+  gap: var(--s-2);
   overflow-x: auto;
-  padding: 0 12px 8px;
+  padding: 0 var(--s-3) var(--s-2);
 }
 
 .folder-pill {
@@ -214,8 +212,8 @@
   min-width: 108px;
   height: 34px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.24);
-  background: rgba(12, 19, 33, 0.44);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: var(--color-surface-translucent);
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -223,14 +221,14 @@
   padding: 0 10px;
 
   strong {
-    font-size: 11px;
+    font-size: var(--fs-caption1);
     font-weight: 700;
   }
 
   em {
     margin-left: auto;
     font-style: normal;
-    font-size: 10px;
+    font-size: var(--fs-caption2);
     opacity: 0.88;
   }
 }
@@ -401,7 +399,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: var(--s-2);
   padding: 6px 10px 20px;
 }
 
@@ -419,15 +417,13 @@
 .folder-panel {
   width: 100%;
   max-height: 52%;
-  border-radius: 18px;
+  border-radius: var(--r-xl);
   border: 1px solid rgba(255, 255, 255, 0.24);
-  background:
-    radial-gradient(120% 120% at 0% -20%, rgba(255, 255, 255, 0.2), transparent 60%),
-    rgba(14, 21, 36, 0.95);
-  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.35);
-  padding: 10px;
+  background: linear-gradient(180deg, rgba(17, 24, 38, 0.92), rgba(11, 17, 28, 0.96));
+  box-shadow: var(--shadow-lg);
+  padding: var(--s-3);
   display: grid;
-  gap: 8px;
+  gap: var(--s-2);
 }
 
 .folder-header {
@@ -436,7 +432,7 @@
   justify-content: space-between;
 
   strong {
-    font-size: 14px;
+    font-size: var(--fs-subhead);
     color: #f8fbff;
   }
 
@@ -447,7 +443,7 @@
     padding: 0 10px;
     background: rgba(255, 255, 255, 0.16);
     color: #edf5ff;
-    font-size: 11px;
+    font-size: var(--fs-caption1);
     font-weight: 700;
   }
 }
@@ -455,7 +451,7 @@
 .folder-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
+  gap: var(--s-2);
   overflow-y: auto;
   padding-bottom: 2px;
 }
@@ -492,8 +488,8 @@
   height: 30px;
   border: none;
   border-radius: 999px;
-  background: rgba(11, 18, 30, 0.45);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.15);
+  background: var(--color-surface-translucent);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16), var(--shadow-sm);
   color: #fff;
   font-size: 16px;
 }
@@ -501,8 +497,8 @@
 .page-dots {
   padding: 7px 12px;
   border-radius: 999px;
-  background: rgba(12, 18, 30, 0.38);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
+  background: var(--color-surface-translucent);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16), var(--shadow-sm);
   display: flex;
   align-items: center;
   gap: 6px;
@@ -534,12 +530,10 @@
 .search-panel {
   width: 100%;
   max-height: 84%;
-  border-radius: 18px;
-  background:
-    radial-gradient(120% 100% at 0% 0%, rgba(255, 255, 255, 0.3), transparent 64%),
-    rgba(232, 240, 252, 0.95);
+  border-radius: var(--r-xl);
+  background: linear-gradient(180deg, rgba(245, 249, 255, 0.96), rgba(232, 240, 252, 0.95));
   border: 1px solid rgba(255, 255, 255, 0.62);
-  box-shadow: 0 22px 44px rgba(3, 10, 21, 0.4);
+  box-shadow: var(--shadow-lg);
   display: grid;
   grid-template-rows: auto 1fr;
   overflow: hidden;
@@ -548,18 +542,18 @@
 .search-header {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px;
+  gap: var(--s-2);
+  padding: var(--s-3);
 }
 
 .search-input {
   flex: 1;
   min-height: 36px;
   border: none;
-  border-radius: 10px;
+  border-radius: var(--r-md);
   background: rgba(255, 255, 255, 0.94);
   color: #143052;
-  font-size: 13px;
+  font-size: var(--fs-footnote);
   padding: 0 12px;
 }
 
@@ -567,24 +561,24 @@
   border: none;
   background: transparent;
   color: #2f5f9d;
-  font-size: 12px;
+  font-size: var(--fs-footnote);
   font-weight: 760;
 }
 
 .search-results {
   overflow-y: auto;
-  padding: 0 10px 10px;
+  padding: 0 var(--s-3) var(--s-3);
   display: grid;
-  gap: 10px;
+  gap: var(--s-3);
 
   section {
     display: grid;
-    gap: 6px;
+      gap: 6px;
   }
 
   h4 {
     margin: 0;
-    font-size: 11px;
+      font-size: var(--fs-caption2);
     font-weight: 760;
     letter-spacing: 0.05em;
     text-transform: uppercase;
@@ -594,7 +588,7 @@
 
 .search-item {
   border: none;
-  border-radius: 12px;
+  border-radius: var(--r-md);
   background: rgba(255, 255, 255, 0.84);
   min-height: 50px;
   display: flex;
@@ -602,7 +596,7 @@
   gap: 10px;
   padding: 8px 10px;
   text-align: left;
-  box-shadow: 0 8px 16px rgba(16, 34, 58, 0.12);
+  box-shadow: var(--shadow-sm);
 
   img,
   .search-dot {
@@ -620,14 +614,14 @@
 
   strong {
     display: block;
-    font-size: 12px;
+      font-size: var(--fs-footnote);
     font-weight: 760;
     color: #122b49;
   }
 
   span {
     display: block;
-    font-size: 11px;
+      font-size: var(--fs-caption1);
     color: #577091;
     max-width: 220px;
     overflow: hidden;
@@ -645,7 +639,7 @@
 .search-empty {
   padding: 12px;
   text-align: center;
-  font-size: 12px;
+  font-size: var(--fs-footnote);
   color: #637b9f;
 }
 
