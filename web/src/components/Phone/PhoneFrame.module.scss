@@ -11,7 +11,7 @@
 }
 
 .phone-screen {
-  --phone-bottom-ui-gap: calc(24px + var(--safe-b));
+  --phone-bottom-ui-gap: calc(10px + var(--safe-b));
   overflow: hidden;
   position: absolute;
   background-color: white;
