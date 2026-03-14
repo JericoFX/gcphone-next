@@ -7,11 +7,11 @@
 }
 
 body {
-  font-family: var(--font-family);
-  font-size: var(--font-size-base);
+  font-family: var(--font-sans);
+  font-size: var(--fs-body);
   font-weight: 400;
-  color: var(--color-text);
-  background-color: transparent;
+  color: var(--text);
+  background-color: var(--bg);
   overflow: hidden;
   user-select: none;
   -webkit-user-select: none;
@@ -28,14 +28,18 @@ button {
 
 input, textarea {
   font-family: inherit;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
   
   &:focus {
     outline: none;
+    border-color: var(--tint);
   }
 }
 
 a {
-  color: var(--color-primary);
+  color: var(--tint);
   text-decoration: none;
 }
 

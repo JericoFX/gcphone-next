@@ -167,6 +167,18 @@ export const PhoneFrame: ParentComponent & { Router: () => JSX.Element } = (prop
     onCleanup(() => window.removeEventListener('phone:uiDialogRequest', onDialogRequest as EventListener));
   });
 
+  // Theme management
+  createEffect(() => {
+    const theme = phoneState.settings.theme || 'light';
+    const phoneScreen = document.querySelector(`.${styles.phoneScreen}`);
+    if (phoneScreen) {
+      phoneScreen.classList.remove('theme-light', 'theme-dark');
+      if (theme !== 'auto') {
+        phoneScreen.classList.add(`theme-${theme}`);
+      }
+    }
+  });
+
   const closeDialog = (value: unknown) => {
     const resolve = dialogResolve;
     dialogResolve = null;
