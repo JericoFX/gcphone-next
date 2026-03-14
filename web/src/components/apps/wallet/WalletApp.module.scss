@@ -2,7 +2,7 @@
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: #f5f5f7;
+  background: var(--bg);
 }
 
 .modalBody,
@@ -13,32 +13,32 @@
 
 .modalIntro {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--fs-footnote);
   line-height: 1.5;
   color: #6b7280;
 }
 
 .helperText {
-  font-size: 12px;
+  font-size: var(--fs-caption1);
   color: #8e8e93;
 }
 
 .formGrid {
   display: grid;
-  gap: 12px;
+  gap: var(--s-3);
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .segmentedGrid {
   display: grid;
-  gap: 8px;
+  gap: var(--s-2);
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .segmentButton {
-  border: 1px solid #e5e7eb;
-  border-radius: 14px;
-  background: #f8fafc;
+  border: 1px solid color-mix(in srgb, var(--border) 88%, transparent);
+  border-radius: var(--r-lg);
+  background: var(--color-surface-elevated);
   padding: 12px;
   display: grid;
   gap: 4px;
@@ -46,12 +46,12 @@
   color: #111827;
 
   span {
-    font-size: 13px;
+      font-size: var(--fs-footnote);
     font-weight: 700;
   }
 
   small {
-    font-size: 11px;
+      font-size: var(--fs-caption1);
     line-height: 1.35;
     color: #6b7280;
   }
@@ -71,21 +71,21 @@
 }
 
 .optionCard {
-  border: 1px solid #e5e7eb;
-  border-radius: 14px;
-  background: #fff;
+  border: 1px solid color-mix(in srgb, var(--border) 88%, transparent);
+  border-radius: var(--r-lg);
+  background: var(--surface);
   padding: 12px 14px;
   display: grid;
   gap: 4px;
   text-align: left;
 
   strong {
-    font-size: 13px;
+      font-size: var(--fs-footnote);
     color: #111827;
   }
 
   span {
-    font-size: 12px;
+      font-size: var(--fs-caption1);
     color: #6b7280;
   }
 }
@@ -96,26 +96,26 @@
 }
 
 .emptyPicker {
-  border: 1px dashed #d1d5db;
-  border-radius: 14px;
+  border: 1px dashed color-mix(in srgb, var(--border) 88%, transparent);
+  border-radius: var(--r-lg);
   padding: 16px;
   background: #f8fafc;
-  font-size: 12px;
+  font-size: var(--fs-footnote);
   line-height: 1.5;
   color: #6b7280;
 }
 
 .balanceSection {
-  padding: 16px;
+  padding: var(--s-4);
   background: linear-gradient(135deg, #007aff 0%, #5856d6 100%);
-  margin: 16px;
-  border-radius: 20px;
+  margin: var(--s-4);
+  border-radius: var(--r-xl);
   color: white;
-  box-shadow: 0 8px 24px rgba(0, 122, 255, 0.25);
+  box-shadow: var(--shadow-lg);
 }
 
 .balanceLabel {
-  font-size: 13px;
+  font-size: var(--fs-footnote);
   opacity: 0.9;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -132,23 +132,23 @@
 .balanceActions {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  gap: var(--s-3);
 }
 
 .quickPayRow {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 10px;
+  gap: var(--s-2);
   margin-top: 10px;
 }
 
 .quickPayBtn {
   border: none;
-  border-radius: 12px;
+  border-radius: var(--r-md);
   background: rgba(255, 255, 255, 0.14);
   color: #fff;
   height: 38px;
-  font-size: 12px;
+  font-size: var(--fs-footnote);
   font-weight: 700;
 }
 
@@ -157,8 +157,8 @@
   border: none;
   color: white;
   padding: 12px 16px;
-  border-radius: 12px;
-  font-size: 14px;
+  border-radius: var(--r-md);
+  font-size: var(--fs-footnote);
   font-weight: 600;
   cursor: pointer;
   transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, opacity 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
@@ -169,12 +169,12 @@
 }
 
 .section {
-  padding: 0 16px;
+  padding: 0 var(--s-4);
   margin-bottom: 16px;
 }
 
 .sectionTitle {
-  font-size: 20px;
+  font-size: var(--fs-title3);
   font-weight: 700;
   color: #1c1c1e;
   margin-bottom: 12px;
@@ -184,14 +184,14 @@
 .cardsList {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--s-3);
 }
 
 .cardItem {
-  background: white;
-  border-radius: 16px;
-  padding: 16px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  background: var(--color-surface-elevated);
+  border-radius: var(--r-xl);
+  padding: var(--s-4);
+  box-shadow: var(--shadow-sm);
   display: flex;
   align-items: center;
   gap: 12px;
@@ -226,13 +226,13 @@
 }
 
 .cardName {
-  font-size: 16px;
+  font-size: var(--fs-body);
   font-weight: 600;
   color: #1c1c1e;
 }
 
 .cardNumber {
-  font-size: 14px;
+  font-size: var(--fs-footnote);
   color: #8e8e93;
   font-family: 'SF Mono', monospace;
 }
@@ -262,10 +262,10 @@
 }
 
 .transactionsList {
-  background: white;
-  border-radius: 16px;
+  background: var(--color-surface-elevated);
+  border-radius: var(--r-xl);
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--shadow-sm);
 }
 
 .transactionItem {
@@ -287,18 +287,18 @@
 }
 
 .transactionTitle {
-  font-size: 16px;
+  font-size: var(--fs-body);
   font-weight: 500;
   color: #1c1c1e;
 }
 
 .transactionDate {
-  font-size: 13px;
+  font-size: var(--fs-footnote);
   color: #8e8e93;
 }
 
 .transactionAmount {
-  font-size: 16px;
+  font-size: var(--fs-body);
   font-weight: 600;
 
   &.in {

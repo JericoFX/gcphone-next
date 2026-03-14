@@ -4,6 +4,7 @@ local PendingTokenRequests = {}
 local LastTokenRequestId = 0
 local REQUEST_TIMEOUT_MS = 7000
 local CLEANUP_INTERVAL_MS = 30000
+local CleanupTimer = nil
 
 local Utils = GcPhoneUtils
 
@@ -76,10 +77,13 @@ local function CleanupExpiredRequests()
             PendingTokenRequests[id] = nil
         end
     end
-    SetTimeout(CLEANUP_INTERVAL_MS, CleanupExpiredRequests)
 end
 
-SetTimeout(CLEANUP_INTERVAL_MS, CleanupExpiredRequests)
+-- Verified: CommunityOX ox_lib Timer/Shared exposes lib.timer(time, onEnd, async) with restart()
+CleanupTimer = lib.timer(CLEANUP_INTERVAL_MS, function()
+    CleanupExpiredRequests()
+    CleanupTimer:restart()
+end, true)
 
 AddEventHandler('gcphone:livekit:tokenResponse', function(requestId, token, errorCode)
     local id = tonumber(requestId)
@@ -190,4 +194,9 @@ lib.callback.register('gcphone:livekit:getToken', function(source, data)
     end
 
     return { success = false, error = result and result.error or 'TOKEN_ERROR' }
+end)
+
+AddEventHandler('onResourceStop', function(resourceName)
+    if resourceName ~= cache.resource or not CleanupTimer then return end
+    CleanupTimer:forceEnd(false)
 end)

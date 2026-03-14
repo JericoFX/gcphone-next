@@ -4,20 +4,20 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 24px 16px;
+  gap: var(--s-2);
+  padding: var(--s-6) var(--s-4);
   text-align: center;
-  color: #6b7280;
+  color: var(--text-3);
 }
 
 .emptyState strong {
-  font-size: 16px;
+  font-size: var(--fs-body);
   font-weight: 700;
-  color: #111827;
+  color: var(--text);
 }
 
 .emptyState span {
   max-width: 240px;
-  font-size: 13px;
-  line-height: 1.45;
+  font-size: var(--fs-footnote);
+  line-height: var(--lh-relaxed);
 }

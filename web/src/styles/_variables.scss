@@ -3,49 +3,52 @@
   --phone-height: 742px;
   --phone-screen-top: 100px;
   --phone-screen-bottom: 100px;
-  
-  --color-primary: #0b81ff;
-  --color-primary-dark: #0066cc;
-  --color-background: #ffffff;
-  --color-surface: #e9e9eb;
-  --color-surface-dark: #f5f5f5;
-  --color-sms-me: #e9e9eb;
-  --color-sms-other: #0b81ff;
-  --color-danger: #ee3838;
-  --color-success: #34c759;
-  --color-warning: #ff9500;
-  --color-text: #000000;
-  --color-text-secondary: #959595;
-  --color-text-tertiary: #c7c7cc;
-  --color-border: #c6c6c8;
-  
-  --font-family: "SF Pro Display", "SF Pro Text", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
-  --font-size-xs: 12px;
-  --font-size-sm: 14px;
-  --font-size-base: 17px;
-  --font-size-lg: 20px;
-  --font-size-xl: 24px;
-  --font-size-xxl: 34px;
-  
-  --spacing-xs: 4px;
-  --spacing-sm: 8px;
-  --spacing-md: 12px;
-  --spacing-lg: 16px;
-  --spacing-xl: 24px;
-  --spacing-xxl: 32px;
-  
-  --radius-sm: 4px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
-  --radius-xxl: 20px;
+
+  --color-primary: var(--tint, #007aff);
+  --color-primary-dark: color-mix(in srgb, var(--tint, #007aff) 86%, #003b7a);
+  --color-background: var(--bg, #f2f2f7);
+  --color-surface: var(--surface, #ffffff);
+  --color-surface-dark: var(--surface-2, #f7f7fa);
+  --color-surface-elevated: linear-gradient(180deg, rgb(255 255 255 / 0%), rgb(242 242 247 / 21%));
+  --color-surface-translucent: linear-gradient(180deg, rgb(255 255 255 / 0%), rgb(242 242 247 / 18%));
+  --color-sms-me: var(--surface-3, #efeff4);
+  --color-sms-other: var(--tint, #007aff);
+  --color-danger: var(--danger, #ff3b30);
+  --color-success: var(--success, #34c759);
+  --color-warning: var(--warning, #ff9500);
+  --color-text: var(--text, #111111);
+  --color-text-secondary: var(--text-2, rgba(17, 17, 17, 0.72));
+  --color-text-tertiary: var(--text-3, rgba(17, 17, 17, 0.52));
+  --color-border: var(--border, rgba(0, 0, 0, 0.12));
+  --color-separator: var(--separator, rgba(0, 0, 0, 0.1));
+
+  --font-family: var(--font-sans, "SF Pro Display", "SF Pro Text", "Segoe UI", "Helvetica Neue", Arial, sans-serif);
+  --font-size-xs: var(--fs-caption1, 12px);
+  --font-size-sm: var(--fs-footnote, 14px);
+  --font-size-base: var(--fs-body, 17px);
+  --font-size-lg: var(--fs-title3, 20px);
+  --font-size-xl: var(--fs-title2, 24px);
+  --font-size-xxl: var(--fs-large, 34px);
+
+  --spacing-xs: var(--s-1, 4px);
+  --spacing-sm: var(--s-2, 8px);
+  --spacing-md: var(--s-3, 12px);
+  --spacing-lg: var(--s-4, 16px);
+  --spacing-xl: var(--s-6, 24px);
+  --spacing-xxl: var(--s-8, 32px);
+
+  --radius-sm: var(--r-xs, 8px);
+  --radius-md: var(--r-sm, 10px);
+  --radius-lg: var(--r-md, 12px);
+  --radius-xl: var(--r-lg, 16px);
+  --radius-xxl: var(--r-xl, 20px);
   --radius-full: 50%;
-  
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.12);
-  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
-  --shadow-lg: 0 10px 20px rgba(0, 0, 0, 0.15);
-  
-  --transition-fast: 0.15s ease;
-  --transition-normal: 0.25s ease;
-  --transition-slow: 0.4s ease;
+
+  --shadow-sm: var(--shadow-1, 0 1px 2px rgba(0, 0, 0, 0.08));
+  --shadow-md: var(--shadow-2, 0 6px 18px rgba(0, 0, 0, 0.12));
+  --shadow-lg: var(--shadow-3, 0 14px 34px rgba(0, 0, 0, 0.18));
+
+  --transition-fast: var(--dur-1, 120ms) var(--ease-standard, ease);
+  --transition-normal: var(--dur-2, 180ms) var(--ease-standard, ease);
+  --transition-slow: var(--dur-3, 260ms) var(--ease-standard, ease);
 }

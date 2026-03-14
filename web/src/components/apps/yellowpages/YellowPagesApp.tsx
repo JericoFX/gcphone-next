@@ -1,4 +1,4 @@
-import { For, Show, createEffect, createSignal } from 'solid-js';
+import { For, Show, createEffect, createMemo, createSignal, onMount } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { fetchNui } from '../../../utils/fetchNui';
 import { formatPhoneNumber, timeAgo } from '../../../utils/misc';
@@ -101,6 +101,15 @@ export function YellowPagesApp() {
     { id: 'all', label: 'Explorar' },
     { id: 'my', label: 'Mis anuncios' },
   ];
+  const categoryNameMap = createMemo(() => {
+    const map = new Map<string, string>();
+
+    for (const category of categories()) {
+      map.set(category.id, category.name);
+    }
+
+    return map;
+  });
 
   const loadCategories = async () => {
     const cats = await fetchNui<Category[]>('yellowpagesGetCategories', {}, []);
@@ -132,8 +141,11 @@ export function YellowPagesApp() {
     setLoading(false);
   };
 
-  createEffect(() => {
+  onMount(() => {
     void loadCategories();
+  });
+
+  createEffect(() => {
     void loadListings();
   });
 
@@ -159,8 +171,7 @@ export function YellowPagesApp() {
   const getCategoryIcon = (catId: string) => CATEGORY_ICON_MAP[catId] || './img/icons_ios/ui-list.svg';
 
   const getCategoryName = (catId: string) => {
-    const cat = categories().find(c => c.id === catId);
-    return cat?.name || 'Otros';
+    return categoryNameMap().get(catId) || 'Otros';
   };
 
   const openListing = async (listing: Listing) => {

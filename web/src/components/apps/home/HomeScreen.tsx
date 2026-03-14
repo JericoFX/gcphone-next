@@ -1,34 +1,26 @@
-import { createMemo, createSelector, createSignal, For, Show, createEffect, onMount, onCleanup, untrack } from 'solid-js';
+import { createMemo, createSelector, createSignal, For, Show, createEffect, onCleanup, untrack } from 'solid-js';
 import { usePhone } from '../../../store/phone';
 import { useNotifications } from '../../../store/notifications';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { APP_BY_ID } from '../../../config/apps';
 import { appName, formatDate as formatDateI18n, formatTime as formatTimeI18n, t } from '../../../i18n';
-import { fetchNui } from '../../../utils/fetchNui';
-import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { timeAgo } from '../../../utils/misc';
+import { useWindowEvent } from '../../../hooks';
+import { useHomeSearch } from './hooks/useHomeSearch';
+import { useHomeDesktopState } from './hooks/useHomeDesktopState';
 import styles from './HomeScreen.module.scss';
 
 export function HomeScreen() {
   const [state, phoneActions] = usePhone();
   const [, notificationsActions] = useNotifications();
   const router = useRouter();
-  const [currentTime, setCurrentTime] = createSignal(new Date());
   const [selectedApp, setSelectedApp] = createSignal(-1);
   const [editing, setEditing] = createSignal(false);
   const [draggingId, setDraggingId] = createSignal<string | null>(null);
   const [dragOverIndex, setDragOverIndex] = createSignal<number | null>(null);
-  const [desktopPage, setDesktopPage] = createSignal(0);
   const [touchStartX, setTouchStartX] = createSignal<number | null>(null);
   const [pageTransition, setPageTransition] = createSignal<'next' | 'prev' | null>(null);
   const [openFolderId, setOpenFolderId] = createSignal<string | null>(null);
-  const [musicNowPlaying, setMusicNowPlaying] = createSignal('');
-  const [searchOpen, setSearchOpen] = createSignal(false);
-  const [searchQuery, setSearchQuery] = createSignal('');
-  const [searchLoading, setSearchLoading] = createSignal(false);
-  const [searchContacts, setSearchContacts] = createSignal<Array<{ number: string; display: string }>>([]);
-  const [searchConversations, setSearchConversations] = createSignal<Array<{ number: string; preview: string; time: string }>>([]);
-  const [searchCalls, setSearchCalls] = createSignal<Array<{ num: string; time: string }>>([]);
 
   const APPS_PER_PAGE = 12;
 
@@ -52,6 +44,16 @@ export function HomeScreen() {
   const isDragOverIndex = createSelector(dragOverIndex);
   const isDraggingApp = createSelector(draggingId);
   const language = createMemo(() => state.settings.language || 'es');
+  const { currentTime, desktopPage, setDesktopPage, musicNowPlaying } = useHomeDesktopState(language);
+  const {
+    searchOpen,
+    searchQuery,
+    searchLoading,
+    searchResults,
+    setSearchQuery,
+    openSearch,
+    closeSearch,
+  } = useHomeSearch(() => state.enabledApps, language);
 
   const folderGroups = createMemo(() => {
     const socialSet = new Set(['messages', 'wavechat', 'chirp', 'snap', 'clips', 'darkrooms']);
@@ -81,84 +83,6 @@ export function HomeScreen() {
   const formattedDate = createMemo(() => formatDate(currentTime()));
   const formattedWidgetDate = createMemo(() => formatDateI18n(currentTime(), language(), { day: '2-digit', month: 'short' }));
 
-  const searchResults = createMemo(() => {
-    const q = searchQuery().trim().toLowerCase();
-    if (!q) {
-      return {
-        apps: [] as Array<{ id: string; name: string; icon: string; route: string }>,
-        contacts: [] as Array<{ number: string; display: string }>,
-        conversations: [] as Array<{ number: string; preview: string; time: string }>,
-        calls: [] as Array<{ num: string; time: string }>,
-      };
-    }
-
-    const apps = state.enabledApps
-      .map((id) => APP_BY_ID[id])
-      .filter((app): app is NonNullable<typeof app> => Boolean(app))
-      .filter((app) => {
-        const label = appName(app.id, app.name, language()).toLowerCase();
-        return label.includes(q) || app.id.toLowerCase().includes(q);
-      })
-      .slice(0, 6);
-
-    const contacts = searchContacts()
-      .filter((entry) => entry.display.toLowerCase().includes(q) || entry.number.toLowerCase().includes(q))
-      .slice(0, 6);
-
-    const conversations = searchConversations()
-      .filter((entry) => entry.number.toLowerCase().includes(q) || entry.preview.toLowerCase().includes(q))
-      .slice(0, 6);
-
-    const calls = searchCalls()
-      .filter((entry) => entry.num.toLowerCase().includes(q))
-      .slice(0, 6);
-
-    return { apps, contacts, conversations, calls };
-  });
-
-  const hasSearchMatches = createMemo(() => {
-    const results = searchResults();
-    return results.apps.length + results.contacts.length + results.conversations.length + results.calls.length > 0;
-  });
-
-  const loadSearchIndex = async () => {
-    setSearchLoading(true);
-    const [contacts, messages, calls] = await Promise.all([
-      fetchNui<Array<{ number: string; display: string }>>('getContacts', undefined, []),
-      fetchNui<Array<{ owner: number; receiver: string; transmitter: string; message: string; time: string }>>('getMessages', undefined, []),
-      fetchNui<Array<{ num: string; time: string }>>('getCallHistory', undefined, []),
-    ]);
-
-    setSearchContacts((contacts || []).slice(0, 300));
-
-    const byNumber = new Map<string, { number: string; preview: string; time: string }>();
-    for (const msg of messages || []) {
-      const number = msg.owner === 1 ? msg.receiver : msg.transmitter;
-      if (!number || byNumber.has(number)) continue;
-      byNumber.set(number, {
-        number,
-        preview: msg.message || t('home.section_chats', language()),
-        time: msg.time,
-      });
-      if (byNumber.size >= 300) break;
-    }
-    setSearchConversations(Array.from(byNumber.values()));
-    setSearchCalls((calls || []).slice(0, 300));
-    setSearchLoading(false);
-  };
-
-  const openSearch = () => {
-    setSearchOpen(true);
-    if (searchContacts().length === 0 && !searchLoading()) {
-      void loadSearchIndex();
-    }
-  };
-
-  const closeSearch = () => {
-    setSearchOpen(false);
-    setSearchQuery('');
-  };
-
   const openMessagesThread = (number: string) => {
     closeSearch();
     router.navigate('messages', { phoneNumber: number });
@@ -168,11 +92,6 @@ export function HomeScreen() {
     if (desktopPage() > pageCount() - 1) setDesktopPage(Math.max(0, pageCount() - 1));
   });
 
-  createEffect(() => {
-    window.localStorage.setItem('gcphone:desktopPage', String(desktopPage()));
-  });
-  
-  let timer: number | undefined;
   let pageTransitionTimer: number | undefined;
 
   const goToPage = (nextPage: number) => {
@@ -186,78 +105,52 @@ export function HomeScreen() {
     pageTransitionTimer = window.setTimeout(() => setPageTransition(null), 340);
   };
   
-  onMount(() => {
-    const savedPage = Number(window.localStorage.getItem('gcphone:desktopPage') || '0');
-    if (Number.isFinite(savedPage) && savedPage >= 0) setDesktopPage(savedPage);
-
-    timer = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 1000);
-
-    setMusicNowPlaying(window.localStorage.getItem('gcphone:musicNowPlaying') || t('home.music_idle', language()));
-
-    const onMusicStorage = () => {
-      setMusicNowPlaying(window.localStorage.getItem('gcphone:musicNowPlaying') || t('home.music_idle', language()));
-    };
-
-    window.addEventListener('storage', onMusicStorage);
-    onCleanup(() => window.removeEventListener('storage', onMusicStorage));
-  });
-  
   onCleanup(() => {
-    if (timer) clearInterval(timer);
     if (pageTransitionTimer) clearTimeout(pageTransitionTimer);
   });
   
-  createEffect(() => {
-    const handleKeyUp = (e: CustomEvent<string>) => {
-      const key = e.detail;
-      
-      switch (key) {
-        case 'ArrowUp':
-          setSelectedApp(prev => Math.max(0, prev - 4));
+  useWindowEvent<CustomEvent<string>>('phone:keyUp', (event) => {
+    const key = event.detail;
+
+    switch (key) {
+      case 'ArrowUp':
+        setSelectedApp((prev) => Math.max(0, prev - 4));
+        break;
+      case 'ArrowDown':
+        setSelectedApp((prev) => Math.min(visibleApps().length - 1, prev + 4));
+        break;
+      case 'ArrowLeft':
+        if (selectedApp() === 0 && desktopPage() > 0) {
+          goToPage(desktopPage() - 1);
+          setSelectedApp(0);
+        } else {
+          setSelectedApp((prev) => Math.max(0, prev - 1));
+        }
+        break;
+      case 'ArrowRight':
+        if (selectedApp() === visibleApps().length - 1 && desktopPage() < pageCount() - 1) {
+          goToPage(desktopPage() + 1);
+          setSelectedApp(0);
+        } else {
+          setSelectedApp((prev) => Math.min(visibleApps().length - 1, prev + 1));
+        }
+        break;
+      case 'Enter':
+        if (selectedApp() >= 0 && selectedApp() < visibleApps().length) {
+          router.navigate(visibleApps()[selectedApp()].route);
+        }
+        break;
+      case 'Backspace':
+        if (openFolderId()) {
+          setOpenFolderId(null);
           break;
-        case 'ArrowDown':
-          setSelectedApp(prev => Math.min(visibleApps().length - 1, prev + 4));
-          break;
-        case 'ArrowLeft':
-          if (selectedApp() === 0 && desktopPage() > 0) {
-            goToPage(desktopPage() - 1);
-            setSelectedApp(0);
-          } else {
-            setSelectedApp(prev => Math.max(0, prev - 1));
-          }
-          break;
-        case 'ArrowRight':
-          if (selectedApp() === visibleApps().length - 1 && desktopPage() < pageCount() - 1) {
-            goToPage(desktopPage() + 1);
-            setSelectedApp(0);
-          } else {
-            setSelectedApp(prev => Math.min(visibleApps().length - 1, prev + 1));
-          }
-          break;
-        case 'Enter':
-          if (selectedApp() >= 0 && selectedApp() < visibleApps().length) {
-            router.navigate(visibleApps()[selectedApp()].route);
-          }
-          break;
-        case 'Backspace':
-          if (openFolderId()) {
-            setOpenFolderId(null);
-            break;
-          }
-          if (searchOpen()) {
-            closeSearch();
-          }
-          break;
-      }
-    };
-    
-    window.addEventListener('phone:keyUp', handleKeyUp as EventListener);
-    
-    onCleanup(() => {
-      window.removeEventListener('phone:keyUp', handleKeyUp as EventListener);
-    });
+        }
+
+        if (searchOpen()) {
+          closeSearch();
+        }
+        break;
+    }
   });
   
   function formatTime(date: Date) {

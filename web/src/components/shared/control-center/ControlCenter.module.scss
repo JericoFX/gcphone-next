@@ -58,8 +58,8 @@
   inset: 0;
   z-index: 90;
   background:
-    radial-gradient(130% 65% at 50% -8%, color-mix(in srgb, var(--surface) 30%, transparent), transparent 58%),
-    linear-gradient(180deg, color-mix(in srgb, var(--surface-2) 80%, transparent), color-mix(in srgb, var(--surface-3) 82%, transparent));
+    radial-gradient(130% 65% at 50% -8%, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0) 58%),
+    linear-gradient(180deg, rgba(242, 244, 250, 0.82), rgba(229, 235, 246, 0.86));
 }
 
 .sheet {
@@ -88,8 +88,8 @@
 .sheet-header {
   display: grid;
   justify-items: center;
-  gap: 8px;
-  margin-bottom: 10px;
+  gap: var(--s-2);
+  margin-bottom: var(--s-3);
 
   h3 {
     margin: 0;
@@ -100,7 +100,7 @@
 }
 
 .headerDate {
-  font-size: 11px;
+  font-size: var(--fs-caption2);
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--text-2);
@@ -110,16 +110,16 @@
 .summaryRow {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-  margin-bottom: 10px;
+  gap: var(--s-2);
+  margin-bottom: var(--s-3);
 }
 
 .summaryCard {
   min-height: 52px;
-  border-radius: var(--r-lg);
-  background: color-mix(in srgb, var(--surface) 72%, transparent);
-  border: 1px solid color-mix(in srgb, var(--surface) 62%, transparent);
-  box-shadow: var(--shadow-2);
+  border-radius: var(--r-lg, 16px);
+  background: var(--color-surface-translucent, rgba(255, 255, 255, 0.72));
+  border: 1px solid color-mix(in srgb, var(--border, rgba(0,0,0,.12)) 80%, transparent);
+  box-shadow: var(--shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.08));
   display: grid;
   align-content: center;
   justify-items: start;
@@ -145,7 +145,7 @@
   border-radius: var(--r-pill);
   min-height: 28px;
   padding: 0 10px;
-  font-size: 11px;
+  font-size: var(--fs-caption1);
   font-weight: 760;
   background: color-mix(in srgb, var(--tint) 12%, transparent);
   color: var(--tint);
@@ -163,13 +163,13 @@
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--s-2);
   padding: 0 2px;
 }
 
 .notification-group {
   display: grid;
-  gap: 4px;
+  gap: var(--s-1);
 }
 
 .group-title {
@@ -185,7 +185,7 @@
   }
 
   span {
-    font-size: 10px;
+    font-size: var(--fs-caption2);
     font-weight: 760;
     color: var(--text-3);
     letter-spacing: 0.05em;
@@ -206,14 +206,14 @@
 
 .notification-item {
   border: none;
-  border-radius: var(--r-lg);
-  background: color-mix(in srgb, var(--surface) 72%, transparent);
-  color: var(--text);
+  border-radius: var(--r-lg, 16px);
+  background: var(--color-surface-translucent, rgba(255, 255, 255, 0.72));
+  color: #132139;
   text-align: left;
-  padding: 8px 10px;
+  padding: 10px 12px;
   display: grid;
   gap: 2px;
-  box-shadow: var(--shadow-2), inset 0 0 0 1px color-mix(in srgb, var(--surface) 50%, transparent);
+  box-shadow: var(--shadow-sm, 0 1px 2px rgba(0, 0, 0, 0.08)), inset 0 0 0 1px rgba(255, 255, 255, 0.5);
   transition: transform 120ms ease, background 120ms ease;
 
   &:active {
@@ -222,7 +222,7 @@
   }
 
   strong {
-    font-size: 12px;
+    font-size: var(--fs-footnote);
     font-weight: 760;
     display: flex;
     align-items: center;
@@ -230,29 +230,29 @@
     gap: 6px;
 
     small {
-      font-size: 10px;
+      font-size: var(--fs-caption2);
       font-weight: 700;
       color: var(--text-3);
     }
   }
 
   span {
-    font-size: 11px;
-    color: var(--text-2);
+    font-size: var(--fs-caption1);
+    color: #4e607b;
     line-height: 1.34;
   }
 }
 
 .empty {
-  font-size: 13px;
-  color: var(--text-3);
+  font-size: var(--fs-footnote);
+  color: #70839f;
   text-align: center;
   padding-top: 20px;
 }
 
 .more-count {
   margin-top: 4px;
-  font-size: 10px;
+  font-size: var(--fs-caption2);
   font-weight: 760;
   color: var(--text-3);
   padding-left: 4px;
@@ -261,15 +261,15 @@
 .preset-row {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-  margin-bottom: 10px;
+  gap: var(--s-2);
+  margin-bottom: var(--s-3);
 }
 
 .preset-btn {
   border: none;
-  border-radius: var(--r-md);
+  border-radius: var(--r-sm);
   height: 30px;
-  font-size: 11px;
+  font-size: var(--fs-caption1);
   font-weight: 760;
   color: var(--tint);
   background: color-mix(in srgb, var(--surface-2) 72%, transparent);
@@ -284,7 +284,7 @@
 .system-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  gap: var(--s-2);
 }
 
 .system-grid-compact {
@@ -573,9 +573,9 @@
 }
 
 .sheet-footer {
-  margin-top: 12px;
+  margin-top: var(--s-3);
   display: flex;
-  gap: 8px;
+  gap: var(--s-2);
 }
 
 .clear-btn,
@@ -584,7 +584,7 @@
   border: none;
   border-radius: var(--r-md);
   height: 38px;
-  font-size: 12px;
+  font-size: var(--fs-footnote);
   font-weight: 760;
 }
 

@@ -1,7 +1,12 @@
 .root {
-  padding: 0 12px 8px;
+  padding: 0 var(--s-3) var(--s-2);
 }
 
 .input {
   width: 100%;
+  min-height: 38px;
+  border-radius: var(--r-md);
+  background: var(--color-surface-elevated);
+  border: 1px solid color-mix(in srgb, var(--border) 88%, transparent);
+  box-shadow: var(--shadow-sm);
 }

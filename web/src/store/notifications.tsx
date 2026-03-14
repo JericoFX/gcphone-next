@@ -1,4 +1,4 @@
-import { ParentComponent, createContext, createEffect, createSignal, onCleanup, useContext } from 'solid-js';
+import { ParentComponent, createContext, createEffect, createMemo, createSignal, onCleanup, useContext } from 'solid-js';
 import { createStore } from 'solid-js/store';
 import { useNuiCustomEvent } from '../utils/useNui';
 import { sanitizeText } from '../utils/sanitize';
@@ -135,6 +135,29 @@ export const NotificationsProvider: ParentComponent = (props) => {
   const [timerVersion, setTimerVersion] = createSignal(0);
   let timeoutId: number | undefined;
 
+  const unreadCountByApp = createMemo<Record<string, number>>(() => {
+    const counts: Record<string, number> = {};
+
+    for (const entry of state.history) {
+      const appId = sanitizeText(entry.appId, 24);
+      if (!appId) continue;
+
+      const createdAt = Number(entry.createdAt) || 0;
+      if (createdAt <= (state.readAtByApp[appId] || 0)) continue;
+
+      counts[appId] = (counts[appId] || 0) + 1;
+    }
+
+    return counts;
+  });
+
+  const persistedPreferences = createMemo(() => ({
+    notificationCompact: state.notificationCompactMode ? '1' : '0',
+    controlTilePreset: state.controlTilePreset,
+    controlTileOrder: JSON.stringify(state.controlTileOrder),
+    mutedApps: JSON.stringify(state.mutedApps),
+  }));
+
   const actions: NotificationsActions = {
     receive: (payload) => {
       const next = normalizeNotification(payload);
@@ -261,8 +284,7 @@ export const NotificationsProvider: ParentComponent = (props) => {
     getUnreadCount: (appId: string) => {
       const key = sanitizeText(appId, 24);
       if (!key) return 0;
-      const localRead = state.readAtByApp[key] || 0;
-      return state.history.filter((n) => n.appId === key && (n.createdAt || 0) > localRead).length;
+      return unreadCountByApp()[key] || 0;
     },
     toggleMuteApp: (appId: string) => {
       const key = sanitizeText(appId, 24);
@@ -298,10 +320,11 @@ export const NotificationsProvider: ParentComponent = (props) => {
   });
 
   createEffect(() => {
-    window.localStorage.setItem('gcphone:notificationCompact', state.notificationCompactMode ? '1' : '0');
-    window.localStorage.setItem('gcphone:controlTilePreset', state.controlTilePreset);
-    window.localStorage.setItem('gcphone:controlTileOrder', JSON.stringify(state.controlTileOrder));
-    window.localStorage.setItem('gcphone:mutedApps', JSON.stringify(state.mutedApps));
+    const preferences = persistedPreferences();
+    window.localStorage.setItem('gcphone:notificationCompact', preferences.notificationCompact);
+    window.localStorage.setItem('gcphone:controlTilePreset', preferences.controlTilePreset);
+    window.localStorage.setItem('gcphone:controlTileOrder', preferences.controlTileOrder);
+    window.localStorage.setItem('gcphone:mutedApps', preferences.mutedApps);
   });
 
   onCleanup(() => {

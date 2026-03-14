@@ -3,6 +3,7 @@
 local ActiveMusicBySource = {}
 local LastMusicActionBySource = {}
 local LastSearchBySource = {}
+local MusicPositionTimer = nil
 
 local function SafeString(value, maxLen)
     if type(value) ~= 'string' then return '' end
@@ -26,6 +27,10 @@ local function ClampNumber(value, minValue, maxValue, fallback)
     if minValue and num < minValue then num = minValue end
     if maxValue and num > maxValue then num = maxValue end
     return num
+end
+
+local function GetPositionUpdateIntervalMs()
+    return ClampNumber((Config.Music and Config.Music.UpdatePositionInterval), 100, 2000, 300)
 end
 
 local function IsSafeHttpUrl(value)
@@ -430,30 +435,40 @@ RegisterNetEvent('gcphone:music:setVolume', function(data)
     })
 end)
 
-CreateThread(function()
-    while true do
-        local waitMs = ClampNumber((Config.Music and Config.Music.UpdatePositionInterval), 100, 2000, 300)
-        Wait(waitMs)
-
-        if EnsureXSoundReady() then
-            for source, current in pairs(ActiveMusicBySource) do
-                local srcNum = tonumber(source)
-                if not srcNum or GetPlayerName(srcNum) == nil then
-                    DestroyForSource(source)
-                else
-                    local coords = GetPlayerCoords(srcNum)
-                    if coords then
-                        exports['xsound']:Position(-1, current.name, coords)
-                    end
+local function UpdateActiveMusicPositions()
+    if EnsureXSoundReady() then
+        for source, current in pairs(ActiveMusicBySource) do
+            local srcNum = tonumber(source)
+            if not srcNum or GetPlayerName(srcNum) == nil then
+                DestroyForSource(source)
+            else
+                local coords = GetPlayerCoords(srcNum)
+                if coords then
+                    exports['xsound']:Position(-1, current.name, coords)
                 end
             end
         end
     end
-end)
+end
+
+local function ScheduleMusicPositionUpdate()
+    -- Verified: CommunityOX ox_lib Timer/Shared exposes lib.timer(time, onEnd, async)
+    MusicPositionTimer = lib.timer(GetPositionUpdateIntervalMs(), function()
+        UpdateActiveMusicPositions()
+        ScheduleMusicPositionUpdate()
+    end, true)
+end
+
+ScheduleMusicPositionUpdate()
 
 AddEventHandler('playerDropped', function()
     local source = source
     DestroyForSource(source)
     LastMusicActionBySource[source] = nil
     LastSearchBySource[source] = nil
+end)
+
+AddEventHandler('onResourceStop', function(resourceName)
+    if resourceName ~= cache.resource or not MusicPositionTimer then return end
+    MusicPositionTimer:forceEnd(false)
 end)

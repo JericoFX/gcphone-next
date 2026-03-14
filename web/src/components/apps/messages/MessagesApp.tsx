@@ -48,26 +48,36 @@ export function MessagesApp() {
 
   const getMediaUrl = (msg: any): string | undefined => sanitizeMediaUrl(msg.mediaUrl || msg.media_url) || undefined;
   const isReadOnly = createMemo(() => phoneState.accessMode === 'foreign-readonly');
+  const contactsByNumber = createMemo(() => {
+    const map = new Map<string, string>();
+
+    for (const contact of contactsState.contacts) {
+      map.set(contact.number, contact.display || contact.number);
+    }
+
+    return map;
+  });
+  const knownContactNumbers = createMemo(() => new Set(contactsState.contacts.map((contact) => contact.number)));
   
   const conversations = createMemo(() => {
     const convos: Map<string, { number: string; display: string; lastMessage: any; unread: number }> = new Map();
     
     for (const msg of messagesState.messages) {
       const number = msg.owner === 1 ? msg.receiver : msg.transmitter;
+      const msgTime = new Date(msg.time).getTime();
       
       if (!convos.has(number)) {
-        const contact = contactsState.contacts.find(c => c.number === number);
         convos.set(number, {
           number,
-          display: contact?.display || number,
-          lastMessage: msg,
+          display: contactsByNumber().get(number) || number,
+          lastMessage: { ...msg, _timeMs: msgTime },
           unread: 0
         });
       }
       
       const convo = convos.get(number)!;
-      if (new Date(msg.time) > new Date(convo.lastMessage.time)) {
-        convo.lastMessage = msg;
+      if (msgTime > (convo.lastMessage._timeMs || 0)) {
+        convo.lastMessage = { ...msg, _timeMs: msgTime };
       }
       
       if (!msg.isRead && msg.owner === 0) {
@@ -76,7 +86,7 @@ export function MessagesApp() {
     }
     
     return Array.from(convos.values()).sort(
-      (a, b) => new Date(b.lastMessage.time).getTime() - new Date(a.lastMessage.time).getTime()
+      (a, b) => (b.lastMessage._timeMs || 0) - (a.lastMessage._timeMs || 0)
     );
   });
 
@@ -219,11 +229,10 @@ export function MessagesApp() {
   };
   
   const getContactName = (number: string) => {
-    const contact = contactsState.contacts.find(c => c.number === number);
-    return contact?.display || number;
+    return contactsByNumber().get(number) || number;
   };
 
-  const isKnownContact = (number: string) => contactsState.contacts.some((contact) => contact.number === number);
+  const isKnownContact = (number: string) => knownContactNumbers().has(number);
 
   const addContactFromMessage = async (display: string, number: string) => {
     if (isReadOnly()) return;
@@ -301,7 +310,7 @@ export function MessagesApp() {
               <Show
                 when={messagesState.loading}
                 fallback={
-                  <VirtualList items={conversations} itemHeight={78} overscan={5}>
+                  <VirtualList items={filteredConversations} itemHeight={78} overscan={5}>
                     {(convo, index) => (
                       <div
                         class={styles.conversationItem}

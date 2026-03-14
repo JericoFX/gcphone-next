@@ -1,3 +1,5 @@
+import { emitInternalEvent } from './internalEvents';
+
 type DialogRequest = {
   type: 'prompt' | 'confirm';
   title?: string;
@@ -18,7 +20,7 @@ export function uiPrompt(message: string, options?: { title?: string; placeholde
       resolve,
     };
 
-    window.dispatchEvent(new CustomEvent('phone:uiDialogRequest', { detail: payload }));
+    emitInternalEvent('phone:uiDialogRequest', payload);
   });
 }
 
@@ -31,6 +33,6 @@ export function uiConfirm(message: string, options?: { title?: string }) {
       resolve: (value) => resolve(value === true),
     };
 
-    window.dispatchEvent(new CustomEvent('phone:uiDialogRequest', { detail: payload }));
+    emitInternalEvent('phone:uiDialogRequest', payload);
   });
 }

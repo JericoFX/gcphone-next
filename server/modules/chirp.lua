@@ -203,13 +203,10 @@ local function IsPublishJobAllowed(source)
         return false
     end
 
-    for _, allowed in ipairs(rules) do
-        if tostring(allowed):lower() == jobName then
-            return true
-        end
-    end
-
-    return false
+    -- Verified: CommunityOX ox_lib Table/Shared exposes lib.table.contains(tbl, value)
+    return lib.table.contains(lib.array.map(rules, function(allowed)
+        return tostring(allowed):lower()
+    end), jobName)
 end
 
 lib.callback.register('gcphone:chirp:getAccount', function(source)

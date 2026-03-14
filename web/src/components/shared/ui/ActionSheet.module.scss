@@ -2,42 +2,44 @@
   position: absolute;
   inset: 0;
   z-index: 500;
-  background: rgba(9, 12, 20, 0.44);
+  background: rgba(9, 12, 20, 0.32);
   display: flex;
   align-items: flex-end;
 }
 
 .sheet {
   width: 100%;
-  border-radius: 18px 18px 0 0;
-  background: #f3f6fb;
-  padding: 8px 8px 12px;
+  border-radius: var(--r-2xl) var(--r-2xl) 0 0;
+  background: linear-gradient(180deg, rgba(247, 250, 255, 0.98), rgba(238, 244, 252, 0.96));
+  padding: var(--s-2) var(--s-2) calc(var(--s-3) + 2px);
   animation: sheet-in 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  box-shadow: var(--shadow-lg);
 }
 
 .title {
-  font-size: 12px;
+  font-size: var(--fs-caption1);
   font-weight: 700;
   text-align: center;
   color: #6a7690;
-  padding: 8px 0;
+  padding: var(--s-2) 0;
 }
 
 .list {
-  border-radius: 12px;
+  border-radius: var(--r-lg);
   overflow: hidden;
-  background: #fff;
-  border: 1px solid #dde4ef;
+  background: var(--surface);
+  border: 1px solid color-mix(in srgb, var(--border) 88%, transparent);
+  box-shadow: var(--shadow-sm);
 }
 
 .action {
   width: 100%;
   min-height: 44px;
   border: none;
-  border-bottom: 1px solid #edf1f8;
-  background: #fff;
+  border-bottom: 1px solid color-mix(in srgb, var(--separator) 82%, transparent);
+  background: var(--surface);
   color: #2d3951;
-  font-size: 14px;
+  font-size: var(--fs-body);
   font-weight: 600;
 
   &:last-child {
@@ -59,13 +61,14 @@
   width: 100%;
   height: 44px;
   border: none;
-  border-radius: 12px;
-  margin-top: 8px;
-  background: #fff;
+  border-radius: var(--r-lg);
+  margin-top: var(--s-2);
+  background: var(--surface);
   color: #1f2a3f;
-  font-size: 14px;
+  font-size: var(--fs-body);
   font-weight: 700;
-  border: 1px solid #dde4ef;
+  border: 1px solid color-mix(in srgb, var(--border) 88%, transparent);
+  box-shadow: var(--shadow-sm);
 }
 
 @keyframes sheet-in {

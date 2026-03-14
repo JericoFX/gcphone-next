@@ -15,15 +15,33 @@ body {
   overflow: hidden;
   user-select: none;
   -webkit-user-select: none;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 button {
   font-family: inherit;
   cursor: pointer;
+  transition:
+    transform var(--transition-fast),
+    box-shadow var(--transition-normal),
+    background var(--transition-normal),
+    border-color var(--transition-normal),
+    color var(--transition-normal),
+    opacity var(--transition-normal);
   
   &:focus {
     outline: none;
   }
+
+  &:active {
+    transform: scale(0.985);
+  }
+}
+
+:focus-visible {
+  outline: 2px solid rgba(10, 132, 255, 0.9);
+  outline-offset: 2px;
 }
 
 input, textarea {
@@ -36,6 +54,36 @@ input, textarea {
     outline: none;
     border-color: var(--tint);
   }
+}
+
+input,
+textarea,
+select {
+  color: inherit;
+}
+
+.ios-surface-card {
+  background: var(--color-surface-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-sm);
+}
+
+.ios-surface-panel {
+  background: var(--color-surface-translucent);
+  border: 1px solid color-mix(in srgb, var(--color-border) 88%, transparent);
+  border-radius: var(--radius-xxl);
+  box-shadow: var(--shadow-md);
+}
+
+.ios-text-caption {
+  font-size: var(--fs-caption1);
+  color: var(--color-text-tertiary);
+}
+
+.ios-text-footnote {
+  font-size: var(--fs-footnote);
+  color: var(--color-text-secondary);
 }
 
 a {

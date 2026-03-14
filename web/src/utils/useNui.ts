@@ -1,5 +1,5 @@
 import { onCleanup } from 'solid-js';
-import { isEnvBrowser } from './misc';
+import { useInternalEvent } from './internalEvents';
 
 interface NuiMessageData<T = unknown> {
   action: string;
@@ -11,8 +11,11 @@ export function useNuiEvent<T = unknown>(
   handler: (data: T) => void
 ): void {
   const messageListener = (event: MessageEvent<NuiMessageData<T>>) => {
-    const { action: eventAction, data } = event.data;
-    
+    const payload = event.data;
+    if (!payload || typeof payload !== 'object') return;
+
+    const { action: eventAction, data } = payload;
+
     if (eventAction === action) {
       handler(data);
     }
@@ -25,17 +28,32 @@ export function useNuiEvent<T = unknown>(
   });
 }
 
+export function useNuiActions<T extends Record<string, unknown>>(
+  handlers: Partial<{ [K in keyof T & string]: (data: T[K]) => void }>
+): void {
+  const messageListener = (event: MessageEvent<{ action?: string; data?: unknown }>) => {
+    const payload = event.data;
+    if (!payload || typeof payload !== 'object') return;
+
+    const action = typeof payload.action === 'string' ? payload.action : '';
+    if (!action) return;
+
+    const handler = handlers[action as keyof T & string];
+    if (!handler) return;
+
+    handler(payload.data as T[keyof T & string]);
+  };
+
+  window.addEventListener('message', messageListener);
+
+  onCleanup(() => {
+    window.removeEventListener('message', messageListener);
+  });
+}
+
 export function useNuiCustomEvent<T = unknown>(
   eventName: string,
   handler: (data: T) => void
 ): void {
-  const customEventListener = (event: CustomEvent<T>) => {
-    handler(event.detail);
-  };
-  
-  window.addEventListener(eventName, customEventListener as EventListener);
-  
-  onCleanup(() => {
-    window.removeEventListener(eventName, customEventListener as EventListener);
-  });
+  useInternalEvent(eventName, handler);
 }

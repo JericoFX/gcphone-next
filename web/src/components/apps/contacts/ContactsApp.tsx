@@ -1,4 +1,4 @@
-import { createSignal, For, Show, createEffect, onCleanup, batch, createMemo } from 'solid-js';
+import { createSignal, For, Show, createEffect, onCleanup, onMount, batch, createMemo } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { useContacts } from '../../../store/contacts';
 import { useMessages } from '../../../store/messages';
@@ -38,12 +38,26 @@ export function ContactsApp() {
   const [recentCalls, setRecentCalls] = createSignal<string[]>([]);
   const language = () => phoneState.settings.language || 'es';
 
-  const filteredContacts = () => {
+  const filteredContacts = createMemo(() => {
     const q = search().trim().toLowerCase();
-    if (!q) return contactsState.contacts;
-    const base = contactsState.contacts.filter((c) => c.display.toLowerCase().includes(q) || c.number.toLowerCase().includes(q));
-    return tab() === 'favoritos' ? base.filter((c) => c.favorite) : base;
-  };
+    const contacts = tab() === 'favoritos'
+      ? contactsState.contacts.filter((contact) => contact.favorite)
+      : contactsState.contacts;
+
+    if (!q) return contacts;
+
+    return contacts.filter((c) => c.display.toLowerCase().includes(q) || c.number.toLowerCase().includes(q));
+  });
+
+  const contactsByNumber = createMemo(() => {
+    const map = new Map<string, { display: string; number: string }>();
+
+    for (const contact of contactsState.contacts) {
+      map.set(contact.number, contact);
+    }
+
+    return map;
+  });
   const isReadOnly = createMemo(() => phoneState.accessMode === 'foreign-readonly');
 
   const contactsCounter = createMemo(() => filteredContacts().length);
@@ -59,7 +73,7 @@ export function ContactsApp() {
     onCleanup(() => clearTimeout(handle));
   });
 
-  createEffect(() => {
+  onMount(() => {
     const loadRecents = async () => {
       const history = await fetchNui<any[]>('getCallHistory', undefined, []);
       const numbers = Array.from(new Set((history || []).map((c) => String(c.num || '')).filter(Boolean))).slice(0, 4);
@@ -73,7 +87,7 @@ export function ContactsApp() {
       setSelectedIndex((prev) => Math.max(0, prev - 1));
     },
     ArrowDown: () => {
-      setSelectedIndex((prev) => Math.min(filteredContacts().length, prev + 1));
+        setSelectedIndex((prev) => Math.min(filteredContacts().length, prev + 1));
     },
     Enter: () => {
       const contacts = filteredContacts();
@@ -190,7 +204,7 @@ export function ContactsApp() {
             <div class={styles.quickRow}>
               <For each={recentCalls()}>
                 {(number) => {
-                  const contact = contactsState.contacts.find((c) => c.number === number);
+                   const contact = contactsByNumber().get(number);
                   const display = contact?.display || number;
                   return (
                     <button class={styles.quickChip} onClick={() => handleSelect({ number, display })}>
