@@ -110,13 +110,12 @@
     --kbd: rgba(255, 255, 255, 0.1);
     --kbd-border: rgba(255, 255, 255, 0.14);
     --selection: rgba(10, 132, 255, 0.26);
-    
+
     /* Sombras adaptadas para dark mode - opacidad reducida */
-    --shadow-1: 0 1px 2px rgba(0,0,0,0.24);
-    --shadow-2: 0 6px 18px rgba(0,0,0,0.32);
-    --shadow-3: 0 14px 34px rgba(0,0,0,0.42);
+    --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.24);
+    --shadow-2: 0 6px 18px rgba(0, 0, 0, 0.32);
+    --shadow-3: 0 14px 34px rgba(0, 0, 0, 0.42);
   }
-}
 }
 
 .gcphone-app.theme-light {
@@ -161,11 +160,11 @@
   --kbd: rgba(255, 255, 255, 0.1);
   --kbd-border: rgba(255, 255, 255, 0.14);
   --selection: rgba(10, 132, 255, 0.26);
-  
+
   /* Sombras adaptadas para dark mode - opacidad reducida */
-  --shadow-1: 0 1px 2px rgba(0,0,0,0.24);
-  --shadow-2: 0 6px 18px rgba(0,0,0,0.32);
-  --shadow-3: 0 14px 34px rgba(0,0,0,0.42);
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.24);
+  --shadow-2: 0 6px 18px rgba(0, 0, 0, 0.32);
+  --shadow-3: 0 14px 34px rgba(0, 0, 0, 0.42);
 }
 
 .ios18-switch {
@@ -175,7 +174,9 @@
   border: 1px solid var(--border);
   border-radius: var(--r-pill);
   background: rgba(120, 120, 128, 0.16);
-  transition: background var(--dur-2) var(--ease-standard), border-color var(--dur-2) var(--ease-standard);
+  transition:
+    background var(--dur-2) var(--ease-standard),
+    border-color var(--dur-2) var(--ease-standard);
 }
 
 .ios18-switch__thumb {
@@ -213,7 +214,11 @@
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: radial-gradient(120% 100% at 50% 0%, color-mix(in srgb, var(--surface) 72%, var(--bg)), var(--bg) 62%);
+  background: radial-gradient(
+    120% 100% at 50% 0%,
+    color-mix(in srgb, var(--surface) 72%, var(--bg)),
+    var(--bg) 62%
+  );
   font-family: var(--font-sans);
   color: var(--text);
 }
@@ -227,7 +232,11 @@
   align-items: center;
   gap: 8px;
   padding: 0 12px;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--surface) 92%, transparent), color-mix(in srgb, var(--surface-2) 90%, transparent));
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--surface) 92%, transparent),
+    color-mix(in srgb, var(--surface-2) 90%, transparent)
+  );
   border-bottom: 1px solid var(--separator);
 }
 
@@ -465,8 +474,11 @@
   font-size: var(--fs-caption1);
   font-weight: 700;
   letter-spacing: 0.01em;
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--tint) 20%, transparent), color-mix(in srgb, var(--tint) 10%, transparent));
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--tint) 20%, transparent),
+    color-mix(in srgb, var(--tint) 10%, transparent)
+  );
   color: color-mix(in srgb, var(--tint) 88%, #fff 12%);
   box-shadow:
     0 4px 10px color-mix(in srgb, var(--tint) 18%, transparent),
