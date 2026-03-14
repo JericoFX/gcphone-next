@@ -511,8 +511,36 @@ export function SettingsApp() {
   );
 
   // APPEARANCE VIEW
-  const renderAppearance = () => (
+  const renderAppearance = () => {
+    const themes = [
+      { id: 'light', name: 'Claro', icon: ICONS.brightness },
+      { id: 'dark', name: 'Oscuro', icon: ICONS.moon },
+      { id: 'auto', name: 'Automatico', icon: ICONS.shuffle },
+    ];
+    
+    return (
     <div class={styles.content}>
+      <SectionHeader title={t('settings.appearance', language()).toUpperCase()} />
+      <Group>
+        <div class={styles.themeList}>
+          <For each={themes}>
+            {(theme) => (
+              <button
+                class={styles.themeOption}
+                classList={{ [styles.selected]: phoneState.settings.theme === theme.id }}
+                onClick={() => phoneActions.setTheme(theme.id as 'light' | 'dark' | 'auto')}
+              >
+                <span class={styles.themeIcon}>
+                  <IconImage src={theme.icon} class={styles.themeIconImage} />
+                </span>
+                <span class={styles.themeName}>{theme.name}</span>
+                {phoneState.settings.theme === theme.id && <CheckIcon />}
+              </button>
+            )}
+          </For>
+        </div>
+      </Group>
+
       <SectionHeader title={t('settings.wallpapers', language()).toUpperCase()} />
       <Group>
         <Show when={phoneState.settings.wallpaper}>
@@ -575,7 +603,8 @@ export function SettingsApp() {
         </div>
       </Group>
     </div>
-  );
+    );
+  };
 
   // SOUND VIEW
   const renderSound = () => (

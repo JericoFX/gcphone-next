@@ -1033,3 +1033,60 @@
     padding: var(--s-3, 12px);
   }
 }
+
+/* Theme Selector */
+.theme-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.theme-option {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3, 12px);
+  padding: 14px 16px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--separator, rgba(0,0,0,.1));
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--dur-1, 120ms) ease;
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &:active {
+    background: color-mix(in srgb, var(--surface-3, #EFEFF4) 50%, transparent);
+  }
+
+  &.selected {
+    background: color-mix(in srgb, var(--tint, #007AFF) 8%, transparent);
+  }
+}
+
+.theme-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, var(--tint, #007AFF) 16%, rgba(120,120,128,.08));
+  flex: 0 0 auto;
+}
+
+.theme-icon-image {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  filter: brightness(0) saturate(100%) invert(31%) sepia(98%) saturate(2045%) hue-rotate(203deg) brightness(99%) contrast(101%);
+}
+
+.theme-name {
+  flex: 1;
+  font-size: var(--fs-body, 1rem);
+  font-weight: 500;
+  color: var(--text, #111111);
+}
+}
