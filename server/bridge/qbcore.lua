@@ -2,13 +2,25 @@ local Core = nil
 local Framework = nil
 
 CreateThread(function()
-    if GetResourceState('qb-core') == 'started' then
+    -- Verified: CommunityOX ox_lib WaitFor/Shared supports indefinite waits with timeout = false
+    local framework = lib.waitFor(function()
+        if GetResourceState('qb-core') == 'started' then
+            return 'qbcore'
+        end
+
+        if GetResourceState('qbx_core') == 'started' then
+            return 'qbox'
+        end
+    end, 'gcphone-next failed to initialize QB/Qbox bridge', false)
+
+    if framework == 'qbcore' then
         Core = exports['qb-core']:GetCoreObject()
         Framework = 'qbcore'
-    elseif GetResourceState('qbx_core') == 'started' then
+    elseif framework == 'qbox' then
         Core = exports.qbx_core
         Framework = 'qbox'
     end
+
     if Framework then
         print(('[gcphone-next] Framework detected: %s'):format(Framework))
     end

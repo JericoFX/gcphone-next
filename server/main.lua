@@ -87,13 +87,12 @@ local function toTargetList(target)
 end
 
 CreateThread(function()
-    Wait(500)
-    
-    while GetResourceState('qb-core') ~= 'started' and GetResourceState('qbx_core') ~= 'started' and GetResourceState('es_extended') ~= 'started' do
-        Wait(100)
-    end
-    
-    Wait(500)
+    -- Verified: CommunityOX ox_lib WaitFor/Shared supports lib.waitFor(cb, errMessage, timeout)
+    lib.waitFor(function()
+        if GetResourceState('qb-core') == 'started' or GetResourceState('qbx_core') == 'started' or GetResourceState('es_extended') == 'started' then
+            return true
+        end
+    end, 'gcphone-next failed to detect a supported framework', false)
     
     Bridge = {
         GetIdentifier = function(source) return bridgeCall('GetIdentifier', source) end,

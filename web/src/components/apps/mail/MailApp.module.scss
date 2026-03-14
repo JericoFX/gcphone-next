@@ -1,24 +1,23 @@
 /* MailApp iOS 18 Modern Design - Light Theme Only */
 
 :root {
-  /* Light theme tokens forced */
-  --mail-bg: #F2F2F7;
-  --mail-surface: #FFFFFF;
-  --mail-surface-2: #F7F7FA;
-  --mail-surface-3: #EFEFF4;
+  --mail-bg: var(--bg, #F2F2F7);
+  --mail-surface: var(--surface, #FFFFFF);
+  --mail-surface-2: var(--surface-2, #F7F7FA);
+  --mail-surface-3: var(--surface-3, #EFEFF4);
   
-  --mail-text: #111111;
-  --mail-text-2: rgba(17, 17, 17, 0.72);
-  --mail-text-3: rgba(17, 17, 17, 0.52);
+  --mail-text: var(--text, #111111);
+  --mail-text-2: var(--text-2, rgba(17, 17, 17, 0.72));
+  --mail-text-3: var(--text-3, rgba(17, 17, 17, 0.52));
   
-  --mail-border: rgba(0, 0, 0, 0.12);
-  --mail-separator: rgba(0, 0, 0, 0.10);
+  --mail-border: var(--border, rgba(0, 0, 0, 0.12));
+  --mail-separator: var(--separator, rgba(0, 0, 0, 0.10));
   
-  --mail-tint: #007AFF;
-  --mail-tint-2: #0A84FF;
-  --mail-danger: #FF3B30;
-  --mail-success: #34C759;
-  --mail-warning: #FF9500;
+  --mail-tint: var(--tint, #007AFF);
+  --mail-tint-2: var(--tint-2, #0A84FF);
+  --mail-danger: var(--danger, #FF3B30);
+  --mail-success: var(--success, #34C759);
+  --mail-warning: var(--warning, #FF9500);
   
   --mail-focus: rgba(0, 122, 255, 0.35);
   --mail-unread-bg: rgba(0, 122, 255, 0.08);

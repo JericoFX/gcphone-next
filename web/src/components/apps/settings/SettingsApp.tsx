@@ -3,6 +3,7 @@ import { useRouter } from '../../Phone/PhoneFrame';
 import { usePhone } from '../../../store/phone';
 import { useNotifications } from '../../../store/notifications';
 import { fetchNui } from '../../../utils/fetchNui';
+import { emitInternalEvent } from '../../../utils/internalEvents';
 import { APP_DEFINITIONS } from '../../../config/apps';
 import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { AppScaffold } from '../../shared/layout';
@@ -133,7 +134,7 @@ export function SettingsApp() {
   });
 
   onCleanup(() => {
-    window.dispatchEvent(new CustomEvent('gcphone:stopTonePreview'));
+    emitInternalEvent('gcphone:stopTonePreview');
   });
 
   const updateLiveLocationInterval = async (seconds: 10) => {
@@ -330,17 +331,15 @@ export function SettingsApp() {
   const playRingtonePreview = (ringtoneId: string, category: ToneCategory) => {
     if (previewToneId() === ringtoneId) {
       setPreviewToneId(null);
-      window.dispatchEvent(new CustomEvent('gcphone:stopTonePreview'));
+      emitInternalEvent('gcphone:stopTonePreview');
       return;
     }
 
     setPreviewToneId(ringtoneId);
-    window.dispatchEvent(new CustomEvent('gcphone:previewTone', {
-      detail: {
-        toneId: ringtoneId,
-        category,
-      },
-    }));
+    emitInternalEvent('gcphone:previewTone', {
+      toneId: ringtoneId,
+      category,
+    });
   };
 
   const IconImage = (props: { src: string; class?: string; alt?: string }) => (

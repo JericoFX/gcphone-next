@@ -1173,7 +1173,7 @@ const mockChirpCommentsByTweet: Record<number, Array<Record<string, unknown>>> =
 let nextChirpCommentId = 1100;
 
 const emitPhoneNotification = (payload: Record<string, unknown>) => {
-  window.dispatchEvent(new CustomEvent('phone:notification', { detail: payload }));
+  emitInternalEvent('phone:notification', payload);
 };
 
 const emitHiddenMockNotification = (payload?: Partial<Record<string, unknown>>) => {
@@ -2928,3 +2928,4 @@ export async function handleBrowserNui<T = unknown>(eventName: string, data?: un
 
   return undefined;
 }
+import { emitInternalEvent } from '../utils/internalEvents';

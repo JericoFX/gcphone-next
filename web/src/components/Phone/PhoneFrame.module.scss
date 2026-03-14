@@ -11,7 +11,7 @@
 }
 
 .phone-screen {
-  --phone-bottom-ui-gap: calc(24px + var(--safe-b));
+  --phone-bottom-ui-gap: calc(10px + var(--safe-b));
   overflow: hidden;
   position: absolute;
   background-color: white;
@@ -195,6 +195,18 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 @media (max-height: 900px) {

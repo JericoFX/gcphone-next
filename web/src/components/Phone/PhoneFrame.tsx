@@ -1,4 +1,4 @@
-import { For, ParentComponent, Show, createContext, createEffect, createMemo, createSignal, onCleanup, useContext, lazy, Suspense } from 'solid-js';
+import { For, ParentComponent, Show, createContext, createMemo, createSignal, useContext, lazy, Suspense, createUniqueId } from 'solid-js';
 import type { JSX } from 'solid-js';
 import { usePhone, usePhoneState } from '../../store/phone';
 import { HomeScreen } from '../apps/home/HomeScreen';
@@ -9,6 +9,8 @@ import { useNotifications } from '../../store/notifications';
 import { APP_BY_ID } from '../../config/apps';
 import { appName } from '../../i18n';
 import { isEnvBrowser } from '../../utils/misc';
+import { useWindowEvent } from '../../hooks';
+import { useInternalEvent } from '../../utils/internalEvents';
 import styles from './PhoneFrame.module.scss';
 
 type AppRoute = string;
@@ -85,6 +87,9 @@ export const PhoneFrame: ParentComponent & { Router: () => JSX.Element } = (prop
   const [dialogInput, setDialogInput] = createSignal('');
   const [dialogPlaceholder, setDialogPlaceholder] = createSignal('');
   let dialogResolve: ((value: unknown) => void) | null = null;
+  const dialogTitleId = createUniqueId();
+  const dialogMessageId = createUniqueId();
+  const multitaskTitleId = createUniqueId();
   const currentLanguage = () => phoneState.settings.language || 'es';
 
   const currentRoute = () => {
@@ -131,40 +136,42 @@ export const PhoneFrame: ParentComponent & { Router: () => JSX.Element } = (prop
     closeApp,
   };
 
-  createEffect(() => {
-    const handler = (event: CustomEvent<{ route: string; data?: Record<string, unknown> }>) => {
-      if (!event.detail?.route) return;
-      navigate(event.detail.route, event.detail.data || {});
-    };
-
-    window.addEventListener('phone:openRoute', handler as EventListener);
-    onCleanup(() => window.removeEventListener('phone:openRoute', handler as EventListener));
+  useInternalEvent<{ route: string; data?: Record<string, unknown> }>('phone:openRoute', (detail) => {
+    if (!detail?.route) return;
+    navigate(detail.route, detail.data || {});
   });
 
-  createEffect(() => {
-    const onDialogRequest = (event: Event) => {
-      const detail = (event as CustomEvent<{
-        type?: 'prompt' | 'confirm';
-        title?: string;
-        message?: string;
-        placeholder?: string;
-        defaultValue?: string;
-        resolve?: (value: unknown) => void;
-      }>).detail;
+  useInternalEvent<{
+      type?: 'prompt' | 'confirm';
+      title?: string;
+      message?: string;
+      placeholder?: string;
+      defaultValue?: string;
+      resolve?: (value: unknown) => void;
+    }>('phone:uiDialogRequest', (detail) => {
 
-      if (!detail || typeof detail.resolve !== 'function' || !detail.message) return;
+    if (!detail || typeof detail.resolve !== 'function' || !detail.message) return;
 
-      dialogResolve = detail.resolve;
-      setDialogType(detail.type === 'prompt' ? 'prompt' : 'confirm');
-      setDialogTitle(detail.title || (detail.type === 'prompt' ? 'Entrada' : 'Confirmar'));
-      setDialogMessage(detail.message);
-      setDialogPlaceholder(detail.placeholder || '');
-      setDialogInput(detail.defaultValue || '');
-      setDialogOpen(true);
-    };
+    dialogResolve = detail.resolve;
+    setDialogType(detail.type === 'prompt' ? 'prompt' : 'confirm');
+    setDialogTitle(detail.title || (detail.type === 'prompt' ? 'Entrada' : 'Confirmar'));
+    setDialogMessage(detail.message);
+    setDialogPlaceholder(detail.placeholder || '');
+    setDialogInput(detail.defaultValue || '');
+    setDialogOpen(true);
+  });
 
-    window.addEventListener('phone:uiDialogRequest', onDialogRequest as EventListener);
-    onCleanup(() => window.removeEventListener('phone:uiDialogRequest', onDialogRequest as EventListener));
+  useWindowEvent<KeyboardEvent>('keydown', (event) => {
+    if (event.key !== 'Escape') return;
+
+    if (dialogOpen()) {
+      closeDialog(dialogType() === 'confirm' ? false : null);
+      return;
+    }
+
+    if (multitaskOpen()) {
+      setMultitaskOpen(false);
+    }
   });
 
   // Theme management
@@ -197,28 +204,49 @@ export const PhoneFrame: ParentComponent & { Router: () => JSX.Element } = (prop
           {props.children}
 
           <Show when={!phoneState.requiresSetup && !phoneState.locked}>
-            <button class={styles.multitaskBtn} onClick={() => setMultitaskOpen(true)} data-testid="multitask-btn">▤</button>
+            <button
+              class={styles.multitaskBtn}
+              type="button"
+              onClick={() => setMultitaskOpen(true)}
+              data-testid="multitask-btn"
+              aria-label="Abrir apps recientes"
+              aria-haspopup="dialog"
+              aria-expanded={multitaskOpen()}
+            >
+              ▤
+            </button>
 
             <Show when={multitaskOpen()}>
               <div class={styles.multitaskOverlay} onClick={() => setMultitaskOpen(false)}>
-                <div class={styles.multitaskPanel} onClick={(event) => event.stopPropagation()}>
+                <div
+                  class={styles.multitaskPanel}
+                  onClick={(event) => event.stopPropagation()}
+                  role="dialog"
+                  aria-modal="true"
+                  aria-labelledby={multitaskTitleId}
+                >
+                  <h2 id={multitaskTitleId} class={styles.srOnly}>Apps recientes</h2>
                   <For each={recentRoutes()}>
                     {(route) => {
                       const app = APP_BY_ID[route];
+                      const label = appName(route, app?.name || route, currentLanguage());
                       return (
                         <div class={styles.multitaskCard}>
                           <button
                             class={styles.multitaskOpen}
+                            type="button"
                             onClick={() => {
                               router.navigate(route);
                               setMultitaskOpen(false);
                             }}
                           >
-                            <img src={app?.icon || './img/icons_ios/settings.svg'} alt={appName(route, app?.name || route, currentLanguage())} />
-                            <span>{appName(route, app?.name || route, currentLanguage())}</span>
+                            <img src={app?.icon || './img/icons_ios/settings.svg'} alt="" aria-hidden="true" />
+                            <span>{label}</span>
                           </button>
                           <button
                             class={styles.multitaskClose}
+                            type="button"
+                            aria-label={`Cerrar ${label}`}
                             onClick={() => {
                               closeApp(route);
                             }}
@@ -236,9 +264,16 @@ export const PhoneFrame: ParentComponent & { Router: () => JSX.Element } = (prop
 
           <Show when={dialogOpen()}>
             <div class={styles.dialogOverlay} onClick={() => closeDialog(dialogType() === 'confirm' ? false : null)}>
-              <div class={styles.dialogCard} onClick={(event) => event.stopPropagation()}>
-                <h3>{dialogTitle()}</h3>
-                <p>{dialogMessage()}</p>
+              <div
+                class={styles.dialogCard}
+                onClick={(event) => event.stopPropagation()}
+                role={dialogType() === 'confirm' ? 'alertdialog' : 'dialog'}
+                aria-modal="true"
+                aria-labelledby={dialogTitleId}
+                aria-describedby={dialogMessageId}
+              >
+                <h3 id={dialogTitleId}>{dialogTitle()}</h3>
+                <p id={dialogMessageId}>{dialogMessage()}</p>
                 <Show when={dialogType() === 'prompt'}>
                   <input
                     class="ios-input"
@@ -249,8 +284,8 @@ export const PhoneFrame: ParentComponent & { Router: () => JSX.Element } = (prop
                   />
                 </Show>
                 <div class={styles.dialogActions}>
-                  <button class="ios-btn" onClick={() => closeDialog(dialogType() === 'confirm' ? false : null)}>Cancelar</button>
-                  <button class="ios-btn ios-btn-primary" onClick={() => closeDialog(dialogType() === 'confirm' ? true : dialogInput())}>Aceptar</button>
+                  <button class="ios-btn" type="button" onClick={() => closeDialog(dialogType() === 'confirm' ? false : null)}>Cancelar</button>
+                  <button class="ios-btn ios-btn-primary" type="button" onClick={() => closeDialog(dialogType() === 'confirm' ? true : dialogInput())}>Aceptar</button>
                 </div>
               </div>
             </div>

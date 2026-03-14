@@ -1,6 +1,7 @@
 import type { JSX, ParentComponent, ParentProps } from 'solid-js';
 import { Show } from 'solid-js';
 import { getStoredLanguage, tl } from '../../../i18n';
+import { emitInternalEvent } from '../../../utils/internalEvents';
 import styles from './layout.module.scss';
 
 const isAssetIcon = (icon?: string) => !!icon && /\.(svg|png|webp|jpg|jpeg)$/i.test(icon);
@@ -41,9 +42,11 @@ export interface AppHeaderProps extends ParentProps {
 }
 
 export const AppHeader: ParentComponent<AppHeaderProps> = (props) => {
+  const title = () => tl(props.title, getStoredLanguage());
+  const subtitle = () => props.subtitle ? tl(props.subtitle, getStoredLanguage()) : '';
   const router = {
     goBack: () => {
-      window.dispatchEvent(new CustomEvent('phone:keyUp', { detail: 'Backspace' }));
+      emitInternalEvent('phone:keyUp', 'Backspace');
     },
   };
 
@@ -64,28 +67,28 @@ export const AppHeader: ParentComponent<AppHeaderProps> = (props) => {
         [props.class || '']: !!props.class,
       }}
     >
-      <button class="ios-icon-btn" onClick={handleBack}>
-        <Show when={isAssetIcon(props.backIcon)} fallback={<img src="./img/icons_ios/ui-chevron-left.svg" alt="back" draggable={false} />}>
-          <img src={props.backIcon as string} alt="back" draggable={false} />
+      <button class="ios-icon-btn" type="button" onClick={handleBack} aria-label="Volver">
+        <Show when={isAssetIcon(props.backIcon)} fallback={<img src="./img/icons_ios/ui-chevron-left.svg" alt="" draggable={false} aria-hidden="true" />}>
+          <img src={props.backIcon as string} alt="" draggable={false} aria-hidden="true" />
         </Show>
       </button>
       <div class="ios-nav-title">
         <Show when={props.title}>
-          <span class={styles.titleText}>{tl(props.title, getStoredLanguage())}</span>
+          <span class={styles.titleText}>{title()}</span>
         </Show>
         <Show when={props.subtitle}>
-          <span class={styles.subtitleText}>{tl(props.subtitle || '', getStoredLanguage())}</span>
+          <span class={styles.subtitleText}>{subtitle()}</span>
         </Show>
       </div>
       <Show when={props.action}>
-        <button class="ios-icon-btn" onClick={props.action!.onClick}>
+        <button class="ios-icon-btn" type="button" onClick={props.action!.onClick} aria-label={props.action!.label || 'Accion'}>
           <Show
               when={isAssetIcon(props.action!.icon)}
               fallback={props.action!.icon}
             >
-              <img src={props.action!.icon as string} alt={props.action!.label || 'action'} draggable={false} />
-            </Show>
-          </button>
+              <img src={props.action!.icon as string} alt="" draggable={false} aria-hidden="true" />
+             </Show>
+           </button>
       </Show>
       <Show when={!props.action && props.children}>
         <div class={styles.headerChildren}>{props.children}</div>
@@ -208,20 +211,24 @@ export interface AppTabsProps {
 
 export function AppTabs(props: AppTabsProps) {
   return (
-    <div classList={{ [styles.tabs]: true, [props.class || '']: !!props.class }}>
+    <div classList={{ [styles.tabs]: true, [props.class || '']: !!props.class }} role="tablist">
       {props.tabs.map((tab) => (
         <button
+          type="button"
           classList={{
             [styles.tab]: true,
             [styles.tabActive]: props.active === tab.id,
           }}
           onClick={() => props.onChange(tab.id)}
+          role="tab"
           aria-selected={props.active === tab.id}
+          aria-label={tl(tab.label, getStoredLanguage())}
+          tabIndex={props.active === tab.id ? 0 : -1}
         >
           <Show when={tab.icon}>
-            <span class={styles.tabIcon}>
+            <span class={styles.tabIcon} aria-hidden="true">
               <Show when={tab.icon!.endsWith('.svg')} fallback={tab.icon}>
-                <img src={tab.icon} alt={tl(tab.label, getStoredLanguage())} />
+                <img src={tab.icon} alt="" />
               </Show>
             </span>
           </Show>

@@ -1,4 +1,5 @@
-import { createSignal, createEffect, onCleanup, batch } from 'solid-js';
+import { createSignal, batch } from 'solid-js';
+import { emitInternalEvent, useInternalEvent } from '../../../../utils/internalEvents';
 
 interface Message {
   id: string;
@@ -23,13 +24,7 @@ export function useLiveChat(clipId: string, isLive: boolean) {
   const [isConnected, setIsConnected] = createSignal(false);
   const [isOwner, setIsOwner] = createSignal(false);
   
-  // Listen for live events from server
-  createEffect(() => {
-    if (!isLive || !clipId) return;
-    
-    const handleLiveMessage = (event: Event) => {
-      const customEvent = event as CustomEvent<Message>;
-      const message = customEvent.detail;
+  const handleLiveMessage = (message: Message | undefined) => {
       if (!message) return;
       
       batch(() => {
@@ -47,17 +42,13 @@ export function useLiveChat(clipId: string, isLive: boolean) {
       });
     };
     
-    const handleLiveReaction = (event: Event) => {
-      const customEvent = event as CustomEvent<Reaction>;
-      const reaction = customEvent.detail;
+    const handleLiveReaction = (reaction: Reaction | undefined) => {
       if (!reaction) return;
       
       setReactions(prev => [...prev, reaction]);
     };
     
-    const handleMessageDeleted = (event: Event) => {
-      const customEvent = event as CustomEvent<string>;
-      const messageId = customEvent.detail;
+    const handleMessageDeleted = (messageId: string | undefined) => {
       if (!messageId) return;
       
       batch(() => {
@@ -65,54 +56,43 @@ export function useLiveChat(clipId: string, isLive: boolean) {
         setFloatingMessages(prev => prev.filter(m => m.id !== messageId));
       });
     };
-    
-    // Add event listeners
-    window.addEventListener('gcphone:live:message', handleLiveMessage);
-    window.addEventListener('gcphone:live:reaction', handleLiveReaction);
-    window.addEventListener('gcphone:live:messageDeleted', handleMessageDeleted);
-    
-    onCleanup(() => {
-      window.removeEventListener('gcphone:live:message', handleLiveMessage);
-      window.removeEventListener('gcphone:live:reaction', handleLiveReaction);
-      window.removeEventListener('gcphone:live:messageDeleted', handleMessageDeleted);
-    });
+
+  useInternalEvent('gcphone:live:message', (payload: Message) => {
+    if (!isLive || !clipId) return;
+    handleLiveMessage(payload);
+  });
+  useInternalEvent('gcphone:live:reaction', (payload: Reaction) => {
+    if (!isLive || !clipId) return;
+    handleLiveReaction(payload);
+  });
+  useInternalEvent('gcphone:live:messageDeleted', (payload: string) => {
+    if (!isLive || !clipId) return;
+    handleMessageDeleted(payload);
   });
   
   const sendMessage = (content: string) => {
     if (!isLive) return;
     
     // Dispatch event to server
-    const event = new CustomEvent('gcphone:live:sendMessage', {
-      detail: { clipId, content }
-    });
-    window.dispatchEvent(event);
+    emitInternalEvent('gcphone:live:sendMessage', { clipId, content });
   };
   
   const sendReaction = (reaction: string) => {
     if (!isLive) return;
     
-    const event = new CustomEvent('gcphone:live:sendReaction', {
-      detail: { clipId, reaction }
-    });
-    window.dispatchEvent(event);
+    emitInternalEvent('gcphone:live:sendReaction', { clipId, reaction });
   };
   
   const deleteMessage = (messageId: string) => {
     if (!isOwner()) return;
     
-    const event = new CustomEvent('gcphone:live:deleteMessage', {
-      detail: { clipId, messageId }
-    });
-    window.dispatchEvent(event);
+    emitInternalEvent('gcphone:live:deleteMessage', { clipId, messageId });
   };
   
   const muteUser = (username: string) => {
     if (!isOwner()) return;
     
-    const event = new CustomEvent('gcphone:live:muteUser', {
-      detail: { clipId, username }
-    });
-    window.dispatchEvent(event);
+    emitInternalEvent('gcphone:live:muteUser', { clipId, username });
   };
   
   const removeFloatingMessage = (id: string) => {

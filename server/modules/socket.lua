@@ -4,6 +4,7 @@ local PendingSocketTokenRequests = {}
 local LastSocketTokenRequestId = 0
 local REQUEST_TIMEOUT_MS = 7000
 local CLEANUP_INTERVAL_MS = 30000
+local CleanupTimer = nil
 
 local function NextRequestId()
     LastSocketTokenRequestId = LastSocketTokenRequestId + 1
@@ -49,10 +50,13 @@ local function CleanupExpiredRequests()
             PendingSocketTokenRequests[id] = nil
         end
     end
-    SetTimeout(CLEANUP_INTERVAL_MS, CleanupExpiredRequests)
 end
 
-SetTimeout(CLEANUP_INTERVAL_MS, CleanupExpiredRequests)
+-- Verified: CommunityOX ox_lib Timer/Shared exposes lib.timer(time, onEnd, async) with restart()
+CleanupTimer = lib.timer(CLEANUP_INTERVAL_MS, function()
+    CleanupExpiredRequests()
+    CleanupTimer:restart()
+end, true)
 
 local function GetUserGroupIds(identifier)
     if not identifier then return {} end
@@ -61,11 +65,11 @@ local function GetUserGroupIds(identifier)
         { identifier }
     )
     if not rows then return {} end
-    local ids = {}
-    for _, row in ipairs(rows) do
-        ids[#ids + 1] = tostring(row.group_id)
-    end
-    return ids
+
+    -- Verified: CommunityOX ox_lib Array/Shared exposes lib.array.map(arr, fn)
+    return lib.array.map(rows, function(row)
+        return tostring(row.group_id)
+    end)
 end
 
 local function GetSnapSocketContext(source, identifier, data)
@@ -180,4 +184,9 @@ lib.callback.register('gcphone:socket:getToken', function(source, data)
     end
 
     return { success = false, error = result and result.error or 'TOKEN_ERROR' }
+end)
+
+AddEventHandler('onResourceStop', function(resourceName)
+    if resourceName ~= cache.resource or not CleanupTimer then return end
+    CleanupTimer:forceEnd(false)
 end)

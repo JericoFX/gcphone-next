@@ -1,4 +1,5 @@
-import { createSignal, createEffect, onCleanup } from 'solid-js';
+import { createSignal } from 'solid-js';
+import { useInternalEvent } from '../utils/internalEvents';
 
 export interface UseListNavigationOptions<T> {
   onSelect?: (item: T, index: number) => void;
@@ -66,34 +67,29 @@ export function useListNavigation<T>(
     setIsActive(false);
   };
 
-  createEffect(() => {
-    const handleKeyUp = (e: CustomEvent<string>) => {
-      const key = e.detail;
+  const handleKeyUp = (key: string) => {
+    switch (key) {
+      case 'ArrowUp':
+        selectPrev();
+        setIsActive(true);
+        break;
+      case 'ArrowDown':
+        selectNext();
+        setIsActive(true);
+        break;
+      case 'Enter':
+        confirmSelection();
+        break;
+      case 'Home':
+        selectFirst();
+        break;
+      case 'End':
+        selectLast();
+        break;
+    }
+  };
 
-      switch (key) {
-        case 'ArrowUp':
-          selectPrev();
-          setIsActive(true);
-          break;
-        case 'ArrowDown':
-          selectNext();
-          setIsActive(true);
-          break;
-        case 'Enter':
-          confirmSelection();
-          break;
-        case 'Home':
-          selectFirst();
-          break;
-        case 'End':
-          selectLast();
-          break;
-      }
-    };
-
-    window.addEventListener('phone:keyUp', handleKeyUp as EventListener);
-    onCleanup(() => window.removeEventListener('phone:keyUp', handleKeyUp as EventListener));
-  });
+  useInternalEvent('phone:keyUp', handleKeyUp);
 
   return {
     selectedIndex,

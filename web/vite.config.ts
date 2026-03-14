@@ -20,6 +20,25 @@ export default defineConfig({
         chunkFileNames: 'assets/[name].js',
         assetFileNames: 'assets/[name].[ext]',
         manualChunks(id) {
+          if (
+            id.includes('MediaLightbox')
+            || id.includes('EmojiPicker')
+            || id.includes('MediaAttachmentPreview')
+            || id.includes('MediaActionButtons')
+            || id.includes('SocialOnboardingModal')
+            || id.includes('LiveFlashlightControl')
+          ) {
+            return 'shared-social';
+          }
+          if (id.includes('livekit-client')) {
+            return 'vendor-livekit';
+          }
+          if (id.includes('socket.io-client')) {
+            return 'vendor-socket';
+          }
+          if (id.includes('/leaflet/') || id.includes('\\leaflet\\')) {
+            return 'vendor-leaflet';
+          }
           if (id.includes('node_modules')) {
             return 'vendor';
           }
@@ -32,6 +51,9 @@ export default defineConfig({
           if (id.includes('components/apps/')) {
             const match = id.match(/components\/apps\/([^/]+)/);
             if (match) {
+              if (match[1] === 'home') {
+                return undefined;
+              }
               return `app-${match[1]}`;
             }
           }

@@ -1,9 +1,10 @@
-import { For, Show, createEffect, createMemo, createSignal, onCleanup } from 'solid-js';
+import { For, Show, createMemo, createSignal, onMount } from 'solid-js';
 import { fetchNui } from '../../../utils/fetchNui';
 import { useNotifications } from '../../../store/notifications';
 import { usePhone } from '../../../store/phone';
 import { APP_BY_ID } from '../../../config/apps';
 import { appName, formatDate, t } from '../../../i18n';
+import { useInternalEvent, emitInternalEvent } from '../../../utils/internalEvents';
 import styles from './ControlCenter.module.scss';
 
 type TileId = 'airplane' | 'dnd' | 'silent' | 'gps' | 'preview';
@@ -26,13 +27,20 @@ export function ControlCenter() {
 
   const groupedNotifications = createMemo(() => {
     const groups = new Map<string, Array<{ id: string; title: string; message: string; route?: string; data?: Record<string, unknown>; createdAt?: number }>>();
+
     for (const item of notifications.history) {
       const key = item.appId || 'system';
       const list = groups.get(key) || [];
       list.push({ id: item.id, title: item.title, message: item.message, route: item.route, data: item.data, createdAt: item.createdAt });
       groups.set(key, list);
     }
-    return Array.from(groups.entries());
+
+    return Array.from(groups.entries()).map(([appId, items]) => ({
+      appId,
+      items,
+      icon: APP_BY_ID[appId]?.icon || './img/icons_ios/settings.svg',
+      title: appName(appId, APP_BY_ID[appId]?.name || appId, language()).toUpperCase(),
+    }));
   });
 
   const totalNotificationCount = createMemo(() => notifications.history.length);
@@ -209,7 +217,7 @@ export function ControlCenter() {
 
   const openRoute = (route?: string, data?: Record<string, unknown>) => {
     if (!route) return;
-    window.dispatchEvent(new CustomEvent('phone:openRoute', { detail: { route, data: data || {} } }));
+    emitInternalEvent('phone:openRoute', { route, data: data || {} });
   };
 
   const topDragEnabled = createMemo(() => !notifications.controlCenterOpen && !notifications.notificationCenterOpen);
@@ -253,20 +261,12 @@ export function ControlCenter() {
     </button>
   );
 
-  createEffect(() => {
+  onMount(() => {
     void syncLiveLocationState();
-
-    const onOpenControl = () => notificationsActions.setControlCenterOpen(true);
-    const onOpenNotifications = () => notificationsActions.setNotificationCenterOpen(true);
-
-    window.addEventListener('phone:openControlCenter', onOpenControl);
-    window.addEventListener('phone:openNotificationCenter', onOpenNotifications);
-
-    onCleanup(() => {
-      window.removeEventListener('phone:openControlCenter', onOpenControl);
-      window.removeEventListener('phone:openNotificationCenter', onOpenNotifications);
-    });
   });
+
+  useInternalEvent('phone:openControlCenter', () => notificationsActions.setControlCenterOpen(true));
+  useInternalEvent('phone:openNotificationCenter', () => notificationsActions.setNotificationCenterOpen(true));
 
   return (
     <>
@@ -323,24 +323,24 @@ export function ControlCenter() {
             <div class={styles.notificationList}>
               <Show when={groupedNotifications().length > 0} fallback={<div class={styles.empty}>{t('notifications.none_saved', language())}</div>}>
                 <For each={groupedNotifications()}>
-                  {([appId, items]) => (
+                  {(group) => (
                     <div class={styles.notificationGroup}>
                       <div class={styles.groupTitle}>
-                        <img src={APP_BY_ID[appId]?.icon || './img/icons_ios/settings.svg'} alt={appId} />
-                        <span>{appName(appId, APP_BY_ID[appId]?.name || appId, language()).toUpperCase()}</span>
+                        <img src={group.icon} alt="" />
+                        <span>{group.title}</span>
                         <button
                           class={styles.muteAppBtn}
-                          onClick={() => notificationsActions.toggleMuteApp(appId)}
+                          onClick={() => notificationsActions.toggleMuteApp(group.appId)}
                         >
-                           {notificationsActions.isAppMuted(appId) ? t('notifications.enable', language()) : t('notifications.mute', language())}
+                           {notificationsActions.isAppMuted(group.appId) ? t('notifications.enable', language()) : t('notifications.mute', language())}
                         </button>
                       </div>
-                      <For each={visibleItemsForGroup(items)}>
+                      <For each={visibleItemsForGroup(group.items)}>
                         {(item) => (
                           <button
                             class={styles.notificationItem}
                             onClick={() => {
-                              notificationsActions.markAppAsRead(appId);
+                              notificationsActions.markAppAsRead(group.appId);
                               notificationsActions.setNotificationCenterOpen(false);
                               openRoute(item.route, item.data);
                             }}
@@ -353,8 +353,8 @@ export function ControlCenter() {
                           </button>
                         )}
                       </For>
-                      <Show when={items.length > 2}>
-                        <div class={styles.moreCount}>+{items.length - 2} mas</div>
+                      <Show when={group.items.length > 2}>
+                        <div class={styles.moreCount}>+{group.items.length - 2} mas</div>
                       </Show>
                     </div>
                   )}
