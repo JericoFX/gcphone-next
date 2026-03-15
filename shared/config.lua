@@ -293,7 +293,8 @@ Config.Phone = {
     },
 
     ExportAllowlist = {
-        -- ['resource_name'] = true,
+        ['cad-system'] = true,
+        ['cad-system-clean'] = true,
     },
 }
 
