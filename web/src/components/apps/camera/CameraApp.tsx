@@ -1,15 +1,35 @@
-import { Show, createEffect, createMemo, createSignal, onCleanup, onMount } from 'solid-js';
+import {
+  Show,
+  createEffect,
+  createMemo,
+  createSignal,
+  onCleanup,
+  onMount,
+} from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { fetchNui } from '../../../utils/fetchNui';
 import { getStoredLanguage, t } from '../../../i18n';
 import { uiPrompt } from '../../../utils/uiDialog';
-import { resolveMediaType, sanitizeMediaUrl, sanitizeText } from '../../../utils/sanitize';
+import {
+  resolveMediaType,
+  sanitizeMediaUrl,
+  sanitizeText,
+} from '../../../utils/sanitize';
 import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { useNuiEvent } from '../../../utils/useNui';
 import styles from './CameraApp.module.scss';
 
 type CameraEffect = 'normal' | 'noir' | 'vivid' | 'warm';
-type CameraTarget = 'snap-post' | 'snap-story' | 'snap-avatar' | 'chirp' | 'chirp-avatar' | 'chirp-rechirp' | 'clips' | 'clips-avatar' | '';
+type CameraTarget =
+  | 'snap-post'
+  | 'snap-story'
+  | 'snap-avatar'
+  | 'chirp'
+  | 'chirp-avatar'
+  | 'chirp-rechirp'
+  | 'clips'
+  | 'clips-avatar'
+  | '';
 
 interface EffectConfig {
   id: CameraEffect;
@@ -96,18 +116,29 @@ export function CameraApp() {
   });
 
   onMount(async () => {
-    const capabilities = await fetchNui<{ quickZooms?: number[]; video?: boolean }>('cameraGetCapabilities', {}, { quickZooms: [30, 52, 78], video: false });
-    setQuickZooms((capabilities?.quickZooms || [30, 52, 78]).map((value) => Number(value)).filter((value) => Number.isFinite(value)));
+    const capabilities = await fetchNui<{
+      quickZooms?: number[];
+      video?: boolean;
+    }>('cameraGetCapabilities', {}, { quickZooms: [30, 52, 78], video: false });
+    setQuickZooms(
+      (capabilities?.quickZooms || [30, 52, 78])
+        .map((value) => Number(value))
+        .filter((value) => Number.isFinite(value)),
+    );
     setVideoSupported(capabilities?.video === true);
 
-    await fetchNui('startCameraSession', {
-      effect: effect(),
-      fov: fov(),
-      blur: blur(),
-      flash: flash(),
-      selfie: selfie(),
-      landscape: landscape(),
-    }, true);
+    await fetchNui(
+      'startCameraSession',
+      {
+        effect: effect(),
+        fov: fov(),
+        blur: blur(),
+        flash: flash(),
+        selfie: selfie(),
+        landscape: landscape(),
+      },
+      true,
+    );
     setSessionReady(true);
   });
 
@@ -118,37 +149,54 @@ export function CameraApp() {
 
   createEffect(() => {
     if (!sessionReady()) return;
-    void fetchNui('updateCameraSession', {
-      effect: effect(),
-      fov: fov(),
-      blur: blur(),
-      flash: flash(),
-      selfie: selfie(),
-      landscape: landscape(),
-    }, true);
+    void fetchNui(
+      'updateCameraSession',
+      {
+        effect: effect(),
+        fov: fov(),
+        blur: blur(),
+        flash: flash(),
+        selfie: selfie(),
+        landscape: landscape(),
+      },
+      true,
+    );
   });
 
   const toggleLandscape = async () => {
-    const result = await fetchNui<{ success?: boolean; landscape?: boolean }>('cameraSetLandscape', { enabled: !landscape() }, { success: true, landscape: !landscape() });
+    const result = await fetchNui<{ success?: boolean; landscape?: boolean }>(
+      'cameraSetLandscape',
+      { enabled: !landscape() },
+      { success: true, landscape: !landscape() },
+    );
     if (result?.success) {
       setLandscape(result.landscape === true);
     }
   };
 
   const applyQuickZoom = async (index: number) => {
-    const result = await fetchNui<{ success?: boolean; fov?: number }>('cameraSetQuickZoom', { index }, { success: true, fov: fov() });
+    const result = await fetchNui<{ success?: boolean; fov?: number }>(
+      'cameraSetQuickZoom',
+      { index },
+      { success: true, fov: fov() },
+    );
     if (result?.success && typeof result.fov === 'number') {
       setFov(Math.round(result.fov));
     }
   };
-
 
   const takePhoto = async () => {
     if (busy()) return;
     setBusy(true);
     setError('');
 
-    const storage = await fetchNui<{ provider?: string; uploadUrl?: string; uploadField?: string; customUploadUrl?: string; customUploadField?: string }>('getStorageConfig', undefined, {
+    const storage = await fetchNui<{
+      provider?: string;
+      uploadUrl?: string;
+      uploadField?: string;
+      customUploadUrl?: string;
+      customUploadField?: string;
+    }>('getStorageConfig', undefined, {
       provider: 'custom',
       uploadUrl: '',
       uploadField: 'files[]',
@@ -156,20 +204,24 @@ export function CameraApp() {
 
     const provider = String(storage?.provider || 'custom');
 
-    const result = await fetchNui<{ url?: string; error?: string }>('captureCameraSession', {
-      provider,
-      url: storage?.uploadUrl || storage?.customUploadUrl || '',
-      field: storage?.uploadField || storage?.customUploadField || 'files[]',
-    }, { url: '' });
+    const result = await fetchNui<{ url?: string; error?: string }>(
+      'captureCameraSession',
+      {
+        provider,
+        url: storage?.uploadUrl || storage?.customUploadUrl || '',
+        field: storage?.uploadField || storage?.customUploadField || 'files[]',
+      },
+      { url: '' },
+    );
 
     const mediaUrl = sanitizeMediaUrl(result?.url);
     if (!mediaUrl) {
       setBusy(false);
-        if (result?.error === 'upload_not_configured') {
-          setError(t('camera.error.upload_not_configured', language()));
-        } else {
-          setError(t('camera.error.capture_cancelled', language()));
-        }
+      if (result?.error === 'upload_not_configured') {
+        setError(t('camera.error.upload_not_configured', language()));
+      } else {
+        setError(t('camera.error.capture_cancelled', language()));
+      }
       return;
     }
 
@@ -200,7 +252,11 @@ export function CameraApp() {
       });
       router.navigate('chirp');
     } else if (target() === 'chirp-rechirp') {
-      router.navigate('chirp', { rechirpMedia: mediaUrl, openRechirp: '1', rechirpTweetId: String(router.params().rechirpTweetId || '') });
+      router.navigate('chirp', {
+        rechirpMedia: mediaUrl,
+        openRechirp: '1',
+        rechirpTweetId: String(router.params().rechirpTweetId || ''),
+      });
     } else if (target() === 'clips') {
       setError(t('camera.error.clips_requires_video', language()));
     }
@@ -239,7 +295,9 @@ export function CameraApp() {
   };
 
   const publishClipFromUrl = async () => {
-    const input = await uiPrompt(t('camera.prompt.video_url', language()), { title: t('camera.publish_clip', language()) });
+    const input = await uiPrompt(t('camera.prompt.video_url', language()), {
+      title: t('camera.publish_clip', language()),
+    });
     const videoUrl = sanitizeMediaUrl(input);
     if (!videoUrl || resolveMediaType(videoUrl) !== 'video') {
       if (input && input.trim()) {
@@ -249,9 +307,13 @@ export function CameraApp() {
     }
 
     await fetchNui('storeMediaUrl', { url: videoUrl }, { success: false });
-    const result = await fetchNui<{ success?: boolean }>('clipsPublish', {
-      mediaUrl: videoUrl,
-    }, { success: false });
+    const result = await fetchNui<{ success?: boolean }>(
+      'clipsPublish',
+      {
+        mediaUrl: videoUrl,
+      },
+      { success: false },
+    );
 
     if (result?.success) {
       router.navigate('clips');
@@ -263,7 +325,11 @@ export function CameraApp() {
   };
 
   const publishClipFromGallery = async () => {
-    const gallery = await fetchNui<Array<{ url?: string }>>('getGallery', undefined, []);
+    const gallery = await fetchNui<Array<{ url?: string }>>(
+      'getGallery',
+      undefined,
+      [],
+    );
     const picked = (gallery || []).find((entry) => {
       const mediaUrl = sanitizeMediaUrl(entry?.url);
       return mediaUrl && resolveMediaType(mediaUrl) === 'video';
@@ -274,9 +340,13 @@ export function CameraApp() {
       return false;
     }
 
-    const result = await fetchNui<{ success?: boolean }>('clipsPublish', {
-      mediaUrl: videoUrl,
-    }, { success: false });
+    const result = await fetchNui<{ success?: boolean }>(
+      'clipsPublish',
+      {
+        mediaUrl: videoUrl,
+      },
+      { success: false },
+    );
 
     if (result?.success) {
       router.navigate('clips');
@@ -289,19 +359,32 @@ export function CameraApp() {
 
   const publishClipFromRecording = async () => {
     setIsRecording(true);
-    const storage = await fetchNui<{ uploadUrl?: string; uploadField?: string; customUploadUrl?: string; customUploadField?: string; maxVideoDurationSeconds?: number }>('getStorageConfig', undefined, {
+    const storage = await fetchNui<{
+      uploadUrl?: string;
+      uploadField?: string;
+      customUploadUrl?: string;
+      customUploadField?: string;
+      maxVideoDurationSeconds?: number;
+    }>('getStorageConfig', undefined, {
       uploadUrl: '',
       uploadField: 'files[]',
       customUploadUrl: '',
       customUploadField: 'files[]',
     });
-    const maxDuration = Math.max(5, Math.min(30, Number(storage?.maxVideoDurationSeconds || 30)));
+    const maxDuration = Math.max(
+      5,
+      Math.min(30, Number(storage?.maxVideoDurationSeconds || 30)),
+    );
 
-    const result = await fetchNui<{ url?: string; error?: string }>('captureCameraVideoSession', {
-      url: storage?.uploadUrl || storage?.customUploadUrl || '',
-      field: storage?.uploadField || storage?.customUploadField || 'files[]',
-      durationSeconds: maxDuration,
-    }, { url: '', error: 'video_not_supported' });
+    const result = await fetchNui<{ url?: string; error?: string }>(
+      'captureCameraVideoSession',
+      {
+        url: storage?.uploadUrl || storage?.customUploadUrl || '',
+        field: storage?.uploadField || storage?.customUploadField || 'files[]',
+        durationSeconds: maxDuration,
+      },
+      { url: '', error: 'video_not_supported' },
+    );
 
     setIsRecording(false);
 
@@ -322,9 +405,13 @@ export function CameraApp() {
     }
 
     await fetchNui('storeMediaUrl', { url: videoUrl }, { success: false });
-    const publish = await fetchNui<{ success?: boolean }>('clipsPublish', {
-      mediaUrl: videoUrl,
-    }, { success: false });
+    const publish = await fetchNui<{ success?: boolean }>(
+      'clipsPublish',
+      {
+        mediaUrl: videoUrl,
+      },
+      { success: false },
+    );
 
     if (publish?.success) {
       router.navigate('clips');
@@ -344,7 +431,11 @@ export function CameraApp() {
   const currentZoomLabel = createMemo(() => {
     const values = quickZooms();
     if (!values.length) return '1x';
-    const nearest = values.reduce((acc, value) => Math.abs(value - fov()) < Math.abs(acc - fov()) ? value : acc, values[0]);
+    const nearest = values.reduce(
+      (acc, value) =>
+        Math.abs(value - fov()) < Math.abs(acc - fov()) ? value : acc,
+      values[0],
+    );
     return `${(52 / nearest).toFixed(1).replace('.0', '')}x`;
   });
 
@@ -361,12 +452,16 @@ export function CameraApp() {
       }
     }
     const nextIndex = (nearestIndex + 1) % values.length;
-    await applyQuickZoom(nextIndex + 1);
+    await applyQuickZoom(nextIndex);
+    console.log(nextIndex);
   };
 
   return (
     <div class={styles.app}>
-      <div class={styles.preview} classList={{ [styles.previewLandscapeShell]: landscape() }}>
+      <div
+        class={styles.preview}
+        classList={{ [styles.previewLandscapeShell]: landscape() }}
+      >
         <div
           class={styles.feedLayer}
           classList={{
@@ -392,7 +487,11 @@ export function CameraApp() {
               onClick={() => void closeCamera()}
               title={t('control.close', language())}
             >
-              <img src="./img/icons_ios/ui-close.svg" alt="" draggable={false} />
+              <img
+                src='./img/icons_ios/ui-close.svg'
+                alt=''
+                draggable={false}
+              />
             </button>
           </div>
 
@@ -407,33 +506,61 @@ export function CameraApp() {
               onClick={() => router.navigate('gallery')}
               title={t('camera.gallery', language())}
             >
-              <img src="./img/icons_ios/gallery.svg" alt="" draggable={false} />
+              <img src='./img/icons_ios/gallery.svg' alt='' draggable={false} />
             </button>
           </div>
         </div>
 
         <div class={styles.minimalRow}>
-          <button class={styles.minimalBtn} classList={{ [styles.minimalBtnActive]: flash() }} onClick={() => setFlash((v) => !v)}>
+          <button
+            class={styles.minimalBtn}
+            classList={{ [styles.minimalBtnActive]: flash() }}
+            onClick={() => setFlash((v) => !v)}
+          >
             {t('camera.flash', language())}
           </button>
-          <button class={styles.minimalBtn} classList={{ [styles.minimalBtnActive]: selfie() }} onClick={() => setSelfie((v) => !v)}>
+          <button
+            class={styles.minimalBtn}
+            classList={{ [styles.minimalBtnActive]: selfie() }}
+            onClick={() => setSelfie((v) => !v)}
+          >
             {t('camera.selfie', language())}
           </button>
-          <button class={styles.minimalBtn} onClick={() => void cycleZoom()}>{currentZoomLabel()}</button>
-          <button class={styles.minimalBtn} onClick={cycleEffect}>{EFFECTS.find((item) => item.id === effect())?.label || 'Normal'}</button>
+          <button class={styles.minimalBtn} onClick={() => void cycleZoom()}>
+            {currentZoomLabel()}
+          </button>
+          <button class={styles.minimalBtn} onClick={cycleEffect}>
+            {EFFECTS.find((item) => item.id === effect())?.label || 'Normal'}
+          </button>
         </div>
 
         <Show when={target() === 'clips'}>
           <div class={styles.clipsRow}>
-            <Show when={videoSupported()} fallback={<button class={styles.clipsBtn} disabled>{t('camera.video_unavailable', language())}</button>}>
-              <button class={`${styles.clipsBtn} ${styles.clipsBtnPrimary}`} onClick={() => void publishClipFromRecording()}>
+            <Show
+              when={videoSupported()}
+              fallback={
+                <button class={styles.clipsBtn} disabled>
+                  {t('camera.video_unavailable', language())}
+                </button>
+              }
+            >
+              <button
+                class={`${styles.clipsBtn} ${styles.clipsBtnPrimary}`}
+                onClick={() => void publishClipFromRecording()}
+              >
                 {t('camera.record_clip', language())}
               </button>
             </Show>
-            <button class={styles.clipsBtn} onClick={() => void publishClipFromGallery()}>
+            <button
+              class={styles.clipsBtn}
+              onClick={() => void publishClipFromGallery()}
+            >
               {t('camera.gallery_video', language())}
             </button>
-            <button class={styles.clipsBtn} onClick={() => void publishClipFromUrl()}>
+            <button
+              class={styles.clipsBtn}
+              onClick={() => void publishClipFromUrl()}
+            >
               {t('camera.publish_clip', language())}
             </button>
           </div>
@@ -458,8 +585,12 @@ export function CameraApp() {
         <div class={styles.lastRow}>
           <img src={lastUrl()} alt={t('camera.last_capture', language())} />
           <div class={styles.lastActions}>
-            <button onClick={() => void shareSnapPost()}>{t('camera.snap_post', language())}</button>
-            <button onClick={() => void shareSnapStory()}>{t('camera.snap_story', language())}</button>
+            <button onClick={() => void shareSnapPost()}>
+              {t('camera.snap_post', language())}
+            </button>
+            <button onClick={() => void shareSnapStory()}>
+              {t('camera.snap_story', language())}
+            </button>
             <button onClick={() => void shareChirp()}>Chirp</button>
           </div>
         </div>
