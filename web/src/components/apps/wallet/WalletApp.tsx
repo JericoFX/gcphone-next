@@ -6,8 +6,10 @@ import { formatPhoneNumber } from '../../../utils/misc';
 import { usePhone } from '../../../store/phone';
 import { uiAlert } from '../../../utils/uiAlert';
 import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
+import { useNfcShare } from '../../../hooks/useNfcShare';
 import { AppScaffold } from '../../shared/layout';
 import { EmptyState } from '../../shared/ui/EmptyState';
+import { NfcShareSheet } from '../../shared/ui/NfcShareSheet';
 import { FormField, FormSection, Modal, ModalActions, ModalButton } from '../../shared/ui/Modal';
 import { t } from '../../../i18n';
 import styles from './WalletApp.module.scss';
@@ -71,6 +73,8 @@ export function WalletApp() {
   const [proximityPhoneInput, setProximityPhoneInput] = createSignal('');
   const [proximityAmountInput, setProximityAmountInput] = createSignal('');
   const [proximityTitleInput, setProximityTitleInput] = createSignal('');
+  const [showNfcPicker, setShowNfcPicker] = createSignal(false);
+  const [nfcPickerMode, setNfcPickerMode] = createSignal<'invoice' | 'payment'>('invoice');
   const language = () => phoneState.settings.language || 'es';
 
   const targetModes: { id: TargetMode; label: string; helper: string }[] = [
@@ -325,7 +329,7 @@ export function WalletApp() {
           </div>
         </div>
 
-        <button class={styles.nfcHintBtn} onClick={() => void openInvoiceModal()}>{t('wallet.create_invoice_hint', language())}</button>
+        <button class={styles.nfcHintBtn} onClick={() => { setNfcPickerMode('invoice'); setShowNfcPicker(true); }}>{t('wallet.create_invoice_hint', language())}</button>
 
         <div class={styles.section}>
           <div class={styles.sectionTitle}>{t('wallet.cards', language())}</div>
@@ -592,6 +596,23 @@ export function WalletApp() {
           </Show>
         </Modal>
       </div>
+
+      <NfcShareSheet
+        open={showNfcPicker()}
+        onClose={() => setShowNfcPicker(false)}
+        onSelect={(serverId) => {
+          setShowNfcPicker(false);
+          setTargetServerId(serverId);
+          setTargetMode('nearby');
+          if (nfcPickerMode() === 'invoice') {
+            setShowCreateInvoice(true);
+          } else {
+            setShowProximityModal(true);
+          }
+        }}
+        title={nfcPickerMode() === 'invoice' ? 'Seleccionar para factura' : 'Seleccionar para pago'}
+        maxDistance={2.0}
+      />
     </AppScaffold>
   );
 }
