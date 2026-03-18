@@ -5,12 +5,14 @@ import { usePhoneState } from '../../../store/phone';
 import { useContacts } from '../../../store/contacts';
 import { useNotifications } from '../../../store/notifications';
 import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
+import { useNfcShare } from '../../../hooks/useNfcShare';
 import { fetchNui } from '../../../utils/fetchNui';
 import { useNuiEvent } from '../../../utils/useNui';
 import { sanitizeMediaUrl, sanitizePhone } from '../../../utils/sanitize';
 import { uiPrompt } from '../../../utils/uiDialog';
 import { SearchInput } from '../../shared/ui/SearchInput';
 import { ActionSheet } from '../../shared/ui/ActionSheet';
+import { NfcShareSheet } from '../../shared/ui/NfcShareSheet';
 import { MediaLightbox } from '../../shared/ui/MediaLightbox';
 import { InlineNotice } from '../../shared/ui/InlineNotice';
 import { ScreenState } from '../../shared/ui/ScreenState';
@@ -51,9 +53,17 @@ export function GalleryApp() {
   const [showActions, setShowActions] = createSignal(false);
   const [shareChatApp, setShareChatApp] = createSignal<'messages' | 'wavechat' | null>(null);
   const [, notificationsActions] = useNotifications();
-  const [nfcTarget, setNfcTarget] = createSignal<number | null>(null);
-  const [lastNfcRouteKey, setLastNfcRouteKey] = createSignal('');
   const [receivedPhotoUrl, setReceivedPhotoUrl] = createSignal<string | null>(null);
+  const [lastNfcRouteKey, setLastNfcRouteKey] = createSignal('');
+
+  const nfcShare = useNfcShare({
+    onShare: async (targetServerId) => {
+      const photo = selectedPhoto();
+      if (!photo) return { success: false, error: 'INVALID_DATA' };
+      return fetchNui('galleryShareNfc', { photoId: photo.id, targetServerId }, { success: false });
+    },
+    successMessage: 'Foto compartida por NFC',
+  });
   const language = () => phoneState.settings.language || 'es';
   const [query, setQuery] = createSignal('');
 
@@ -205,37 +215,6 @@ export function GalleryApp() {
     });
   };
 
-  const shareNfc = async () => {
-    const photo = selectedPhoto();
-    const target = nfcTarget();
-    if (!photo || !target) return;
-
-    const result = await fetchNui<{ success?: boolean; error?: string }>(
-      'galleryShareNfc',
-      { photoId: photo.id, targetServerId: target },
-      { success: false },
-    );
-
-    setNfcTarget(null);
-    setShowActions(false);
-
-    if (result?.success) {
-      notificationsActions.receive({
-        appId: 'gallery',
-        title: t('app.gallery', language()),
-        message: 'Foto compartida por NFC',
-        priority: 'normal',
-      });
-    } else {
-      notificationsActions.receive({
-        appId: 'gallery',
-        title: t('app.gallery', language()),
-        message: result?.error === 'TOO_FAR' ? 'Demasiado lejos' : (result?.error || 'Error al compartir'),
-        priority: 'normal',
-      });
-    }
-  };
-
   const saveReceivedPhoto = async (url: string) => {
     await fetchNui('storeMediaUrl', { url, type: 'image' }, { success: false });
     setReceivedPhotoUrl(null);
@@ -261,8 +240,7 @@ export function GalleryApp() {
     setLastNfcRouteKey(key);
 
     if (params?.nfcAction === 'share_photo' && typeof params?.targetServerId === 'number') {
-      setNfcTarget(params.targetServerId);
-      setShowActions(true);
+      nfcShare.open();
     }
 
     if (params?.nfcAction === 'received_photo' && params.sharedPhoto?.url) {
@@ -347,8 +325,8 @@ export function GalleryApp() {
         title={t('app.gallery', language())}
         onClose={() => setShowActions(false)}
         actions={[
-          ...(nfcTarget() ? [{ label: 'Enviar por NFC', tone: 'primary' as const, onClick: () => void shareNfc() }] : []),
-          { label: t('gallery.share_messages', language()), tone: nfcTarget() ? undefined : 'primary' as const, onClick: () => void shareToMessages('messages') },
+          { label: 'Compartir NFC', tone: 'primary' as const, onClick: () => { setShowActions(false); nfcShare.open(); } },
+          { label: t('gallery.share_messages', language()), onClick: () => void shareToMessages('messages') },
           { label: t('gallery.share_wavechat', language()), onClick: () => void shareToMessages('wavechat') },
           { label: t('gallery.share_mail', language()), onClick: shareToMail },
           { label: t('gallery.share_chirp', language()), onClick: () => shareToFeedApp('chirp') },
@@ -369,6 +347,14 @@ export function GalleryApp() {
           })),
           { label: t('contacts.enter_number', language()), tone: 'primary' as const, onClick: () => void shareToChatManual() },
         ]}
+      />
+
+      <NfcShareSheet
+        open={nfcShare.isOpen()}
+        onClose={nfcShare.close}
+        onSelect={(id) => void nfcShare.handleSelect(id)}
+        title="Compartir foto"
+        disabled={nfcShare.sharing()}
       />
 
       <Show when={receivedPhotoUrl()}>

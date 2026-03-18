@@ -10,7 +10,8 @@
       "Bash(grep -o '#[0-9a-fA-F]\\\\{3,6\\\\}' \"/c/Users/Jerico/Desktop/gcphone-master/gcphone-master/gcphone-next/web/src/components/apps/music/MusicApp.module.scss\")",
       "Bash(grep -o '#[0-9a-fA-F]\\\\{3,6\\\\}' \"/c/Users/Jerico/Desktop/gcphone-master/gcphone-master/gcphone-next/web/src/components/apps/market/MarketApp.module.scss\")",
       "Bash(grep -o '#[0-9a-fA-F]\\\\{3,6\\\\}' \"/c/Users/Jerico/Desktop/gcphone-master/gcphone-master/gcphone-next/web/src/components/apps/wavechat/WaveChatApp.module.scss\")",
-      "Bash(grep -o '#[0-9a-fA-F]\\\\{3,6\\\\}' \"/c/Users/Jerico/Desktop/gcphone-master/gcphone-master/gcphone-next/web/src/components/apps/yellowpages/YellowPagesApp.module.scss\")"
+      "Bash(grep -o '#[0-9a-fA-F]\\\\{3,6\\\\}' \"/c/Users/Jerico/Desktop/gcphone-master/gcphone-master/gcphone-next/web/src/components/apps/yellowpages/YellowPagesApp.module.scss\")",
+      "Bash(find C:UsersJericoDesktopgcphone-mastergcphone-mastergcphone-next -name *gallery* -o -name *photo*)"
     ]
   }
 }

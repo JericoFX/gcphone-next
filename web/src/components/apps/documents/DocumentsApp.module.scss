@@ -443,6 +443,18 @@
   cursor: pointer;
 }
 
+.nfcBtn {
+  width: 100%;
+  padding: 16px;
+  border: 1px solid color-mix(in srgb, var(--success) 24%, var(--border));
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--success) 8%, var(--surface));
+  color: var(--success);
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
 .deleteBtn {
   width: 100%;
   padding: 16px;
