@@ -194,7 +194,28 @@ export function HomeScreen() {
 
         </div>
       </div>
-      
+
+      <Show when={state.isStolen}>
+        <div class={styles.stolenBanner}>
+          <span class={styles.stolenIcon}>!</span>
+          <div>
+            <strong>{t('phone.stolen_title', language()) || 'Telefono reportado'}</strong>
+            <Show when={state.stolenReason}>
+              <span>{state.stolenReason}</span>
+            </Show>
+          </div>
+        </div>
+      </Show>
+
+      <Show when={state.accessMode === 'foreign-readonly'}>
+        <div class={styles.foreignBanner}>
+          <span>{t('phone.foreign_readonly', language()) || 'Solo lectura'}</span>
+          <Show when={state.accessOwnerName}>
+            <span> &mdash; {state.accessOwnerName}</span>
+          </Show>
+        </div>
+      </Show>
+
       <div class={styles.homeTime}>
         <div class={styles.timeLarge}>{formatTime(currentTime())}</div>
         <div class={styles.date}>{formatDate(currentTime())}</div>

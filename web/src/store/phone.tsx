@@ -582,6 +582,19 @@ export const PhoneProvider: ParentComponent = (props) => {
      });
   });
   
+  useNuiCustomEvent<{ isStolen?: boolean; reason?: string }>('phone:stolenUpdate', (data) => {
+    if (!data) return;
+    batch(() => {
+      setState('isStolen', data.isStolen === true);
+      if (data.isStolen) {
+        setState('stolenReason', data.reason || undefined);
+      } else {
+        setState('stolenAt', undefined);
+        setState('stolenReason', undefined);
+      }
+    });
+  });
+
   useNuiCustomEvent<void>('phone:hide', () => {
     batch(() => {
       setState('visible', false);

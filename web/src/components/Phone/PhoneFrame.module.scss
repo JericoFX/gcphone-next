@@ -45,6 +45,21 @@
   pointer-events: none;
 }
 
+.foreign-strip {
+  position: relative;
+  z-index: 150;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 12px;
+  background: rgba(255, 159, 10, 0.85);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  pointer-events: none;
+}
+
 .multitask-btn {
   position: absolute;
   bottom: 8px;
