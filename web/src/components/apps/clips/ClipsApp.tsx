@@ -7,6 +7,7 @@ import { useAppCache } from '../../../hooks';
 import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { usePhone } from '../../../store/phone';
 import { isEnvBrowser } from '../../../utils/misc';
+import { uiPrompt } from '../../../utils/uiDialog';
 import { MediaLightbox } from '../../shared/ui/MediaLightbox';
 import { FormField, Modal, ModalActions, ModalButton } from '../../shared/ui/Modal';
 import { EmojiPickerButton } from '../../shared/ui/EmojiPicker';
@@ -292,8 +293,9 @@ export function ClipsApp() {
   };
 
   const attachByUrl = async () => {
-    const input = prompt('URL del video (mp4, webm, mov):');
-    const url = sanitizeMediaUrl(input || '');
+    const input = await uiPrompt('URL del video (mp4, webm, mov):', { title: 'Agregar video' });
+    if (typeof input !== 'string') return;
+    const url = sanitizeMediaUrl(input);
     if (url) setUploadMedia(url);
   };
 
@@ -313,9 +315,10 @@ export function ClipsApp() {
     if (image?.url) setProfileAvatar(sanitizeMediaUrl(image.url) || '');
   };
 
-  const attachAvatarByUrl = () => {
-    const input = prompt('URL del avatar:');
-    const url = sanitizeMediaUrl(input || '');
+  const attachAvatarByUrl = async () => {
+    const input = await uiPrompt('URL del avatar:', { title: 'Avatar' });
+    if (typeof input !== 'string') return;
+    const url = sanitizeMediaUrl(input);
     if (url) setProfileAvatar(url);
   };
 
