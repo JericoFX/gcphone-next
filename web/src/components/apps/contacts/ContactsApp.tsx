@@ -9,8 +9,10 @@ import { buildSharedContactMessage } from '../../../utils/contactShare';
 import { uiPrompt } from '../../../utils/uiDialog';
 import { formatPhoneNumber, generateColorForString } from '../../../utils/misc';
 import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
+import { useNfcShare } from '../../../hooks/useNfcShare';
 import { AppScaffold } from '../../shared/layout';
 import { ActionSheet } from '../../shared/ui/ActionSheet';
+import { NfcShareSheet } from '../../shared/ui/NfcShareSheet';
 import { InlineNotice } from '../../shared/ui/InlineNotice';
 import { SearchInput } from '../../shared/ui/SearchInput';
 import { ScreenState } from '../../shared/ui/ScreenState';
@@ -147,6 +149,18 @@ export function ContactsApp() {
   const handleSelect = (contact: { number: string; display: string }) => {
     router.navigate('messages.view', { phoneNumber: contact.number, display: contact.display });
   };
+
+  const nfcShare = useNfcShare({
+    onShare: async (targetServerId) => {
+      const contact = shareContact();
+      if (!contact) return { success: false, error: 'INVALID_DATA' };
+      return fetchNui('shareContact', {
+        targetServerId,
+        contact: { display: contact.display, number: contact.number, avatar: contact.avatar },
+      }, { success: false });
+    },
+    successMessage: 'Contacto compartido por NFC',
+  });
 
   const openShareContact = () => {
     if (isReadOnly()) return;
@@ -363,7 +377,8 @@ export function ContactsApp() {
           setShareChannel(null);
         }}
         actions={[
-          { label: t('messages.title', language()), tone: 'primary', onClick: () => { setShareChannel('messages'); } },
+          { label: 'Compartir NFC', tone: 'primary', onClick: () => nfcShare.open() },
+          { label: t('messages.title', language()), onClick: () => { setShareChannel('messages'); } },
           { label: 'WaveChat', onClick: () => { setShareChannel('wavechat'); } },
         ]}
       />
@@ -382,6 +397,15 @@ export function ContactsApp() {
           })),
           { label: t('contacts.enter_number', language()), tone: 'primary' as const, onClick: () => void shareToManualNumber() },
         ]}
+      />
+
+      <NfcShareSheet
+        open={nfcShare.isOpen()}
+        onClose={nfcShare.close}
+        onSelect={(id) => void nfcShare.handleSelect(id)}
+        title="Compartir contacto"
+        maxDistance={3.0}
+        disabled={nfcShare.sharing()}
       />
     </AppScaffold>
   );
