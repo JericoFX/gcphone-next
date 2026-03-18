@@ -1007,6 +1007,21 @@ RegisterNUICallback('garageShareLocation', function(data, cb)
     end, data or {})
 end)
 
+RegisterNUICallback('garageGetImpoundLocation', function(_, cb)
+    lib.callback('gcphone:garage:getImpoundLocation', false, function(result)
+        cb(result or {})
+    end)
+end)
+
+RegisterNUICallback('garageSetGps', function(data, cb)
+    if type(data) == 'table' and data.x and data.y then
+        SetNewWaypoint(tonumber(data.x) + 0.0, tonumber(data.y) + 0.0)
+        cb(cbSuccess(true))
+    else
+        cb(cbSuccess(false))
+    end
+end)
+
 RegisterNUICallback('snapGetStories', function(_, cb)
     lib.callback('gcphone:snap:getStories', false, function(stories)
         cb(stories or {})
