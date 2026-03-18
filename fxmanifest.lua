@@ -88,4 +88,5 @@ dependencies {
     '/onesync',
     'ox_lib',
     'oxmysql',
+    'gcphone_sounds',
 }

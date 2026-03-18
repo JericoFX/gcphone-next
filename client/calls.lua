@@ -3,9 +3,7 @@
 local inCall = false
 local useRTC = false
 local currentCallId = nil
-local peerConnection = nil
 local usingPmaVoice = GetResourceState('pma-voice') == 'started'
-local callVoiceResetApplied = false
 
 local function IsNativeIncomingToneEnabled()
     local resource = GetCurrentResourceName()
@@ -44,7 +42,19 @@ local function ResetCallVoice()
     NetworkSetTalkerProximity(2.5)
 end
 
-local soundList = {}
+local function PlayOutgoingSoundNative(sound, volume)
+    local toneId = sound == 'calling_loop' and 'sonando' or 'sonando_corto'
+    local ok, result = pcall(function()
+        return exports[GetCurrentResourceName()]:PlayPhoneNativeTone(toneId, 'outgoing')
+    end)
+    if not (ok and result) then
+        PlaySoundJS(sound, volume)
+    end
+end
+
+local function StopOutgoingSoundNative()
+    pcall(function() exports[GetCurrentResourceName()]:StopPhoneNativeOutgoingTone() end)
+end
 
 function PlaySoundJS(sound, volume)
     SendNUIMessage({
@@ -92,6 +102,7 @@ RegisterNetEvent('gcphone:callAccepted', function(callData)
     TriggerEvent('gcphone:stopIncomingCallTone')
     StopSoundJS('calling_loop')
     StopSoundJS('calling_short')
+    StopOutgoingSoundNative()
     
     if not useRTC then SetCallVoice(currentCallId) end
     
@@ -114,6 +125,7 @@ RegisterNetEvent('gcphone:callRejected', function(callId)
     TriggerEvent('gcphone:stopIncomingCallTone')
     StopSoundJS('calling_loop')
     StopSoundJS('calling_short')
+    StopOutgoingSoundNative()
     
     if not useRTC then ResetCallVoice() end
     
@@ -132,6 +144,7 @@ RegisterNetEvent('gcphone:callEnded', function(callId)
     TriggerEvent('gcphone:stopIncomingCallTone')
     StopSoundJS('calling_loop')
     StopSoundJS('calling_short')
+    StopOutgoingSoundNative()
     
     if not useRTC then ResetCallVoice() end
     
@@ -154,7 +167,7 @@ RegisterNUICallback('startCall', function(data, cb)
     lib.callback('gcphone:startCall', false, function(callData)
         if callData then
             currentCallId = callData.id
-            PlaySoundJS('calling_loop', PhoneState and PhoneState.volume or 0.5)
+            PlayOutgoingSoundNative('calling_loop', PhoneState and PhoneState.volume or 0.5)
             PlayPhoneAnimation('call')
         end
         cb(callData)
@@ -176,6 +189,7 @@ RegisterNUICallback('rejectCall', function(data, cb)
 
     StopSoundJS('calling_loop')
     StopSoundJS('calling_short')
+    StopOutgoingSoundNative()
     TriggerServerEvent('gcphone:rejectCall', callId)
     cb(true)
 end)
@@ -189,6 +203,7 @@ RegisterNUICallback('endCall', function(data, cb)
 
     StopSoundJS('calling_loop')
     StopSoundJS('calling_short')
+    StopOutgoingSoundNative()
     TriggerServerEvent('gcphone:endCall', callId)
     cb(true)
 end)
@@ -233,17 +248,10 @@ RegisterNUICallback('clearCallHistory', function(_, cb)
     end)
 end)
 
-CreateThread(function()
-    while true do
-        Wait(1000)
-
-        local shouldResetVoice = not inCall and not useRTC and not usingPmaVoice
-        if shouldResetVoice and not callVoiceResetApplied then
-            NetworkSetTalkerProximity(2.5)
-            callVoiceResetApplied = true
-        elseif not shouldResetVoice then
-            callVoiceResetApplied = false
-        end
+AddEventHandler('onResourceStart', function(resourceName)
+    if resourceName ~= GetCurrentResourceName() then return end
+    if not usingPmaVoice then
+        NetworkSetTalkerProximity(2.5)
     end
 end)
 

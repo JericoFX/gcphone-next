@@ -1,82 +1,68 @@
-# Native Audio TODO
+# Native Audio — COMPLETADO
 
-Estado actual:
+Estado: **Activo** — Audio nativo GTA habilitado via `gcphone_sounds` (AWC + dat54.rel).
 
-- El telefono ya usa `toneId` abstractos en vez de `.ogg` legacy.
-- Hay placeholders listos para audio nativo en `shared/config.lua`.
-- Las llamadas entrantes ya usan `state bag` `gcphoneIncomingCall`.
-- El cliente ya tiene controlador placeholder en `client/native_audio.lua`, pero no entra en runtime final mientras `PlaceholderMode = true` o falten bancos reales.
-- El preview de Settings sigue usando audio web/NUI mediante `gcphone:previewTone` / `gcphone:stopTonePreview`.
-- El ringtone JS hardcodeado `Phone_Call_Sound_Effect.ogg` ya no se usa.
+## Arquitectura
 
-Tone IDs definidos:
+- **Runtime** (notificación, llamada entrante/saliente, mensaje) → `PlaySoundFromEntity` (espacial, nearby players escuchan)
+- **Preview** (Settings, probar tonos) → `PlaySoundFrontend` (solo jugador local)
+- **Modo silencio/DND** → usa variante `_vibrando` del AWC en vez del sonido normal
+- **Fallback** → si el nativo falla (ej. browser dev mode), cae a HTML5 Audio/NUI
 
-- `call_main_01`
-- `call_alt_01`
-- `buzz_short_01`
-- `notif_soft_01`
-- `msg_soft_01`
+## Banco de audio
 
-MP3 fuente esperados:
+- Bank: `audiodirectory/sounds`
+- SoundSet: `gcphone`
+- Recurso: `gcphone_sounds` (dependencia en fxmanifest.lua)
 
-- `audio_sources/ringtones/call_main_01.mp3`
-- `audio_sources/ringtones/call_alt_01.mp3`
-- `audio_sources/vibrate/buzz_short_01.mp3`
-- `audio_sources/notifications/notif_soft_01.mp3`
-- `audio_sources/messages/msg_soft_01.mp3`
+## Sonidos disponibles en AWC (SoundSet `gcphone`)
 
-Suposicion actual para Audiotool:
+| ScriptName | Uso |
+|---|---|
+| call_1..call_13 | Ringtones |
+| call_vibrando | Vibración para ringtones (silencio/DND) |
+| nueva_notificacion | Notificación/Mensaje 1 |
+| nueva_notificacion2 | Notificación/Mensaje 2 |
+| nueva_notificacion3 | Notificación/Mensaje 3 |
+| nueva_notificacion_vibrando | Vibración para notif/msg (silencio/DND) |
+| pop | Pop 1 |
+| pop2 | Pop 2 |
+| sonando | Tono de marcado (loop) |
+| sonando_corto | Tono de marcado corto |
 
-- `soundName` final = nombre del mp3 sin extension.
-- Falta verificar el `bank` real que genera Audiotool.
-- Falta verificar si tambien requiere `soundSet` distinto del banco.
+## Guía para agregar nuevos sonidos
 
-Informacion que falta cuando se conviertan los audios:
+1. Agregar el WAV al recurso `gcphone_sounds` (carpeta `wav/`)
+2. Recompilar el AWC con Renewed Audiotool
+3. Agregar entrada al SoundSet en `gcphone_sounds.dat54.rel.xml`
+4. Recompilar el `.dat54.rel`
+5. Agregar entrada en `Config.NativeAudio.Catalog` (`shared/config.lua`):
+   ```lua
+   mi_sonido = {
+       label = 'Mi Sonido',
+       category = 'notification',  -- ringtone | notification | message | calling
+       soundName = 'mi_sonido',    -- ScriptName del SoundSet
+       vibrando = 'nueva_notificacion_vibrando',  -- o false si no tiene
+   }
+   ```
+6. Bank y SoundSet son compartidos: `audiodirectory/sounds` / `gcphone`
 
-Por cada tono convertir y completar:
+## Archivos clave
 
-1. `resource`
-2. `bank`
-3. `soundName`
-4. `soundSet` (si aplica)
-5. `playback` final (`frontend` o `entity`)
+- `shared/config.lua` — Catálogo (`Config.NativeAudio.Catalog`)
+- `client/native_audio.lua` — Controlador de playback nativo (PlayTone, modos, NUI callbacks)
+- `web/src/components/system/PhoneAudioController.tsx` — Ruteo nativo-primero con fallback NUI
+- `client/calls.lua` — Outgoing call sound via nativo
 
-Archivos a completar cuando exista el output real de Audiotool:
+## Verificación
 
-- `shared/config.lua`
-  - completar `Config.NativeAudio.Catalog[*].bank`
-  - completar `Config.NativeAudio.Catalog[*].soundSet`
-  - ajustar `playback` si hace falta
-
-- `client/native_audio.lua`
-  - verificar native final a usar contra el banco real generado
-  - confirmar si `PlaySoundFrontend` es suficiente o si conviene `PlaySoundFromEntity`
-  - quitar modo placeholder cuando ya existan bancos reales
-
-Flujo implementado hoy:
-
-- Server guarda/lee tonos por `toneId`
-- Server setea `Player(target).state.gcphoneIncomingCall`
-- Client escucha el `state bag`
-- Client intenta resolver `toneId -> soundName/bank/soundSet`, pero con `PlaceholderMode = true` no reproduce runtime nativo aun
-- El telefono reproduce tonos actuales por JS/NUI (`PhoneAudioController` + `phoneAudio.ts`)
-- Client puede parar el sonido con natives cuando el runtime final quede habilitado
-
-Compatibilidad legacy ya resuelta:
-
-- `ring.ogg` -> `call_main_01`
-- `ring2.ogg` -> `call_alt_01`
-- `iphone11.ogg` -> `call_alt_01`
-- `soft-ping.ogg` -> `notif_soft_01`
-- `glass.ogg` -> `notif_soft_01`
-- `orbit.ogg` -> `notif_soft_01`
-- `pop.ogg` -> `msg_soft_01`
-- `bubble.ogg` -> `msg_soft_01`
-- `tap.ogg` -> `msg_soft_01`
-
-Punto importante:
-
-- Los MP3 actuales NO son el runtime final.
-- `catalog.json` ahora funciona como catalogo logico/UI y referencia de source assets.
-- El runtime actual funcional sigue siendo audio web/NUI.
-- El runtime final sera audio nativo de FiveM cuando se complete el mapper real.
+1. `ensure gcphone_sounds` antes de `ensure gcphone-next` en server.cfg
+2. `/testaudio` — confirmar que todos los sonidos AWC funcionan
+3. Recibir llamada → ringtone suena desde el ped (otros jugadores cercanos lo escuchan)
+4. Activar modo silencio → la llamada entrante usa `call_vibrando`
+5. Recibir notificación → sonido espacial `nueva_notificacion` desde el ped
+6. Recibir mensaje → sonido espacial desde el ped
+7. Ir a Settings → probar tonos → suena solo para el jugador local (PlaySoundFrontend)
+8. Hacer llamada saliente → tono `sonando` desde el ped
+9. Browser dev mode → fallback HTML5 Audio funciona
+10. `bun run build` en `web/` compila sin errores
