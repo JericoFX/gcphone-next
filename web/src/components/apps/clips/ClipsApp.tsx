@@ -208,9 +208,16 @@ export function ClipsApp() {
   };
 
   const togglePause = (clipId: number) => {
+    const video = videoRefs.get(clipId);
     setPausedClips(prev => {
       const next = new Set(prev);
-      next.has(clipId) ? next.delete(clipId) : next.add(clipId);
+      if (next.has(clipId)) {
+        next.delete(clipId);
+        video?.play().catch(() => {});
+      } else {
+        next.add(clipId);
+        video?.pause();
+      }
       return next;
     });
   };
@@ -282,6 +289,12 @@ export function ClipsApp() {
     router.navigate('camera', { target: 'clips' });
   };
 
+  const attachByUrl = async () => {
+    const input = prompt('URL del video (mp4, webm, mov):');
+    const url = sanitizeMediaUrl(input || '');
+    if (url) setUploadMedia(url);
+  };
+
   // ── Profile ──
 
   const openProfileEditor = async () => {
@@ -320,19 +333,38 @@ export function ClipsApp() {
     return { ok: true };
   };
 
-  // ── Scroll ──
+  // ── Scroll & Playback ──
   let scrollContainer: HTMLDivElement | undefined;
+  const videoRefs = new Map<number, HTMLVideoElement>();
+
   const handleScroll = () => {
     if (!scrollContainer) return;
     const idx = Math.round(scrollContainer.scrollTop / scrollContainer.clientHeight);
     setCurrentClipIndex(Math.max(0, Math.min(clips().length - 1, idx)));
   };
 
-  // Stop all videos when leaving the app
+  // Sync video play/pause with currentClipIndex
+  createEffect(() => {
+    const activeIdx = currentClipIndex();
+    const paused = pausedClips();
+    videoRefs.forEach((video, clipId) => {
+      const clip = clips().find((c) => c.id === clipId);
+      if (!clip) return;
+      const clipIdx = clips().indexOf(clip);
+      if (clipIdx === activeIdx && !paused.has(clipId)) {
+        video.play().catch(() => {});
+      } else {
+        video.pause();
+      }
+    });
+  });
+
+  const registerVideo = (clipId: number, el: HTMLVideoElement) => {
+    videoRefs.set(clipId, el);
+  };
+
   const stopAllVideos = () => {
-    if (!scrollContainer) return;
-    const videos = scrollContainer.querySelectorAll('video');
-    videos.forEach((v) => { v.pause(); v.currentTime = 0; });
+    videoRefs.forEach((v) => { v.pause(); v.currentTime = 0; });
   };
 
   onCleanup(stopAllVideos);
@@ -383,18 +415,34 @@ export function ClipsApp() {
         <For each={clips()}>
           {(clip, index) => {
             const isPaused = () => pausedClips().has(clip.id);
+            let tapTimer: number | undefined;
+
+            const handleTap = (e: MouseEvent) => {
+              e.stopPropagation();
+              if (tapTimer) {
+                clearTimeout(tapTimer);
+                tapTimer = undefined;
+                handleDoubleTap(clip.id);
+                return;
+              }
+              tapTimer = window.setTimeout(() => {
+                tapTimer = undefined;
+                togglePause(clip.id);
+              }, 250);
+            };
 
             return (
-              <div class={styles.clipScreen} onDblClick={(e) => { e.preventDefault(); handleDoubleTap(clip.id); }}>
+              <div class={styles.clipScreen}>
                 <video
                   class={styles.clipVideo}
                   src={clip.media_url}
                   controls={false}
                   playsinline
                   loop
-                  autoplay={index() === currentClipIndex() && !isPaused()}
+                  muted
                   preload={Math.abs(index() - currentClipIndex()) <= 1 ? 'auto' : 'metadata'}
-                  onClick={() => togglePause(clip.id)}
+                  ref={(el) => registerVideo(clip.id, el)}
+                  onClick={handleTap}
                 />
 
                 <Show when={isPaused()}>
@@ -528,6 +576,10 @@ export function ClipsApp() {
               <button class={styles.uploadCard} onClick={attachFromGallery}>
                 <img src="./img/icons_ios/gallery.svg" alt="" />
                 <span>Galeria</span>
+              </button>
+              <button class={styles.uploadCard} onClick={attachByUrl}>
+                <img src="./img/icons_ios/ui-link.svg" alt="" />
+                <span>URL</span>
               </button>
             </div>
           </Show>
