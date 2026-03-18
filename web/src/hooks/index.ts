@@ -12,4 +12,6 @@ export type { UseListNavigationOptions } from './useListNavigation';
 
 export { useAppCache } from './useAppCache';
 export { usePollingTask } from './usePollingTask';
+export { useNfcShare } from './useNfcShare';
+export type { UseNfcShareOptions, UseNfcShareReturn } from './useNfcShare';
 export { useWindowEvent } from './useWindowEvent';

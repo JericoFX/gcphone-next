@@ -8,11 +8,13 @@ import { useNuiEvent } from '../../../utils/useNui';
 import { AppScaffold } from '../../shared/layout';
 import { useAppCache } from '../../../hooks';
 import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
+import { useNfcShare } from '../../../hooks/useNfcShare';
 import { usePhoneState } from '../../../store/phone';
 import { t } from '../../../i18n';
 import { FormCheckbox, FormSection, Modal, ModalActions, ModalButton } from '../../shared/ui/Modal';
 import { EmptyState } from '../../shared/ui/EmptyState';
 import { InlineNotice } from '../../shared/ui/InlineNotice';
+import { NfcShareSheet } from '../../shared/ui/NfcShareSheet';
 import { SegmentedTabs } from '../../shared/ui/SegmentedTabs';
 import { SheetIntro } from '../../shared/ui/SheetIntro';
 import styles from './DocumentsApp.module.scss';
@@ -87,6 +89,16 @@ export function DocumentsApp() {
   const [loading, setLoading] = createSignal(false);
   const [showComposer, setShowComposer] = createSignal(false);
   const [showDocPicker, setShowDocPicker] = createSignal(false);
+  const [nfcDocId, setNfcDocId] = createSignal<number | null>(null);
+
+  const nfcShare = useNfcShare({
+    onShare: async (targetServerId) => {
+      const docId = nfcDocId();
+      if (!docId) return { success: false, error: 'INVALID_DATA' };
+      return fetchNui('shareDocument', { documentId: docId, targetServerId }, { success: false });
+    },
+    successMessage: 'Documento compartido por NFC',
+  });
   const [docPickerTarget, setDocPickerTarget] = createSignal<number | null>(null);
   const [receivedDoc, setReceivedDoc] = createSignal<ScannedDoc & { from?: string; shared_at?: string } | null>(null);
   const [lastNfcRouteKey, setLastNfcRouteKey] = createSignal('');
@@ -447,6 +459,11 @@ export function DocumentsApp() {
                   
                     <Show when={!isReadOnly()}>
                       <div class={styles.detailActions}>
+                        <Show when={doc.nfc_enabled}>
+                          <button class={styles.nfcBtn} onClick={() => { setNfcDocId(doc.id); nfcShare.open(); }}>
+                            Compartir NFC
+                          </button>
+                        </Show>
                         <button class={styles.mailBtn} onClick={() => shareDocumentByMail(doc)}>
                           {t('documents.share_by_mail', language())}
                         </button>
@@ -650,6 +667,15 @@ export function DocumentsApp() {
           </div>
         </Show>
       </div>
+
+      <NfcShareSheet
+        open={nfcShare.isOpen()}
+        onClose={nfcShare.close}
+        onSelect={(id) => void nfcShare.handleSelect(id)}
+        title="Mostrar documento"
+        maxDistance={2.0}
+        disabled={nfcShare.sharing()}
+      />
     </AppScaffold>
   );
 }

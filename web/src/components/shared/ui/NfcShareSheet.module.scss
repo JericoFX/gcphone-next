@@ -1,0 +1,335 @@
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 100;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: flex-end;
+  animation: nfc-fade var(--dur-2) var(--ease-standard);
+}
+
+@keyframes nfc-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.sheet {
+  width: 100%;
+  max-height: 85%;
+  border-radius: var(--r-2xl) var(--r-2xl) 0 0;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  box-shadow: var(--shadow-3);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: nfc-sheet-up var(--dur-3) var(--ease-standard);
+}
+
+@keyframes nfc-sheet-up {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+.header {
+  display: grid;
+  justify-items: center;
+  gap: var(--s-1);
+  padding: var(--s-3) var(--s-4) 0;
+
+  h3 {
+    margin: 0;
+    font-size: var(--fs-headline);
+    font-weight: 700;
+    color: var(--text);
+  }
+}
+
+.subtitle {
+  font-size: var(--fs-caption1);
+  color: var(--text-3);
+  font-weight: 600;
+}
+
+.grabber {
+  width: 36px;
+  height: 5px;
+  border-radius: var(--r-pill);
+  background: color-mix(in srgb, var(--text) 18%, transparent);
+}
+
+/* ── Radar ── */
+
+.radar {
+  position: relative;
+  width: 180px;
+  height: 180px;
+  margin: var(--s-3) auto;
+  flex-shrink: 0;
+}
+
+.radar-bg {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--r-pill);
+  background:
+    radial-gradient(circle, color-mix(in srgb, var(--tint) 4%, transparent) 0%, color-mix(in srgb, var(--tint) 1%, transparent) 100%);
+  border: 1px solid color-mix(in srgb, var(--tint) 12%, var(--border));
+  overflow: hidden;
+}
+
+.ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 100%;
+  height: 100%;
+  border-radius: var(--r-pill);
+  border: 1px solid color-mix(in srgb, var(--tint) 10%, transparent);
+  pointer-events: none;
+}
+
+.sweep {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: var(--r-pill);
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    color-mix(in srgb, var(--tint) 16%, transparent) 30deg,
+    transparent 60deg
+  );
+  opacity: 0;
+  pointer-events: none;
+}
+
+.sweep-active {
+  opacity: 1;
+  animation: radar-sweep 2.4s linear infinite;
+}
+
+@keyframes radar-sweep {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.center-dot {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 28px;
+  height: 28px;
+  border-radius: var(--r-pill);
+  background: var(--tint);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--tint) 20%, transparent);
+  z-index: 2;
+}
+
+/* ── Player dots on radar ── */
+
+.radar-dot {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  z-index: 3;
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+
+  &:active .dot-core {
+    transform: scale(0.85);
+  }
+}
+
+.dot-pulse {
+  position: absolute;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--r-pill);
+  background: color-mix(in srgb, var(--success) 18%, transparent);
+  animation: dot-pulse-anim 1.8s ease-out infinite;
+}
+
+@keyframes dot-pulse-anim {
+  0% {
+    transform: scale(0.8);
+    opacity: 0.6;
+  }
+  100% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+
+.dot-core {
+  position: relative;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--r-pill);
+  background: var(--success);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+  box-shadow: var(--shadow-1);
+  transition: transform var(--dur-1) var(--ease-standard);
+  z-index: 1;
+}
+
+/* ── Player list ── */
+
+.player-list {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  padding: 0 var(--s-3);
+}
+
+.player-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-3);
+  border: none;
+  border-radius: var(--r-lg);
+  background: transparent;
+  cursor: pointer;
+  transition:
+    background var(--dur-1) var(--ease-standard),
+    transform var(--dur-1) var(--ease-standard);
+
+  &:active {
+    transform: scale(0.97);
+    background: color-mix(in srgb, var(--tint) 6%, transparent);
+  }
+
+  & + & {
+    border-top: 1px solid var(--separator);
+  }
+}
+
+.avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--r-pill);
+  background: linear-gradient(135deg, var(--tint), var(--success));
+  color: #fff;
+  font-size: var(--fs-caption1);
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.player-info {
+  flex: 1;
+  text-align: left;
+  display: grid;
+  gap: 1px;
+
+  strong {
+    font-size: var(--fs-footnote);
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  span {
+    font-size: var(--fs-caption2);
+    color: var(--text-3);
+    font-weight: 600;
+  }
+}
+
+.distance-pill {
+  padding: var(--s-1) var(--s-2);
+  border-radius: var(--r-pill);
+  font-size: 10px;
+  font-weight: 700;
+  background: color-mix(in srgb, var(--success) 12%, transparent);
+  color: var(--success);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* ── Scan status ── */
+
+.scan-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-2);
+  padding: var(--s-2) 0;
+
+  span {
+    font-size: var(--fs-caption1);
+    color: var(--text-3);
+    font-weight: 600;
+  }
+}
+
+.scan-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--r-pill);
+  background: var(--tint);
+  animation: scan-blink 1s ease-in-out infinite;
+}
+
+@keyframes scan-blink {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 1; }
+}
+
+/* ── Empty state ── */
+
+.empty {
+  display: grid;
+  justify-items: center;
+  gap: var(--s-1);
+  padding: var(--s-6) var(--s-4);
+  text-align: center;
+
+  span {
+    font-size: var(--fs-footnote);
+    color: var(--text-2);
+    font-weight: 600;
+  }
+
+  small {
+    font-size: var(--fs-caption1);
+    color: var(--text-3);
+  }
+}
+
+/* ── Cancel button ── */
+
+.cancel-btn {
+  margin: var(--s-2) var(--s-3) var(--s-3);
+  min-height: 40px;
+  border: none;
+  border-radius: var(--r-lg);
+  background: color-mix(in srgb, var(--surface-2) 80%, var(--bg));
+  color: var(--tint);
+  font-size: var(--fs-footnote);
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform var(--dur-1) var(--ease-standard);
+
+  &:active {
+    transform: scale(0.97);
+  }
+}

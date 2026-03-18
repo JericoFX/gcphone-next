@@ -190,8 +190,11 @@ RegisterNUICallback('acceptContactRequest', function(data, cb)
     end, data)
 end)
 
-RegisterNUICallback('getNearbyPlayers', function(_, cb)
-    local list = GetNearbyPlayers(Config.Proximity.ShareWalletDistance)
+RegisterNUICallback('getNearbyPlayers', function(data, cb)
+    local maxDist = tonumber(type(data) == 'table' and data.maxDistance or nil)
+        or Config.Proximity.SharePhotoDistance
+        or 5.0
+    local list = GetNearbyPlayers(maxDist)
     local payload = {}
 
     for _, item in ipairs(list) do
