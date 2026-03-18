@@ -6,6 +6,7 @@ import { AppScaffold } from '../../shared/layout';
 import { sanitizeText } from '../../../utils/sanitize';
 import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { usePollingTask, useWindowEvent } from '../../../hooks';
+import { getStoredLanguage, t } from '../../../i18n';
 import { LeafletMap } from './LeafletMap';
 import styles from './MapsApp.module.scss';
 
@@ -39,6 +40,7 @@ let markerIdCounter = 0;
 
 export function MapsApp() {
   const router = useRouter();
+  const language = () => getStoredLanguage();
 
   const [locations, setLocations] = createSignal<SharedLocationItem[]>([]);
   const [manualMarkers, setManualMarkers] = createSignal<ManualMarker[]>([]);
@@ -52,7 +54,7 @@ export function MapsApp() {
   const [shareNumber, setShareNumber] = createSignal('');
   const [shareGroupId, setShareGroupId] = createSignal('');
   const [shareError, setShareError] = createSignal('');
-  const [status, setStatus] = createSignal('Toca el mapa para marcar un punto y compartirlo.');
+  const [status, setStatus] = createSignal(t('maps.hint_tap', language()));
 
   const [contacts, setContacts] = createSignal<ContactItem[]>([]);
   const [groups, setGroups] = createSignal<WaveGroup[]>([]);
@@ -103,11 +105,11 @@ export function MapsApp() {
 
     setLocations(rows.map((row, index) => ({
       id: `live-${row.sender_phone || index}`,
-      from: row.sender_name || row.sender_phone || 'Contacto',
+      from: row.sender_name || row.sender_phone || t('maps.unknown_contact', language()),
       x: Number(row.x) || 0,
       y: Number(row.y) || 0,
       z: 0,
-      message: 'ubicacion activa',
+      message: t('maps.live_location', language()),
     })));
   };
 
@@ -131,7 +133,7 @@ export function MapsApp() {
 
     if (!Number.isFinite(x) || !Number.isFinite(y)) return;
     lastRouteKey = key;
-    addManualMarker(x, y, 'Punto compartido');
+    addManualMarker(x, y, t('maps.shared_point', language()));
   });
 
   createEffect(() => {
@@ -152,7 +154,7 @@ export function MapsApp() {
       id,
       x,
       y,
-      label: label || `Punto ${manualMarkers().length + 1}`,
+      label: label || `${t('maps.point_n', language())} ${manualMarkers().length + 1}`,
     };
 
     setManualMarkers((prev) => [...prev, marker]);
@@ -174,12 +176,12 @@ export function MapsApp() {
     setManualMarkers([]);
     setSelectedMarker(null);
     setPickedCoords(null);
-    setStatus('Puntos manuales limpiados.');
+    setStatus(t('maps.markers_cleared', language()));
   };
 
   const setGps = async (x: number, y: number) => {
     await fetchNui('setGPS', { x, y });
-    setStatus(`GPS actualizado: ${x.toFixed(2)}, ${y.toFixed(2)}`);
+    setStatus(`${t('maps.gps_updated', language())}: ${x.toFixed(2)}, ${y.toFixed(2)}`);
   };
 
   const setCustomGps = async () => {
@@ -193,7 +195,7 @@ export function MapsApp() {
   const pins = createMemo(() => {
     const shared = locations().map((location) => ({
       id: location.id,
-      label: `${location.from}: ${location.message || 'Ubicacion'}`,
+      label: `${location.from}: ${location.message || t('maps.location_label', language())}`,
       x: location.x,
       y: location.y,
       kind: 'shared' as const,
@@ -218,11 +220,11 @@ export function MapsApp() {
     if (shareApp() === 'messages') {
       const number = sanitizeText(shareNumber(), 20);
       if (!number) {
-        setShareError('Debes elegir o escribir un numero');
+        setShareError(t('maps.error.pick_number', language()));
         return;
       }
       if (!/^[\+]?[0-9\-\s()]{3,20}$/.test(number)) {
-        setShareError('Numero invalido');
+        setShareError(t('maps.error.invalid_number', language()));
         return;
       }
 
@@ -241,7 +243,7 @@ export function MapsApp() {
     if (shareApp() === 'wavechat') {
       const groupId = Number(shareGroupId());
       if (!Number.isFinite(groupId) || groupId <= 0) {
-        setShareError('Elige un grupo de WaveChat');
+        setShareError(t('maps.error.pick_group', language()));
         return;
       }
 
@@ -263,25 +265,25 @@ export function MapsApp() {
     }
 
     setShowShareSheet(false);
-    setStatus('Ubicacion compartida correctamente.');
+    setStatus(t('maps.shared_success', language()));
   };
 
   const copyCoords = async () => {
     const marker = selectedMarker();
     if (!marker) return;
     await navigator.clipboard.writeText(`LOC:${marker.x.toFixed(2)},${marker.y.toFixed(2)}`);
-    setStatus('Coordenadas copiadas al portapapeles.');
+    setStatus(t('maps.coords_copied', language()));
   };
 
   const getMyLocation = async () => {
     const coords = await fetchNui<{ x: number; y: number }>('getPlayerCoords', undefined, { x: 0, y: 0 });
     if (coords && Number.isFinite(coords.x) && Number.isFinite(coords.y)) {
-      addManualMarker(coords.x, coords.y, 'Mi ubicacion');
+      addManualMarker(coords.x, coords.y, t('maps.my_location', language()));
     }
   };
 
   return (
-    <AppScaffold title="Mapas" subtitle="GPS y ubicaciones" onBack={() => router.goBack()} bodyPadding="none">
+    <AppScaffold title={t('maps.title', language())} subtitle={t('maps.subtitle', language())} onBack={() => router.goBack()} bodyPadding="none">
       <div class={styles.mapsPage}>
         <div class={styles.topHud}>
           <div class={styles.hudText}>
@@ -315,7 +317,7 @@ export function MapsApp() {
 
         <Show when={pickedCoords()}>
           <div class={styles.coordDisplay}>
-            <span>📍 Coordenada activa</span>
+            <span>📍 {t('maps.active_coord', language())}</span>
             <span class={styles.coordValue}>{coordsX()}, {coordsY()}</span>
           </div>
         </Show>
@@ -336,35 +338,35 @@ export function MapsApp() {
               setShowManualGpsSheet(true);
             }}>
               <span class={styles.fabMenuIcon}>📍</span>
-              <span>GPS Manual</span>
+              <span>{t('maps.manual_gps', language())}</span>
             </button>
             <button class={styles.fabMenuItem} onClick={() => {
               setShowFabMenu(false);
               setShowShareSheet(true);
             }}>
               <span class={styles.fabMenuIcon}>📤</span>
-              <span>Compartir punto</span>
+              <span>{t('maps.share_point', language())}</span>
             </button>
             <button class={styles.fabMenuItem} onClick={() => {
               setShowFabMenu(false);
               setShowLocationsSheet(true);
             }}>
               <span class={styles.fabMenuIcon}>📋</span>
-              <span>Ubicaciones activas</span>
+              <span>{t('maps.active_locations', language())}</span>
             </button>
             <button class={styles.fabMenuItem} onClick={() => {
               setShowFabMenu(false);
               void getMyLocation();
             }}>
               <span class={styles.fabMenuIcon}>🎯</span>
-              <span>Mi ubicacion</span>
+              <span>{t('maps.my_location', language())}</span>
             </button>
             <button class={styles.fabMenuItem} onClick={() => {
               setShowFabMenu(false);
               clearAllMarkers();
             }}>
               <span class={styles.fabMenuIcon}><img src="./img/icons_ios/ui-trash.svg" alt="" draggable={false} /></span>
-              <span>Limpiar puntos</span>
+              <span>{t('maps.clear_markers', language())}</span>
             </button>
           </div>
         </Show>
@@ -372,14 +374,14 @@ export function MapsApp() {
         <Show when={showManualGpsSheet()}>
           <div class={styles.sheetOverlay} onClick={() => setShowManualGpsSheet(false)}>
             <div class={styles.sheet} onClick={(e) => e.stopPropagation()}>
-              <h3>GPS Manual</h3>
+              <h3>{t('maps.manual_gps', language())}</h3>
               <div class={styles.sheetGrid}>
                 <input class="ios-input" type="number" step="0.00001" placeholder="X" value={coordsX()} onInput={(e) => setCoordsX(e.currentTarget.value)} />
                 <input class="ios-input" type="number" step="0.00001" placeholder="Y" value={coordsY()} onInput={(e) => setCoordsY(e.currentTarget.value)} />
               </div>
               <div class={styles.sheetActions}>
-                <button class="ios-btn" onClick={() => setShowManualGpsSheet(false)}>Cancelar</button>
-                <button class="ios-btn ios-btn-primary" onClick={() => void setCustomGps()}>Establecer</button>
+                <button class="ios-btn" onClick={() => setShowManualGpsSheet(false)}>{t('action.cancel', language())}</button>
+                <button class="ios-btn ios-btn-primary" onClick={() => void setCustomGps()}>{t('maps.set', language())}</button>
               </div>
             </div>
           </div>
@@ -388,27 +390,27 @@ export function MapsApp() {
         <Show when={showShareSheet()}>
           <div class={styles.sheetOverlay} onClick={() => setShowShareSheet(false)}>
             <div class={styles.sheet} onClick={(e) => e.stopPropagation()}>
-              <h3>Compartir ubicacion</h3>
+              <h3>{t('maps.share_location', language())}</h3>
               <select class="ios-select" value={shareApp()} onChange={(e) => setShareApp(e.currentTarget.value as 'messages' | 'chirp' | 'wavechat' | 'mail')}>
-                <option value="messages">Mensajes</option>
+                <option value="messages">{t('app.messages', language())}</option>
                 <option value="chirp">Chirp</option>
-                <option value="wavechat">WaveChat Grupo</option>
+                <option value="wavechat">{t('maps.wavechat_group', language())}</option>
                 <option value="mail">Mail</option>
               </select>
 
               <Show when={shareApp() === 'messages'}>
                 <>
                   <select class="ios-select" onChange={(e) => setShareNumber(e.currentTarget.value)}>
-                    <option value="">Elegir contacto</option>
+                    <option value="">{t('maps.pick_contact', language())}</option>
                     <For each={contacts()}>{(contact) => <option value={contact.number}>{contact.display} ({contact.number})</option>}</For>
                   </select>
-                  <input class="ios-input" type="text" placeholder="Numero" value={shareNumber()} onInput={(e) => setShareNumber(e.currentTarget.value)} />
+                  <input class="ios-input" type="text" placeholder={t('maps.number', language())} value={shareNumber()} onInput={(e) => setShareNumber(e.currentTarget.value)} />
                 </>
               </Show>
 
               <Show when={shareApp() === 'wavechat'}>
                 <select class="ios-select" value={shareGroupId()} onChange={(e) => setShareGroupId(e.currentTarget.value)}>
-                  <option value="">Elegir grupo</option>
+                  <option value="">{t('maps.pick_group', language())}</option>
                   <For each={groups()}>{(group) => <option value={String(group.id)}>{group.name}</option>}</For>
                 </select>
               </Show>
@@ -418,8 +420,8 @@ export function MapsApp() {
               </Show>
 
               <div class={styles.sheetActions}>
-                <button class="ios-btn" onClick={() => void copyCoords()}>Copiar</button>
-                <button class="ios-btn ios-btn-primary" onClick={() => void shareSelectedCoords()}>Compartir</button>
+                <button class="ios-btn" onClick={() => void copyCoords()}>{t('maps.copy', language())}</button>
+                <button class="ios-btn ios-btn-primary" onClick={() => void shareSelectedCoords()}>{t('maps.share_location', language())}</button>
               </div>
             </div>
           </div>
@@ -427,20 +429,20 @@ export function MapsApp() {
 
         <ActionSheet
           open={showLocationsSheet()}
-          title="Ubicaciones activas"
+          title={t('maps.active_locations', language())}
           onClose={() => {
             setShowLocationsSheet(false);
           }}
           actions={[
             ...locations().map((location) => ({
-              label: `${location.from}: ${location.message || 'Ubicacion'}`,
+              label: `${location.from}: ${location.message || t('maps.location_label', language())}`,
               onClick: () => {
                 void setGps(location.x, location.y);
                 setShowLocationsSheet(false);
               },
             })),
             {
-              label: 'Dejar de compartir mi ubicacion',
+              label: t('maps.stop_sharing', language()),
               tone: 'danger' as const,
               onClick: async () => {
                 await fetchNui('stopLiveLocation', {}, { success: false });
@@ -452,13 +454,13 @@ export function MapsApp() {
 
         <ActionSheet
           open={showMarkerSheet()}
-          title="Punto marcado"
+          title={t('maps.point_marked', language())}
           onClose={() => {
             setShowMarkerSheet(false);
           }}
           actions={[
             {
-              label: 'Ir con GPS',
+              label: t('maps.go_gps', language()),
               tone: 'primary',
               onClick: () => {
                 const marker = selectedMarker();
@@ -467,13 +469,13 @@ export function MapsApp() {
               },
             },
             {
-              label: 'Compartir',
+              label: t('maps.share_location', language()),
               onClick: () => {
                 setShowShareSheet(true);
               },
             },
             {
-              label: 'Eliminar punto',
+              label: t('maps.delete_point', language()),
               tone: 'danger',
               onClick: () => {
                 const marker = selectedMarker();
