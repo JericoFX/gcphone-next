@@ -2,25 +2,241 @@
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: var(--bg);
+  gap: var(--s-3);
+  padding-bottom: var(--s-4);
 }
+
+/* ── Balance card ── */
+
+.balanceSection {
+  margin: var(--s-3) var(--s-3) 0;
+  padding: var(--s-5) var(--s-4) var(--s-4);
+  border-radius: var(--r-2xl);
+  background:
+    radial-gradient(120% 90% at 20% -10%, rgba(120, 180, 255, 0.24), transparent 50%),
+    linear-gradient(145deg, var(--tint) 0%, #5856d6 65%, #3634a3 100%);
+  color: #fff;
+  box-shadow:
+    0 8px 28px rgba(0, 60, 180, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+
+.balanceLabel {
+  font-size: var(--fs-caption2);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+
+.balanceAmount {
+  font-size: 36px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  margin: var(--s-1) 0 var(--s-4);
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.18);
+}
+
+.balanceActions {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--s-2);
+}
+
+.actionBtn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: var(--s-2) var(--s-1);
+  border: none;
+  border-radius: var(--r-lg);
+  background: rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: #fff;
+  font-size: var(--fs-caption2);
+  font-weight: 600;
+  transition: background var(--dur-1) var(--ease-standard), transform var(--dur-1) var(--ease-standard);
+
+  &:active {
+    background: rgba(255, 255, 255, 0.26);
+    transform: scale(0.95);
+  }
+}
+
+.actionIcon {
+  width: 20px;
+  height: 20px;
+  filter: brightness(0) invert(1);
+  opacity: 0.9;
+}
+
+/* ── Sections ── */
+
+.section {
+  padding: 0 var(--s-3);
+}
+
+.sectionTitle {
+  font-size: var(--fs-caption2);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  margin-bottom: var(--s-2);
+  padding-left: var(--s-1);
+}
+
+/* ── Cards ── */
+
+.cardsList {
+  display: grid;
+  gap: var(--s-2);
+}
+
+.cardItem {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-3);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  transition: transform var(--dur-1) var(--ease-standard);
+
+  &:active {
+    transform: scale(0.98);
+  }
+}
+
+.cardChip {
+  width: 8px;
+  height: 32px;
+  border-radius: var(--r-pill);
+  flex-shrink: 0;
+}
+
+.cardInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.cardName {
+  font-size: var(--fs-footnote);
+  font-weight: 600;
+  color: var(--text);
+}
+
+.cardNumber {
+  font-size: var(--fs-caption1);
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.cardDelete {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--r-pill);
+  border: none;
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+  display: grid;
+  place-items: center;
+  transition: transform var(--dur-1) var(--ease-standard);
+
+  img {
+    width: 10px;
+    height: 10px;
+    opacity: 0.6;
+  }
+
+  &:active {
+    transform: scale(0.88);
+  }
+}
+
+/* ── Transactions ── */
+
+.transactionsList {
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.transactionItem {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-3);
+
+  & + & {
+    border-top: 1px solid var(--border);
+  }
+}
+
+.txIcon {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--r-pill);
+  display: grid;
+  place-items: center;
+  font-size: 14px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.txIn {
+  background: color-mix(in srgb, var(--success) 12%, transparent);
+  color: var(--success);
+}
+
+.txOut {
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+  color: var(--danger);
+}
+
+.txAdjust {
+  background: color-mix(in srgb, var(--tint) 12%, transparent);
+  color: var(--tint);
+}
+
+.transactionInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.transactionTitle {
+  font-size: var(--fs-footnote);
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.transactionDate {
+  font-size: var(--fs-caption2);
+  color: var(--text-3);
+}
+
+.transactionAmount {
+  font-size: var(--fs-footnote);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+
+  &.in { color: var(--success); }
+  &.out { color: var(--danger); }
+  &.adjust { color: var(--tint); }
+}
+
+/* ── Modals shared ── */
 
 .modalBody,
 .invoiceModalBody {
   display: grid;
-  gap: 14px;
-}
-
-.modalIntro {
-  margin: 0;
-  font-size: var(--fs-footnote);
-  line-height: 1.5;
-  color: var(--text-3);
-}
-
-.helperText {
-  font-size: var(--fs-caption1);
-  color: var(--text-3);
+  gap: var(--s-3);
 }
 
 .formGrid {
@@ -29,328 +245,74 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+/* ── Segment buttons (target mode) ── */
+
 .segmentedGrid {
   display: grid;
   gap: var(--s-2);
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(4, 1fr);
 }
 
 .segmentButton {
-  border: 1px solid color-mix(in srgb, var(--border) 88%, transparent);
-  border-radius: var(--r-lg);
-  background: var(--color-surface-elevated);
-  padding: 12px;
-  display: grid;
-  gap: 4px;
-  text-align: left;
-  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  padding: var(--s-2);
+  text-align: center;
+  color: var(--text-3);
+  font-size: var(--fs-caption1);
+  font-weight: 600;
+  transition: all var(--dur-1) var(--ease-standard);
 
   span {
-      font-size: var(--fs-footnote);
-    font-weight: 700;
+    display: block;
   }
 
-  small {
-      font-size: var(--fs-caption1);
-    line-height: 1.35;
-    color: var(--text-3);
+  &:active {
+    transform: scale(0.96);
   }
 }
 
 .activeSegment {
   border-color: var(--tint);
-  background: rgba(0, 122, 255, 0.1);
-  box-shadow: inset 0 0 0 1px rgba(0, 122, 255, 0.08);
+  background: color-mix(in srgb, var(--tint) 10%, var(--surface));
+  color: var(--tint);
 }
 
-.optionList {
+/* ── Nearby player grid (replaces NfcShareSheet radar) ── */
+
+.nearbyGrid {
   display: grid;
-  gap: 8px;
-  max-height: 200px;
-  overflow-y: auto;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--s-2);
 }
 
-.optionCard {
-  border: 1px solid color-mix(in srgb, var(--border) 88%, transparent);
+.nearbyCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: var(--s-3) var(--s-1);
+  border: 1px solid var(--border);
   border-radius: var(--r-lg);
   background: var(--surface);
-  padding: 12px 14px;
-  display: grid;
-  gap: 4px;
-  text-align: left;
+  text-align: center;
+  transition: all var(--dur-1) var(--ease-standard);
 
   strong {
-      font-size: var(--fs-footnote);
+    font-size: var(--fs-caption2);
+    font-weight: 700;
     color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
   }
 
   span {
-      font-size: var(--fs-caption1);
+    font-size: 10px;
+    font-weight: 600;
     color: var(--text-3);
-  }
-}
-
-.optionCardActive {
-  border-color: var(--tint);
-  background: rgba(0, 122, 255, 0.08);
-}
-
-.emptyPicker {
-  border: 1px dashed color-mix(in srgb, var(--border) 88%, transparent);
-  border-radius: var(--r-lg);
-  padding: 16px;
-  background: var(--surface-2);
-  font-size: var(--fs-footnote);
-  line-height: 1.5;
-  color: var(--text-3);
-}
-
-.balanceSection {
-  padding: var(--s-4);
-  background: linear-gradient(135deg, var(--tint) 0%, #5856d6 100%);
-  margin: var(--s-4);
-  border-radius: var(--r-xl);
-  color: white;
-  box-shadow: var(--shadow-lg);
-}
-
-.balanceLabel {
-  font-size: var(--fs-footnote);
-  opacity: 0.9;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 8px;
-}
-
-.balanceAmount {
-  font-size: 34px;
-  font-weight: 700;
-  letter-spacing: -0.5px;
-  margin-bottom: 16px;
-}
-
-.balanceActions {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--s-3);
-}
-
-.quickPayRow {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: var(--s-2);
-  margin-top: 10px;
-}
-
-.quickPayBtn {
-  border: none;
-  border-radius: var(--r-md);
-  background: rgba(255, 255, 255, 0.14);
-  color: #fff;
-  height: 38px;
-  font-size: var(--fs-footnote);
-  font-weight: 700;
-}
-
-.actionBtn {
-  background: rgba(255, 255, 255, 0.2);
-  border: none;
-  color: white;
-  padding: 12px 16px;
-  border-radius: var(--r-md);
-  font-size: var(--fs-footnote);
-  font-weight: 600;
-  cursor: pointer;
-  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, opacity 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.3);
-  }
-}
-
-.section {
-  padding: 0 var(--s-4);
-  margin-bottom: 16px;
-}
-
-.sectionTitle {
-  font-size: var(--fs-title3);
-  font-weight: 700;
-  color: var(--text);
-  margin-bottom: 12px;
-  padding-left: 4px;
-}
-
-.cardsList {
-  display: flex;
-  flex-direction: column;
-  gap: var(--s-3);
-}
-
-.cardItem {
-  background: var(--color-surface-elevated);
-  border-radius: var(--r-xl);
-  padding: var(--s-4);
-  box-shadow: var(--shadow-sm);
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-
-  &:active {
-    transform: scale(0.98);
-  }
-}
-
-.cardIcon {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-
-  img {
-    width: 24px;
-    height: 24px;
-    filter: brightness(0) invert(1);
-  }
-}
-
-.cardInfo {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.cardName {
-  font-size: var(--fs-body);
-  font-weight: 600;
-  color: var(--text);
-}
-
-.cardNumber {
-  font-size: var(--fs-footnote);
-  color: var(--text-3);
-  font-family: 'SF Mono', monospace;
-}
-
-.cardDelete {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  border: none;
-  background: var(--danger);
-  color: white;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.2s ease;
-
-  img {
-    width: 11px;
-    height: 11px;
-    filter: brightness(0) invert(1);
-  }
-
-  &:hover {
-    background: #d63029;
-  }
-}
-
-.transactionsList {
-  background: var(--color-surface-elevated);
-  border-radius: var(--r-xl);
-  overflow: hidden;
-  box-shadow: var(--shadow-sm);
-}
-
-.transactionItem {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px;
-  border-bottom: 1px solid var(--bg);
-
-  &:last-child {
-    border-bottom: none;
-  }
-}
-
-.transactionInfo {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.transactionTitle {
-  font-size: var(--fs-body);
-  font-weight: 500;
-  color: var(--text);
-}
-
-.transactionDate {
-  font-size: var(--fs-footnote);
-  color: var(--text-3);
-}
-
-.transactionAmount {
-  font-size: var(--fs-body);
-  font-weight: 600;
-
-  &.in {
-    color: var(--success);
-  }
-
-  &.out {
-    color: var(--danger);
-  }
-
-  &.adjust {
-    color: var(--tint);
-  }
-}
-
-.emptyState {
-  text-align: center;
-  padding: 40px 20px;
-  color: var(--text-3);
-
-  p:first-child {
-    font-size: 16px;
-    font-weight: 500;
-    margin-bottom: 8px;
-  }
-
-  p:last-child {
-    font-size: 14px;
-  }
-}
-
-.addCardFab {
-  position: fixed;
-  bottom: 24px;
-  right: 24px;
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  background: var(--tint);
-  color: white;
-  border: none;
-  font-size: 28px;
-  cursor: pointer;
-  box-shadow: 0 4px 16px rgba(0, 122, 255, 0.4);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-
-  &:hover {
-    transform: scale(1.05);
-    box-shadow: 0 6px 20px rgba(0, 122, 255, 0.5);
   }
 
   &:active {
@@ -358,55 +320,146 @@
   }
 }
 
-.nfcHintBtn {
-  margin: 0 16px 12px;
-  border: 1px solid var(--border);
-  background: var(--surface);
+.nearbyCardActive {
+  border-color: var(--tint);
+  background: color-mix(in srgb, var(--tint) 10%, var(--surface));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--tint) 20%, transparent);
+
+  .nearbyAvatar {
+    background: var(--tint);
+    color: #fff;
+    border-color: var(--tint);
+  }
+}
+
+.nearbyAvatar {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--r-pill);
+  background: color-mix(in srgb, var(--tint) 12%, var(--surface-2));
+  border: 2px solid var(--border);
+  display: grid;
+  place-items: center;
+  font-size: var(--fs-footnote);
+  font-weight: 700;
   color: var(--tint);
-  border-radius: 12px;
-  height: 40px;
-  font-size: 13px;
-  font-weight: 600;
+  transition: all var(--dur-1) var(--ease-standard);
+}
+
+/* ── Option list (contacts, etc.) ── */
+
+.optionList {
+  display: grid;
+  gap: var(--s-2);
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.optionCard {
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  padding: var(--s-2) var(--s-3);
+  display: grid;
+  gap: 2px;
+  text-align: left;
+  transition: all var(--dur-1) var(--ease-standard);
+
+  strong {
+    font-size: var(--fs-caption1);
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  span {
+    font-size: var(--fs-caption2);
+    color: var(--text-3);
+  }
+
+  &:active {
+    transform: scale(0.98);
+  }
+}
+
+.optionCardActive {
+  border-color: var(--tint);
+  background: color-mix(in srgb, var(--tint) 8%, var(--surface));
+}
+
+.emptyPicker {
+  border: 1px dashed var(--border);
+  border-radius: var(--r-lg);
+  padding: var(--s-4);
+  text-align: center;
+  font-size: var(--fs-caption1);
+  color: var(--text-3);
+}
+
+/* ── Invoice received ── */
+
+.invoiceModalBody {
+  text-align: center;
+  padding: var(--s-2) 0;
+}
+
+.invoiceFrom {
+  font-size: var(--fs-footnote);
+  font-weight: 700;
+  color: var(--text);
+}
+
+.invoiceAmount {
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.02em;
+}
+
+.invoiceTitle {
+  font-size: var(--fs-caption1);
+  color: var(--text-3);
 }
 
 .invoiceActionsRow3 {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
-  gap: 8px;
+  gap: var(--s-2);
+  padding: 0 var(--s-1);
 }
 
 .invoiceAction {
-  height: 40px;
-  border: none;
-  border-radius: 10px;
-  background: var(--bg);
+  height: 38px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface);
   color: var(--text-2);
   font-weight: 600;
-  font-size: 12px;
+  font-size: var(--fs-caption2);
+  transition: transform var(--dur-1) var(--ease-standard);
+
+  &:active {
+    transform: scale(0.96);
+  }
 }
 
 .invoiceActionPrimary {
   background: var(--tint);
+  border-color: var(--tint);
   color: #fff;
 }
 
-.invoiceAmount {
-  font-size: 30px;
-  font-weight: 700;
-  color: var(--text);
-}
+/* ── Empty state ── */
 
-.invoiceTitle {
-  font-size: 14px;
-  color: var(--text-3);
+.emptyState {
+  padding: var(--s-6) var(--s-4);
 }
 
 @media (max-width: 360px) {
   .formGrid,
   .segmentedGrid,
   .balanceActions,
-  .quickPayRow,
-  .invoiceActionsRow3 {
+  .invoiceActionsRow3,
+  .nearbyGrid {
     grid-template-columns: 1fr;
   }
 }

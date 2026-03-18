@@ -6,10 +6,8 @@ import { formatPhoneNumber } from '../../../utils/misc';
 import { usePhone } from '../../../store/phone';
 import { uiAlert } from '../../../utils/uiAlert';
 import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
-import { useNfcShare } from '../../../hooks/useNfcShare';
 import { AppScaffold } from '../../shared/layout';
 import { EmptyState } from '../../shared/ui/EmptyState';
-import { NfcShareSheet } from '../../shared/ui/NfcShareSheet';
 import { FormField, FormSection, Modal, ModalActions, ModalButton } from '../../shared/ui/Modal';
 import { t } from '../../../i18n';
 import styles from './WalletApp.module.scss';
@@ -73,8 +71,6 @@ export function WalletApp() {
   const [proximityPhoneInput, setProximityPhoneInput] = createSignal('');
   const [proximityAmountInput, setProximityAmountInput] = createSignal('');
   const [proximityTitleInput, setProximityTitleInput] = createSignal('');
-  const [showNfcPicker, setShowNfcPicker] = createSignal(false);
-  const [nfcPickerMode, setNfcPickerMode] = createSignal<'invoice' | 'payment'>('invoice');
   const language = () => phoneState.settings.language || 'es';
 
   const targetModes: { id: TargetMode; label: string; helper: string }[] = [
@@ -149,14 +145,14 @@ export function WalletApp() {
   };
 
   const proximityTransfer = async () => {
-    const targetPhone = proximityPhoneInput().trim();
+    const phone = proximityPhoneInput().trim();
     const amount = Number(proximityAmountInput() || '0');
     const title = proximityTitleInput().trim() || 'Pago NFC';
-    if (!targetPhone || !Number.isFinite(amount) || amount <= 0) return;
+    if (!phone || !Number.isFinite(amount) || amount <= 0) return;
 
     const result = await fetchNui<{ success?: boolean; balance?: number; error?: string; distance?: number; maxDistance?: number }>(
       'walletProximityTransfer',
-      { targetPhone, amount, title, method: 'nfc' },
+      { targetPhone: phone, amount, title, method: 'nfc' },
       { success: false }
     );
 
@@ -217,7 +213,7 @@ export function WalletApp() {
 
     setShowCreateInvoice(false);
     setNfcAmount('');
-      setNfcTitle(t('wallet.invoice', language()));
+    setNfcTitle(t('wallet.invoice', language()));
     if (result.channel === 'remote') {
       uiAlert(t('wallet.remote_invoice_sent', language()));
     }
@@ -249,6 +245,8 @@ export function WalletApp() {
     setTargetServerId(firstNearby ? firstNearby.serverId : null);
     setTargetPhone('');
     setTargetIdentifier('');
+    setNfcAmount('');
+    setNfcTitle(t('wallet.invoice', language()));
     setShowCreateInvoice(true);
   };
 
@@ -317,46 +315,50 @@ export function WalletApp() {
   return (
     <AppScaffold title={t('wallet.title', language())} subtitle={t('wallet.subtitle', language())} onBack={() => router.goBack()} bodyClass={styles.walletApp}>
       <div class={styles.walletApp}>
+        {/* ── Balance card ── */}
         <div class={styles.balanceSection}>
           <div class={styles.balanceLabel}>{t('wallet.balance', language())}</div>
           <div class={styles.balanceAmount}>{formatMoney(balance())}</div>
           <div class={styles.balanceActions}>
-            <button class={styles.actionBtn} onClick={() => void openInvoiceModal()}>{t('wallet.invoice', language())}</button>
-            <button class={styles.actionBtn} onClick={openAddCardModal}>{t('wallet.add_card', language())}</button>
-          </div>
-          <div class={styles.quickPayRow}>
-            <button class={styles.quickPayBtn} onClick={openProximityModal}>{t('wallet.nfc_payment', language())}</button>
+            <button class={styles.actionBtn} onClick={() => void openInvoiceModal()}>
+              <img src="./img/icons_ios/wallet.svg" alt="" class={styles.actionIcon} />
+              <span>{t('wallet.invoice', language())}</span>
+            </button>
+            <button class={styles.actionBtn} onClick={openProximityModal}>
+              <img src="./img/icons_ios/ui-scan.svg" alt="" class={styles.actionIcon} />
+              <span>{t('wallet.nfc_payment', language())}</span>
+            </button>
+            <button class={styles.actionBtn} onClick={openAddCardModal}>
+              <img src="./img/icons_ios/ui-plus.svg" alt="" class={styles.actionIcon} />
+              <span>{t('wallet.add_card', language())}</span>
+            </button>
           </div>
         </div>
 
-        <button class={styles.nfcHintBtn} onClick={() => { setNfcPickerMode('invoice'); setShowNfcPicker(true); }}>{t('wallet.create_invoice_hint', language())}</button>
-
-        <div class={styles.section}>
-          <div class={styles.sectionTitle}>{t('wallet.cards', language())}</div>
-          <Show when={!loading()} fallback={<EmptyState class={styles.emptyState} title={t('state.loading', language())} />}>
-            <Show when={cards().length > 0} fallback={<EmptyState class={styles.emptyState} title={t('wallet.no_cards', language())} description={t('wallet.no_cards_desc', language())} />}>
-              <div class={styles.cardsList}>
-                <For each={cards()}>
-                  {(card) => (
-                    <div class={styles.cardItem}>
-                      <div class={styles.cardIcon} style={{ background: card.color || '#007aff' }}>
-                        <img src="./img/icons_ios/wallet.svg" alt="" />
-                      </div>
-                      <div class={styles.cardInfo}>
-                        <div class={styles.cardName}>{card.label}</div>
-                        <div class={styles.cardNumber}>•••• {card.last4}</div>
-                      </div>
-                      <button class={styles.cardDelete} onClick={() => void removeCard(card.id)}>
-                        <img src="./img/icons_ios/ui-close.svg" alt="" />
-                      </button>
+        {/* ── Cards ── */}
+        <Show when={!loading() && cards().length > 0}>
+          <div class={styles.section}>
+            <div class={styles.sectionTitle}>{t('wallet.cards', language())}</div>
+            <div class={styles.cardsList}>
+              <For each={cards()}>
+                {(card) => (
+                  <div class={styles.cardItem}>
+                    <div class={styles.cardChip} style={{ background: card.color || 'var(--tint)' }} />
+                    <div class={styles.cardInfo}>
+                      <div class={styles.cardName}>{card.label}</div>
+                      <div class={styles.cardNumber}>•••• {card.last4}</div>
                     </div>
-                  )}
-                </For>
-              </div>
-            </Show>
-          </Show>
-        </div>
+                    <button class={styles.cardDelete} onClick={() => void removeCard(card.id)}>
+                      <img src="./img/icons_ios/ui-close.svg" alt="" />
+                    </button>
+                  </div>
+                )}
+              </For>
+            </div>
+          </div>
+        </Show>
 
+        {/* ── Transactions ── */}
         <div class={styles.section}>
           <div class={styles.sectionTitle}>{t('wallet.recent_activity', language())}</div>
           <Show when={tx().length > 0} fallback={<EmptyState class={styles.emptyState} title={t('wallet.no_transactions', language())} description={t('wallet.no_transactions_desc', language())} />}>
@@ -364,8 +366,11 @@ export function WalletApp() {
               <For each={tx()}>
                 {(item) => (
                   <div class={styles.transactionItem}>
+                    <div class={styles.txIcon} classList={{ [styles.txIn]: item.type === 'in', [styles.txOut]: item.type === 'out', [styles.txAdjust]: item.type === 'adjust' }}>
+                      {item.type === 'in' ? '↓' : item.type === 'out' ? '↑' : '⟳'}
+                    </div>
                     <div class={styles.transactionInfo}>
-                        <div class={styles.transactionTitle}>{item.title || t('wallet.transaction', language())}</div>
+                      <div class={styles.transactionTitle}>{item.title || t('wallet.transaction', language())}</div>
                       <div class={styles.transactionDate}>{new Date(item.created_at).toLocaleString('es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</div>
                     </div>
                     <div class={styles.transactionAmount} classList={{ [styles.in]: item.type === 'in', [styles.out]: item.type === 'out', [styles.adjust]: item.type === 'adjust' }}>
@@ -379,19 +384,15 @@ export function WalletApp() {
           </Show>
         </div>
 
-        <button class={styles.addCardFab} onClick={openAddCardModal}>+</button>
-
+        {/* ── Add Card Modal ── */}
         <Modal open={showAddCardModal()} title={t('wallet.add_card', language())} onClose={closeAddCardModal} size="md">
           <div class={styles.modalBody}>
-            <p class={styles.modalIntro}>{t('wallet.add_card_desc', language())}</p>
-
             <FormField
               label={t('contacts.field.name', language())}
               value={cardLabelInput()}
               onChange={setCardLabelInput}
               placeholder="Ej: Visa principal"
             />
-
             <FormField
               label={t('wallet.last_four', language())}
               type="tel"
@@ -399,20 +400,16 @@ export function WalletApp() {
               onChange={(value) => setCardLast4Input(value.replace(/\D/g, '').slice(0, 4))}
               placeholder="1234"
             />
-
-            <div class={styles.helperText}>{t('wallet.card_helper', language())}</div>
           </div>
-
           <ModalActions>
             <ModalButton label={t('action.cancel', language())} onClick={closeAddCardModal} />
             <ModalButton label={t('notes.save', language())} tone="primary" onClick={() => void addCard()} disabled={!canAddCard()} />
           </ModalActions>
         </Modal>
 
+        {/* ── NFC Payment Modal ── */}
         <Modal open={showProximityModal()} title={t('wallet.nfc_payment', language())} onClose={closeProximityModal} size="md">
           <div class={styles.modalBody}>
-            <p class={styles.modalIntro}>{t('wallet.proximity_desc', language())}</p>
-
             <FormField
               label={t('wallet.target_number', language())}
               type="tel"
@@ -444,7 +441,6 @@ export function WalletApp() {
                 onChange={setProximityAmountInput}
                 placeholder="0"
               />
-
               <FormField
                 label={t('wallet.concept', language())}
                 value={proximityTitleInput()}
@@ -453,17 +449,15 @@ export function WalletApp() {
               />
             </div>
           </div>
-
           <ModalActions>
             <ModalButton label={t('action.cancel', language())} onClick={closeProximityModal} />
             <ModalButton label={t('mail.send', language())} tone="primary" onClick={() => void proximityTransfer()} disabled={!canSendProximity()} />
           </ModalActions>
         </Modal>
 
+        {/* ── Create Invoice Modal (unified — includes nearby player selection inline) ── */}
         <Modal open={showCreateInvoice()} title={t('wallet.new_invoice', language())} onClose={closeInvoiceModal} size="md">
           <div class={styles.modalBody}>
-            <p class={styles.modalIntro}>{t('wallet.invoice_desc', language())}</p>
-
             <FormSection label={t('wallet.target', language())}>
               <div class={styles.segmentedGrid}>
                 <For each={targetModes}>
@@ -474,7 +468,6 @@ export function WalletApp() {
                       onClick={() => setTargetMode(mode.id)}
                     >
                       <span>{mode.label}</span>
-                      <small>{mode.helper}</small>
                     </button>
                   )}
                 </For>
@@ -482,49 +475,45 @@ export function WalletApp() {
             </FormSection>
 
             <Show when={targetMode() === 'nearby'}>
-              <FormSection label={t('wallet.nearby_player', language())}>
-                <Show
-                  when={nearbyPlayers().length > 0}
-                  fallback={<div class={styles.emptyPicker}>{t('wallet.no_nearby_players', language())}</div>}
-                >
-                  <div class={styles.optionList}>
-                    <For each={nearbyPlayers()}>
-                      {(player) => (
-                        <button
-                          class={styles.optionCard}
-                          classList={{ [styles.optionCardActive]: targetServerId() === player.serverId }}
-                          onClick={() => setTargetServerId(player.serverId)}
-                        >
-                          <strong>{player.name}</strong>
-                          <span>ID {player.serverId} - {player.distance}m</span>
-                        </button>
-                      )}
-                    </For>
-                  </div>
-                  <div class={styles.helperText}>{t('wallet.selected', language())}: {selectedNearbyLabel()}</div>
-                </Show>
-              </FormSection>
+              <Show
+                when={nearbyPlayers().length > 0}
+                fallback={<div class={styles.emptyPicker}>{t('wallet.no_nearby_players', language())}</div>}
+              >
+                <div class={styles.nearbyGrid}>
+                  <For each={nearbyPlayers()}>
+                    {(player) => (
+                      <button
+                        class={styles.nearbyCard}
+                        classList={{ [styles.nearbyCardActive]: targetServerId() === player.serverId }}
+                        onClick={() => setTargetServerId(player.serverId)}
+                      >
+                        <div class={styles.nearbyAvatar}>{player.name.charAt(0).toUpperCase()}</div>
+                        <strong>{player.name}</strong>
+                        <span>{player.distance.toFixed(1)}m</span>
+                      </button>
+                    )}
+                  </For>
+                </div>
+              </Show>
             </Show>
 
             <Show when={targetMode() === 'contact'}>
-              <FormSection label={t('wallet.saved_contact', language())}>
-                <Show when={contacts().length > 0} fallback={<div class={styles.emptyPicker}>{t('wallet.no_saved_contacts', language())}</div>}>
-                  <div class={styles.optionList}>
-                    <For each={contacts().slice(0, 8)}>
-                      {(contact) => (
-                        <button
-                          class={styles.optionCard}
-                          classList={{ [styles.optionCardActive]: targetPhone() === contact.number }}
-                          onClick={() => setTargetPhone(contact.number)}
-                        >
-                          <strong>{contact.display}</strong>
-                          <span>{formatPhoneNumber(contact.number, phoneState.framework || 'unknown')}</span>
-                        </button>
-                      )}
-                    </For>
-                  </div>
-                </Show>
-              </FormSection>
+              <Show when={contacts().length > 0} fallback={<div class={styles.emptyPicker}>{t('wallet.no_saved_contacts', language())}</div>}>
+                <div class={styles.optionList}>
+                  <For each={contacts().slice(0, 8)}>
+                    {(contact) => (
+                      <button
+                        class={styles.optionCard}
+                        classList={{ [styles.optionCardActive]: targetPhone() === contact.number }}
+                        onClick={() => setTargetPhone(contact.number)}
+                      >
+                        <strong>{contact.display}</strong>
+                        <span>{formatPhoneNumber(contact.number, phoneState.framework || 'unknown')}</span>
+                      </button>
+                    )}
+                  </For>
+                </div>
+              </Show>
             </Show>
 
             <Show when={targetMode() === 'phone'}>
@@ -554,7 +543,6 @@ export function WalletApp() {
                 onChange={setNfcAmount}
                 placeholder="0"
               />
-
               <FormField
                 label={t('wallet.concept', language())}
                 value={nfcTitle()}
@@ -563,13 +551,13 @@ export function WalletApp() {
               />
             </div>
           </div>
-
           <ModalActions>
             <ModalButton label={t('action.cancel', language())} onClick={closeInvoiceModal} />
             <ModalButton label={t('wallet.send_invoice', language())} tone="primary" onClick={() => void createInvoice()} disabled={!canCreateInvoice()} />
           </ModalActions>
         </Modal>
 
+        {/* ── Incoming Invoice Modal ── */}
         <Modal
           open={Boolean(incomingInvoice())}
           title={incomingInvoice()?.channel === 'nfc' ? t('wallet.nfc_invoice_received', language()) : t('wallet.invoice_received', language())}
@@ -577,7 +565,7 @@ export function WalletApp() {
           size="sm"
         >
           <div class={styles.invoiceModalBody}>
-            <p class={styles.modalIntro}><strong>{incomingInvoice()?.fromName}</strong> {t('wallet.payment_request', language())}</p>
+            <div class={styles.invoiceFrom}>{incomingInvoice()?.fromName}</div>
             <div class={styles.invoiceAmount}>{formatMoney(incomingInvoice()?.amount || 0)}</div>
             <div class={styles.invoiceTitle}>{incomingInvoice()?.title}</div>
           </div>
@@ -596,23 +584,6 @@ export function WalletApp() {
           </Show>
         </Modal>
       </div>
-
-      <NfcShareSheet
-        open={showNfcPicker()}
-        onClose={() => setShowNfcPicker(false)}
-        onSelect={(serverId) => {
-          setShowNfcPicker(false);
-          setTargetServerId(serverId);
-          setTargetMode('nearby');
-          if (nfcPickerMode() === 'invoice') {
-            setShowCreateInvoice(true);
-          } else {
-            setShowProximityModal(true);
-          }
-        }}
-        title={nfcPickerMode() === 'invoice' ? 'Seleccionar para factura' : 'Seleccionar para pago'}
-        maxDistance={2.0}
-      />
     </AppScaffold>
   );
 }
