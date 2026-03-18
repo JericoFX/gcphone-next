@@ -3,18 +3,12 @@ import { useRouter } from '../../Phone/PhoneFrame';
 import { fetchNui } from '../../../utils/fetchNui';
 import { timeAgo } from '../../../utils/misc';
 import { sanitizeMediaUrl, sanitizeText } from '../../../utils/sanitize';
-import { AppScaffold } from '../../shared/layout';
 import { useAppCache } from '../../../hooks';
 import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { usePhone } from '../../../store/phone';
 import { MediaLightbox } from '../../shared/ui/MediaLightbox';
-import { MediaAttachmentPreview } from '../../shared/ui/MediaAttachmentPreview';
-import { MediaActionButtons } from '../../shared/ui/MediaActionButtons';
-import { FormField, FormTextarea, Modal, ModalActions, ModalButton } from '../../shared/ui/Modal';
+import { FormField, Modal, ModalActions, ModalButton } from '../../shared/ui/Modal';
 import { EmojiPickerButton } from '../../shared/ui/EmojiPicker';
-import { InlineNotice } from '../../shared/ui/InlineNotice';
-import { SegmentedTabs } from '../../shared/ui/SegmentedTabs';
-import { SheetIntro } from '../../shared/ui/SheetIntro';
 import { SocialOnboardingModal, type SocialOnboardingPayload } from '../../shared/ui/SocialOnboardingModal';
 import { t } from '../../../i18n';
 import styles from './ClipsApp.module.scss';
@@ -49,30 +43,21 @@ interface SharedSnapAccount {
   is_private?: boolean | number;
 }
 
+type ClipTab = 'feed' | 'following' | 'myVideos';
+
 export function ClipsApp() {
   const router = useRouter();
   const cache = useAppCache('clips');
   const [phoneState] = usePhone();
   const language = () => phoneState.settings.language || 'es';
-  const isReadOnly = createMemo(() => phoneState.accessMode === 'foreign-readonly');
-  const clipTabs = [
-    { id: 'feed', label: t('clips.for_you', language()) },
-    { id: 'myVideos', label: t('clips.library', language()) },
-  ];
 
-  // Data
   const [clips, setClips] = createSignal<Clip[]>([]);
   const [currentClipIndex, setCurrentClipIndex] = createSignal(0);
   const [comments, setComments] = createSignal<Comment[]>([]);
   const [showComments, setShowComments] = createSignal(false);
   const [myAccount, setMyAccount] = createSignal<SharedSnapAccount | null>(null);
-
-  // Tabs
-  const [currentTab, setCurrentTab] = createSignal<'feed' | 'myVideos'>('feed');
-
-  // UI State
+  const [currentTab, setCurrentTab] = createSignal<ClipTab>('feed');
   const [loading, setLoading] = createSignal(false);
-  const [fabTooltipVisible, setFabTooltipVisible] = createSignal(false);
   const [likeAnimation, setLikeAnimation] = createSignal<number | null>(null);
   const [viewerUrl, setViewerUrl] = createSignal<string | null>(null);
   const [pausedClips, setPausedClips] = createSignal<Set<number>>(new Set());
@@ -80,54 +65,27 @@ export function ClipsApp() {
   const [deleteClipId, setDeleteClipId] = createSignal<number | null>(null);
   const [showOnboarding, setShowOnboarding] = createSignal(false);
   const [showProfileModal, setShowProfileModal] = createSignal(false);
-  const [profileDisplayName, setProfileDisplayName] = createSignal('');
-  const [profileAvatar, setProfileAvatar] = createSignal('');
-  const [profileBio, setProfileBio] = createSignal('');
   const [profilePrivate, setProfilePrivate] = createSignal(false);
-
-  // Upload
   const [showUpload, setShowUpload] = createSignal(false);
   const [uploadMedia, setUploadMedia] = createSignal('');
   const [uploadCaption, setUploadCaption] = createSignal('');
   const [storageReady, setStorageReady] = createSignal(false);
   const [storageProvider, setStorageProvider] = createSignal('');
-
-  // Chat
   const [commentText, setCommentText] = createSignal('');
 
   const clipById = createMemo(() => {
     const map = new Map<number, Clip>();
-    for (const clip of clips()) {
-      map.set(clip.id, clip);
-    }
+    for (const clip of clips()) map.set(clip.id, clip);
     return map;
   });
 
-  const currentClip = createMemo(() => {
-    const index = currentClipIndex();
-    const list = clips();
-    return list[index] || null;
-  });
-
-  // FAB Tooltip
-  let fabTimeout: number;
-  const showFabTooltip = () => {
-    setFabTooltipVisible(true);
-    fabTimeout = window.setTimeout(() => setFabTooltipVisible(false), 2000);
-  };
-  const hideFabTooltip = () => {
-    setFabTooltipVisible(false);
-    if (fabTimeout) clearTimeout(fabTimeout);
-  };
+  const currentClip = createMemo(() => clips()[currentClipIndex()] || null);
 
   const loadClips = async () => {
     setLoading(true);
 
     const storage = await fetchNui<{
-      provider?: string;
-      uploadUrl?: string;
-      customUploadUrl?: string;
-      serverFolderPublicUrl?: string;
+      provider?: string; uploadUrl?: string; customUploadUrl?: string; serverFolderPublicUrl?: string;
     }>('getStorageConfig', undefined, {});
     const provider = String(storage?.provider || 'custom');
     const hasStorage = provider === 'server_folder'
@@ -135,28 +93,36 @@ export function ClipsApp() {
       : Boolean(storage?.uploadUrl || storage?.customUploadUrl);
     setStorageReady(hasStorage);
     setStorageProvider(provider);
-    
+
     const account = await fetchNui<SharedSnapAccount | null>('clipsGetAccount', {});
     setMyAccount(account);
     setShowOnboarding(!account?.username);
-    
-    if (currentTab() === 'myVideos') {
-      const cached = cache.get<Clip[]>('clips:myvideos');
-      const list = cached ?? await fetchNui<Clip[]>('clipsGetMyClips', { limit: 40, offset: 0 }, []);
-      if (!cached) cache.set('clips:myvideos', list || [], 60000);
-      setClips(list || []);
+
+    const tab = currentTab();
+    let cacheKey: string;
+    let endpoint: string;
+
+    if (tab === 'myVideos') {
+      cacheKey = 'clips:myvideos';
+      endpoint = 'clipsGetMyClips';
+    } else if (tab === 'following') {
+      cacheKey = 'clips:following';
+      endpoint = 'clipsGetFeed';
     } else {
-      const cached = cache.get<Clip[]>('clips:feed');
-      const list = cached ?? await fetchNui<Clip[]>('clipsGetFeed', { limit: 40, offset: 0 }, []);
-      if (!cached) cache.set('clips:feed', list || [], 60000);
-      setClips(list || []);
+      cacheKey = 'clips:feed';
+      endpoint = 'clipsGetFeed';
     }
-    
+
+    const cached = cache.get<Clip[]>(cacheKey);
+    const list = cached ?? await fetchNui<Clip[]>(endpoint, { limit: 40, offset: 0 }, []);
+    if (!cached) cache.set(cacheKey, list || [], 60000);
+    setClips(list || []);
     setCurrentClipIndex(0);
     setLoading(false);
   };
 
   createEffect(() => {
+    currentTab();
     void loadClips();
   });
 
@@ -167,20 +133,19 @@ export function ClipsApp() {
     const openProfile = params.openProfile === '1';
     if (!openProfile || !sharedAvatar || sharedAvatar === lastAvatarMedia) return;
     lastAvatarMedia = sharedAvatar;
-    setProfileAvatar(sharedAvatar);
     setShowProfileModal(true);
-    setStatusMessage('Avatar listo para guardar');
   });
 
   usePhoneKeyHandler({
     Backspace: () => {
-      if (showComments()) {
-        setShowComments(false);
-        return;
-      }
+      if (showComments()) { setShowComments(false); return; }
+      if (showUpload()) { setShowUpload(false); return; }
+      if (showProfileModal()) { setShowProfileModal(false); return; }
       router.goBack();
     },
   });
+
+  // ── Interactions ──
 
   const toggleLike = async (clipId: number) => {
     const result = await fetchNui<{ liked?: boolean }>('clipsToggleLike', { postId: clipId });
@@ -188,9 +153,7 @@ export function ClipsApp() {
       setClips((prev) => prev.map((c) => {
         if (c.id !== clipId) return c;
         if (c.liked === result.liked) return c;
-
-        const likes = Math.max(0, (c.likes || 0) + (result.liked ? 1 : -1));
-        return { ...c, liked: result.liked, likes };
+        return { ...c, liked: result.liked, likes: Math.max(0, (c.likes || 0) + (result.liked ? 1 : -1)) };
       }));
     }
   };
@@ -198,27 +161,19 @@ export function ClipsApp() {
   const handleDoubleTap = (clipId: number) => {
     setLikeAnimation(clipId);
     setTimeout(() => setLikeAnimation(null), 1000);
-    
     const clip = clipById().get(clipId);
-    if (clip && !clip.liked) {
-      void toggleLike(clipId);
-    }
+    if (clip && !clip.liked) void toggleLike(clipId);
   };
 
-  const deleteClip = async (clipId: number) => {
-    setDeleteClipId(clipId);
+  const togglePause = (clipId: number) => {
+    setPausedClips(prev => {
+      const next = new Set(prev);
+      next.has(clipId) ? next.delete(clipId) : next.add(clipId);
+      return next;
+    });
   };
 
-  const confirmDeleteClip = async () => {
-    const clipId = deleteClipId();
-    if (!clipId) return;
-
-    await fetchNui('clipsDeletePost', clipId);
-    setClips(prev => prev.filter(c => c.id !== clipId));
-    cache.invalidate('clips:feed');
-    cache.invalidate('clips:myvideos');
-    setDeleteClipId(null);
-  };
+  // ── Comments ──
 
   const loadComments = async (clipId: number) => {
     const list = await fetchNui<Comment[]>('clipsGetComments', { clipId }, []);
@@ -235,43 +190,38 @@ export function ClipsApp() {
     const content = sanitizeText(commentText(), 500);
     if (!clip || !content) return;
 
-    const result = await fetchNui<{ success?: boolean; comment?: Comment }>('clipsAddComment', {
-      clipId: clip.id,
-      content,
-    });
-
+    const result = await fetchNui<{ success?: boolean; comment?: Comment }>('clipsAddComment', { clipId: clip.id, content });
     if (result?.success && result.comment) {
       setCommentText('');
       setComments((prev) => [...prev, result.comment!]);
-      setClips((prev) => prev.map((c) => (
-        c.id === clip.id ? { ...c, comments_count: (c.comments_count || 0) + 1 } : c
-      )));
+      setClips((prev) => prev.map((c) => (c.id === clip.id ? { ...c, comments_count: (c.comments_count || 0) + 1 } : c)));
     }
   };
 
-  const publishClip = async () => {
-    if (!storageReady()) {
-      setStatusMessage(t('clips.storage_required', language()));
-      return;
-    }
+  // ── CRUD ──
 
+  const deleteClip = (clipId: number) => setDeleteClipId(clipId);
+
+  const confirmDeleteClip = async () => {
+    const clipId = deleteClipId();
+    if (!clipId) return;
+    await fetchNui('clipsDeletePost', clipId);
+    setClips(prev => prev.filter(c => c.id !== clipId));
+    cache.invalidate('clips:feed');
+    cache.invalidate('clips:myvideos');
+    cache.invalidate('clips:following');
+    setDeleteClipId(null);
+  };
+
+  const publishClip = async () => {
+    if (!storageReady()) { setStatusMessage(t('clips.storage_required', language())); return; }
     const media = sanitizeMediaUrl(uploadMedia());
-    if (!media) {
-      setStatusMessage(t('clips.select_video', language()));
-      return;
-    }
+    if (!media) { setStatusMessage(t('clips.select_video', language())); return; }
     setStatusMessage('');
-    
     setLoading(true);
-    const result = await fetchNui<{ success?: boolean }>('clipsPublish', {
-      mediaUrl: media,
-      caption: sanitizeText(uploadCaption(), 500)
-    });
-    
+    const result = await fetchNui<{ success?: boolean }>('clipsPublish', { mediaUrl: media, caption: sanitizeText(uploadCaption(), 500) });
     if (result?.success) {
-      setUploadMedia('');
-      setUploadCaption('');
-      setShowUpload(false);
+      setUploadMedia(''); setUploadCaption(''); setShowUpload(false);
       cache.invalidate('clips:feed');
       await loadClips();
     }
@@ -281,41 +231,26 @@ export function ClipsApp() {
   const attachFromGallery = async () => {
     const gallery = await fetchNui<any[]>('getGallery', undefined, []);
     const video = gallery?.find((g: any) => g.url?.match(/\.(mp4|webm|mov)$/i));
-    if (video?.url) {
-      setUploadMedia(sanitizeMediaUrl(video.url) || '');
-    } else {
-      setStatusMessage(t('clips.no_gallery_videos', language()));
-    }
+    if (video?.url) setUploadMedia(sanitizeMediaUrl(video.url) || '');
+    else setStatusMessage(t('clips.no_gallery_videos', language()));
   };
 
   const openCamera = () => {
-    if (!storageReady()) {
-      setStatusMessage(t('clips.storage_before_record', language()));
-      return;
-    }
-
+    if (!storageReady()) { setStatusMessage(t('clips.storage_before_record', language())); return; }
     router.navigate('camera', { target: 'clips' });
   };
 
+  // ── Profile ──
+
   const openProfileEditor = async () => {
     const account = await fetchNui<SharedSnapAccount | null>('clipsGetAccount', {});
-    if (!account?.username) {
-      setShowOnboarding(true);
-      return;
-    }
-    if (!account) return;
-    setProfileDisplayName(account.display_name || '');
-    setProfileAvatar(account.avatar || '');
-    setProfileBio(account.bio || '');
+    if (!account?.username) { setShowOnboarding(true); return; }
     setProfilePrivate(!!account.is_private);
     setShowProfileModal(true);
   };
 
   const saveProfile = async () => {
-    const ok = await fetchNui<{ success?: boolean }>('clipsUpdateAccount', {
-      isPrivate: profilePrivate(),
-    });
-
+    const ok = await fetchNui<{ success?: boolean }>('clipsUpdateAccount', { isPrivate: profilePrivate() });
     if (ok?.success) {
       setStatusMessage(t('snap.profile_updated', language()));
       setShowProfileModal(false);
@@ -323,399 +258,289 @@ export function ClipsApp() {
     }
   };
 
-  const attachAvatarFromGallery = async () => {
-    const gallery = await fetchNui<any[]>('getGallery', undefined, []);
-    const image = gallery?.find((item: any) => item?.url && !item.url.match(/\.(mp4|webm|mov)$/i));
-    if (image?.url) {
-      setProfileAvatar(sanitizeMediaUrl(image.url) || '');
-      setStatusMessage(t('clips.avatar_ready', language()));
-      setShowProfileModal(true);
-    } else {
-      setStatusMessage(t('clips.no_gallery_images', language()));
-    }
-  };
-
-  const openAvatarCamera = () => {
-    router.navigate('camera', { target: 'clips-avatar' });
-  };
-
   const createClipsAccount = async (payload: SocialOnboardingPayload) => {
     const avatar = sanitizeMediaUrl(payload.avatar) || '';
     const bio = sanitizeText(payload.bio, 180);
 
     const response = await fetchNui<{ success?: boolean; error?: string }>('clipsCreateAccount', {
-      username: payload.username,
-      displayName: payload.displayName,
-      avatar,
+      username: payload.username, displayName: payload.displayName, avatar,
     }, { success: false });
 
-    if (!response?.success) {
-      return { ok: false, error: response?.error || 'No se pudo crear la cuenta de Clips.' };
-    }
+    if (!response?.success) return { ok: false, error: response?.error || 'No se pudo crear la cuenta.' };
 
-    const updated = await fetchNui<{ success?: boolean }>('clipsUpdateAccount', {
-      displayName: payload.displayName,
-      avatar,
-      bio,
-      isPrivate: payload.isPrivate,
+    await fetchNui<{ success?: boolean }>('clipsUpdateAccount', {
+      displayName: payload.displayName, avatar, bio, isPrivate: payload.isPrivate,
     }, { success: false });
-
-    if (!updated?.success) {
-      return { ok: false, error: 'Cuenta creada, pero no se pudieron guardar todos los datos del perfil.' };
-    }
 
     setShowOnboarding(false);
-      setStatusMessage(t('clips.account_created', language()));
+    setStatusMessage(t('clips.account_created', language()));
     await loadClips();
     return { ok: true };
   };
 
-  const togglePause = (clipId: number) => {
-    setPausedClips(prev => {
-      const next = new Set(prev);
-      if (next.has(clipId)) {
-        next.delete(clipId);
-      } else {
-        next.add(clipId);
-      }
-      return next;
-    });
-  };
-
-  // Handle scroll
+  // ── Scroll ──
   let scrollContainer: HTMLDivElement | undefined;
   const handleScroll = () => {
     if (!scrollContainer) return;
-    const scrollTop = scrollContainer.scrollTop;
-    const clipHeight = scrollContainer.clientHeight;
-    const maxIndex = Math.max(0, clips().length - 1);
-    const newIndex = Math.max(0, Math.min(maxIndex, Math.round(scrollTop / clipHeight)));
-    setCurrentClipIndex(newIndex);
+    const idx = Math.round(scrollContainer.scrollTop / scrollContainer.clientHeight);
+    setCurrentClipIndex(Math.max(0, Math.min(clips().length - 1, idx)));
   };
 
   return (
-    <AppScaffold title={t('clips.title', language())} subtitle={t('clips.subtitle', language())} onBack={() => router.goBack()} bodyClass={styles.body}>
-      <div class={styles.clipsApp}>
-        <Show when={isReadOnly()}>
-          <InlineNotice title={t('contacts.readonly_title', language())} message={t('clips.readonly_message', language(), { name: phoneState.accessOwnerName || t('common.other_person', language()) })} />
-        </Show>
-
-        <Show when={statusMessage()}>
-          <div class={styles.statusBanner}>
-            {statusMessage()}
-          </div>
-        </Show>
-
-        <Show when={!storageReady()}>
-          <div class={styles.statusBanner}>
-            {t('clips.storage_banner', language())}
-          </div>
-        </Show>
-
-        <div class={styles.tabs}>
-          <SegmentedTabs items={clipTabs} active={currentTab()} onChange={(id) => setCurrentTab(id as 'feed' | 'myVideos')} />
-          <button class={styles.profileBtn} onClick={() => void openProfileEditor()}>
-            {t('chirp.profile', language())}
+    <div class={styles.root}>
+      {/* ── Top bar: tabs left, username right ── */}
+      <div class={styles.topBar}>
+        <div class={styles.tabRow}>
+          <button class={styles.tabPill} classList={{ [styles.tabActive]: currentTab() === 'feed' }} onClick={() => setCurrentTab('feed')}>
+            {t('clips.for_you', language())}
+          </button>
+          <button class={styles.tabPill} classList={{ [styles.tabActive]: currentTab() === 'following' }} onClick={() => setCurrentTab('following')}>
+            {t('clips.following', language()) || 'Siguiendo'}
+          </button>
+          <button class={styles.tabPill} classList={{ [styles.tabActive]: currentTab() === 'myVideos' }} onClick={() => setCurrentTab('myVideos')}>
+            {t('clips.library', language())}
           </button>
         </div>
-
-        <SocialOnboardingModal
-          open={showOnboarding()}
-          appName="Clips"
-          usernameHint={myAccount()?.username || ''}
-          displayNameHint={myAccount()?.display_name || ''}
-          avatarHint={myAccount()?.avatar || ''}
-          bioHint={myAccount()?.bio || ''}
-          isPrivateHint={myAccount()?.is_private === 1 || myAccount()?.is_private === true}
-          displayNameReadOnly
-          onCreate={createClipsAccount}
-          onClose={() => setShowOnboarding(false)}
-        />
-
-        {/* Feed */}
-        <div class={styles.feed} ref={scrollContainer} onScroll={handleScroll}>
-          <Show when={loading() && clips().length === 0}>
-            <div class={styles.loading}>{t('clips.loading_videos', language())}</div>
+        <button class={styles.userBadge} onClick={() => void openProfileEditor()}>
+          <Show when={myAccount()?.avatar} fallback={
+            <span class={styles.userInitial}>{(myAccount()?.display_name || myAccount()?.username || 'U').charAt(0).toUpperCase()}</span>
+          }>
+            <img src={myAccount()!.avatar!} alt="" class={styles.userAvatarImg} />
           </Show>
-          
-          <For each={clips()}>
-            {(clip, index) => {
-              const isPaused = () => pausedClips().has(clip.id);
-              
-              return (
-                <div 
-                  class={styles.clipCard}
-                  onDblClick={(e) => {
-                    e.preventDefault();
-                    handleDoubleTap(clip.id);
-                  }}
-                >
-                  <video
-                    class={styles.clipVideo}
-                    src={clip.media_url}
-                    controls={false}
-                    playsinline
-                    loop
-                    autoplay={index() === currentClipIndex() && !isPaused()}
-                    preload={Math.abs(index() - currentClipIndex()) <= 1 ? "auto" : "metadata"}
-                    onClick={() => togglePause(clip.id)}
-                  />
-                  
-                  <Show when={isPaused()}>
-                    <div class={styles.pauseIndicator}><img src="./img/icons_ios/ui-play.svg" alt="" draggable={false} /></div>
-                  </Show>
-                  
-                  <Show when={likeAnimation() === clip.id}>
-                    <div class={styles.likeAnimation}>♥</div>
-                  </Show>
-                  
-                  <div class={styles.clipOverlay}>
-                      <div class={styles.sideActions}>
-                      <div class={styles.actionItem}>
-                        <button 
-                          class={styles.actionBtn}
-                          classList={{ [styles.liked]: clip.liked }}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleLike(clip.id);
-                          }}
-                        >
-                          {clip.liked ? '♥' : '♡'}
-                        </button>
-                        <span class={styles.actionCount}>{clip.likes || 0}</span>
-                      </div>
-                      
-                      <div class={styles.actionItem}>
-                        <button 
-                          class={styles.actionBtn}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openComments(clip.id);
-                          }}
-                        >
-                          <img src="./img/icons_ios/ui-chat.svg" alt="" draggable={false} />
-                        </button>
-                        <span class={styles.actionCount}>{clip.comments_count || 0}</span>
-                      </div>
-                      
-                      <Show when={clip.is_own}>
-                        <div class={styles.actionItem}>
-                          <button 
-                            class={styles.actionBtn}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              deleteClip(clip.id);
-                            }}
-                          >
-                            <img src="./img/icons_ios/ui-trash.svg" alt="" draggable={false} />
-                          </button>
-                          <span class={styles.actionCount}>{t('action.delete', language())}</span>
-                        </div>
-                      </Show>
-                    </div>
-                    
-                    <div class={styles.bottomInfo}>
-                      <div class={styles.authorInfo}>
-                        <div class={styles.authorAvatar}>
-                          {clip.avatar ? (
-                            <img src={clip.avatar} alt="" />
-                          ) : (
-                            <span>{(clip.display_name || clip.username || 'U').charAt(0).toUpperCase()}</span>
-                          )}
-                        </div>
-                        <span class={styles.authorName}>@{clip.username || 'user'}</span>
-                      </div>
+          <span class={styles.userName}>@{myAccount()?.username || '...'}</span>
+        </button>
+      </div>
 
-                      <div class={styles.clipMetaRow}>
-                        <span class={styles.clipMetaPill}>{clip.display_name || clip.username || 'Creador'}</span>
-                        <span class={styles.clipMetaPill}>{clip.is_own ? 'Tu clip' : 'En clips'}</span>
-                      </div>
-                       
-                      <Show when={clip.caption}>
-                        <p class={styles.caption}>{clip.caption}</p>
-                      </Show>
-                      
-                      <div class={styles.musicInfo}>
-                        <span><img src="./img/icons_ios/music.svg" alt="" draggable={false} />{t('clips.original_sound', language(), { name: clip.display_name || clip.username || 'user' })}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            }}
-          </For>
-          
-          <Show when={!loading() && clips().length === 0}>
-            <div class={styles.emptyState}>
-              <p>{t('clips.no_clips', language())}</p>
-              <p class={styles.emptyHint}>{t('clips.no_clips_desc', language())}</p>
-            </div>
-          </Show>
-        </div>
+      {/* ── Back button ── */}
+      <button class={styles.backBtn} onClick={() => router.goBack()}>
+        <img src="./img/icons_ios/ui-chevron-left.svg" alt="" />
+      </button>
 
-        {/* FAB */}
-        <Show when={storageReady()}>
-          <div class={styles.fabContainer}>
-            <Show when={fabTooltipVisible()}>
-              <div class={styles.fabTooltip}>{t('clips.upload', language())}</div>
-            </Show>
-            <button 
-              class={styles.fab}
-              onClick={() => setShowUpload(true)}
-              onPointerDown={showFabTooltip}
-              onPointerUp={hideFabTooltip}
-              onPointerLeave={hideFabTooltip}
-            >
-              +
-            </button>
+      {/* ── Status ── */}
+      <Show when={statusMessage()}>
+        <div class={styles.statusToast}>{statusMessage()}</div>
+      </Show>
+
+      {/* ── Feed ── */}
+      <div class={styles.feed} ref={scrollContainer} onScroll={handleScroll}>
+        <Show when={loading() && clips().length === 0}>
+          <div class={styles.emptyCenter}>
+            <div class={styles.loadingDot} />
           </div>
         </Show>
 
-        {/* Comments Modal */}
-        <Show when={showComments()}>
-          <div class={styles.commentsScrim} onClick={() => setShowComments(false)}>
-            <div class={styles.commentsModal} onClick={(e) => e.stopPropagation()}>
-              <div class={styles.sheetHandle} />
-              <div class={styles.commentsHeader}>
-                <h4>{comments().length} comentarios</h4>
-                <button class={styles.closeBtn} onClick={() => setShowComments(false)}><img src="./img/icons_ios/ui-close.svg" alt="" draggable={false} /></button>
-              </div>
+        <For each={clips()}>
+          {(clip, index) => {
+            const isPaused = () => pausedClips().has(clip.id);
 
-              <div class={styles.commentsList}>
-                <For each={comments()}>
-                  {(comment) => (
-                    <div class={styles.commentItem}>
-                      <div class={styles.commentAvatar}>
-                        {comment.avatar ? (
-                          <img src={comment.avatar} alt="" />
-                        ) : (
-                          <span>{(comment.display_name || comment.username || 'U').charAt(0).toUpperCase()}</span>
-                        )}
-                      </div>
-                      <div class={styles.commentContent}>
-                        <strong>{comment.display_name || comment.username}</strong>
-                        <p>{comment.content}</p>
-                        <span class={styles.commentTime}>{comment.created_at ? timeAgo(comment.created_at) : 'ahora'}</span>
-                      </div>
-                    </div>
-                  )}
-                </For>
+            return (
+              <div class={styles.clipScreen} onDblClick={(e) => { e.preventDefault(); handleDoubleTap(clip.id); }}>
+                <video
+                  class={styles.clipVideo}
+                  src={clip.media_url}
+                  controls={false}
+                  playsinline
+                  loop
+                  autoplay={index() === currentClipIndex() && !isPaused()}
+                  preload={Math.abs(index() - currentClipIndex()) <= 1 ? 'auto' : 'metadata'}
+                  onClick={() => togglePause(clip.id)}
+                />
 
-                <Show when={comments().length === 0}>
-                  <div class={styles.emptyComments}>
-                    <p>Sin comentarios aun</p>
-                    <p>¡Se el primero en comentar!</p>
+                <Show when={isPaused()}>
+                  <div class={styles.pauseIcon}>▶</div>
+                </Show>
+
+                <Show when={likeAnimation() === clip.id}>
+                  <div class={styles.likeExplosion}>
+                    <span class={styles.likeHeart}>♥</span>
+                    <span class={styles.particle} style={{ '--angle': '0deg', '--dist': '60px' } as any} />
+                    <span class={styles.particle} style={{ '--angle': '45deg', '--dist': '50px' } as any} />
+                    <span class={styles.particle} style={{ '--angle': '90deg', '--dist': '55px' } as any} />
+                    <span class={styles.particle} style={{ '--angle': '135deg', '--dist': '45px' } as any} />
+                    <span class={styles.particle} style={{ '--angle': '180deg', '--dist': '60px' } as any} />
+                    <span class={styles.particle} style={{ '--angle': '225deg', '--dist': '50px' } as any} />
+                    <span class={styles.particle} style={{ '--angle': '270deg', '--dist': '55px' } as any} />
+                    <span class={styles.particle} style={{ '--angle': '315deg', '--dist': '48px' } as any} />
                   </div>
                 </Show>
-              </div>
 
-              <div class={styles.commentInput}>
-                <EmojiPickerButton value={commentText()} onChange={setCommentText} maxLength={500} />
-                <input
-                  type="text"
-                  placeholder="Escribe un comentario..."
-                  value={commentText()}
-                  onInput={(e) => setCommentText(sanitizeText(e.currentTarget.value, 500))}
-                  onKeyDown={(e) => e.key === 'Enter' && addComment()}
-                />
-                <button onClick={addComment} disabled={!commentText().trim()}>
-                  Enviar
-                </button>
+                {/* Gradient overlay — bottom only */}
+                <div class={styles.gradient} />
+
+                {/* Side actions */}
+                <div class={styles.sideActions}>
+                  <button
+                    class={styles.sideBtn}
+                    classList={{ [styles.sideLiked]: clip.liked }}
+                    onClick={(e) => { e.stopPropagation(); void toggleLike(clip.id); }}
+                  >
+                    <span class={styles.sideIcon}>{clip.liked ? '♥' : '♡'}</span>
+                    <span class={styles.sideCount}>{clip.likes || 0}</span>
+                  </button>
+
+                  <button class={styles.sideBtn} onClick={(e) => { e.stopPropagation(); void openComments(clip.id); }}>
+                    <span class={styles.sideIcon}><img src="./img/icons_ios/ui-chat.svg" alt="" /></span>
+                    <span class={styles.sideCount}>{clip.comments_count || 0}</span>
+                  </button>
+
+                  <Show when={clip.is_own}>
+                    <button class={styles.sideBtn} onClick={(e) => { e.stopPropagation(); deleteClip(clip.id); }}>
+                      <span class={styles.sideIcon}><img src="./img/icons_ios/ui-trash.svg" alt="" /></span>
+                    </button>
+                  </Show>
+                </div>
+
+                {/* Bottom info */}
+                <div class={styles.bottomInfo}>
+                  <div class={styles.authorRow}>
+                    <div class={styles.authorAvatar}>
+                      {clip.avatar
+                        ? <img src={clip.avatar} alt="" />
+                        : <span>{(clip.display_name || clip.username || 'U').charAt(0).toUpperCase()}</span>
+                      }
+                    </div>
+                    <strong class={styles.authorHandle}>@{clip.username || 'user'}</strong>
+                  </div>
+                  <Show when={clip.caption}>
+                    <p class={styles.caption}>{clip.caption}</p>
+                  </Show>
+                  <div class={styles.soundRow}>
+                    <img src="./img/icons_ios/music.svg" alt="" />
+                    <span>{t('clips.original_sound', language(), { name: clip.display_name || clip.username || 'user' })}</span>
+                  </div>
+                </div>
               </div>
-            </div>
+            );
+          }}
+        </For>
+
+        <Show when={!loading() && clips().length === 0}>
+          <div class={styles.emptyCenter}>
+            <p>{t('clips.no_clips', language())}</p>
+            <small>{t('clips.no_clips_desc', language())}</small>
           </div>
         </Show>
-
-        {/* Upload Modal */}
-        <Modal
-          open={showUpload()}
-          title="Subir Clip"
-          onClose={() => { setShowUpload(false); setUploadMedia(''); setUploadCaption(''); }}
-          size="md"
-        >
-          <div class={styles.uploadContent}>
-            <SheetIntro title="Nuevo clip" description="Sube un video vertical y agrega una descripcion corta para tu feed." />
-            <Show when={!uploadMedia()}>
-              <>
-                <div class={styles.uploadOptions}>
-                  <button class={styles.uploadBtn} onClick={openCamera}>
-                    <span class={styles.uploadIcon}><img src="./img/icons_ios/camera.svg" alt="" draggable={false} /></span>
-                    <span>Grabar video</span>
-                  </button>
-                  <button class={styles.uploadBtn} onClick={attachFromGallery}>
-                    <span class={styles.uploadIcon}><img src="./img/icons_ios/gallery.svg" alt="" draggable={false} /></span>
-                    <span>Elegir de galeria</span>
-                  </button>
-                </div>
-                <div class={styles.uploadHint}>Publica videos verticales de hasta 30 segundos usando {storageProvider() || 'tu proveedor actual'}.</div>
-              </>
-            </Show>
-            
-            <Show when={uploadMedia()}>
-              <div class={styles.videoPreview}>
-                <video src={uploadMedia()} controls playsinline />
-                <button class={styles.removeBtn} onClick={() => setUploadMedia('')}><img src="./img/icons_ios/ui-close.svg" alt="" draggable={false} /></button>
-              </div>
-              
-              <textarea
-                class={styles.captionInput}
-                placeholder="Describe tu video..."
-                value={uploadCaption()}
-                onInput={(e) => setUploadCaption(e.currentTarget.value)}
-                rows={3}
-              />
-            </Show>
-          </div>
-          
-          <ModalActions>
-            <ModalButton label="Cancelar" onClick={() => { setShowUpload(false); setUploadMedia(''); setUploadCaption(''); }} />
-            <ModalButton 
-              label={loading() ? 'Subiendo...' : 'Subir'}
-              onClick={() => void publishClip()}
-              tone="primary"
-              disabled={!uploadMedia() || loading()}
-            />
-          </ModalActions>
-        </Modal>
-
-        <Modal
-          open={showProfileModal()}
-          title="Editar perfil"
-          onClose={() => setShowProfileModal(false)}
-          size="md"
-        >
-          <div class={styles.identityCard}>
-            <span class={styles.identityLabel}>Identidad</span>
-            <strong>{profileDisplayName() || myAccount()?.display_name || 'Usuario'}</strong>
-            <span class={styles.identityHandle}>@{myAccount()?.username || 'clips'}</span>
-            <p>Usuario y nombre principal quedan definidos desde el inicio del telefono.</p>
-          </div>
-          <FormField label="Nombre visible" value={profileDisplayName()} onChange={setProfileDisplayName} placeholder="Tu nombre" disabled />
-          <label class={styles.profileToggle}>
-            <input type="checkbox" checked={profilePrivate()} onChange={(e) => setProfilePrivate(e.currentTarget.checked)} />
-            <span>Cuenta privada</span>
-          </label>
-          <ModalActions>
-            <ModalButton label="Cancelar" onClick={() => setShowProfileModal(false)} />
-            <ModalButton label="Guardar" tone="primary" onClick={() => void saveProfile()} />
-          </ModalActions>
-        </Modal>
-
-        <Modal
-          open={deleteClipId() !== null}
-          title="Eliminar clip"
-          onClose={() => setDeleteClipId(null)}
-          size="sm"
-        >
-          <p>Esta accion no se puede deshacer.</p>
-          <ModalActions>
-            <ModalButton label="Cancelar" onClick={() => setDeleteClipId(null)} />
-            <ModalButton label="Eliminar" tone="danger" onClick={() => void confirmDeleteClip()} />
-          </ModalActions>
-        </Modal>
-
-        <MediaLightbox url={viewerUrl()} onClose={() => setViewerUrl(null)} />
       </div>
-    </AppScaffold>
+
+      {/* ── FAB ── */}
+      <Show when={storageReady()}>
+        <button class={styles.fab} onClick={() => setShowUpload(true)}>+</button>
+      </Show>
+
+      {/* ── Comments overlay ── */}
+      <Show when={showComments()}>
+        <div class={styles.commentsOverlay}>
+          <div class={styles.commentsPanel} onClick={(e) => e.stopPropagation()}>
+            <div class={styles.commentsHead}>
+              <span>{comments().length} comentarios</span>
+              <button class={styles.commentsClose} onClick={() => setShowComments(false)}>✕</button>
+            </div>
+            <div class={styles.commentsFeed}>
+              <For each={comments()}>
+                {(comment) => (
+                  <div class={styles.commentBubble}>
+                    <strong>@{comment.username || 'user'}</strong>
+                    <span>{comment.content}</span>
+                    <small>{comment.created_at ? timeAgo(comment.created_at) : 'ahora'}</small>
+                  </div>
+                )}
+              </For>
+              <Show when={comments().length === 0}>
+                <div class={styles.commentsEmpty}>Sin comentarios</div>
+              </Show>
+            </div>
+            <div class={styles.commentBar}>
+              <EmojiPickerButton value={commentText()} onChange={setCommentText} maxLength={500} />
+              <input
+                type="text"
+                placeholder="Comentar..."
+                value={commentText()}
+                onInput={(e) => setCommentText(sanitizeText(e.currentTarget.value, 500))}
+                onKeyDown={(e) => e.key === 'Enter' && void addComment()}
+              />
+              <button onClick={() => void addComment()} disabled={!commentText().trim()}>↑</button>
+            </div>
+          </div>
+          <div class={styles.commentsScrim} onClick={() => setShowComments(false)} />
+        </div>
+      </Show>
+
+      {/* ── Upload Modal ── */}
+      <Modal open={showUpload()} title="Subir Clip" onClose={() => { setShowUpload(false); setUploadMedia(''); setUploadCaption(''); }} size="md">
+        <div class={styles.uploadBody}>
+          <Show when={!uploadMedia()}>
+            <div class={styles.uploadGrid}>
+              <button class={styles.uploadCard} onClick={openCamera}>
+                <img src="./img/icons_ios/camera.svg" alt="" />
+                <span>Grabar</span>
+              </button>
+              <button class={styles.uploadCard} onClick={attachFromGallery}>
+                <img src="./img/icons_ios/gallery.svg" alt="" />
+                <span>Galeria</span>
+              </button>
+            </div>
+          </Show>
+          <Show when={uploadMedia()}>
+            <div class={styles.previewWrap}>
+              <video src={uploadMedia()} controls playsinline />
+              <button class={styles.previewRemove} onClick={() => setUploadMedia('')}>✕</button>
+            </div>
+            <textarea class={styles.captionInput} placeholder="Describe tu video..." value={uploadCaption()} onInput={(e) => setUploadCaption(e.currentTarget.value)} rows={2} />
+          </Show>
+        </div>
+        <ModalActions>
+          <ModalButton label="Cancelar" onClick={() => { setShowUpload(false); setUploadMedia(''); setUploadCaption(''); }} />
+          <ModalButton label={loading() ? 'Subiendo...' : 'Subir'} onClick={() => void publishClip()} tone="primary" disabled={!uploadMedia() || loading()} />
+        </ModalActions>
+      </Modal>
+
+      {/* ── Profile Modal ── */}
+      <Modal open={showProfileModal()} title="Perfil" onClose={() => setShowProfileModal(false)} size="sm">
+        <div class={styles.profileCard}>
+          <div class={styles.profileAvatarLg}>
+            <Show when={myAccount()?.avatar} fallback={
+              <span>{(myAccount()?.display_name || 'U').charAt(0).toUpperCase()}</span>
+            }>
+              <img src={myAccount()!.avatar!} alt="" />
+            </Show>
+          </div>
+          <strong>{myAccount()?.display_name || 'Usuario'}</strong>
+          <span class={styles.profileHandle}>@{myAccount()?.username || 'clips'}</span>
+        </div>
+        <label class={styles.toggleRow}>
+          <input type="checkbox" checked={profilePrivate()} onChange={(e) => setProfilePrivate(e.currentTarget.checked)} />
+          <span>Cuenta privada</span>
+        </label>
+        <ModalActions>
+          <ModalButton label="Cancelar" onClick={() => setShowProfileModal(false)} />
+          <ModalButton label="Guardar" tone="primary" onClick={() => void saveProfile()} />
+        </ModalActions>
+      </Modal>
+
+      {/* ── Delete confirm ── */}
+      <Modal open={deleteClipId() !== null} title="Eliminar clip" onClose={() => setDeleteClipId(null)} size="sm">
+        <p style={{ margin: '0', 'font-size': '13px', color: 'var(--text-2)' }}>Esta accion no se puede deshacer.</p>
+        <ModalActions>
+          <ModalButton label="Cancelar" onClick={() => setDeleteClipId(null)} />
+          <ModalButton label="Eliminar" tone="danger" onClick={() => void confirmDeleteClip()} />
+        </ModalActions>
+      </Modal>
+
+      {/* ── Onboarding ── */}
+      <SocialOnboardingModal
+        open={showOnboarding()}
+        appName="Clips"
+        usernameHint={myAccount()?.username || ''}
+        displayNameHint={myAccount()?.display_name || ''}
+        avatarHint={myAccount()?.avatar || ''}
+        bioHint={myAccount()?.bio || ''}
+        isPrivateHint={myAccount()?.is_private === 1 || myAccount()?.is_private === true}
+        displayNameReadOnly
+        onCreate={createClipsAccount}
+        onClose={() => setShowOnboarding(false)}
+      />
+
+      <MediaLightbox url={viewerUrl()} onClose={() => setViewerUrl(null)} />
+    </div>
   );
 }
