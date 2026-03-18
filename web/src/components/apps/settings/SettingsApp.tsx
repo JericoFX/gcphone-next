@@ -10,7 +10,7 @@ import { AppScaffold } from '../../shared/layout';
 import { InlineNotice } from '../../shared/ui/InlineNotice';
 import { SectionGroup, SectionHeader } from '../../shared/ui/SectionBlock';
 import { appName, t } from '../../../i18n';
-import { uiConfirm } from '../../../utils/uiDialog';
+import { uiConfirm, uiPrompt } from '../../../utils/uiDialog';
 import { formatPhoneNumber } from '../../../utils/misc';
 import { FALLBACK_AUDIO_CATALOG, type PhoneToneCatalog, type ToneCategory } from '../../../utils/phoneAudio';
 import styles from './SettingsApp.module.scss';
@@ -92,6 +92,8 @@ export function SettingsApp() {
   const [liveLocationStatus, setLiveLocationStatus] = createSignal('');
   const [resettingPhone, setResettingPhone] = createSignal(false);
   const [resetStatus, setResetStatus] = createSignal<{ type: 'ok' | 'error'; text: string } | null>(null);
+  const [autoReplyEnabled, setAutoReplyEnabled] = createSignal(false);
+  const [autoReplyMessage, setAutoReplyMessage] = createSignal('');
   const language = () => phoneState.settings.language || 'es';
 
   usePhoneKeyHandler({
@@ -131,6 +133,10 @@ export function SettingsApp() {
       setLiveLocationEnabled(Boolean(state.active));
       setLiveLocationInterval(10);
     }
+
+    const autoReply = await fetchNui<{ enabled?: boolean; message?: string }>('getAutoReply', {}, { enabled: false, message: '' });
+    setAutoReplyEnabled(autoReply?.enabled === true);
+    setAutoReplyMessage(autoReply?.message || '');
   });
 
   onCleanup(() => {
@@ -468,14 +474,54 @@ export function SettingsApp() {
           switchValue={notifications.doNotDisturb}
           onSwitch={() => notificationsActions.setDoNotDisturb(!notifications.doNotDisturb)}
         />
-        <Cell 
+        <Cell
           icon={ICONS.mute}
           iconBg="iconGray"
-          title={t('settings.silent', language())} 
+          title={t('settings.silent', language())}
           right="switch"
           switchValue={notifications.silentMode}
           onSwitch={() => notificationsActions.setSilentMode(!notifications.silentMode)}
         />
+        <Cell
+          icon={ICONS.moon}
+          iconBg="iconGreen"
+          title="Auto-respuesta"
+          subtitle={autoReplyEnabled() ? 'Activa' : 'Inactiva'}
+          right="switch"
+          switchValue={autoReplyEnabled()}
+          onSwitch={async () => {
+            const next = !autoReplyEnabled();
+            if (!next) {
+              await fetchNui('setAutoReply', { enabled: false, message: '' }, { success: true });
+              setAutoReplyEnabled(false);
+              setAutoReplyMessage('');
+              return;
+            }
+            const msg = autoReplyMessage() || 'No puedo responder ahora, te escribo luego.';
+            const result = await fetchNui<{ success?: boolean; enabled?: boolean; message?: string }>('setAutoReply', { enabled: true, message: msg }, { success: true, enabled: true, message: msg });
+            if (result?.success) {
+              setAutoReplyEnabled(result.enabled === true);
+              setAutoReplyMessage(result.message || msg);
+            }
+          }}
+        />
+        <Show when={autoReplyEnabled()}>
+          <Cell
+            icon={ICONS.moon}
+            iconBg="iconGreen"
+            title="Mensaje auto"
+            subtitle={autoReplyMessage() || 'Sin mensaje'}
+            onClick={async () => {
+              const input = await uiPrompt('Escribe tu mensaje de auto-respuesta:', { title: 'Auto-respuesta', defaultValue: autoReplyMessage() });
+              if (typeof input === 'string' && input.trim()) {
+                const result = await fetchNui<{ success?: boolean; message?: string }>('setAutoReply', { enabled: true, message: input.trim() }, { success: true, message: input.trim() });
+                if (result?.success) {
+                  setAutoReplyMessage(result.message || input.trim());
+                }
+              }
+            }}
+          />
+        </Show>
       </Group>
 
       <div class={styles.brightnessSection}>
