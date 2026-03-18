@@ -489,11 +489,25 @@ Config.Snap = {
 Config.Garage = {
     MaxVehicles = 20,
 
-    -- Seed locations loaded at startup. Other resources can add more at runtime via exports:
+    -- Seed locations loaded at startup. External resources extend via SERVER-SIDE exports:
+    --
+    -- SINGLE:
     --   exports['gcphone-next']:RegisterGarageSpawnPoint(id, { label, x, y, z, h })
     --   exports['gcphone-next']:RegisterImpoundLocation(id, { label, x, y, z })
+    --
+    -- BATCH (one call, array of points):
+    --   exports['gcphone-next']:RegisterGarageSpawnPoints({ {id='g1', label='...', x=0, y=0, z=0, h=0}, ... }, 'prefix')
+    --   exports['gcphone-next']:RegisterImpoundLocations({ {id='i1', label='...', x=0, y=0, z=0}, ... }, 'prefix')
+    --
+    -- PROVIDER (dynamic, e.g. from DB — called per-request with player source):
+    --   exports['gcphone-next']:SetSpawnPointProvider(function(source) return { {label='...', x=0, y=0, z=0, h=0}, ... } end)
+    --   exports['gcphone-next']:SetImpoundProvider(function(source) return { {label='...', x=0, y=0, z=0}, ... } end)
+    --
+    -- REMOVE / CLEAR:
     --   exports['gcphone-next']:RemoveGarageSpawnPoint(id)
-    --   exports['gcphone-next']:RemoveImpoundLocation(id)
+    --   exports['gcphone-next']:ClearGarageSpawnPoints('prefix')  -- nil = clear all
+    --
+    -- QUERY:
     --   exports['gcphone-next']:GetNearestSpawnPoint(source) → point|nil
     --   exports['gcphone-next']:GetNearestImpound(source)    → point|nil
 

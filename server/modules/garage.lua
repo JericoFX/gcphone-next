@@ -94,25 +94,47 @@ lib.callback.register('gcphone:garage:getLocationHistory', function(source, plat
 end)
 
 -- ══════════════════════════════════════════════════════════════════
--- Runtime location registry
--- Seeded from Config, extended at runtime via exports.
--- Other resources can call:
---   exports['gcphone-next']:RegisterGarageSpawnPoint(id, { label, x, y, z, h })
---   exports['gcphone-next']:RegisterImpoundLocation(id, { label, x, y, z })
+-- Runtime location registry (SERVER SIDE)
+--
+-- Seeded from Config.Garage at startup.
+-- External resources extend it via exports — single or batch.
+--
+-- SINGLE:
+--   exports['gcphone-next']:RegisterGarageSpawnPoint(id, point)
+--   exports['gcphone-next']:RegisterImpoundLocation(id, point)
+--
+-- BATCH (array of { id, ... } tables):
+--   exports['gcphone-next']:RegisterGarageSpawnPoints(array)
+--   exports['gcphone-next']:RegisterImpoundLocations(array)
+--
+-- REMOVE:
 --   exports['gcphone-next']:RemoveGarageSpawnPoint(id)
 --   exports['gcphone-next']:RemoveImpoundLocation(id)
---   exports['gcphone-next']:GetGarageSpawnPoints()   → { [id] = point }
---   exports['gcphone-next']:GetImpoundLocations()     → { [id] = point }
---   exports['gcphone-next']:GetNearestSpawnPoint(source)  → point|nil
---   exports['gcphone-next']:GetNearestImpound(source)     → point|nil
+--   exports['gcphone-next']:ClearGarageSpawnPoints(prefix?)
+--   exports['gcphone-next']:ClearImpoundLocations(prefix?)
+--
+-- QUERY:
+--   exports['gcphone-next']:GetGarageSpawnPoints()        → { [id] = point }
+--   exports['gcphone-next']:GetImpoundLocations()         → { [id] = point }
+--   exports['gcphone-next']:GetNearestSpawnPoint(source)   → point|nil
+--   exports['gcphone-next']:GetNearestImpound(source)      → point|nil
+--
+-- PROVIDER CALLBACK (lazy/dynamic locations, e.g. from your DB):
+--   exports['gcphone-next']:SetSpawnPointProvider(function(source) return { {id,label,x,y,z,h}, ... } end)
+--   exports['gcphone-next']:SetImpoundProvider(function(source) return { {id,label,x,y,z}, ... } end)
+--
+-- When a provider is set, its results are merged with the static
+-- registry at query time. The provider receives the player source
+-- so it can return context-aware locations (e.g. per-job impounds).
 -- ══════════════════════════════════════════════════════════════════
 
 ---@class GaragePoint
+---@field id? string
 ---@field label string
 ---@field x number
 ---@field y number
 ---@field z number
----@field h? number  heading (spawn points only)
+---@field h? number
 
 ---@type table<string, GaragePoint>
 local SpawnPoints = {}
@@ -120,48 +142,87 @@ local SpawnPoints = {}
 ---@type table<string, GaragePoint>
 local ImpoundLocations = {}
 
--- Seed from config
-local function SeedFromConfig()
-    local cfg = Config.Garage or {}
+---@type fun(source: number): GaragePoint[]|nil
+local SpawnPointProvider = nil
 
-    if type(cfg.SpawnPoints) == 'table' then
-        for i, p in ipairs(cfg.SpawnPoints) do
-            if p.x and p.y and p.z then
-                SpawnPoints['config_spawn_' .. i] = {
-                    label = p.label or ('Garage ' .. i),
-                    x = tonumber(p.x), y = tonumber(p.y), z = tonumber(p.z),
-                    h = tonumber(p.h) or 0.0,
-                }
-            end
+---@type fun(source: number): GaragePoint[]|nil
+local ImpoundProvider = nil
+
+-- ── Internal helpers ──
+
+local function ValidatePoint(point)
+    return type(point) == 'table' and point.x and point.y and point.z
+end
+
+local function NormalizePoint(id, point)
+    return {
+        label = point.label or tostring(id),
+        x = tonumber(point.x), y = tonumber(point.y), z = tonumber(point.z),
+        h = tonumber(point.h) or 0.0,
+    }
+end
+
+local function InsertOne(registry, id, point)
+    if type(id) ~= 'string' or not ValidatePoint(point) then return end
+    registry[id] = NormalizePoint(id, point)
+end
+
+local function InsertBatch(registry, list, prefix)
+    if type(list) ~= 'table' then return 0 end
+    local count = 0
+    for i = 1, #list do
+        local entry = list[i]
+        if ValidatePoint(entry) then
+            local id = entry.id or ((prefix or 'batch') .. '_' .. i)
+            registry[tostring(id)] = NormalizePoint(id, entry)
+            count = count + 1
         end
     end
+    return count
+end
 
-    if type(cfg.Impounds) == 'table' then
-        for i, p in ipairs(cfg.Impounds) do
-            if p.x and p.y and p.z then
-                ImpoundLocations['config_impound_' .. i] = {
-                    label = p.label or ('Deposito ' .. i),
-                    x = tonumber(p.x), y = tonumber(p.y), z = tonumber(p.z),
-                }
-            end
+local function ClearByPrefix(registry, prefix)
+    if not prefix then
+        for k in pairs(registry) do registry[k] = nil end
+        return
+    end
+    for k in pairs(registry) do
+        if k:sub(1, #prefix) == prefix then
+            registry[k] = nil
         end
     end
 end
 
-SeedFromConfig()
+local function MergeProviderResults(registry, provider, source)
+    local merged = {}
+    for k, v in pairs(registry) do merged[k] = v end
 
--- Helpers
+    if provider then
+        local ok, extra = pcall(provider, source)
+        if ok and type(extra) == 'table' then
+            for i = 1, #extra do
+                local p = extra[i]
+                if ValidatePoint(p) then
+                    local id = p.id or ('provider_' .. i)
+                    merged[tostring(id)] = NormalizePoint(id, p)
+                end
+            end
+        end
+    end
 
-local function RegistryToList(registry)
+    return merged
+end
+
+local function RegistryToList(map)
     local list = {}
-    for _, point in pairs(registry) do
+    for _, point in pairs(map) do
         list[#list + 1] = point
     end
     return list
 end
 
-local function FindNearestPoint(source, registry)
-    local list = RegistryToList(registry)
+local function FindNearestInMap(source, map)
+    local list = RegistryToList(map)
     if #list == 0 then return nil end
 
     local ped = GetPlayerPed(source)
@@ -186,71 +247,134 @@ local function FindNearestPoint(source, registry)
     return nearest
 end
 
--- ── Exports: Register / Remove ──
+-- Resolved maps (static + provider) for a given source
+local function ResolveSpawnPoints(source)
+    return MergeProviderResults(SpawnPoints, SpawnPointProvider, source)
+end
 
----Register a garage spawn point where vehicles will be delivered.
----@param id string Unique identifier (e.g. 'mygarage_legion')
----@param point GaragePoint { label, x, y, z, h }
+local function ResolveImpounds(source)
+    return MergeProviderResults(ImpoundLocations, ImpoundProvider, source)
+end
+
+-- ── Seed from config ──
+
+local function SeedFromConfig()
+    local cfg = Config.Garage or {}
+    if type(cfg.SpawnPoints) == 'table' then
+        InsertBatch(SpawnPoints, cfg.SpawnPoints, 'config_spawn')
+    end
+    if type(cfg.Impounds) == 'table' then
+        InsertBatch(ImpoundLocations, cfg.Impounds, 'config_impound')
+    end
+end
+
+SeedFromConfig()
+
+-- ══════════════════════════════════════════════════════════════════
+-- Exports: Register
+-- ══════════════════════════════════════════════════════════════════
+
+---Register a single garage spawn point.
+---@param id string
+---@param point GaragePoint
 exports('RegisterGarageSpawnPoint', function(id, point)
-    if type(id) ~= 'string' or type(point) ~= 'table' then return end
-    if not point.x or not point.y or not point.z then return end
-    SpawnPoints[id] = {
-        label = point.label or id,
-        x = tonumber(point.x), y = tonumber(point.y), z = tonumber(point.z),
-        h = tonumber(point.h) or 0.0,
-    }
+    InsertOne(SpawnPoints, id, point)
 end)
 
----Register an impound lot location.
----@param id string Unique identifier (e.g. 'impound_lspd')
----@param point GaragePoint { label, x, y, z }
+---Register a single impound location.
+---@param id string
+---@param point GaragePoint
 exports('RegisterImpoundLocation', function(id, point)
-    if type(id) ~= 'string' or type(point) ~= 'table' then return end
-    if not point.x or not point.y or not point.z then return end
-    ImpoundLocations[id] = {
-        label = point.label or id,
-        x = tonumber(point.x), y = tonumber(point.y), z = tonumber(point.z),
-    }
+    InsertOne(ImpoundLocations, id, point)
 end)
 
----Remove a previously registered spawn point.
+---Register multiple spawn points at once.
+---Each entry: { id?, label, x, y, z, h? }
+---If id is omitted, auto-generates from prefix + index.
+---@param list GaragePoint[]
+---@param prefix? string  ID prefix (default 'batch')
+---@return number count  How many were registered
+exports('RegisterGarageSpawnPoints', function(list, prefix)
+    return InsertBatch(SpawnPoints, list, prefix)
+end)
+
+---Register multiple impound locations at once.
+---@param list GaragePoint[]
+---@param prefix? string
+---@return number count
+exports('RegisterImpoundLocations', function(list, prefix)
+    return InsertBatch(ImpoundLocations, list, prefix)
+end)
+
+-- ══════════════════════════════════════════════════════════════════
+-- Exports: Remove / Clear
+-- ══════════════════════════════════════════════════════════════════
+
 ---@param id string
 exports('RemoveGarageSpawnPoint', function(id)
     if type(id) == 'string' then SpawnPoints[id] = nil end
 end)
 
----Remove a previously registered impound location.
 ---@param id string
 exports('RemoveImpoundLocation', function(id)
     if type(id) == 'string' then ImpoundLocations[id] = nil end
 end)
 
--- ── Exports: Query ──
+---Clear spawn points. If prefix given, only clears IDs starting with it.
+---@param prefix? string
+exports('ClearGarageSpawnPoints', function(prefix)
+    ClearByPrefix(SpawnPoints, prefix)
+end)
 
----Get all registered spawn points.
+---Clear impound locations. If prefix given, only clears IDs starting with it.
+---@param prefix? string
+exports('ClearImpoundLocations', function(prefix)
+    ClearByPrefix(ImpoundLocations, prefix)
+end)
+
+-- ══════════════════════════════════════════════════════════════════
+-- Exports: Provider callbacks (dynamic/DB-based locations)
+-- ══════════════════════════════════════════════════════════════════
+
+---Set a callback that provides additional spawn points per-request.
+---Called with (source) when the phone needs to resolve the nearest spawn.
+---Return an array of { id?, label, x, y, z, h? }.
+---Set to nil to remove the provider.
+---@param fn fun(source: number): GaragePoint[]|nil
+exports('SetSpawnPointProvider', function(fn)
+    SpawnPointProvider = type(fn) == 'function' and fn or nil
+end)
+
+---Set a callback that provides additional impound locations per-request.
+---@param fn fun(source: number): GaragePoint[]|nil
+exports('SetImpoundProvider', function(fn)
+    ImpoundProvider = type(fn) == 'function' and fn or nil
+end)
+
+-- ══════════════════════════════════════════════════════════════════
+-- Exports: Query
+-- ══════════════════════════════════════════════════════════════════
+
 ---@return table<string, GaragePoint>
 exports('GetGarageSpawnPoints', function()
     return SpawnPoints
 end)
 
----Get all registered impound locations.
 ---@return table<string, GaragePoint>
 exports('GetImpoundLocations', function()
     return ImpoundLocations
 end)
 
----Get the nearest spawn point to a player.
----@param source number Server ID
+---@param source number
 ---@return GaragePoint|nil
 exports('GetNearestSpawnPoint', function(source)
-    return FindNearestPoint(source, SpawnPoints)
+    return FindNearestInMap(source, ResolveSpawnPoints(source))
 end)
 
----Get the nearest impound location to a player.
----@param source number Server ID
+---@param source number
 ---@return GaragePoint|nil
 exports('GetNearestImpound', function(source)
-    return FindNearestPoint(source, ImpoundLocations)
+    return FindNearestInMap(source, ResolveImpounds(source))
 end)
 
 -- ── Callbacks ──
@@ -271,7 +395,7 @@ lib.callback.register('gcphone:garage:requestVehicle', function(source, plate)
         return false, 'Vehicle is impounded'
     end
 
-    local spawnPoint = FindNearestPoint(source, SpawnPoints)
+    local spawnPoint = FindNearestInMap(source, ResolveSpawnPoints(source))
 
     if spawnPoint then
         vehicle._spawnX = spawnPoint.x
@@ -288,7 +412,7 @@ end)
 
 -- Get nearest impound location for GPS
 lib.callback.register('gcphone:garage:getImpoundLocation', function(source)
-    return FindNearestPoint(source, ImpoundLocations)
+    return FindNearestInMap(source, ResolveImpounds(source))
 end)
 
 -- Share vehicle location with contact
