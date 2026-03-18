@@ -1,4 +1,4 @@
-import { ParentComponent, createContext, createEffect, createMemo, createSignal, onCleanup, useContext } from 'solid-js';
+import { ParentComponent, batch, createContext, createEffect, createMemo, createSignal, onCleanup, useContext } from 'solid-js';
 import { createStore } from 'solid-js/store';
 import { useNuiCustomEvent } from '../utils/useNui';
 import { sanitizeText } from '../utils/sanitize';
@@ -170,8 +170,10 @@ export const NotificationsProvider: ParentComponent = (props) => {
       setState('history', (current) => [next, ...current.filter((item) => item.id !== next.id)].slice(0, MAX_HISTORY));
 
       if (state.current?.id === next.id) {
-        setState('current', next);
-        setTimerVersion((v) => v + 1);
+        batch(() => {
+          setState('current', next);
+          setTimerVersion((v) => v + 1);
+        });
         return;
       }
 

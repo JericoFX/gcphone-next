@@ -1,4 +1,4 @@
-import { createSignal, createEffect, onCleanup } from 'solid-js';
+import { createSignal, onMount, onCleanup } from 'solid-js';
 
 export interface UseAsyncDataOptions<T> {
   initialData?: T;
@@ -54,8 +54,8 @@ export function useAsyncData<T>(
   };
 
   if (autoFetch) {
-    createEffect(() => {
-      execute();
+    onMount(() => {
+      void execute();
     });
   }
 
@@ -76,7 +76,7 @@ export function useAsyncData<T>(
 export function useDelayedLoading(delay = 120) {
   const [loading, setLoading] = createSignal(true);
 
-  createEffect(() => {
+  onMount(() => {
     const handle = setTimeout(() => setLoading(false), delay);
     onCleanup(() => clearTimeout(handle));
   });

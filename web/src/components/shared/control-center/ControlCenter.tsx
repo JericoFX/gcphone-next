@@ -7,9 +7,6 @@ import { appName, formatDate, t } from '../../../i18n';
 import { useInternalEvent, emitInternalEvent } from '../../../utils/internalEvents';
 import styles from './ControlCenter.module.scss';
 
-type TileId = 'airplane' | 'dnd' | 'silent' | 'gps' | 'preview';
-
-
 export function ControlCenter() {
   const [notifications, notificationsActions] = useNotifications();
   const [phoneState, phoneActions] = usePhone();
@@ -17,24 +14,24 @@ export function ControlCenter() {
   const [dragSurface, setDragSurface] = createSignal<'notifications' | 'control' | null>(null);
   const [dragProgress, setDragProgress] = createSignal(0);
   const [liveLocationEnabled, setLiveLocationEnabled] = createSignal(false);
-  
+  const [flashlightEnabled, setFlashlightEnabled] = createSignal(false);
+
   let sheetGestureStartX = 0;
   let sheetGestureStartY = 0;
   let topDragStartY = 0;
   let topDragPointerId = -1;
 
   const volumePercent = () => Math.round(phoneState.settings.volume * 100);
+  const brightnessPercent = () => Math.round(notifications.brightness * 100);
 
   const groupedNotifications = createMemo(() => {
     const groups = new Map<string, Array<{ id: string; title: string; message: string; route?: string; data?: Record<string, unknown>; createdAt?: number }>>();
-
     for (const item of notifications.history) {
       const key = item.appId || 'system';
       const list = groups.get(key) || [];
       list.push({ id: item.id, title: item.title, message: item.message, route: item.route, data: item.data, createdAt: item.createdAt });
       groups.set(key, list);
     }
-
     return Array.from(groups.entries()).map(([appId, items]) => ({
       appId,
       items,
@@ -44,7 +41,6 @@ export function ControlCenter() {
   });
 
   const totalNotificationCount = createMemo(() => notifications.history.length);
-
   const mutedAppsCount = createMemo(() => notifications.mutedApps.length);
 
   const dayLabel = createMemo(() => {
@@ -54,22 +50,26 @@ export function ControlCenter() {
     return `${weekday} ${shortDate}`;
   });
 
-  function previewNotification() {
-    notificationsActions.receive({
-      id: `preview-${Date.now()}`,
-      appId: 'wavechat',
-        title: 'WaveChat',
-       message: 'Mensaje nuevo de Alex: Estoy en Legion Square',
-      icon: './img/icons_ios/ui-chat.svg',
-      route: 'wavechat',
-      durationMs: 4200,
-      priority: 'high',
-    });
-  }
-
   async function syncLiveLocationState() {
     const result = await fetchNui<{ success?: boolean; active?: boolean }>('getLiveLocationState', {}, { success: false, active: false });
     setLiveLocationEnabled(result?.success === true && result.active === true);
+  }
+
+  async function syncFlashlightState() {
+    const result = await fetchNui<{ enabled?: boolean }>('cameraGetFlashlightSettings', {}, { enabled: false });
+    setFlashlightEnabled(result?.enabled === true);
+  }
+
+  async function toggleFlashlight() {
+    const nextEnabled = !flashlightEnabled();
+    const result = await fetchNui<{ success?: boolean; enabled?: boolean }>(
+      'cameraToggleFlashlight',
+      { enabled: nextEnabled },
+      { success: true, enabled: nextEnabled },
+    );
+    if (result?.success) {
+      setFlashlightEnabled(result.enabled === true);
+    }
   }
 
   async function toggleGpsQuickAction() {
@@ -129,45 +129,6 @@ export function ControlCenter() {
       priority: 'normal',
     });
   }
-
-  const controlTiles = createMemo(() => {
-    const handlers: Record<TileId, { label: string; glyph: string; active?: boolean; onClick: () => void; testId?: string }> = {
-      airplane: {
-        label: 'Modo avion',
-        glyph: '✈',
-        active: notifications.airplaneMode,
-        onClick: () => notificationsActions.setAirplaneMode(!notifications.airplaneMode),
-      },
-      dnd: {
-        label: 'No molestar',
-        glyph: '☾',
-        active: notifications.doNotDisturb,
-        onClick: () => notificationsActions.setDoNotDisturb(!notifications.doNotDisturb),
-      },
-      silent: {
-        label: 'Silencio',
-        glyph: '🔕',
-        active: notifications.silentMode,
-        onClick: () => notificationsActions.setSilentMode(!notifications.silentMode),
-      },
-      gps: {
-        label: 'GPS',
-        glyph: '⌖',
-        active: liveLocationEnabled(),
-        onClick: () => void toggleGpsQuickAction(),
-      },
-      preview: {
-        label: 'Probar noti',
-        glyph: '◎',
-        onClick: previewNotification,
-        testId: 'preview-notification-btn',
-      },
-    };
-
-    return notifications.controlTileOrder
-      .map((id) => handlers[id as TileId])
-      .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry));
-  });
 
   const visibleItemsForGroup = (items: Array<{ id: string; title: string; message: string; route?: string; data?: Record<string, unknown>; createdAt?: number }>) => {
     return items.slice(0, 2);
@@ -246,23 +207,14 @@ export function ControlCenter() {
       if (dragSurface() === 'notifications') notificationsActions.setNotificationCenterOpen(true);
       if (dragSurface() === 'control') notificationsActions.setControlCenterOpen(true);
     }
-
     topDragPointerId = -1;
     setDragSurface(null);
     setDragProgress(0);
   };
 
-  const ControlToggle = (props: { label: string; active: boolean; onChange: (next: boolean) => void }) => (
-    <button class={styles.switchRow} onClick={() => props.onChange(!props.active)}>
-      <span>{props.label}</span>
-      <span class={styles.switch} classList={{ [styles.switchOn]: props.active }}>
-        <span class={styles.switchThumb} />
-      </span>
-    </button>
-  );
-
   onMount(() => {
     void syncLiveLocationState();
+    void syncFlashlightState();
   });
 
   useInternalEvent('phone:openControlCenter', () => notificationsActions.setControlCenterOpen(true));
@@ -291,6 +243,7 @@ export function ControlCenter() {
         </div>
       </Show>
 
+      {/* ── Notification Center ── */}
       <Show when={notifications.notificationCenterOpen}>
         <div class={styles.overlay} data-testid="notification-center-sheet" onClick={() => notificationsActions.setNotificationCenterOpen(false)}>
           <div
@@ -311,12 +264,8 @@ export function ControlCenter() {
                 <strong>{totalNotificationCount()}</strong>
               </article>
               <article class={styles.summaryCard}>
-                 <span>Silenciadas</span>
+                <span>Silenciadas</span>
                 <strong>{mutedAppsCount()}</strong>
-              </article>
-              <article class={styles.summaryCard}>
-                <span>Modo</span>
-                <strong>{t('control.preset.compact', language())}</strong>
               </article>
             </div>
 
@@ -332,7 +281,7 @@ export function ControlCenter() {
                           class={styles.muteAppBtn}
                           onClick={() => notificationsActions.toggleMuteApp(group.appId)}
                         >
-                           {notificationsActions.isAppMuted(group.appId) ? t('notifications.enable', language()) : t('notifications.mute', language())}
+                          {notificationsActions.isAppMuted(group.appId) ? t('notifications.enable', language()) : t('notifications.mute', language())}
                         </button>
                       </div>
                       <For each={visibleItemsForGroup(group.items)}>
@@ -363,13 +312,14 @@ export function ControlCenter() {
             </div>
 
             <div class={styles.sheetFooter}>
-               <button class={styles.clearBtn} onClick={() => notificationsActions.clear()}>{t('control.clear', language())}</button>
-               <button class={styles.closeBtn} onClick={() => notificationsActions.setNotificationCenterOpen(false)}>{t('control.close', language())}</button>
+              <button class={styles.clearBtn} onClick={() => notificationsActions.clear()}>{t('control.clear', language())}</button>
+              <button class={styles.closeBtn} onClick={() => notificationsActions.setNotificationCenterOpen(false)}>{t('control.close', language())}</button>
             </div>
           </div>
         </div>
       </Show>
 
+      {/* ── Control Center ── */}
       <Show when={notifications.controlCenterOpen}>
         <div class={styles.overlay} data-testid="control-center-sheet" onClick={() => notificationsActions.setControlCenterOpen(false)}>
           <div
@@ -380,70 +330,128 @@ export function ControlCenter() {
           >
             <div class={styles.sheetHeader}>
               <div class={styles.grabber} />
-               <h3>{t('control.center', language())}</h3>
             </div>
 
-            <div class={styles.presetRow}>
-                <button class={styles.presetBtn} onClick={() => notificationsActions.applyControlTileOrderPreset('default')}>{t('control.order.base', language())}</button>
-                <button class={styles.presetBtn} onClick={() => notificationsActions.applyControlTileOrderPreset('commute')}>{t('control.order.commute', language())}</button>
-               <button class={styles.presetBtn} onClick={() => notificationsActions.applyControlTileOrderPreset('focus')}>{t('control.order.focus', language())}</button>
+            {/* Connectivity module */}
+            <div class={styles.connectivityModule}>
+              <button
+                class={styles.connectivityTile}
+                classList={{ [styles.connectivityTileActive]: notifications.airplaneMode }}
+                onClick={() => notificationsActions.setAirplaneMode(!notifications.airplaneMode)}
+              >
+                <span class={styles.tileIcon}>
+                  <img src="./img/icons_ios/ui-plane.svg" alt="" draggable={false} />
+                </span>
+                <span class={styles.tileLabel}>{t('control.airplane', language())}</span>
+              </button>
+
+              <button
+                class={styles.connectivityTile}
+                classList={{ [styles.connectivityTileActive]: notifications.doNotDisturb }}
+                onClick={() => notificationsActions.setDoNotDisturb(!notifications.doNotDisturb)}
+              >
+                <span class={styles.tileIcon}>
+                  <img src="./img/icons_ios/ui-moon.svg" alt="" draggable={false} />
+                </span>
+                <span class={styles.tileLabel}>{t('control.dnd', language())}</span>
+              </button>
+
+              <button
+                class={styles.connectivityTile}
+                classList={{ [styles.connectivityTileActive]: notifications.silentMode }}
+                onClick={() => notificationsActions.setSilentMode(!notifications.silentMode)}
+              >
+                <span class={styles.tileIcon}>
+                  <img src="./img/icons_ios/ui-bell.svg" alt="" draggable={false} />
+                </span>
+                <span class={styles.tileLabel}>{t('control.silent', language())}</span>
+              </button>
+
+              <button
+                class={styles.connectivityTile}
+                classList={{ [styles.connectivityTileActive]: liveLocationEnabled() }}
+                onClick={() => void toggleGpsQuickAction()}
+              >
+                <span class={styles.tileIcon}>
+                  <img src="./img/icons_ios/ui-location.svg" alt="" draggable={false} />
+                </span>
+                <span class={styles.tileLabel}>GPS</span>
+              </button>
             </div>
 
-            <div
-              class={styles.systemGrid}
-              classList={{
-                [styles.systemGridCompact]: true,
-              }}
-            >
-              <For each={controlTiles()}>
-                {(tile) => (
-                  <button class={styles.systemTile} classList={{ [styles.activeTile]: !!tile.active }} onClick={tile.onClick} data-testid={tile.testId}>
-                    <span class={styles.glyph}>{tile.glyph}</span>
-                    <strong>{tile.label}</strong>
-                  </button>
-                )}
-              </For>
+            {/* Quick actions row */}
+            <div class={styles.quickRow}>
+              <button
+                class={styles.quickTile}
+                classList={{ [styles.quickTileActive]: flashlightEnabled() }}
+                onClick={() => void toggleFlashlight()}
+              >
+                <img src="./img/icons_ios/ui-flashlight.svg" alt="" draggable={false} />
+              </button>
+
+              <button
+                class={styles.quickTile}
+                onClick={() => {
+                  notificationsActions.setControlCenterOpen(false);
+                  emitInternalEvent('phone:openRoute', { route: 'camera', data: {} });
+                }}
+              >
+                <img src="./img/icons_ios/camera.svg" alt="" draggable={false} />
+              </button>
+
+              <button
+                class={styles.quickTile}
+                onClick={() => {
+                  notificationsActions.setControlCenterOpen(false);
+                  emitInternalEvent('phone:lockPhone', {});
+                }}
+              >
+                <img src="./img/icons_ios/ui-lock.svg" alt="" draggable={false} />
+              </button>
             </div>
 
-            <div class={styles.switchCard}>
-              <ControlToggle label={t('control.dnd', language())} active={notifications.doNotDisturb} onChange={notificationsActions.setDoNotDisturb} />
-              <ControlToggle label={t('control.airplane', language())} active={notifications.airplaneMode} onChange={notificationsActions.setAirplaneMode} />
-            </div>
-
-            <div class={styles.sliderCard}>
-              <span>{t('settings.brightness', language())}</span>
-              <input 
+            {/* Brightness */}
+            <div class={styles.sliderModule}>
+              <div class={styles.sliderHeader}>
+                <img src="./img/icons_ios/ui-sun.svg" alt="" class={styles.sliderIcon} draggable={false} />
+                <span>{t('settings.brightness', language())}</span>
+                <strong>{brightnessPercent()}%</strong>
+              </div>
+              <input
                 class={`${styles.slider} ios-slider`}
-                type="range" 
-                min="40" 
-                max="120" 
-                value={Math.round(notifications.brightness * 100)} 
-                style={{ '--value-percent': `${((Math.round(notifications.brightness * 100) - 40) / (120 - 40)) * 100}%` }}
+                type="range"
+                min="40"
+                max="120"
+                value={brightnessPercent()}
+                style={{ '--value-percent': `${((brightnessPercent() - 40) / 80) * 100}%` }}
                 onInput={(e) => {
                   const val = Number(e.currentTarget.value);
-                  e.currentTarget.style.setProperty('--value-percent', `${((val - 40) / (120 - 40)) * 100}%`);
+                  e.currentTarget.style.setProperty('--value-percent', `${((val - 40) / 80) * 100}%`);
                   notificationsActions.setBrightness(val / 100);
-                }} 
+                }}
               />
-              <strong>{Math.round(notifications.brightness * 100)}%</strong>
             </div>
 
-            <div class={styles.sliderCard}>
-              <span>{t('settings.volume', language())}</span>
-              <input 
+            {/* Volume */}
+            <div class={styles.sliderModule}>
+              <div class={styles.sliderHeader}>
+                <img src="./img/icons_ios/ui-bell.svg" alt="" class={styles.sliderIcon} draggable={false} />
+                <span>{t('settings.volume', language())}</span>
+                <strong>{volumePercent()}%</strong>
+              </div>
+              <input
                 class={`${styles.slider} ios-slider`}
-                type="range" 
-                min="0" 
-                max="100" 
-                value={volumePercent()} 
+                type="range"
+                min="0"
+                max="100"
+                value={volumePercent()}
                 style={{ '--value-percent': `${volumePercent()}%` }}
                 onInput={(e) => {
                   const val = Number(e.currentTarget.value);
                   e.currentTarget.style.setProperty('--value-percent', `${val}%`);
                   phoneActions.setVolume(val / 100);
-                }} 
+                }}
               />
-              <strong>{volumePercent()}%</strong>
             </div>
 
             <div class={styles.sheetFooter}>

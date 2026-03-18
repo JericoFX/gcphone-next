@@ -55,7 +55,7 @@ export const MessagesProvider: ParentComponent = (props) => {
     }
 
     for (const [phoneNumber, messages] of map.entries()) {
-      map.set(phoneNumber, messages.slice().sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime()));
+      map.set(phoneNumber, messages.slice().sort((a, b) => (a.time > b.time ? 1 : a.time < b.time ? -1 : 0)));
     }
 
     return map;

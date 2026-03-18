@@ -55,12 +55,12 @@ export function HomeScreen() {
     closeSearch,
   } = useHomeSearch(() => state.enabledApps, language);
 
-  const folderGroups = createMemo(() => {
-    const socialSet = new Set(['messages', 'wavechat', 'chirp', 'snap', 'clips', 'darkrooms']);
-    const utilitySet = new Set(['camera', 'gallery', 'maps', 'notes', 'settings']);
+  const SOCIAL_IDS = new Set(['messages', 'wavechat', 'chirp', 'snap', 'clips', 'darkrooms']);
+  const UTILITY_IDS = new Set(['camera', 'gallery', 'maps', 'notes', 'settings']);
 
-    const socialApps = homeApps().filter((app) => socialSet.has(app.id));
-    const utilityApps = homeApps().filter((app) => utilitySet.has(app.id));
+  const folderGroups = createMemo(() => {
+    const socialApps = homeApps().filter((app) => SOCIAL_IDS.has(app.id));
+    const utilityApps = homeApps().filter((app) => UTILITY_IDS.has(app.id));
 
     return [
       { id: 'social', name: t('home.folder.social', language()), icon: './img/icons_ios/ui-chat.svg', apps: socialApps },

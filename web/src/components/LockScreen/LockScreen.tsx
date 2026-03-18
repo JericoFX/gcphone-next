@@ -1,4 +1,4 @@
-import { For, Show, batch, createEffect, createMemo, createSignal, onCleanup, onMount } from 'solid-js';
+import { For, Index, Show, batch, createEffect, createMemo, createSignal, onCleanup, onMount } from 'solid-js';
 import { usePhone } from '../../store/phone';
 import { useNotifications } from '../../store/notifications';
 import { fetchNui } from '../../utils/fetchNui';
@@ -354,15 +354,15 @@ export function LockScreen() {
           </div>
 
           <div class={styles.keypad}>
-            <For each={keypadKeys}>
+            <Index each={keypadKeys}>
               {(key) => (
-                <Show when={key !== ''} fallback={<div class={styles.keySpacer} />}>
-                  <button class={styles.key} onClick={() => (key === 'del' ? setCode((prev) => prev.slice(0, -1)) : handleKeyPress(key))}>
-                    {key === 'del' ? '⌫' : key}
+                <Show when={key() !== ''} fallback={<div class={styles.keySpacer} />}>
+                  <button class={styles.key} onClick={() => (key() === 'del' ? setCode((prev) => prev.slice(0, -1)) : handleKeyPress(key()))}>
+                    {key() === 'del' ? '⌫' : key()}
                   </button>
                 </Show>
               )}
-            </For>
+            </Index>
           </div>
 
           <div class={styles.sheetActions}>
