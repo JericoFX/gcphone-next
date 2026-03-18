@@ -171,23 +171,23 @@
 }
 
 .widget-viewport {
-  min-height: 124px;
+  min-height: 146px;
   display: grid;
 }
 
 .primary-panel {
-  min-height: 124px;
+  min-height: 146px;
 }
 
 .widget-viewport > section {
-  min-height: 124px;
-  max-height: 124px;
+  min-height: 146px;
+  max-height: 180px;
 }
 
 .compact-panel {
-  height: 104px;
-  min-height: 104px;
-  max-height: 104px;
+  height: 120px;
+  min-height: 120px;
+  max-height: 120px;
 }
 
 // ---------------------------------------------------------------------------
