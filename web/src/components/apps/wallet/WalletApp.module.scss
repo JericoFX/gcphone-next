@@ -229,6 +229,57 @@
   &.adjust { color: var(--tint); }
 }
 
+/* ── Selected target (shown in invoice modal after NFC selection) ── */
+
+.selectedTarget {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-3);
+  border-radius: var(--r-lg);
+  background: color-mix(in srgb, var(--tint) 8%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--tint) 20%, var(--border));
+
+  strong {
+    display: block;
+    font-size: var(--fs-footnote);
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  span {
+    font-size: var(--fs-caption2);
+    color: var(--text-3);
+  }
+}
+
+.selectedAvatar {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--r-pill);
+  background: var(--tint);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-size: var(--fs-footnote);
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.changeTarget {
+  margin-left: auto;
+  padding: var(--s-1) var(--s-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-pill);
+  background: var(--surface);
+  color: var(--tint);
+  font-size: var(--fs-caption2);
+  font-weight: 600;
+  transition: transform var(--dur-1) var(--ease-standard);
+
+  &:active { transform: scale(0.95); }
+}
+
 /* ── Modals shared ── */
 
 .modalBody,

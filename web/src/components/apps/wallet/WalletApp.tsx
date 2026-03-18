@@ -8,6 +8,7 @@ import { uiAlert } from '../../../utils/uiAlert';
 import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { AppScaffold } from '../../shared/layout';
 import { EmptyState } from '../../shared/ui/EmptyState';
+import { NfcShareSheet } from '../../shared/ui/NfcShareSheet';
 import { FormField, FormSection, Modal, ModalActions, ModalButton } from '../../shared/ui/Modal';
 import { t } from '../../../i18n';
 import styles from './WalletApp.module.scss';
@@ -55,6 +56,7 @@ export function WalletApp() {
   const [nearbyPlayers, setNearbyPlayers] = createSignal<NearbyPlayer[]>([]);
   const [loading, setLoading] = createSignal(true);
 
+  const [showNfcRadar, setShowNfcRadar] = createSignal(false);
   const [showCreateInvoice, setShowCreateInvoice] = createSignal(false);
   const [showAddCardModal, setShowAddCardModal] = createSignal(false);
   const [showProximityModal, setShowProximityModal] = createSignal(false);
@@ -238,15 +240,20 @@ export function WalletApp() {
     void load();
   };
 
-  const openInvoiceModal = async () => {
-    await load();
-    setTargetMode('nearby');
-    const firstNearby = nearbyPlayers()[0];
-    setTargetServerId(firstNearby ? firstNearby.serverId : null);
-    setTargetPhone('');
-    setTargetIdentifier('');
+  const openInvoiceModal = () => {
     setNfcAmount('');
     setNfcTitle(t('wallet.invoice', language()));
+    setTargetPhone('');
+    setTargetIdentifier('');
+    setTargetServerId(null);
+    setTargetMode('nearby');
+    setShowNfcRadar(true);
+  };
+
+  const onNfcPlayerSelected = (serverId: number) => {
+    setShowNfcRadar(false);
+    setTargetServerId(serverId);
+    setTargetMode('nearby');
     setShowCreateInvoice(true);
   };
 
@@ -262,6 +269,10 @@ export function WalletApp() {
       }
       if (showCreateInvoice()) {
         setShowCreateInvoice(false);
+        return;
+      }
+      if (showNfcRadar()) {
+        setShowNfcRadar(false);
         return;
       }
       if (showAddCardModal()) {
@@ -455,84 +466,22 @@ export function WalletApp() {
           </ModalActions>
         </Modal>
 
-        {/* ── Create Invoice Modal (unified — includes nearby player selection inline) ── */}
-        <Modal open={showCreateInvoice()} title={t('wallet.new_invoice', language())} onClose={closeInvoiceModal} size="md">
+        {/* ── Create Invoice Modal (shows after NFC radar selected a player) ── */}
+        <Modal open={showCreateInvoice()} title={t('wallet.new_invoice', language())} onClose={closeInvoiceModal} size="sm">
           <div class={styles.modalBody}>
-            <FormSection label={t('wallet.target', language())}>
-              <div class={styles.segmentedGrid}>
-                <For each={targetModes}>
-                  {(mode) => (
-                    <button
-                      class={styles.segmentButton}
-                      classList={{ [styles.activeSegment]: targetMode() === mode.id }}
-                      onClick={() => setTargetMode(mode.id)}
-                    >
-                      <span>{mode.label}</span>
-                    </button>
-                  )}
-                </For>
+            <Show when={targetMode() === 'nearby' && targetServerId()}>
+              <div class={styles.selectedTarget}>
+                <div class={styles.selectedAvatar}>
+                  {(nearbyPlayers().find(p => p.serverId === targetServerId())?.name || '?').charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <strong>{nearbyPlayers().find(p => p.serverId === targetServerId())?.name || 'Jugador'}</strong>
+                  <span>{nearbyPlayers().find(p => p.serverId === targetServerId())?.distance.toFixed(1) || '?'}m</span>
+                </div>
+                <button class={styles.changeTarget} onClick={() => { setShowCreateInvoice(false); setShowNfcRadar(true); }}>
+                  {t('action.change', language()) || 'Cambiar'}
+                </button>
               </div>
-            </FormSection>
-
-            <Show when={targetMode() === 'nearby'}>
-              <Show
-                when={nearbyPlayers().length > 0}
-                fallback={<div class={styles.emptyPicker}>{t('wallet.no_nearby_players', language())}</div>}
-              >
-                <div class={styles.nearbyGrid}>
-                  <For each={nearbyPlayers()}>
-                    {(player) => (
-                      <button
-                        class={styles.nearbyCard}
-                        classList={{ [styles.nearbyCardActive]: targetServerId() === player.serverId }}
-                        onClick={() => setTargetServerId(player.serverId)}
-                      >
-                        <div class={styles.nearbyAvatar}>{player.name.charAt(0).toUpperCase()}</div>
-                        <strong>{player.name}</strong>
-                        <span>{player.distance.toFixed(1)}m</span>
-                      </button>
-                    )}
-                  </For>
-                </div>
-              </Show>
-            </Show>
-
-            <Show when={targetMode() === 'contact'}>
-              <Show when={contacts().length > 0} fallback={<div class={styles.emptyPicker}>{t('wallet.no_saved_contacts', language())}</div>}>
-                <div class={styles.optionList}>
-                  <For each={contacts().slice(0, 8)}>
-                    {(contact) => (
-                      <button
-                        class={styles.optionCard}
-                        classList={{ [styles.optionCardActive]: targetPhone() === contact.number }}
-                        onClick={() => setTargetPhone(contact.number)}
-                      >
-                        <strong>{contact.display}</strong>
-                        <span>{formatPhoneNumber(contact.number, phoneState.framework || 'unknown')}</span>
-                      </button>
-                    )}
-                  </For>
-                </div>
-              </Show>
-            </Show>
-
-            <Show when={targetMode() === 'phone'}>
-              <FormField
-                label={t('wallet.manual_number', language())}
-                type="tel"
-                value={targetPhone()}
-                onChange={setTargetPhone}
-                placeholder={t('wallet.phone_number_placeholder', language())}
-              />
-            </Show>
-
-            <Show when={targetMode() === 'identifier'}>
-              <FormField
-                label="Identifier"
-                value={targetIdentifier()}
-                onChange={setTargetIdentifier}
-                placeholder="steam:, license:, citizenid..."
-              />
             </Show>
 
             <div class={styles.formGrid}>
@@ -584,6 +533,14 @@ export function WalletApp() {
           </Show>
         </Modal>
       </div>
+
+      <NfcShareSheet
+        open={showNfcRadar()}
+        onClose={() => setShowNfcRadar(false)}
+        onSelect={onNfcPlayerSelected}
+        title={t('wallet.select_recipient', language()) || 'Seleccionar destinatario'}
+        maxDistance={3.0}
+      />
     </AppScaffold>
   );
 }
