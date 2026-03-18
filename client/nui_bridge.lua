@@ -63,6 +63,18 @@ RegisterNUICallback('sendMessage', function(data, cb)
     end, data)
 end)
 
+RegisterNUICallback('setAutoReply', function(data, cb)
+    lib.callback('gcphone:setAutoReply', false, function(result)
+        cb(result or { success = false })
+    end, data)
+end)
+
+RegisterNUICallback('getAutoReply', function(_, cb)
+    lib.callback('gcphone:getAutoReply', false, function(result)
+        cb(result or { enabled = false, message = '' })
+    end)
+end)
+
 RegisterNUICallback('mailGetState', function(data, cb)
     lib.callback('gcphone:mail:getState', false, function(payload)
         cb(payload or { success = false, error = 'NO_RESPONSE' })

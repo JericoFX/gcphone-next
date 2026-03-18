@@ -12,6 +12,8 @@ local LastMessageSentBySource = {}
 local LastStatusViewByIdentifier = {}
 local SecurityResource = GetCurrentResourceName()
 local STATUS_VIEW_DEBOUNCE_MS = 5 * 60 * 1000
+local AutoReplyByIdentifier = {}
+local AutoReplySentTo = {}
 
 local function HitRateLimit(source, key, windowMs, maxHits)
     local ok, blocked = pcall(function()
@@ -325,9 +327,35 @@ lib.callback.register('gcphone:sendMessage', function(source, data)
             )
             
             TriggerClientEvent('gcphone:messageReceived', targetSource, receivedMessage)
+
+            local autoReply = AutoReplyByIdentifier[targetIdentifier]
+            if autoReply and autoReply ~= '' then
+                local sentKey = targetIdentifier .. ':' .. identifier
+                local lastSent = AutoReplySentTo[sentKey] or 0
+                if GetGameTimer() - lastSent > 60000 then
+                    AutoReplySentTo[sentKey] = GetGameTimer()
+
+                    local replyText = '[Auto] ' .. autoReply
+
+                    MySQL.insert.await(
+                        'INSERT INTO phone_messages (transmitter, receiver, message, media_url, owner) VALUES (?, ?, ?, ?, ?)',
+                        { targetPhone, myNumber, replyText, nil, 1 }
+                    )
+
+                    local replyForSender = MySQL.insert.await(
+                        'INSERT INTO phone_messages (transmitter, receiver, message, media_url, owner, is_read) VALUES (?, ?, ?, ?, ?, ?)',
+                        { targetPhone, myNumber, replyText, nil, 0, 0 }
+                    )
+
+                    local replyMsg = MySQL.single.await('SELECT * FROM phone_messages WHERE id = ?', { replyForSender })
+                    if replyMsg then
+                        TriggerClientEvent('gcphone:messageReceived', source, replyMsg)
+                    end
+                end
+            end
         end
     end
-    
+
     return true
 end)
 
@@ -721,6 +749,39 @@ lib.callback.register('gcphone:wavechatMarkStatusViewed', function(source, statu
     return true
 end)
 
+lib.callback.register('gcphone:setAutoReply', function(source, data)
+    local identifier = GetIdentifier(source)
+    if not identifier then return false end
+
+    local enabled = type(data) == 'table' and data.enabled == true
+    local message = type(data) == 'table' and SanitizeText(data.message, 120) or ''
+
+    if enabled and message ~= '' then
+        AutoReplyByIdentifier[identifier] = message
+    else
+        AutoReplyByIdentifier[identifier] = nil
+    end
+
+    return { success = true, enabled = AutoReplyByIdentifier[identifier] ~= nil, message = AutoReplyByIdentifier[identifier] or '' }
+end)
+
+lib.callback.register('gcphone:getAutoReply', function(source)
+    local identifier = GetIdentifier(source)
+    if not identifier then return { enabled = false, message = '' } end
+    local msg = AutoReplyByIdentifier[identifier]
+    return { enabled = msg ~= nil, message = msg or '' }
+end)
+
 AddEventHandler('playerDropped', function()
-    LastMessageSentBySource[source] = nil
+    local src = source
+    LastMessageSentBySource[src] = nil
+    local identifier = GetIdentifier(src)
+    if identifier then
+        AutoReplyByIdentifier[identifier] = nil
+        for key, _ in pairs(AutoReplySentTo) do
+            if key:find(identifier, 1, true) then
+                AutoReplySentTo[key] = nil
+            end
+        end
+    end
 end)
