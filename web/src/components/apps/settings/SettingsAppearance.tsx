@@ -34,21 +34,6 @@ export function SettingsAppearance(props: SettingsAppearanceProps) {
 
   return (
     <div class={styles.content}>
-      <SectionHeader title={t('settings.appearance', props.language()).toUpperCase()} />
-      <Group>
-        <div class={styles.themeList}>
-          <For each={themes}>
-            {(theme) => (
-              <button class={styles.themeOption} classList={{ [styles.selected]: props.phoneState.settings.theme === theme.id }} onClick={() => props.phoneActions.setTheme(theme.id as 'light' | 'dark' | 'auto')}>
-                <span class={styles.themeIcon}><IconImage src={theme.icon} class={styles.themeIconImage} /></span>
-                <span class={styles.themeName}>{theme.name}</span>
-                {props.phoneState.settings.theme === theme.id && <CheckIcon />}
-              </button>
-            )}
-          </For>
-        </div>
-      </Group>
-
       <SectionHeader title={t('settings.wallpapers', props.language()).toUpperCase()} />
       <Group>
         <Show when={props.phoneState.settings.wallpaper}>
