@@ -39,14 +39,14 @@
 .loading {
   text-align: center;
   padding: 40px;
-  color: #8e8e93;
+  color: var(--text-3);
   font-size: 15px;
 }
 
 .emptyState {
   text-align: center;
   padding: 60px 20px;
-  color: #8e8e93;
+  color: var(--text-3);
   
   p {
     font-size: 16px;
@@ -70,7 +70,7 @@
   }
   
   &:active {
-    background: #f5f5f7;
+    background: var(--bg);
   }
 }
 
@@ -99,7 +99,7 @@
   }
   
   span {
-    color: #ffffff;
+    color: var(--surface);
     font-size: 16px;
     font-weight: 600;
   }
@@ -119,7 +119,7 @@
   strong {
     font-size: 15px;
     font-weight: 600;
-    color: #1a1a1a;
+    color: var(--text);
   }
 }
 
@@ -141,18 +141,18 @@
 
 .username {
   font-size: 14px;
-  color: #8e8e93;
+  color: var(--text-3);
 }
 
 .time {
   font-size: 13px;
-  color: #8e8e93;
+  color: var(--text-3);
 }
 
 .tweetContent {
   font-size: 15px;
   line-height: 1.5;
-  color: #1a1a1a;
+  color: var(--text);
   margin: 0 0 10px 0;
   word-wrap: break-word;
 }
@@ -219,7 +219,7 @@
   border: none;
   border-radius: 20px;
   background: transparent;
-  color: #8e8e93;
+  color: var(--text-3);
   font-size: 14px;
   cursor: pointer;
   transition: background-color 150ms ease, color 150ms ease;
@@ -229,7 +229,7 @@
   }
   
   &.active {
-    color: #007aff;
+    color: var(--tint);
     
     .icon {
       color: #ff2d55;
@@ -261,8 +261,8 @@
   height: 56px;
   border-radius: 50%;
   border: none;
-  background: #007aff;
-  color: #ffffff;
+  background: var(--tint);
+  color: var(--surface);
   font-size: 24px;
   font-weight: 500;
   display: flex;
@@ -319,7 +319,7 @@
   border: none;
   border-radius: 8px;
   background: transparent;
-  color: #007aff;
+  color: var(--tint);
   font-size: 15px;
   font-weight: 500;
   cursor: pointer;
@@ -333,7 +333,7 @@
   flex: 1;
   font-size: 17px;
   font-weight: 600;
-  color: #1a1a1a;
+  color: var(--text);
   text-align: center;
 }
 
@@ -352,7 +352,7 @@
 .detailText {
   font-size: 17px;
   line-height: 1.6;
-  color: #1a1a1a;
+  color: var(--text);
   margin: 14px 0;
   word-wrap: break-word;
 }
@@ -368,7 +368,7 @@
 
 .detailMeta {
   font-size: 14px;
-  color: #8e8e93;
+  color: var(--text-3);
   margin: 14px 0;
   padding-bottom: 14px;
   border-bottom: 1px solid #f0f0f0;
@@ -389,7 +389,7 @@
 .commentsTitle {
   font-size: 17px;
   font-weight: 600;
-  color: #1a1a1a;
+  color: var(--text);
   margin: 0 0 16px 0;
 }
 
@@ -416,18 +416,18 @@
   strong {
     font-size: 14px;
     font-weight: 600;
-    color: #1a1a1a;
+    color: var(--text);
   }
 }
 
 .commentTime {
   font-size: 12px;
-  color: #8e8e93;
+  color: var(--text-3);
 }
 
 .commentText {
   font-size: 14px;
-  color: #3a3a3c;
+  color: var(--text-2);
   line-height: 1.5;
   margin: 0;
 }
@@ -435,7 +435,7 @@
 .emptyComments {
   text-align: center;
   padding: 30px;
-  color: #8e8e93;
+  color: var(--text-3);
   font-size: 14px;
 }
 
@@ -450,23 +450,23 @@
 .commentInput {
   width: 100%;
   padding: 12px;
-  border: 1px solid #e5e5ea;
+  border: 1px solid var(--border);
   border-radius: 10px;
-  background: #f5f5f7;
-  color: #1a1a1a;
+  background: var(--bg);
+  color: var(--text);
   font-size: 15px;
   resize: none;
   font-family: inherit;
   margin-bottom: 10px;
   
   &::placeholder {
-    color: #8e8e93;
+    color: var(--text-3);
   }
   
   &:focus {
     outline: none;
-    border-color: #007aff;
-    background: #ffffff;
+    border-color: var(--tint);
+    background: var(--surface);
   }
 }
 
@@ -475,8 +475,8 @@
   padding: 12px;
   border: none;
   border-radius: 10px;
-  background: #007aff;
-  color: #ffffff;
+  background: var(--tint);
+  color: var(--surface);
   font-size: 15px;
   font-weight: 600;
   cursor: pointer;
@@ -500,10 +500,10 @@
 .composerTextarea {
   width: 100%;
   padding: 12px;
-  border: 1px solid #e5e5ea;
+  border: 1px solid var(--border);
   border-radius: 12px;
-  background: #f5f5f7;
-  color: #1a1a1a;
+  background: var(--bg);
+  color: var(--text);
   font-size: 17px;
   resize: none;
   font-family: inherit;
@@ -511,13 +511,13 @@
   margin-bottom: 8px;
   
   &::placeholder {
-    color: #8e8e93;
+    color: var(--text-3);
   }
   
   &:focus {
     outline: none;
-    border-color: #007aff;
-    background: #ffffff;
+    border-color: var(--tint);
+    background: var(--surface);
   }
 }
 
@@ -527,10 +527,10 @@
   
   span {
     font-size: 13px;
-    color: #8e8e93;
+    color: var(--text-3);
     
     &.limitReached {
-      color: #ff3b30;
+      color: var(--danger);
       font-weight: 600;
     }
   }
@@ -622,7 +622,7 @@
   border: 1px solid #e5e7eb;
   border-radius: 14px;
   padding: 10px;
-  background: linear-gradient(180deg, #ffffff, #f8fafc);
+  background: linear-gradient(180deg, var(--surface), #f8fafc);
 }
 
 .requestIdentity {
@@ -666,7 +666,7 @@
 
 .primaryBtn {
   background: #2563eb;
-  color: #ffffff;
+  color: var(--surface);
 }
 
 .privateToggle {

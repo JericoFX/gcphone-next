@@ -73,7 +73,7 @@
   
   &:active {
     transform: translateY(0);
-    background: #f5f5f7;
+    background: var(--bg);
   }
 }
 
@@ -107,7 +107,7 @@
 .roomName {
   font-size: 17px;
   font-weight: 600;
-  color: #1a1a1a;
+  color: var(--text);
   letter-spacing: -0.01em;
 }
 
@@ -117,7 +117,7 @@
 
 .roomDescription {
   font-size: 14px;
-  color: #3a3a3c;
+  color: var(--text-2);
   margin: 0 0 8px 0;
   line-height: 1.4;
   display: -webkit-box;
@@ -131,7 +131,7 @@
   align-items: center;
   gap: 6px;
   font-size: 13px;
-  color: #8e8e93;
+  color: var(--text-3);
 }
 
 .statDot {
@@ -144,7 +144,7 @@
   align-items: center;
   justify-content: center;
   padding: 40px 20px;
-  color: #8e8e93;
+  color: var(--text-3);
   text-align: center;
   
   p {
@@ -158,8 +158,8 @@
   height: 56px;
   border-radius: 50%;
   border: none;
-  background: #007aff;
-  color: #ffffff;
+  background: var(--tint);
+  color: var(--surface);
   font-size: 32px;
   font-weight: 300;
   display: flex;
@@ -191,8 +191,8 @@
 }
 
 .roomInteriorHeader {
-  background: #ffffff;
-  border-bottom: 1px solid #e5e5ea;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
   padding: 12px 16px;
   display: flex;
   align-items: center;
@@ -207,7 +207,7 @@
   border: none;
   border-radius: 8px;
   background: transparent;
-  color: #007aff;
+  color: var(--tint);
   font-size: 15px;
   font-weight: 500;
   cursor: pointer;
@@ -232,7 +232,7 @@
 .roomInteriorTitle {
   font-size: 17px;
   font-weight: 600;
-  color: #1a1a1a;
+  color: var(--text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -245,7 +245,7 @@
 
 .roomStat {
   font-size: 13px;
-  color: #8e8e93;
+  color: var(--text-3);
   background: rgba(118, 118, 128, 0.12);
   padding: 4px 10px;
   border-radius: 12px;
@@ -288,7 +288,7 @@
   border: none;
   border-radius: 8px;
   background: transparent;
-  color: #8e8e93;
+  color: var(--text-3);
   font-size: 16px;
   cursor: pointer;
   transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease, opacity 150ms ease, transform 150ms ease, box-shadow 150ms ease;
@@ -297,8 +297,8 @@
   justify-content: center;
   
   &:hover {
-    background: #f5f5f7;
-    color: #3a3a3c;
+    background: var(--bg);
+    color: var(--text-2);
   }
   
   &.votedUp {
@@ -315,7 +315,7 @@
 .voteCount {
   font-size: 14px;
   font-weight: 600;
-  color: #1a1a1a;
+  color: var(--text);
   min-width: 24px;
   text-align: center;
 }
@@ -328,14 +328,14 @@
 .postTitle {
   font-size: 16px;
   font-weight: 600;
-  color: #1a1a1a;
+  color: var(--text);
   margin: 0 0 6px 0;
   line-height: 1.3;
 }
 
 .postExcerpt {
   font-size: 14px;
-  color: #3a3a3c;
+  color: var(--text-2);
   margin: 0 0 10px 0;
   line-height: 1.4;
   display: -webkit-box;
@@ -349,7 +349,7 @@
   align-items: center;
   gap: 8px;
   font-size: 13px;
-  color: #8e8e93;
+  color: var(--text-3);
 }
 
 .metaDot {
@@ -372,8 +372,8 @@
 }
 
 .postDetailHeader {
-  background: #ffffff;
-  border-bottom: 1px solid #e5e5ea;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
   padding: 12px 16px;
   display: flex;
   align-items: center;
@@ -387,7 +387,7 @@
   flex: 1;
   font-size: 17px;
   font-weight: 600;
-  color: #1a1a1a;
+  color: var(--text);
   text-align: center;
 }
 
@@ -395,7 +395,7 @@
   display: flex;
   gap: 12px;
   padding: 16px;
-  background: #ffffff;
+  background: var(--surface);
 }
 
 .postDetailVotes {
@@ -409,7 +409,7 @@
 .voteCountLarge {
   font-size: 18px;
   font-weight: 700;
-  color: #1a1a1a;
+  color: var(--text);
   min-width: 32px;
   text-align: center;
 }
@@ -422,20 +422,20 @@
 .postDetailHeading {
   font-size: 20px;
   font-weight: 700;
-  color: #1a1a1a;
+  color: var(--text);
   margin: 0 0 8px 0;
   line-height: 1.3;
 }
 
 .postDetailMeta {
   font-size: 13px;
-  color: #8e8e93;
+  color: var(--text-3);
   margin-bottom: 12px;
 }
 
 .postDetailText {
   font-size: 15px;
-  color: #3a3a3c;
+  color: var(--text-2);
   line-height: 1.6;
   margin: 0 0 16px 0;
 }
@@ -444,12 +444,12 @@
 .commentsSection {
   display: flex;
   flex-direction: column;
-  background: #f5f5f7;
+  background: var(--bg);
 }
 
 .commentsSeparator {
   height: 10px;
-  border-top: 1px solid #e5e5ea;
+  border-top: 1px solid var(--border);
   border-bottom: 1px solid #ececf0;
   background: #f2f2f6;
 }
@@ -459,8 +459,8 @@
   padding: 16px;
   font-size: 15px;
   font-weight: 600;
-  color: #3a3a3c;
-  border-bottom: 1px solid #e5e5ea;
+  color: var(--text-2);
+  border-bottom: 1px solid var(--border);
 }
 
 .commentsList {
@@ -481,21 +481,21 @@
   strong {
     font-size: 14px;
     font-weight: 600;
-    color: #1a1a1a;
+    color: var(--text);
   }
 }
 
 .commentText {
   font-size: 14px;
-  color: #3a3a3c;
+  color: var(--text-2);
   line-height: 1.5;
   margin: 0;
 }
 
 // Comment Composer
 .commentComposer {
-  background: #ffffff;
-  border-top: 1px solid #e5e5ea;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
   padding: 12px;
   flex-shrink: 0;
 }
@@ -503,23 +503,23 @@
 .commentInput {
   width: 100%;
   padding: 12px;
-  border: 1px solid #e5e5ea;
+  border: 1px solid var(--border);
   border-radius: 10px;
-  background: #f5f5f7;
-  color: #1a1a1a;
+  background: var(--bg);
+  color: var(--text);
   font-size: 15px;
   resize: none;
   font-family: inherit;
   margin-bottom: 12px;
   
   &::placeholder {
-    color: #8e8e93;
+    color: var(--text-3);
   }
   
   &:focus {
     outline: none;
-    border-color: #007aff;
-    background: #ffffff;
+    border-color: var(--tint);
+    background: var(--surface);
   }
 }
 
@@ -535,12 +535,12 @@
   gap: 8px;
   cursor: pointer;
   font-size: 14px;
-  color: #3a3a3c;
+  color: var(--text-2);
   
   input {
     width: 18px;
     height: 18px;
-    accent-color: #007aff;
+    accent-color: var(--tint);
   }
 }
 
@@ -548,8 +548,8 @@
   padding: 10px 20px;
   border: none;
   border-radius: 10px;
-  background: #007aff;
-  color: #ffffff;
+  background: var(--tint);
+  color: var(--surface);
   font-size: 15px;
   font-weight: 600;
   cursor: pointer;
@@ -599,28 +599,28 @@
   margin-bottom: 6px;
   font-size: 14px;
   font-weight: 500;
-  color: #3a3a3c;
+  color: var(--text-2);
 }
 
 .formTextarea {
   width: 100%;
   padding: 12px;
-  border: 1px solid #e5e5ea;
+  border: 1px solid var(--border);
   border-radius: 10px;
-  background: #f5f5f7;
-  color: #1a1a1a;
+  background: var(--bg);
+  color: var(--text);
   font-size: 15px;
   resize: vertical;
   font-family: inherit;
   
   &::placeholder {
-    color: #8e8e93;
+    color: var(--text-3);
   }
   
   &:focus {
     outline: none;
-    border-color: #007aff;
-    background: #ffffff;
+    border-color: var(--tint);
+    background: var(--surface);
   }
 }
 
@@ -632,22 +632,22 @@
 
 .emojiPreset {
   min-height: 40px;
-  border: 1px solid #e5e5ea;
+  border: 1px solid var(--border);
   border-radius: 10px;
-  background: #f5f5f7;
+  background: var(--bg);
   font-size: 22px;
   cursor: pointer;
   transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, opacity 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
 
   &:hover {
-    background: #ffffff;
-    border-color: #007aff;
+    background: var(--surface);
+    border-color: var(--tint);
   }
 }
 
 .emojiPresetActive {
   background: rgba(0, 122, 255, 0.12);
-  border-color: #007aff;
+  border-color: var(--tint);
 }
 
 .checkboxField {
@@ -660,18 +660,18 @@
   gap: 10px;
   cursor: pointer;
   font-size: 15px;
-  color: #1a1a1a;
+  color: var(--text);
   
   input {
     width: 20px;
     height: 20px;
-    accent-color: #007aff;
+    accent-color: var(--tint);
   }
 }
 
 .modalDescription {
   margin: 0 0 16px 0;
   font-size: 15px;
-  color: #3a3a3c;
+  color: var(--text-2);
   line-height: 1.5;
 }
