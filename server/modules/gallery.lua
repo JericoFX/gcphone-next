@@ -62,6 +62,53 @@ lib.callback.register('gcphone:setPhotoAsWallpaper', function(source, data)
     return true
 end)
 
+lib.callback.register('gcphone:gallery:shareNfc', function(source, data)
+    if IsPhoneReadOnly(source) then return { success = false, error = 'READONLY' } end
+    local identifier = GetIdentifier(source)
+    if not identifier then return { success = false, error = 'INVALID_SOURCE' } end
+
+    local photoId = tonumber(type(data) == 'table' and data.photoId or nil)
+    local targetServerId = tonumber(type(data) == 'table' and data.targetServerId or nil)
+    if not photoId or not targetServerId then
+        return { success = false, error = 'INVALID_DATA' }
+    end
+
+    local targetIdentifier = GetIdentifier(targetServerId)
+    if not targetIdentifier then
+        return { success = false, error = 'TARGET_OFFLINE' }
+    end
+
+    if type(IsPlayerActionAllowed) == 'function' then
+        local allowed = IsPlayerActionAllowed(targetServerId)
+        if not allowed then return { success = false, error = 'TARGET_UNAVAILABLE' } end
+    end
+
+    local shareDistance = tonumber(Config.Proximity and Config.Proximity.SharePhotoDistance) or 3.0
+    local near = IsWithinPlayerDistance(source, targetServerId, shareDistance)
+    if not near then
+        return { success = false, error = 'TOO_FAR' }
+    end
+
+    local photo = MySQL.single.await(
+        'SELECT id, url, type FROM phone_gallery WHERE id = ? AND identifier = ?',
+        { photoId, identifier }
+    )
+    if not photo then
+        return { success = false, error = 'PHOTO_NOT_FOUND' }
+    end
+
+    local senderName = GetName(source) or 'Ciudadano'
+
+    TriggerClientEvent('gcphone:receiveSharedPhoto', targetServerId, {
+        url = photo.url,
+        type = photo.type or 'image',
+        from = senderName,
+        shared_at = os.date('%Y-%m-%d %H:%M:%S'),
+    })
+
+    return { success = true }
+end)
+
 local function CanAccessIdentifierExport(identifier, requestSource)
     local src = tonumber(requestSource)
     if not src or src <= 0 or not identifier then

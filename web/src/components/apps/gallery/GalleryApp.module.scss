@@ -175,3 +175,38 @@
   font-size: 12px;
   font-weight: 700;
 }
+
+.nfc-save-bar {
+  position: fixed;
+  bottom: calc(var(--s-6) + var(--phone-bottom-ui-gap, 0px));
+  left: var(--s-4);
+  right: var(--s-4);
+  display: flex;
+  gap: var(--s-2);
+  z-index: 110;
+}
+
+.nfc-save-btn {
+  flex: 1;
+  min-height: 42px;
+  border: none;
+  border-radius: var(--r-pill);
+  background: var(--tint);
+  color: #fff;
+  font-size: var(--fs-footnote);
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 8px 20px color-mix(in srgb, var(--tint) 30%, transparent);
+}
+
+.nfc-dismiss-btn {
+  min-height: 42px;
+  padding: 0 var(--s-4);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: var(--r-pill);
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  font-size: var(--fs-footnote);
+  font-weight: 600;
+  cursor: pointer;
+}

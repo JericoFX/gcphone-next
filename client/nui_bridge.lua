@@ -282,6 +282,12 @@ RegisterNUICallback('deletePhoto', function(data, cb)
     end, photoId)
 end)
 
+RegisterNUICallback('galleryShareNfc', function(data, cb)
+    lib.callback('gcphone:gallery:shareNfc', false, function(result)
+        cb(result or { success = false })
+    end, data)
+end)
+
 RegisterNUICallback('openGallery', function(_, cb)
     cb(true)
 end)

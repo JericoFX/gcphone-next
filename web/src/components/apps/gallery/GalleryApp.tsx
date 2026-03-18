@@ -1,14 +1,17 @@
-import { createSignal, For, Show, createMemo, onMount } from 'solid-js';
+import { createSignal, createEffect, For, Show, createMemo, onMount } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { usePhoneActions } from '../../../store/phone';
 import { usePhoneState } from '../../../store/phone';
 import { useContacts } from '../../../store/contacts';
+import { useNotifications } from '../../../store/notifications';
 import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { fetchNui } from '../../../utils/fetchNui';
+import { useNuiEvent } from '../../../utils/useNui';
 import { sanitizeMediaUrl, sanitizePhone } from '../../../utils/sanitize';
 import { uiPrompt } from '../../../utils/uiDialog';
 import { SearchInput } from '../../shared/ui/SearchInput';
 import { ActionSheet } from '../../shared/ui/ActionSheet';
+import { MediaLightbox } from '../../shared/ui/MediaLightbox';
 import { InlineNotice } from '../../shared/ui/InlineNotice';
 import { ScreenState } from '../../shared/ui/ScreenState';
 import { SkeletonList } from '../../shared/ui/SkeletonList';
@@ -47,6 +50,10 @@ export function GalleryApp() {
   const [loading, setLoading] = createSignal(true);
   const [showActions, setShowActions] = createSignal(false);
   const [shareChatApp, setShareChatApp] = createSignal<'messages' | 'wavechat' | null>(null);
+  const [, notificationsActions] = useNotifications();
+  const [nfcTarget, setNfcTarget] = createSignal<number | null>(null);
+  const [lastNfcRouteKey, setLastNfcRouteKey] = createSignal('');
+  const [receivedPhotoUrl, setReceivedPhotoUrl] = createSignal<string | null>(null);
   const language = () => phoneState.settings.language || 'es';
   const [query, setQuery] = createSignal('');
 
@@ -198,12 +205,83 @@ export function GalleryApp() {
     });
   };
 
+  const shareNfc = async () => {
+    const photo = selectedPhoto();
+    const target = nfcTarget();
+    if (!photo || !target) return;
+
+    const result = await fetchNui<{ success?: boolean; error?: string }>(
+      'galleryShareNfc',
+      { photoId: photo.id, targetServerId: target },
+      { success: false },
+    );
+
+    setNfcTarget(null);
+    setShowActions(false);
+
+    if (result?.success) {
+      notificationsActions.receive({
+        appId: 'gallery',
+        title: t('app.gallery', language()),
+        message: 'Foto compartida por NFC',
+        priority: 'normal',
+      });
+    } else {
+      notificationsActions.receive({
+        appId: 'gallery',
+        title: t('app.gallery', language()),
+        message: result?.error === 'TOO_FAR' ? 'Demasiado lejos' : (result?.error || 'Error al compartir'),
+        priority: 'normal',
+      });
+    }
+  };
+
+  const saveReceivedPhoto = async (url: string) => {
+    await fetchNui('storeMediaUrl', { url, type: 'image' }, { success: false });
+    setReceivedPhotoUrl(null);
+    void loadPhotos();
+    notificationsActions.receive({
+      appId: 'gallery',
+      title: t('app.gallery', language()),
+      message: 'Foto guardada en galeria',
+      priority: 'normal',
+    });
+  };
+
+  createEffect(() => {
+    const params = router.params() as {
+      nfcAction?: string;
+      targetServerId?: number;
+      requestId?: number;
+      sharedPhoto?: { url?: string; from?: string };
+    };
+
+    const key = `${params?.requestId || 0}:${params?.nfcAction || 'none'}`;
+    if (key === lastNfcRouteKey()) return;
+    setLastNfcRouteKey(key);
+
+    if (params?.nfcAction === 'share_photo' && typeof params?.targetServerId === 'number') {
+      setNfcTarget(params.targetServerId);
+      setShowActions(true);
+    }
+
+    if (params?.nfcAction === 'received_photo' && params.sharedPhoto?.url) {
+      setReceivedPhotoUrl(params.sharedPhoto.url);
+    }
+  });
+
+  useNuiEvent<{ url?: string; from?: string }>('receiveSharedPhoto', (payload) => {
+    if (payload?.url) {
+      setReceivedPhotoUrl(payload.url);
+    }
+  });
+
   const currentPhotoIndex = () => {
     const current = selectedPhoto();
     if (!current) return -1;
     return visiblePhotos().findIndex((photo) => photo.id === current.id);
   };
-  
+
   return (
     <AppScaffold
       title={t('app.gallery', language())}
@@ -269,13 +347,14 @@ export function GalleryApp() {
         title={t('app.gallery', language())}
         onClose={() => setShowActions(false)}
         actions={[
-          { label: t('gallery.share_messages', language()), tone: 'primary', onClick: () => void shareToMessages('messages') },
+          ...(nfcTarget() ? [{ label: 'Enviar por NFC', tone: 'primary' as const, onClick: () => void shareNfc() }] : []),
+          { label: t('gallery.share_messages', language()), tone: nfcTarget() ? undefined : 'primary' as const, onClick: () => void shareToMessages('messages') },
           { label: t('gallery.share_wavechat', language()), onClick: () => void shareToMessages('wavechat') },
           { label: t('gallery.share_mail', language()), onClick: shareToMail },
           { label: t('gallery.share_chirp', language()), onClick: () => shareToFeedApp('chirp') },
           { label: t('gallery.share_snap', language()), onClick: () => shareToFeedApp('snap') },
-          { label: t('gallery.use_wallpaper', language()), tone: 'primary', onClick: setAsWallpaper },
-          { label: t('gallery.delete_photo', language()), tone: 'danger', onClick: deletePhoto },
+          { label: t('gallery.use_wallpaper', language()), tone: 'primary' as const, onClick: setAsWallpaper },
+          { label: t('gallery.delete_photo', language()), tone: 'danger' as const, onClick: deletePhoto },
         ]}
       />
 
@@ -291,6 +370,21 @@ export function GalleryApp() {
           { label: t('contacts.enter_number', language()), tone: 'primary' as const, onClick: () => void shareToChatManual() },
         ]}
       />
+
+      <Show when={receivedPhotoUrl()}>
+        <MediaLightbox
+          url={receivedPhotoUrl()}
+          onClose={() => setReceivedPhotoUrl(null)}
+        />
+        <div class={styles.nfcSaveBar}>
+          <button class={styles.nfcSaveBtn} onClick={() => void saveReceivedPhoto(receivedPhotoUrl()!)}>
+            Guardar en galeria
+          </button>
+          <button class={styles.nfcDismissBtn} onClick={() => setReceivedPhotoUrl(null)}>
+            Cerrar
+          </button>
+        </div>
+      </Show>
     </AppScaffold>
   );
 }
