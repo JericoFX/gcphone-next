@@ -1,0 +1,346 @@
+<Dat54>
+  <Version value="7314721" />
+  <ContainerPaths>
+    <Item>audiodirectory\sounds</Item>
+  </ContainerPaths>
+  <Items>
+    <Item type="SimpleSound">
+      <Name>call_1_sp</Name>
+      <Header>
+        <Flags value="0x00008004" />
+        <Volume value="200" />
+        <Category>scripted</Category>
+      </Header>
+      <ContainerName>audiodirectory/sounds</ContainerName>
+      <FileName>call_1</FileName>
+      <WaveSlotNum value="0" />
+    </Item>
+    <Item type="SimpleSound">
+      <Name>call_2_sp</Name>
+      <Header>
+        <Flags value="0x00008004" />
+        <Volume value="200" />
+        <Category>scripted</Category>
+      </Header>
+      <ContainerName>audiodirectory/sounds</ContainerName>
+      <FileName>call_2</FileName>
+      <WaveSlotNum value="0" />
+    </Item>
+    <Item type="SimpleSound">
+      <Name>call_3_sp</Name>
+      <Header>
+        <Flags value="0x00008004" />
+        <Volume value="200" />
+        <Category>scripted</Category>
+      </Header>
+      <ContainerName>audiodirectory/sounds</ContainerName>
+      <FileName>call_3</FileName>
+      <WaveSlotNum value="0" />
+    </Item>
+    <Item type="SimpleSound">
+      <Name>call_4_sp</Name>
+      <Header>
+        <Flags value="0x00008004" />
+        <Volume value="200" />
+        <Category>scripted</Category>
+      </Header>
+      <ContainerName>audiodirectory/sounds</ContainerName>
+      <FileName>call_4</FileName>
+      <WaveSlotNum value="0" />
+    </Item>
+    <Item type="SimpleSound">
+      <Name>call_5_sp</Name>
+      <Header>
+        <Flags value="0x00008004" />
+        <Volume value="200" />
+        <Category>scripted</Category>
+      </Header>
+      <ContainerName>audiodirectory/sounds</ContainerName>
+      <FileName>call_5</FileName>
+      <WaveSlotNum value="0" />
+    </Item>
+    <Item type="SimpleSound">
+      <Name>call_6_sp</Name>
+      <Header>
+        <Flags value="0x00008004" />
+        <Volume value="200" />
+        <Category>scripted</Category>
+      </Header>
+      <ContainerName>audiodirectory/sounds</ContainerName>
+      <FileName>call_6</FileName>
+      <WaveSlotNum value="0" />
+    </Item>
+    <Item type="SimpleSound">
+      <Name>call_7_sp</Name>
+      <Header>
+        <Flags value="0x00008004" />
+        <Volume value="200" />
+        <Category>scripted</Category>
+      </Header>
+      <ContainerName>audiodirectory/sounds</ContainerName>
+      <FileName>call_7</FileName>
+      <WaveSlotNum value="0" />
+    </Item>
+    <Item type="SimpleSound">
+      <Name>call_8_sp</Name>
+      <Header>
+        <Flags value="0x00008004" />
+        <Volume value="200" />
+        <Category>scripted</Category>
+      </Header>
+      <ContainerName>audiodirectory/sounds</ContainerName>
+      <FileName>call_8</FileName>
+      <WaveSlotNum value="0" />
+    </Item>
+    <Item type="SimpleSound">
+      <Name>call_9_sp</Name>
+      <Header>
+        <Flags value="0x00008004" />
+        <Volume value="200" />
+        <Category>scripted</Category>
+      </Header>
+      <ContainerName>audiodirectory/sounds</ContainerName>
+      <FileName>call_9</FileName>
+      <WaveSlotNum value="0" />
+    </Item>
+    <Item type="SimpleSound">
+      <Name>call_10_sp</Name>
+      <Header>
+        <Flags value="0x00008004" />
+        <Volume value="200" />
+        <Category>scripted</Category>
+      </Header>
+      <ContainerName>audiodirectory/sounds</ContainerName>
+      <FileName>call_10</FileName>
+      <WaveSlotNum value="0" />
+    </Item>
+    <Item type="SimpleSound">
+      <Name>call_11_sp</Name>
+      <Header>
+        <Flags value="0x00008004" />
+        <Volume value="200" />
+        <Category>scripted</Category>
+      </Header>
+      <ContainerName>audiodirectory/sounds</ContainerName>
+      <FileName>call_11</FileName>
+      <WaveSlotNum value="0" />
+    </Item>
+    <Item type="SimpleSound">
+      <Name>call_12_sp</Name>
+      <Header>
+        <Flags value="0x00008004" />
+        <Volume value="200" />
+        <Category>scripted</Category>
+      </Header>
+      <ContainerName>audiodirectory/sounds</ContainerName>
+      <FileName>call_12</FileName>
+      <WaveSlotNum value="0" />
+    </Item>
+    <Item type="SimpleSound">
+      <Name>call_13_sp</Name>
+      <Header>
+        <Flags value="0x00008004" />
+        <Volume value="200" />
+        <Category>scripted</Category>
+      </Header>
+      <ContainerName>audiodirectory/sounds</ContainerName>
+      <FileName>call_13</FileName>
+      <WaveSlotNum value="0" />
+    </Item>
+    <Item type="SimpleSound">
+      <Name>call_vibrando_sp</Name>
+      <Header>
+        <Flags value="0x00008004" />
+        <Volume value="200" />
+        <Category>scripted</Category>
+      </Header>
+      <ContainerName>audiodirectory/sounds</ContainerName>
+      <FileName>call_vibrando</FileName>
+      <WaveSlotNum value="0" />
+    </Item>
+    <Item type="SimpleSound">
+      <Name>sonando_sp</Name>
+      <Header>
+        <Flags value="0x00008004" />
+        <Volume value="200" />
+        <Category>scripted</Category>
+      </Header>
+      <ContainerName>audiodirectory/sounds</ContainerName>
+      <FileName>sonando</FileName>
+      <WaveSlotNum value="0" />
+    </Item>
+    <Item type="SimpleSound">
+      <Name>sonando_corto_sp</Name>
+      <Header>
+        <Flags value="0x00008004" />
+        <Volume value="200" />
+        <Category>scripted</Category>
+      </Header>
+      <ContainerName>audiodirectory/sounds</ContainerName>
+      <FileName>sonando_corto</FileName>
+      <WaveSlotNum value="0" />
+    </Item>
+    <Item type="SimpleSound">
+      <Name>nueva_notificacion_sp</Name>
+      <Header>
+        <Flags value="0x00008004" />
+        <Volume value="200" />
+        <Category>scripted</Category>
+      </Header>
+      <ContainerName>audiodirectory/sounds</ContainerName>
+      <FileName>nueva_notificacion</FileName>
+      <WaveSlotNum value="0" />
+    </Item>
+    <Item type="SimpleSound">
+      <Name>nueva_notificacion_vibrando_sp</Name>
+      <Header>
+        <Flags value="0x00008004" />
+        <Volume value="200" />
+        <Category>scripted</Category>
+      </Header>
+      <ContainerName>audiodirectory/sounds</ContainerName>
+      <FileName>nueva_notificacion_vibrando</FileName>
+      <WaveSlotNum value="0" />
+    </Item>
+    <Item type="SimpleSound">
+      <Name>nueva_notificacion2_sp</Name>
+      <Header>
+        <Flags value="0x00008004" />
+        <Volume value="200" />
+        <Category>scripted</Category>
+      </Header>
+      <ContainerName>audiodirectory/sounds</ContainerName>
+      <FileName>nueva_notificacion2</FileName>
+      <WaveSlotNum value="0" />
+    </Item>
+    <Item type="SimpleSound">
+      <Name>nueva_notificacion3_sp</Name>
+      <Header>
+        <Flags value="0x00008004" />
+        <Volume value="200" />
+        <Category>scripted</Category>
+      </Header>
+      <ContainerName>audiodirectory/sounds</ContainerName>
+      <FileName>nueva_notificacion3</FileName>
+      <WaveSlotNum value="0" />
+    </Item>
+    <Item type="SimpleSound">
+      <Name>pop_sp</Name>
+      <Header>
+        <Flags value="0x00008004" />
+        <Volume value="200" />
+        <Category>scripted</Category>
+      </Header>
+      <ContainerName>audiodirectory/sounds</ContainerName>
+      <FileName>pop</FileName>
+      <WaveSlotNum value="0" />
+    </Item>
+    <Item type="SimpleSound">
+      <Name>pop2_sp</Name>
+      <Header>
+        <Flags value="0x00008004" />
+        <Volume value="200" />
+        <Category>scripted</Category>
+      </Header>
+      <ContainerName>audiodirectory/sounds</ContainerName>
+      <FileName>pop2</FileName>
+      <WaveSlotNum value="0" />
+    </Item>
+    <Item type="SoundSet">
+      <Name>gcphone</Name>
+      <Header>
+        <Flags value="0xAAAAAAAA" />
+      </Header>
+      <SoundSets>
+        <Item>
+          <ScriptName>call_1</ScriptName>
+          <ChildSound>call_1_sp</ChildSound>
+        </Item>
+        <Item>
+          <ScriptName>call_2</ScriptName>
+          <ChildSound>call_2_sp</ChildSound>
+        </Item>
+        <Item>
+          <ScriptName>call_3</ScriptName>
+          <ChildSound>call_3_sp</ChildSound>
+        </Item>
+        <Item>
+          <ScriptName>call_4</ScriptName>
+          <ChildSound>call_4_sp</ChildSound>
+        </Item>
+        <Item>
+          <ScriptName>call_5</ScriptName>
+          <ChildSound>call_5_sp</ChildSound>
+        </Item>
+        <Item>
+          <ScriptName>call_6</ScriptName>
+          <ChildSound>call_6_sp</ChildSound>
+        </Item>
+        <Item>
+          <ScriptName>call_7</ScriptName>
+          <ChildSound>call_7_sp</ChildSound>
+        </Item>
+        <Item>
+          <ScriptName>call_8</ScriptName>
+          <ChildSound>call_8_sp</ChildSound>
+        </Item>
+        <Item>
+          <ScriptName>call_9</ScriptName>
+          <ChildSound>call_9_sp</ChildSound>
+        </Item>
+        <Item>
+          <ScriptName>call_10</ScriptName>
+          <ChildSound>call_10_sp</ChildSound>
+        </Item>
+        <Item>
+          <ScriptName>call_11</ScriptName>
+          <ChildSound>call_11_sp</ChildSound>
+        </Item>
+        <Item>
+          <ScriptName>call_12</ScriptName>
+          <ChildSound>call_12_sp</ChildSound>
+        </Item>
+        <Item>
+          <ScriptName>call_13</ScriptName>
+          <ChildSound>call_13_sp</ChildSound>
+        </Item>
+        <Item>
+          <ScriptName>call_vibrando</ScriptName>
+          <ChildSound>call_vibrando_sp</ChildSound>
+        </Item>
+        <Item>
+          <ScriptName>sonando</ScriptName>
+          <ChildSound>sonando_sp</ChildSound>
+        </Item>
+        <Item>
+          <ScriptName>sonando_corto</ScriptName>
+          <ChildSound>sonando_corto_sp</ChildSound>
+        </Item>
+        <Item>
+          <ScriptName>nueva_notificacion</ScriptName>
+          <ChildSound>nueva_notificacion_sp</ChildSound>
+        </Item>
+        <Item>
+          <ScriptName>nueva_notificacion_vibrando</ScriptName>
+          <ChildSound>nueva_notificacion_vibrando_sp</ChildSound>
+        </Item>
+        <Item>
+          <ScriptName>nueva_notificacion2</ScriptName>
+          <ChildSound>nueva_notificacion2_sp</ChildSound>
+        </Item>
+        <Item>
+          <ScriptName>nueva_notificacion3</ScriptName>
+          <ChildSound>nueva_notificacion3_sp</ChildSound>
+        </Item>
+        <Item>
+          <ScriptName>pop</ScriptName>
+          <ChildSound>pop_sp</ChildSound>
+        </Item>
+        <Item>
+          <ScriptName>pop2</ScriptName>
+          <ChildSound>pop2_sp</ChildSound>
+        </Item>
+      </SoundSets>
+    </Item>
+  </Items>
+</Dat54>

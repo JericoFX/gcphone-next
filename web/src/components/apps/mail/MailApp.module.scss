@@ -1,56 +1,28 @@
-/* MailApp iOS 18 Modern Design - Light Theme Only */
+/* MailApp — uses global design tokens from CSSGUIDE.
+   Mail-specific aliases kept for semantic clarity. */
 
 :root {
   --mail-bg: var(--bg, #F2F2F7);
   --mail-surface: var(--surface, #FFFFFF);
   --mail-surface-2: var(--surface-2, #F7F7FA);
   --mail-surface-3: var(--surface-3, #EFEFF4);
-  
+
   --mail-text: var(--text, #111111);
   --mail-text-2: var(--text-2, rgba(17, 17, 17, 0.72));
   --mail-text-3: var(--text-3, rgba(17, 17, 17, 0.52));
-  
+
   --mail-border: var(--border, rgba(0, 0, 0, 0.12));
   --mail-separator: var(--separator, rgba(0, 0, 0, 0.10));
-  
+
   --mail-tint: var(--tint, #007AFF);
   --mail-tint-2: var(--tint-2, #0A84FF);
   --mail-danger: var(--danger, #FF3B30);
   --mail-success: var(--success, #34C759);
   --mail-warning: var(--warning, #FF9500);
-  
+
   --mail-focus: rgba(0, 122, 255, 0.35);
   --mail-unread-bg: rgba(0, 122, 255, 0.08);
   --mail-unread-border: rgba(0, 122, 255, 0.35);
-  
-  /* Design tokens */
-  --radius-xs: 8px;
-  --radius-sm: 10px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --radius-xl: 20px;
-  --radius-2xl: 26px;
-  --radius-pill: 999px;
-  
-  --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 12px;
-  --space-4: 16px;
-  --space-5: 20px;
-  --space-6: 24px;
-  
-  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.08);
-  --shadow-2: 0 6px 18px rgba(0, 0, 0, 0.12);
-  --shadow-3: 0 14px 34px rgba(0, 0, 0, 0.18);
-  
-  --blur-1: 12px;
-  --blur-2: 24px;
-  
-  --ease-standard: cubic-bezier(0.2, 0.8, 0.2, 1);
-  --ease-inout: cubic-bezier(0.25, 0.1, 0.25, 1);
-  --dur-fast: 150ms;
-  --dur-normal: 200ms;
-  --dur-slow: 300ms;
 }
 
 /* Root container */
@@ -70,12 +42,12 @@
   background: rgba(255, 59, 48, 0.12);
   border: 1px solid rgba(255, 59, 48, 0.35);
   color: #D32F2F;
-  border-radius: var(--radius-md);
-  padding: var(--space-3) var(--space-4);
-  margin: var(--space-3) var(--space-4) 0;
+  border-radius: var(--r-md);
+  padding: var(--s-3) var(--s-4);
+  margin: var(--s-3) var(--s-4) 0;
   font-size: 13px;
   font-weight: 500;
-  animation: slideDown var(--dur-normal) var(--ease-standard);
+  animation: slideDown var(--dur-2) var(--ease-standard);
 }
 
 @keyframes slideDown {
@@ -93,18 +65,18 @@
 .setupCard {
   background: var(--mail-surface);
   border: 1px solid var(--mail-border);
-  border-radius: var(--radius-xl);
+  border-radius: var(--r-xl);
   box-shadow: var(--shadow-2);
-  padding: var(--space-6);
-  margin: auto var(--space-4);
+  padding: var(--s-6);
+  margin: auto var(--s-4);
   max-width: 320px;
   width: 100%;
   align-self: center;
-  animation: fadeInUp var(--dur-slow) var(--ease-standard);
+  animation: fadeInUp var(--dur-3) var(--ease-standard);
 }
 
 .setupCard h3 {
-  margin: 0 0 var(--space-2);
+  margin: 0 0 var(--s-2);
   font-size: 22px;
   font-weight: 700;
   color: var(--mail-text);
@@ -113,7 +85,7 @@
 }
 
 .setupHint {
-  margin: 0 0 var(--space-5);
+  margin: 0 0 var(--s-5);
   font-size: 14px;
   color: var(--mail-text-2);
   text-align: center;
@@ -130,7 +102,7 @@
 .textarea {
   width: 100%;
   min-height: 48px;
-  border-radius: var(--radius-md);
+  border-radius: var(--r-md);
   border: 1px solid var(--mail-border);
   background: var(--mail-surface);
   color: var(--mail-text);
@@ -138,8 +110,8 @@
   font-size: 16px;
   font-family: inherit;
   outline: none;
-  transition: background-color var(--dur-normal) var(--ease-standard), color var(--dur-normal) var(--ease-standard), border-color var(--dur-normal) var(--ease-standard), opacity var(--dur-normal) var(--ease-standard), transform var(--dur-normal) var(--ease-standard), box-shadow var(--dur-normal) var(--ease-standard);
-  margin-bottom: var(--space-3);
+  transition: background-color var(--dur-2) var(--ease-standard), color var(--dur-2) var(--ease-standard), border-color var(--dur-2) var(--ease-standard), opacity var(--dur-2) var(--ease-standard), transform var(--dur-2) var(--ease-standard), box-shadow var(--dur-2) var(--ease-standard);
+  margin-bottom: var(--s-3);
 }
 
 .input::placeholder,
@@ -166,7 +138,7 @@
   border: none;
   background: var(--mail-tint);
   color: white;
-  border-radius: var(--radius-pill);
+  border-radius: var(--r-pill);
   padding: 14px 24px;
   min-height: 48px;
   font-size: 16px;
@@ -174,7 +146,7 @@
   font-family: inherit;
   cursor: pointer;
   width: 100%;
-  transition: background-color var(--dur-normal) var(--ease-standard), color var(--dur-normal) var(--ease-standard), border-color var(--dur-normal) var(--ease-standard), opacity var(--dur-normal) var(--ease-standard), transform var(--dur-normal) var(--ease-standard), box-shadow var(--dur-normal) var(--ease-standard);
+  transition: background-color var(--dur-2) var(--ease-standard), color var(--dur-2) var(--ease-standard), border-color var(--dur-2) var(--ease-standard), opacity var(--dur-2) var(--ease-standard), transform var(--dur-2) var(--ease-standard), box-shadow var(--dur-2) var(--ease-standard);
   box-shadow: 0 2px 8px rgba(0, 122, 255, 0.25);
 }
 
@@ -201,7 +173,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--space-3) var(--space-4);
+  padding: var(--s-3) var(--s-4);
   background: var(--mail-surface);
   border-bottom: 1px solid var(--mail-separator);
   position: sticky;
@@ -213,7 +185,7 @@
 .accountBar > div:first-child {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: var(--s-1);
 }
 
 .label {
@@ -234,10 +206,10 @@
 .unreadBadge {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-1);
+  gap: var(--s-1);
   min-height: 28px;
   padding: 4px 12px;
-  border-radius: var(--radius-pill);
+  border-radius: var(--r-pill);
   background: rgba(0, 122, 255, 0.12);
   color: var(--mail-tint);
   font-size: 13px;
@@ -249,15 +221,15 @@
 .composeCard {
   background: var(--mail-surface);
   border: 1px solid var(--mail-border);
-  border-radius: var(--radius-xl);
+  border-radius: var(--r-xl);
   box-shadow: var(--shadow-1);
-  padding: var(--space-4);
-   margin: var(--space-3) var(--space-4) var(--space-4);
-  animation: fadeInUp var(--dur-normal) var(--ease-standard);
+  padding: var(--s-4);
+   margin: var(--s-3) var(--s-4) var(--s-4);
+  animation: fadeInUp var(--dur-2) var(--ease-standard);
 }
 
 .composeCard h4 {
-  margin: 0 0 var(--space-3);
+  margin: 0 0 var(--s-3);
   font-size: 18px;
   font-weight: 700;
   color: var(--mail-text);
@@ -266,26 +238,26 @@
 /* Attachments Box */
 .attachmentsBox {
   position: absolute;
-  right: var(--space-4);
+  right: var(--s-4);
   bottom: calc(92px + var(--phone-bottom-ui-gap, 0px));
-  width: min(280px, calc(100% - (var(--space-4) * 2)));
-  padding: var(--space-4);
+  width: min(280px, calc(100% - (var(--s-4) * 2)));
+  padding: var(--s-4);
   background: var(--mail-surface-2);
   border: 1px solid var(--mail-border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--r-lg);
   box-shadow: var(--shadow-2);
   z-index: 25;
 }
 
 .attachmentsBox h5 {
-  margin: 0 0 var(--space-3);
+  margin: 0 0 var(--s-3);
   font-size: 14px;
   font-weight: 600;
   color: var(--mail-text-2);
 }
 
 .composeMediaButtons {
-  margin-bottom: var(--space-3);
+  margin-bottom: var(--s-3);
 }
 
 .composeMediaButtons :global(.action) {
@@ -294,22 +266,22 @@
 
 .composePreviewMedia {
   max-height: 160px;
-  border-radius: var(--radius-md);
-  margin-bottom: var(--space-3);
+  border-radius: var(--r-md);
+  margin-bottom: var(--s-3);
 }
 
 .attachRow {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: var(--space-2);
-  margin-bottom: var(--space-2);
+  gap: var(--s-2);
+  margin-bottom: var(--s-2);
 }
 
 .select,
 .inputInline {
   width: 100%;
   min-height: 40px;
-  border-radius: var(--radius-sm);
+  border-radius: var(--r-sm);
   border: 1px solid var(--mail-border);
   background: var(--mail-surface);
   color: var(--mail-text);
@@ -317,7 +289,7 @@
   font-size: 14px;
   font-family: inherit;
   outline: none;
-  transition: background-color var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard), border-color var(--dur-fast) var(--ease-standard), opacity var(--dur-fast) var(--ease-standard), transform var(--dur-fast) var(--ease-standard), box-shadow var(--dur-fast) var(--ease-standard);
+  transition: background-color var(--dur-1) var(--ease-standard), color var(--dur-1) var(--ease-standard), border-color var(--dur-1) var(--ease-standard), opacity var(--dur-1) var(--ease-standard), transform var(--dur-1) var(--ease-standard), box-shadow var(--dur-1) var(--ease-standard);
 }
 
 .select:focus,
@@ -340,13 +312,13 @@
   border: 1px solid var(--mail-tint);
   background: transparent;
   color: var(--mail-tint);
-  border-radius: var(--radius-sm);
+  border-radius: var(--r-sm);
   padding: 8px 16px;
   font-size: 14px;
   font-weight: 600;
   font-family: inherit;
   cursor: pointer;
-  transition: background-color var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard), border-color var(--dur-fast) var(--ease-standard), opacity var(--dur-fast) var(--ease-standard), transform var(--dur-fast) var(--ease-standard), box-shadow var(--dur-fast) var(--ease-standard);
+  transition: background-color var(--dur-1) var(--ease-standard), color var(--dur-1) var(--ease-standard), border-color var(--dur-1) var(--ease-standard), opacity var(--dur-1) var(--ease-standard), transform var(--dur-1) var(--ease-standard), box-shadow var(--dur-1) var(--ease-standard);
   min-height: 40px;
 }
 
@@ -363,22 +335,22 @@
 .attachList {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
-  margin-top: var(--space-3);
+  gap: var(--s-2);
+  margin-top: var(--s-3);
 }
 
 .attachItem {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-3);
+  gap: var(--s-2);
+  padding: var(--s-2) var(--s-3);
   background: var(--mail-surface);
   border: 1px solid var(--mail-border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--r-sm);
   font-size: 13px;
   color: var(--mail-text-2);
-  animation: slideIn var(--dur-fast) var(--ease-standard);
+  animation: slideIn var(--dur-1) var(--ease-standard);
 }
 
 @keyframes slideIn {
@@ -404,12 +376,12 @@
   border: none;
   background: rgba(255, 59, 48, 0.1);
   color: var(--mail-danger);
-  border-radius: var(--radius-xs);
+  border-radius: var(--r-xs);
   padding: 4px 10px;
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
-  transition: background-color var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard), border-color var(--dur-fast) var(--ease-standard), opacity var(--dur-fast) var(--ease-standard), transform var(--dur-fast) var(--ease-standard), box-shadow var(--dur-fast) var(--ease-standard);
+  transition: background-color var(--dur-1) var(--ease-standard), color var(--dur-1) var(--ease-standard), border-color var(--dur-1) var(--ease-standard), opacity var(--dur-1) var(--ease-standard), transform var(--dur-1) var(--ease-standard), box-shadow var(--dur-1) var(--ease-standard);
 }
 
 .attachItem button:hover {
@@ -419,12 +391,12 @@
 /* Folder Tabs - Segmented Control */
 .folderTabs {
   display: flex;
-  gap: var(--space-1);
-  padding: var(--space-2);
-  margin: 0 var(--space-4);
+  gap: var(--s-1);
+  padding: var(--s-2);
+  margin: 0 var(--s-4);
   background: rgba(120, 120, 128, 0.16);
   border: 1px solid var(--mail-border);
-  border-radius: var(--radius-pill);
+  border-radius: var(--r-pill);
   min-height: 38px;
 }
 
@@ -435,12 +407,12 @@
   background: transparent;
   color: var(--mail-text-2);
   padding: 8px 16px;
-  border-radius: var(--radius-pill);
+  border-radius: var(--r-pill);
   font-size: 14px;
   font-weight: 500;
   font-family: inherit;
   cursor: pointer;
-  transition: background-color var(--dur-normal) var(--ease-standard), color var(--dur-normal) var(--ease-standard), border-color var(--dur-normal) var(--ease-standard), opacity var(--dur-normal) var(--ease-standard), transform var(--dur-normal) var(--ease-standard), box-shadow var(--dur-normal) var(--ease-standard);
+  transition: background-color var(--dur-2) var(--ease-standard), color var(--dur-2) var(--ease-standard), border-color var(--dur-2) var(--ease-standard), opacity var(--dur-2) var(--ease-standard), transform var(--dur-2) var(--ease-standard), box-shadow var(--dur-2) var(--ease-standard);
   position: relative;
   overflow: hidden;
 }
@@ -461,8 +433,8 @@
   display: flex;
   flex-direction: column;
   flex: 1;
-  gap: var(--space-2);
-  padding: var(--space-3) var(--space-4) var(--space-4);
+  gap: var(--s-2);
+  padding: var(--s-3) var(--s-4) var(--s-4);
   overflow: hidden;
   min-height: 0;
 }
@@ -474,8 +446,8 @@
   overflow-x: hidden;
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
-  padding-right: var(--space-1);
+  gap: var(--s-2);
+  padding-right: var(--s-1);
   scrollbar-width: thin;
   scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
 }
@@ -490,18 +462,18 @@
 
 .list::-webkit-scrollbar-thumb {
   background: rgba(0, 0, 0, 0.2);
-  border-radius: var(--radius-pill);
+  border-radius: var(--r-pill);
 }
 
 .item {
   width: 100%;
   text-align: left;
   border: 1px solid var(--mail-border);
-  border-radius: var(--radius-md);
+  border-radius: var(--r-md);
   background: var(--mail-surface);
-  padding: var(--space-3);
+  padding: var(--s-3);
   cursor: pointer;
-  transition: background-color var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard), border-color var(--dur-fast) var(--ease-standard), opacity var(--dur-fast) var(--ease-standard), transform var(--dur-fast) var(--ease-standard), box-shadow var(--dur-fast) var(--ease-standard);
+  transition: background-color var(--dur-1) var(--ease-standard), color var(--dur-1) var(--ease-standard), border-color var(--dur-1) var(--ease-standard), opacity var(--dur-1) var(--ease-standard), transform var(--dur-1) var(--ease-standard), box-shadow var(--dur-1) var(--ease-standard);
   position: relative;
   overflow: hidden;
 }
@@ -514,7 +486,7 @@
   bottom: 0;
   width: 3px;
   background: transparent;
-  transition: background var(--dur-fast) var(--ease-standard);
+  transition: background var(--dur-1) var(--ease-standard);
 }
 
 .item:hover {
@@ -544,12 +516,12 @@
 .itemUnread::after {
   content: '';
   position: absolute;
-  top: var(--space-3);
-  right: var(--space-3);
+  top: var(--s-3);
+  right: var(--s-3);
   width: 8px;
   height: 8px;
   background: var(--mail-tint);
-  border-radius: var(--radius-pill);
+  border-radius: var(--r-pill);
   box-shadow: 0 0 0 2px var(--mail-surface);
 }
 
@@ -557,8 +529,8 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: var(--space-2);
-  margin-bottom: var(--space-1);
+  gap: var(--s-2);
+  margin-bottom: var(--s-1);
 }
 
 .itemTop strong {
@@ -595,9 +567,9 @@
 .preview {
   background: var(--mail-surface);
   border: 1px solid var(--mail-border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--r-lg);
   box-shadow: var(--shadow-1);
-  padding: var(--space-4);
+  padding: var(--s-4);
   min-height: 200px;
   display: flex;
   flex-direction: column;
@@ -624,7 +596,7 @@
 }
 
 .preview h4 {
-  margin: 0 0 var(--space-2);
+  margin: 0 0 var(--s-2);
   font-size: 20px;
   font-weight: 700;
   color: var(--mail-text);
@@ -633,10 +605,10 @@
 }
 
 .previewMeta {
-  margin: 0 0 var(--space-4);
+  margin: 0 0 var(--s-4);
   font-size: 14px;
   color: var(--mail-text-3);
-  padding-bottom: var(--space-3);
+  padding-bottom: var(--s-3);
   border-bottom: 1px solid var(--mail-separator);
 }
 
@@ -654,13 +626,13 @@
 
 /* Preview Attachments */
 .previewAttachments {
-  margin-top: var(--space-4);
-  padding-top: var(--space-4);
+  margin-top: var(--s-4);
+  padding-top: var(--s-4);
   border-top: 1px dashed var(--mail-border);
 }
 
 .previewAttachments h5 {
-  margin: 0 0 var(--space-3);
+  margin: 0 0 var(--s-3);
   font-size: 14px;
   font-weight: 600;
   color: var(--mail-text-2);
@@ -669,8 +641,8 @@
 .previewAttachmentItem {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-2) 0;
+  gap: var(--s-3);
+  padding: var(--s-2) 0;
   font-size: 14px;
 }
 
@@ -681,7 +653,7 @@
   color: var(--mail-text-3);
   background: var(--mail-surface-2);
   padding: 2px 8px;
-  border-radius: var(--radius-xs);
+  border-radius: var(--r-xs);
   border: 1px solid var(--mail-border);
   flex-shrink: 0;
 }
@@ -691,7 +663,7 @@
   text-decoration: none;
   font-weight: 500;
   word-break: break-all;
-  transition: opacity var(--dur-fast) var(--ease-standard);
+  transition: opacity var(--dur-1) var(--ease-standard);
 }
 
 .previewAttachmentItem a:hover {
@@ -702,7 +674,7 @@
 /* Empty State */
 .empty {
   text-align: center;
-  padding: var(--space-6);
+  padding: var(--s-6);
   color: var(--mail-text-3);
   font-size: 15px;
   margin: auto;
@@ -713,7 +685,7 @@
   display: block;
   width: 44px;
   height: 44px;
-  margin-bottom: var(--space-3);
+  margin-bottom: var(--s-3);
   opacity: 0.5;
   background: center / contain no-repeat url('/img/icons_ios/mail.svg');
   margin-inline: auto;
@@ -736,7 +708,7 @@
 
 .scrollable::-webkit-scrollbar-thumb {
   background: rgba(0, 0, 0, 0.2);
-  border-radius: var(--radius-pill);
+  border-radius: var(--r-pill);
 }
 
 /* Compose View */
@@ -758,7 +730,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--space-3) var(--space-4);
+  padding: var(--s-3) var(--s-4);
   background: var(--mail-surface);
   border-bottom: 1px solid var(--mail-separator);
   position: sticky;
@@ -786,19 +758,19 @@
   font-weight: 500;
   font-family: inherit;
   cursor: pointer;
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-sm);
-  transition: background-color var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard), border-color var(--dur-fast) var(--ease-standard), opacity var(--dur-fast) var(--ease-standard), transform var(--dur-fast) var(--ease-standard), box-shadow var(--dur-fast) var(--ease-standard);
+  padding: var(--s-2) var(--s-3);
+  border-radius: var(--r-sm);
+  transition: background-color var(--dur-1) var(--ease-standard), color var(--dur-1) var(--ease-standard), border-color var(--dur-1) var(--ease-standard), opacity var(--dur-1) var(--ease-standard), transform var(--dur-1) var(--ease-standard), box-shadow var(--dur-1) var(--ease-standard);
   min-width: 70px;
 }
 
 .composeError {
-  margin-bottom: var(--space-3);
+  margin-bottom: var(--s-3);
   background: rgba(255, 59, 48, 0.12);
   border: 1px solid rgba(255, 59, 48, 0.28);
   color: #D32F2F;
-  border-radius: var(--radius-md);
-  padding: var(--space-3);
+  border-radius: var(--r-md);
+  padding: var(--s-3);
   font-size: 13px;
   font-weight: 600;
 }
@@ -807,10 +779,10 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-3);
-  margin-top: var(--space-2);
-  padding: var(--space-3);
-  border-radius: var(--radius-lg);
+  gap: var(--s-3);
+  margin-top: var(--s-2);
+  padding: var(--s-3);
+  border-radius: var(--r-lg);
   background: linear-gradient(135deg, rgba(0, 122, 255, 0.08), rgba(96, 165, 250, 0.18));
   border: 1px solid rgba(0, 122, 255, 0.12);
 }
@@ -834,7 +806,7 @@
   border: none;
   min-height: 40px;
   padding: 0 16px;
-  border-radius: var(--radius-pill);
+  border-radius: var(--r-pill);
   background: var(--mail-surface);
   color: var(--mail-tint);
   font-size: 13px;
@@ -847,8 +819,8 @@
 .composeFooter {
   display: grid;
   grid-template-columns: 1fr 1.3fr;
-  gap: var(--space-2);
-  padding: var(--space-3) var(--space-4) calc(var(--space-3) + var(--phone-bottom-ui-gap, 0px));
+  gap: var(--s-2);
+  padding: var(--s-3) var(--s-4) calc(var(--s-3) + var(--phone-bottom-ui-gap, 0px));
   background: color-mix(in srgb, var(--mail-surface) 92%, transparent);
   border-top: 1px solid var(--mail-separator);
   backdrop-filter: blur(12px);
@@ -860,12 +832,12 @@
   appearance: none;
   border: none;
   min-height: 48px;
-  border-radius: var(--radius-pill);
+  border-radius: var(--r-pill);
   font-size: 15px;
   font-weight: 700;
   font-family: inherit;
   cursor: pointer;
-  transition: background-color var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard), opacity var(--dur-fast) var(--ease-standard), transform var(--dur-fast) var(--ease-standard), box-shadow var(--dur-fast) var(--ease-standard);
+  transition: background-color var(--dur-1) var(--ease-standard), color var(--dur-1) var(--ease-standard), opacity var(--dur-1) var(--ease-standard), transform var(--dur-1) var(--ease-standard), box-shadow var(--dur-1) var(--ease-standard);
 }
 
 .composeFooterSecondary {
@@ -887,7 +859,7 @@
 }
 
 .composeFab {
-  right: var(--space-4);
+  right: var(--s-4);
   bottom: calc(84px + var(--phone-bottom-ui-gap, 0px));
   width: 54px;
   height: 54px;
@@ -904,7 +876,7 @@
 
 .composeFabBadge {
   position: absolute;
-  right: calc(var(--space-4) - 2px);
+  right: calc(var(--s-4) - 2px);
   bottom: calc(132px + var(--phone-bottom-ui-gap, 0px));
   min-width: 22px;
   height: 22px;
@@ -927,8 +899,8 @@
   }
 
   .attachmentsBox {
-    left: var(--space-4);
-    right: var(--space-4);
+    left: var(--s-4);
+    right: var(--s-4);
     width: auto;
   }
 
@@ -944,11 +916,11 @@
 /* Floating Action Button */
 .fab {
   position: fixed;
-  bottom: calc(var(--space-5) + var(--phone-bottom-ui-gap, 0px));
-  right: var(--space-5);
+  bottom: calc(var(--s-5) + var(--phone-bottom-ui-gap, 0px));
+  right: var(--s-5);
   width: 56px;
   height: 56px;
-  border-radius: var(--radius-pill);
+  border-radius: var(--r-pill);
   background: var(--mail-tint);
   border: none;
   color: white;
@@ -957,7 +929,7 @@
   justify-content: center;
   cursor: pointer;
   box-shadow: var(--shadow-1);
-  transition: background-color var(--dur-normal) var(--ease-standard), color var(--dur-normal) var(--ease-standard), border-color var(--dur-normal) var(--ease-standard), opacity var(--dur-normal) var(--ease-standard), transform var(--dur-normal) var(--ease-standard), box-shadow var(--dur-normal) var(--ease-standard);
+  transition: background-color var(--dur-2) var(--ease-standard), color var(--dur-2) var(--ease-standard), border-color var(--dur-2) var(--ease-standard), opacity var(--dur-2) var(--ease-standard), transform var(--dur-2) var(--ease-standard), box-shadow var(--dur-2) var(--ease-standard);
   z-index: 100;
 }
 
@@ -990,13 +962,13 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--space-3) var(--space-4);
+  padding: var(--s-3) var(--s-4);
   background: var(--mail-surface);
   border-bottom: 1px solid var(--mail-separator);
   position: sticky;
   top: 0;
   z-index: 10;
-  gap: var(--space-2);
+  gap: var(--s-2);
 }
 
 .detailTitle {
@@ -1009,12 +981,12 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  padding: 0 var(--space-2);
+  padding: 0 var(--s-2);
 }
 
 .detailActions {
   display: flex;
-  gap: var(--space-2);
+  gap: var(--s-2);
   flex-shrink: 0;
 }
 
@@ -1023,13 +995,13 @@
   border: 1px solid #ff3b30;
   background: transparent;
   color: #ff3b30;
-  border-radius: var(--radius-sm);
+  border-radius: var(--r-sm);
   padding: 8px 14px;
   font-size: 14px;
   font-weight: 600;
   font-family: inherit;
   cursor: pointer;
-  transition: background-color var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard), border-color var(--dur-fast) var(--ease-standard), opacity var(--dur-fast) var(--ease-standard), transform var(--dur-fast) var(--ease-standard), box-shadow var(--dur-fast) var(--ease-standard);
+  transition: background-color var(--dur-1) var(--ease-standard), color var(--dur-1) var(--ease-standard), border-color var(--dur-1) var(--ease-standard), opacity var(--dur-1) var(--ease-standard), transform var(--dur-1) var(--ease-standard), box-shadow var(--dur-1) var(--ease-standard);
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -1048,23 +1020,23 @@
 .detailContent {
   flex: 1;
   overflow-y: auto;
-  padding: var(--space-4);
+  padding: var(--s-4);
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: var(--s-4);
 }
 
 .detailMeta {
   background: var(--mail-surface);
   border: 1px solid var(--mail-border);
-  border-radius: var(--radius-md);
-  padding: var(--space-4);
+  border-radius: var(--r-md);
+  padding: var(--s-4);
 }
 
 .metaRow {
   display: flex;
-  gap: var(--space-3);
-  padding: var(--space-2) 0;
+  gap: var(--s-3);
+  padding: var(--s-2) 0;
   border-bottom: 1px solid var(--mail-separator);
 }
 
@@ -1094,19 +1066,19 @@
   word-break: break-word;
   background: var(--mail-surface);
   border: 1px solid var(--mail-border);
-  border-radius: var(--radius-md);
-  padding: var(--space-4);
+  border-radius: var(--r-md);
+  padding: var(--s-4);
 }
 
 .detailAttachments {
   background: var(--mail-surface);
   border: 1px solid var(--mail-border);
-  border-radius: var(--radius-md);
-  padding: var(--space-4);
+  border-radius: var(--r-md);
+  padding: var(--s-4);
 }
 
 .detailAttachments h5 {
-  margin: 0 0 var(--space-3) 0;
+  margin: 0 0 var(--s-3) 0;
   font-size: 14px;
   font-weight: 600;
   color: var(--mail-text);
@@ -1115,11 +1087,11 @@
 .attachmentItem {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-3);
+  gap: var(--s-3);
+  padding: var(--s-3);
   background: var(--mail-bg);
-  border-radius: var(--radius-sm);
-  margin-bottom: var(--space-2);
+  border-radius: var(--r-sm);
+  margin-bottom: var(--s-2);
 }
 
 .attachmentItem:last-child {
