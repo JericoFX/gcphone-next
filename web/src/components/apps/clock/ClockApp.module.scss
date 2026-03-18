@@ -1,3 +1,34 @@
+.clockDual {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s-2);
+  margin-bottom: var(--s-3);
+}
+
+.clockCard {
+  padding: var(--s-4) var(--s-3);
+  border-radius: var(--r-xl);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-1);
+  text-align: center;
+  display: grid;
+  gap: var(--s-1);
+}
+
+.clockLabel {
+  font-size: var(--fs-caption2);
+  font-weight: 700;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.clockSub {
+  font-size: var(--fs-caption1);
+  color: var(--text-3);
+}
+
 .hero-alarm {
   display: grid;
   gap: var(--s-2);

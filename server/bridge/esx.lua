@@ -1,3 +1,5 @@
+if Config.Framework ~= 'esx' then return end
+
 local ESX = nil
 local Framework = nil
 

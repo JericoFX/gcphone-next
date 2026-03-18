@@ -1436,3 +1436,63 @@ RegisterNUICallback('emergencySOS', function(_, cb)
         cb(result or { success = false })
     end)
 end)
+
+-- Weather: read GTA V weather from natives (CLIENT-ONLY)
+RegisterNUICallback('getWeatherData', function(_, cb)
+    local weatherHash1, weatherHash2, pct = GetWeatherTypeTransition()
+    local hour = GetClockHours()
+    local minute = GetClockMinutes()
+
+    local weatherNames = {
+        [GetHashKey('EXTRASUNNY')]  = 'Despejado',
+        [GetHashKey('CLEAR')]       = 'Despejado',
+        [GetHashKey('CLOUDS')]      = 'Nublado',
+        [GetHashKey('OVERCAST')]    = 'Cubierto',
+        [GetHashKey('RAIN')]        = 'Lluvia',
+        [GetHashKey('THUNDER')]     = 'Tormenta',
+        [GetHashKey('CLEARING')]    = 'Despejando',
+        [GetHashKey('SMOG')]        = 'Smog',
+        [GetHashKey('FOGGY')]       = 'Niebla',
+        [GetHashKey('SNOW')]        = 'Nieve',
+        [GetHashKey('BLIZZARD')]    = 'Ventisca',
+        [GetHashKey('SNOWLIGHT')]   = 'Nieve leve',
+        [GetHashKey('XMAS')]        = 'Navidad',
+        [GetHashKey('HALLOWEEN')]   = 'Halloween',
+        [GetHashKey('NEUTRAL')]     = 'Neutral',
+    }
+
+    local current = weatherNames[weatherHash1] or 'Desconocido'
+    local next = weatherNames[weatherHash2] or current
+
+    local temp = 22
+    if current == 'Despejado' then temp = 28
+    elseif current == 'Nublado' then temp = 20
+    elseif current == 'Cubierto' then temp = 18
+    elseif current == 'Lluvia' or current == 'Tormenta' then temp = 15
+    elseif current == 'Niebla' then temp = 14
+    elseif current == 'Nieve' or current == 'Ventisca' or current == 'Nieve leve' then temp = -2
+    end
+
+    if hour >= 6 and hour < 12 then temp = temp - 3
+    elseif hour >= 18 or hour < 6 then temp = temp - 6
+    end
+
+    cb({
+        condition = pct > 0.5 and next or current,
+        temperature = temp,
+        gameHour = hour,
+        gameMinute = minute,
+        wind = math.random(5, 25),
+        humidity = math.random(30, 80),
+        rainChance = (current == 'Lluvia' or current == 'Tormenta') and math.random(60, 95) or math.random(0, 20),
+    })
+end)
+
+-- Clock: read in-game time (CLIENT-ONLY)
+RegisterNUICallback('getGameTime', function(_, cb)
+    cb({
+        hour = GetClockHours(),
+        minute = GetClockMinutes(),
+        second = GetClockSeconds(),
+    })
+end)
