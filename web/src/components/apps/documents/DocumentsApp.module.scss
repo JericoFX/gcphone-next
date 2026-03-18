@@ -41,12 +41,18 @@
   margin-bottom: 12px;
   cursor: pointer;
   transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease, opacity 150ms ease, transform 150ms ease, box-shadow 150ms ease;
-  
+  animation: doc-card-in var(--dur-3, 260ms) var(--ease-standard, cubic-bezier(.2,.8,.2,1)) both;
+
   &:hover {
     transform: translateX(4px);
     border-color: var(--tint);
     box-shadow: 0 2px 8px rgba(0, 122, 255, 0.1);
   }
+}
+
+@keyframes doc-card-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .docIcon {
@@ -99,14 +105,17 @@
 }
 
 .nfcBadge {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   margin-top: 6px;
   padding: 3px 8px;
-  background: var(--tint);
-  color: var(--surface, #fff);
+  background: color-mix(in srgb, var(--tint) 10%, transparent);
+  color: var(--tint);
   font-size: 11px;
   font-weight: 600;
   border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--tint) 20%, var(--border));
 }
 
 .docArrow {
@@ -248,6 +257,7 @@
   border: 1px solid var(--border);
   border-radius: 12px;
   margin-bottom: 10px;
+  animation: doc-card-in var(--dur-3) var(--ease-standard) both;
 }
 
 .historyIcon {
@@ -297,6 +307,12 @@
   background: var(--bg, #f2f2f7);
   z-index: 200;
   overflow-y: auto;
+  animation: doc-detail-in var(--dur-3, 260ms) var(--ease-standard, cubic-bezier(.2,.8,.2,1));
+}
+
+@keyframes doc-detail-in {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .closeBtn {
@@ -434,10 +450,10 @@
 .mailBtn {
   width: 100%;
   padding: 16px;
-  border: 1px solid rgba(15, 111, 206, 0.18);
+  border: 1px solid color-mix(in srgb, var(--tint) 18%, transparent);
   border-radius: 12px;
-  background: rgba(15, 111, 206, 0.08);
-  color: #0f6fce;
+  background: color-mix(in srgb, var(--tint) 8%, transparent);
+  color: var(--tint);
   font-size: 16px;
   font-weight: 700;
   cursor: pointer;
@@ -477,11 +493,11 @@
   text-align: center;
   
   &.valid {
-    background: var(--success);
+    background: linear-gradient(135deg, var(--success), color-mix(in srgb, var(--success) 80%, black));
   }
-  
+
   &.invalid {
-    background: var(--danger);
+    background: linear-gradient(135deg, var(--danger), color-mix(in srgb, var(--danger) 80%, black));
   }
 }
 

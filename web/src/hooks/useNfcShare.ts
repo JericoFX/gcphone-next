@@ -24,6 +24,9 @@ const DEFAULT_ERRORS: Record<string, string> = {
   READONLY: 'Telefono en modo lectura',
 };
 
+const NFC_COOLDOWN_MS = 10000;
+const lastShareByTarget = new Map<number, number>();
+
 export function useNfcShare(options: UseNfcShareOptions): UseNfcShareReturn {
   const [isOpen, setIsOpen] = createSignal(false);
   const [sharing, setSharing] = createSignal(false);
@@ -32,10 +35,27 @@ export function useNfcShare(options: UseNfcShareOptions): UseNfcShareReturn {
   const errorMap = { ...DEFAULT_ERRORS, ...(options.errorMessages || {}) };
 
   const handleSelect = async (targetServerId: number) => {
+    const now = Date.now();
+    const lastShare = lastShareByTarget.get(targetServerId) || 0;
+    if (now - lastShare < NFC_COOLDOWN_MS) {
+      const waitSec = Math.ceil((NFC_COOLDOWN_MS - (now - lastShare)) / 1000);
+      notificationsActions.receive({
+        appId: 'system',
+        title: 'NFC',
+        message: `Espera ${waitSec}s antes de compartir de nuevo`,
+        priority: 'normal',
+      });
+      return;
+    }
+
     setSharing(true);
     const result = await options.onShare(targetServerId);
     setSharing(false);
     setIsOpen(false);
+
+    if (result?.success) {
+      lastShareByTarget.set(targetServerId, Date.now());
+    }
 
     if (result?.success) {
       notificationsActions.receive({

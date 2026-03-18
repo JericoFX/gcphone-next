@@ -1,10 +1,26 @@
+// DarkRooms — Old Reddit inspired design
+// All hardcoded colors replaced with CSS variable tokens
+
+@keyframes cardSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 .body {
   display: flex;
   flex-direction: column;
-  background:
-    radial-gradient(120% 90% at 0% -10%, rgba(10, 132, 255, 0.08), transparent 50%),
-    radial-gradient(120% 90% at 100% 0%, rgba(88, 86, 214, 0.12), transparent 46%),
-    linear-gradient(180deg, #f8f9fd 0%, #eff2f8 100%);
+  background: var(--bg);
 }
 
 // View: Rooms List (Lobby)
@@ -16,13 +32,12 @@
 }
 
 .roomsHeader {
-  background: rgba(255, 255, 255, 0.84);
-  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
-  padding: 12px 16px;
+  background: var(--surface);
+  border-bottom: 2px solid var(--tint);
+  padding: var(--s-3) var(--s-4);
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  backdrop-filter: blur(18px);
+  gap: var(--s-2);
 }
 
 .searchBar {
@@ -34,91 +49,102 @@
 }
 
 .searchInput {
-  min-height: 42px;
-  border-radius: 14px;
-  background: rgba(118, 118, 128, 0.12);
-  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.06);
+  min-height: 36px;
+  border-radius: var(--r-xs);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  font-size: var(--fs-footnote);
+
+  &:focus {
+    border-color: var(--tint);
+  }
 }
 
 .sortToggle {
-  display: block;
+  display: flex;
+  border-bottom: 1px solid var(--separator);
+  padding-bottom: var(--s-2);
 }
 
 .roomsList {
   flex: 1;
   overflow-y: auto;
-  padding: 8px;
+  padding: var(--s-2);
 }
 
 .roomCard {
   display: flex;
-  align-items: flex-start;
-  gap: 12px;
+  align-items: stretch;
+  gap: 0;
   width: 100%;
-  padding: 14px;
-  margin-bottom: 8px;
-  background: rgba(255, 255, 255, 0.94);
-  border: 1px solid rgba(15, 23, 42, 0.06);
-  border-radius: 16px;
+  padding: 0;
+  margin-bottom: var(--s-2);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-xs);
   text-align: left;
   cursor: pointer;
-  transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease, opacity 150ms ease, transform 150ms ease, box-shadow 150ms ease;
-  
+  overflow: hidden;
+  transition:
+    border-color var(--dur-2) var(--ease-standard),
+    box-shadow var(--dur-2) var(--ease-standard);
+  animation: cardSlideIn var(--dur-3) var(--ease-standard) both;
+
   &:hover {
-    background: #fbfcff;
-    border-color: rgba(10, 132, 255, 0.16);
-    transform: translateY(-1px);
-    box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+    border-color: var(--tint);
+    box-shadow: var(--shadow-1);
   }
-  
+
   &:active {
-    transform: translateY(0);
     background: var(--bg);
   }
 }
 
 .roomIconWrapper {
   flex-shrink: 0;
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  width: 4px;
+  height: auto;
+  border-radius: 0;
+  background: var(--tint);
+  display: block;
+  align-self: stretch;
 }
 
 .roomIcon {
+  // Hidden — the accent strip replaces the emoji circle
+  display: none;
   font-size: 24px;
 }
 
 .roomInfo {
   flex: 1;
   min-width: 0;
+  padding: var(--s-3) var(--s-3);
 }
 
 .roomNameRow {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 4px;
+  gap: var(--s-2);
+  margin-bottom: var(--s-1);
 }
 
 .roomName {
-  font-size: 17px;
-  font-weight: 600;
-  color: var(--text);
+  font-size: var(--fs-body);
+  font-weight: 700;
+  color: var(--tint);
   letter-spacing: -0.01em;
+  font-family: 'Courier New', Courier, monospace;
 }
 
 .roomLock {
-  font-size: 14px;
+  font-size: var(--fs-caption1);
 }
 
 .roomDescription {
-  font-size: 14px;
+  font-size: var(--fs-caption1);
   color: var(--text-2);
-  margin: 0 0 8px 0;
+  margin: 0 0 var(--s-2) 0;
   line-height: 1.4;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -129,13 +155,21 @@
 .roomStats {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 13px;
+  gap: var(--s-2);
+  font-size: var(--fs-caption2);
   color: var(--text-3);
+
+  span:not(.statDot) {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    padding: 1px var(--s-2);
+    border-radius: var(--r-xs);
+    font-weight: 500;
+  }
 }
 
 .statDot {
-  color: #c7c7cc;
+  color: var(--text-3);
 }
 
 .emptyState {
@@ -143,13 +177,14 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 40px 20px;
+  padding: var(--s-8) var(--s-5);
   color: var(--text-3);
   text-align: center;
-  
+  animation: fadeIn var(--dur-3) var(--ease-standard);
+
   p {
     margin: 0;
-    font-size: 16px;
+    font-size: var(--fs-body);
   }
 }
 
@@ -166,19 +201,21 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: 0 4px 14px rgba(0, 122, 255, 0.4);
-  transition: background-color 200ms cubic-bezier(0.2, 0.8, 0.2, 1), color 200ms cubic-bezier(0.2, 0.8, 0.2, 1), border-color 200ms cubic-bezier(0.2, 0.8, 0.2, 1), opacity 200ms cubic-bezier(0.2, 0.8, 0.2, 1), transform 200ms cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 200ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  box-shadow: var(--shadow-2);
+  transition:
+    transform var(--dur-2) var(--ease-standard),
+    box-shadow var(--dur-2) var(--ease-standard);
   user-select: none;
   -webkit-tap-highlight-color: transparent;
-  
+
   &:hover {
     transform: scale(1.05);
-    box-shadow: 0 6px 20px rgba(0, 122, 255, 0.5);
+    box-shadow: var(--shadow-2);
   }
-  
+
   &:active {
     transform: scale(0.95);
-    box-shadow: 0 2px 8px rgba(0, 122, 255, 0.3);
+    box-shadow: var(--shadow-1);
   }
 }
 
@@ -188,32 +225,41 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  animation: fadeIn var(--dur-3) var(--ease-standard);
 }
 
 .roomInteriorHeader {
   background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  padding: 12px 16px;
+  border-bottom: 2px solid var(--tint);
+  padding: var(--s-2) var(--s-3);
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--s-2);
   position: sticky;
   top: 0;
   z-index: 10;
 }
 
 .backButton {
-  padding: 8px 12px;
-  border: none;
-  border-radius: 8px;
-  background: transparent;
+  padding: var(--s-1) var(--s-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-xs);
+  background: var(--surface);
   color: var(--tint);
-  font-size: 15px;
-  font-weight: 500;
+  font-size: var(--fs-caption1);
+  font-weight: 600;
   cursor: pointer;
-  
+  transition:
+    background-color var(--dur-1) var(--ease-standard),
+    border-color var(--dur-1) var(--ease-standard);
+
   &:hover {
-    background: rgba(0, 122, 255, 0.1);
+    background: var(--bg);
+    border-color: var(--tint);
+  }
+
+  &:active {
+    background: var(--border);
   }
 }
 
@@ -221,21 +267,22 @@
   flex: 1;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--s-2);
   min-width: 0;
 }
 
 .roomIconSmall {
-  font-size: 20px;
+  font-size: 18px;
 }
 
 .roomInteriorTitle {
-  font-size: 17px;
-  font-weight: 600;
+  font-size: var(--fs-headline);
+  font-weight: 700;
   color: var(--text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-family: 'Courier New', Courier, monospace;
 }
 
 .roomInteriorActions {
@@ -244,33 +291,44 @@
 }
 
 .roomStat {
-  font-size: 13px;
+  font-size: var(--fs-caption2);
   color: var(--text-3);
-  background: rgba(118, 118, 128, 0.12);
-  padding: 4px 10px;
-  border-radius: 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  padding: var(--s-1) var(--s-2);
+  border-radius: var(--r-xs);
+  font-weight: 500;
 }
 
 .postsList {
   flex: 1;
   overflow-y: auto;
-  padding: 8px;
+  padding: var(--s-2);
+  background: var(--bg);
 }
 
 .postCard {
   display: flex;
-  gap: 12px;
-  padding: 14px;
-  margin-bottom: 8px;
-  background: rgba(255, 255, 255, 0.95);
-  border: 1px solid rgba(15, 23, 42, 0.06);
-  border-radius: 16px;
+  gap: 0;
+  padding: 0;
+  margin-bottom: var(--s-2);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-xs);
   cursor: pointer;
-  transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease, opacity 150ms ease, transform 150ms ease, box-shadow 150ms ease;
-  
+  overflow: hidden;
+  transition:
+    border-color var(--dur-2) var(--ease-standard),
+    box-shadow var(--dur-2) var(--ease-standard);
+  animation: cardSlideIn var(--dur-3) var(--ease-standard) both;
+
   &:hover {
-    background: #fbfcff;
-    border-color: rgba(10, 132, 255, 0.14);
+    border-color: var(--tint);
+    box-shadow: var(--shadow-1);
+  }
+
+  &:active {
+    background: var(--bg);
   }
 }
 
@@ -278,43 +336,52 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  padding: 4px;
+  gap: 2px;
+  padding: var(--s-2) var(--s-2);
+  background: var(--bg);
+  border-right: 1px solid var(--border);
+  min-width: 42px;
 }
 
 .voteButton {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   border: none;
-  border-radius: 8px;
+  border-radius: var(--r-xs);
   background: transparent;
   color: var(--text-3);
-  font-size: 16px;
+  font-size: 14px;
   cursor: pointer;
-  transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease, opacity 150ms ease, transform 150ms ease, box-shadow 150ms ease;
+  transition:
+    background-color var(--dur-1) var(--ease-standard),
+    color var(--dur-1) var(--ease-standard);
   display: flex;
   align-items: center;
   justify-content: center;
-  
+
   &:hover {
-    background: var(--bg);
-    color: var(--text-2);
+    background: var(--border);
+    color: var(--text);
   }
-  
+
+  &:active {
+    transform: scale(0.9);
+  }
+
   &.votedUp {
-    color: #ff4500;
-    background: rgba(255, 69, 0, 0.1);
+    color: var(--warning);
+    background: color-mix(in srgb, var(--warning) 12%, transparent);
   }
-  
+
   &.votedDown {
-    color: #9494ff;
-    background: rgba(148, 148, 255, 0.1);
+    color: var(--tint);
+    background: color-mix(in srgb, var(--tint) 12%, transparent);
   }
 }
 
 .voteCount {
-  font-size: 14px;
-  font-weight: 600;
+  font-size: var(--fs-caption1);
+  font-weight: 700;
   color: var(--text);
   min-width: 24px;
   text-align: center;
@@ -323,20 +390,25 @@
 .postContent {
   flex: 1;
   min-width: 0;
+  padding: var(--s-3);
 }
 
 .postTitle {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--text);
-  margin: 0 0 6px 0;
+  font-size: var(--fs-body);
+  font-weight: 700;
+  color: var(--tint);
+  margin: 0 0 var(--s-1) 0;
   line-height: 1.3;
+
+  &:hover {
+    text-decoration: underline;
+  }
 }
 
 .postExcerpt {
-  font-size: 14px;
+  font-size: var(--fs-caption1);
   color: var(--text-2);
-  margin: 0 0 10px 0;
+  margin: 0 0 var(--s-2) 0;
   line-height: 1.4;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -347,13 +419,13 @@
 .postMeta {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 13px;
+  gap: var(--s-2);
+  font-size: var(--fs-caption2);
   color: var(--text-3);
 }
 
 .metaDot {
-  color: #c7c7cc;
+  color: var(--text-3);
 }
 
 // View: Post Detail
@@ -362,22 +434,23 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  animation: fadeIn var(--dur-3) var(--ease-standard);
 }
 
 .postThreadScroll {
   flex: 1;
   overflow-y: auto;
-  background: linear-gradient(180deg, #f8f9fd 0%, #eff2f8 100%);
+  background: var(--bg);
   min-height: 0;
 }
 
 .postDetailHeader {
   background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  padding: 12px 16px;
+  border-bottom: 2px solid var(--tint);
+  padding: var(--s-2) var(--s-3);
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--s-3);
   position: sticky;
   top: 0;
   z-index: 10;
@@ -385,29 +458,35 @@
 
 .postDetailTitle {
   flex: 1;
-  font-size: 17px;
-  font-weight: 600;
+  font-size: var(--fs-headline);
+  font-weight: 700;
   color: var(--text);
   text-align: center;
 }
 
 .postDetailContent {
   display: flex;
-  gap: 12px;
-  padding: 16px;
+  gap: 0;
   background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-xs);
+  margin: var(--s-2);
+  overflow: hidden;
 }
 
 .postDetailVotes {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
-  padding: 4px;
+  gap: var(--s-1);
+  padding: var(--s-3) var(--s-2);
+  background: var(--bg);
+  border-right: 1px solid var(--border);
+  min-width: 48px;
 }
 
 .voteCountLarge {
-  font-size: 18px;
+  font-size: var(--fs-title3);
   font-weight: 700;
   color: var(--text);
   min-width: 32px;
@@ -417,30 +496,33 @@
 .postDetailBody {
   flex: 1;
   min-width: 0;
+  padding: var(--s-3) var(--s-4);
 }
 
 .postDetailHeading {
-  font-size: 20px;
+  font-size: var(--fs-title3);
   font-weight: 700;
   color: var(--text);
-  margin: 0 0 8px 0;
+  margin: 0 0 var(--s-2) 0;
   line-height: 1.3;
 }
 
 .postDetailMeta {
-  font-size: 13px;
+  font-size: var(--fs-caption2);
   color: var(--text-3);
-  margin-bottom: 12px;
+  margin-bottom: var(--s-3);
+  padding-bottom: var(--s-2);
+  border-bottom: 1px solid var(--separator);
 }
 
 .postDetailText {
-  font-size: 15px;
+  font-size: var(--fs-footnote);
   color: var(--text-2);
   line-height: 1.6;
-  margin: 0 0 16px 0;
+  margin: 0 0 var(--s-4) 0;
 }
 
-// Comments
+// Comments — Reddit thread-style left border indent
 .commentsSection {
   display: flex;
   flex-direction: column;
@@ -448,45 +530,52 @@
 }
 
 .commentsSeparator {
-  height: 10px;
-  border-top: 1px solid var(--border);
-  border-bottom: 1px solid #ececf0;
-  background: #f2f2f6;
+  height: 2px;
+  background: var(--tint);
 }
 
 .commentsTitle {
   margin: 0;
-  padding: 16px;
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--text-2);
+  padding: var(--s-3) var(--s-3);
+  font-size: var(--fs-footnote);
+  font-weight: 700;
+  color: var(--text);
   border-bottom: 1px solid var(--border);
+  background: var(--surface);
 }
 
 .commentsList {
-  padding: 12px;
+  padding: var(--s-2) var(--s-3);
 }
 
 .commentItem {
-  background: rgba(255, 255, 255, 0.96);
-  border: 1px solid rgba(15, 23, 42, 0.06);
-  border-radius: 16px;
-  padding: 14px;
-  margin-bottom: 10px;
+  background: var(--surface);
+  border: none;
+  border-left: 3px solid var(--tint);
+  border-radius: 0;
+  padding: var(--s-2) var(--s-3);
+  margin-bottom: var(--s-2);
+  margin-left: var(--s-3);
+  animation: cardSlideIn var(--dur-3) var(--ease-standard) both;
+  transition: border-color var(--dur-1) var(--ease-standard);
+
+  &:hover {
+    border-left-color: var(--warning);
+  }
 }
 
 .commentHeader {
-  margin-bottom: 8px;
-  
+  margin-bottom: var(--s-1);
+
   strong {
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--text);
+    font-size: var(--fs-caption1);
+    font-weight: 700;
+    color: var(--tint);
   }
 }
 
 .commentText {
-  font-size: 14px;
+  font-size: var(--fs-caption1);
   color: var(--text-2);
   line-height: 1.5;
   margin: 0;
@@ -495,27 +584,30 @@
 // Comment Composer
 .commentComposer {
   background: var(--surface);
-  border-top: 1px solid var(--border);
-  padding: 12px;
+  border-top: 2px solid var(--tint);
+  padding: var(--s-3);
   flex-shrink: 0;
 }
 
 .commentInput {
   width: 100%;
-  padding: 12px;
+  padding: var(--s-3);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--r-xs);
   background: var(--bg);
   color: var(--text);
-  font-size: 15px;
+  font-size: var(--fs-footnote);
   resize: none;
   font-family: inherit;
-  margin-bottom: 12px;
-  
+  margin-bottom: var(--s-2);
+  transition:
+    border-color var(--dur-1) var(--ease-standard),
+    background-color var(--dur-1) var(--ease-standard);
+
   &::placeholder {
     color: var(--text-3);
   }
-  
+
   &:focus {
     outline: none;
     border-color: var(--tint);
@@ -532,35 +624,41 @@
 .anonymousToggle {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--s-2);
   cursor: pointer;
-  font-size: 14px;
+  font-size: var(--fs-caption1);
   color: var(--text-2);
-  
+
   input {
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
     accent-color: var(--tint);
   }
 }
 
 .sendButton {
-  padding: 10px 20px;
+  padding: var(--s-2) var(--s-4);
   border: none;
-  border-radius: 10px;
+  border-radius: var(--r-xs);
   background: var(--tint);
   color: var(--surface);
-  font-size: 15px;
-  font-weight: 600;
+  font-size: var(--fs-footnote);
+  font-weight: 700;
   cursor: pointer;
-  transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease, opacity 150ms ease, transform 150ms ease, box-shadow 150ms ease;
-  
+  transition:
+    opacity var(--dur-1) var(--ease-standard),
+    transform var(--dur-1) var(--ease-standard);
+
   &:hover {
-    background: #0056b3;
+    opacity: 0.85;
   }
-  
+
+  &:active {
+    transform: scale(0.97);
+  }
+
   &:disabled {
-    opacity: 0.5;
+    opacity: 0.4;
     cursor: not-allowed;
   }
 }
@@ -569,10 +667,11 @@
 .media,
 .compactMedia {
   width: 100%;
-  border-radius: 10px;
+  border-radius: var(--r-xs);
   object-fit: cover;
-  margin-top: 10px;
+  margin-top: var(--s-2);
   cursor: zoom-in;
+  border: 1px solid var(--border);
 }
 
 .media {
@@ -581,42 +680,45 @@
 
 .compactMedia {
   max-height: 150px;
-  margin-top: 8px;
+  margin-top: var(--s-2);
 }
 
 .audio {
   width: 100%;
-  margin-top: 10px;
+  margin-top: var(--s-2);
 }
 
 // Forms
 .formField {
-  margin-bottom: 16px;
+  margin-bottom: var(--s-4);
 }
 
 .formLabel {
   display: block;
-  margin-bottom: 6px;
-  font-size: 14px;
-  font-weight: 500;
+  margin-bottom: var(--s-1);
+  font-size: var(--fs-caption1);
+  font-weight: 600;
   color: var(--text-2);
 }
 
 .formTextarea {
   width: 100%;
-  padding: 12px;
+  padding: var(--s-3);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--r-xs);
   background: var(--bg);
   color: var(--text);
-  font-size: 15px;
+  font-size: var(--fs-footnote);
   resize: vertical;
   font-family: inherit;
-  
+  transition:
+    border-color var(--dur-1) var(--ease-standard),
+    background-color var(--dur-1) var(--ease-standard);
+
   &::placeholder {
     color: var(--text-3);
   }
-  
+
   &:focus {
     outline: none;
     border-color: var(--tint);
@@ -627,51 +729,57 @@
 .emojiPresetGrid {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 8px;
+  gap: var(--s-2);
 }
 
 .emojiPreset {
   min-height: 40px;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--r-xs);
   background: var(--bg);
   font-size: 22px;
   cursor: pointer;
-  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, opacity 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    background-color var(--dur-1) var(--ease-standard),
+    border-color var(--dur-1) var(--ease-standard);
 
   &:hover {
     background: var(--surface);
     border-color: var(--tint);
   }
+
+  &:active {
+    transform: scale(0.95);
+  }
 }
 
 .emojiPresetActive {
-  background: rgba(0, 122, 255, 0.12);
+  background: color-mix(in srgb, var(--tint) 14%, transparent);
   border-color: var(--tint);
 }
 
 .checkboxField {
-  margin: 16px 0;
+  margin: var(--s-4) 0;
 }
 
 .checkboxLabel {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--s-2);
   cursor: pointer;
-  font-size: 15px;
+  font-size: var(--fs-footnote);
   color: var(--text);
-  
+
   input {
-    width: 20px;
-    height: 20px;
+    width: 18px;
+    height: 18px;
     accent-color: var(--tint);
   }
 }
 
 .modalDescription {
-  margin: 0 0 16px 0;
-  font-size: 15px;
+  margin: 0 0 var(--s-4) 0;
+  font-size: var(--fs-footnote);
   color: var(--text-2);
   line-height: 1.5;
 }
