@@ -27,76 +27,9 @@ import { AppScaffold } from '../../shared/layout';
 import { getStoredLanguage, t } from '../../../i18n';
 import { useWaveChatDerivedData } from './hooks/useWaveChatDerivedData';
 import { useWaveChatRouteSync } from './hooks/useWaveChatRouteSync';
+import type { GifResult, UploadConfig, WaveChatGroup, WaveChatInvite, WaveChatGroupMessage, WaveStatus, WaveStatusMediaConfig, WaveSocketAuth } from './WaveChatTypes';
+import { extractCoords } from './WaveChatTypes';
 import styles from './WaveChatApp.module.scss';
-
-interface GifResult {
-  id: string;
-  url: string;
-}
-
-interface UploadConfig {
-  uploadUrl: string;
-  uploadField: string;
-}
-
-interface WaveChatGroup {
-  id: number;
-  name: string;
-  members?: number;
-}
-
-interface WaveChatInvite {
-  id: number;
-  group_id: number;
-  group_name: string;
-  inviter_number?: string;
-  created_at?: string;
-}
-
-interface WaveChatGroupMessage {
-  id: number | string;
-  group_id: number;
-  sender_number?: string;
-  message: string;
-  media_url?: string;
-  created_at?: string;
-}
-
-interface WaveStatus {
-  id: number;
-  identifier?: string;
-  phone_number: string;
-  media_url: string;
-  media_type: 'image' | 'video';
-  caption?: string;
-  views?: number;
-  created_at?: string;
-  expires_at?: string;
-  contact_name?: string;
-}
-
-interface WaveStatusMediaConfig {
-  provider?: string;
-  canUploadImage?: boolean;
-  canUploadVideo?: boolean;
-  maxVideoDurationSeconds?: number;
-}
-
-interface WaveSocketAuth {
-  success?: boolean;
-  host?: string;
-  token?: string;
-}
-
-function extractCoords(text?: string): { x: number; y: number } | null {
-  if (!text) return null;
-  const match = text.match(/LOC:([\-\d.]+),\s*([\-\d.]+)/i);
-  if (!match) return null;
-  const x = Number(match[1]);
-  const y = Number(match[2]);
-  if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
-  return { x, y };
-}
 
 export function WaveChatApp() {
   const router = useRouter();
