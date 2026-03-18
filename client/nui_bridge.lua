@@ -975,6 +975,12 @@ RegisterNUICallback('clipsAddComment', function(data, cb)
     end, data or {})
 end)
 
+RegisterNUICallback('clipsDeleteComment', function(data, cb)
+    lib.callback('gcphone:clips:deleteComment', false, function(success)
+        cb(cbSuccess(success))
+    end, data or {})
+end)
+
 RegisterNUICallback('garageGetVehicles', function(_, cb)
     lib.callback('gcphone:garage:getVehicles', false, function(vehicles)
         cb(vehicles or {})

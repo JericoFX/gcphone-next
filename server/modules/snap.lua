@@ -561,7 +561,8 @@ lib.callback.register('gcphone:clips:createAccount', function(source, data)
     end
 
     local name = GetName(source) or 'User'
-    local created = CreateAccount(identifier, username, name, nil)
+    local avatar = SanitizeMediaUrl(data.avatar)
+    local created = CreateAccount(identifier, username, name, avatar ~= '' and avatar or nil)
     return created ~= nil, created
 end)
 
@@ -614,10 +615,20 @@ lib.callback.register('gcphone:clips:updateAccount', function(source, data)
 
     if type(data) ~= 'table' then return false end
 
-    MySQL.update.await(
-        'UPDATE phone_snap_accounts SET is_private = ? WHERE identifier = ?',
-        { data.isPrivate and 1 or 0, identifier }
-    )
+    local avatar = SanitizeMediaUrl(data.avatar)
+    local bio = SanitizeText(data.bio, 160)
+
+    if avatar and avatar ~= '' then
+        MySQL.update.await(
+            'UPDATE phone_snap_accounts SET avatar = ?, bio = ?, is_private = ? WHERE identifier = ?',
+            { avatar, bio ~= '' and bio or nil, data.isPrivate and 1 or 0, identifier }
+        )
+    else
+        MySQL.update.await(
+            'UPDATE phone_snap_accounts SET bio = ?, is_private = ? WHERE identifier = ?',
+            { bio ~= '' and bio or nil, data.isPrivate and 1 or 0, identifier }
+        )
+    end
 
     return true
 end)
