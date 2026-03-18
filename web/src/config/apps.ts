@@ -11,7 +11,8 @@ export const APP_DEFINITIONS: AppDefinition[] = [
   { id: 'contacts', name: 'Contacts', icon: './img/icons_ios/contacts.svg', route: 'contacts', defaultHome: true },
   { id: 'messages', name: 'Messages', icon: './img/icons_ios/messages.svg', route: 'messages', defaultHome: true },
   { id: 'mail', name: 'Mail', icon: './img/icons_ios/mail.svg', route: 'mail', defaultHome: true },
-  { id: 'notifications', name: 'Notifications', icon: './img/icons_ios/ui-list.svg', route: 'notifications', defaultHome: true },
+  // Notifications are accessed via swipe-down panel, not as a standalone app
+  // { id: 'notifications', name: 'Notifications', icon: './img/icons_ios/ui-list.svg', route: 'notifications', defaultHome: true },
   { id: 'calls', name: 'Calls', icon: './img/icons_ios/calls.svg', route: 'calls', defaultHome: true },
   { id: 'settings', name: 'Settings', icon: './img/icons_ios/settings.svg', route: 'settings', defaultHome: true },
   { id: 'gallery', name: 'Gallery', icon: './img/icons_ios/gallery.svg', route: 'gallery', defaultHome: true },
