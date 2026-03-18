@@ -4,7 +4,7 @@
   padding: 8px 0 12px;
   background:
     radial-gradient(120% 90% at 0% -10%, rgba(115, 185, 255, 0.2), transparent 58%),
-    linear-gradient(180deg, #f8fbff 0%, #eef4ff 56%, #e6edfb 100%);
+    linear-gradient(180deg, var(--bg) 0%, var(--surface-2) 56%, var(--surface-3) 100%);
 }
 
 .search-wrap {

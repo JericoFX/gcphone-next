@@ -3,7 +3,7 @@
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: radial-gradient(120% 100% at 50% 0%, #f9fbff, var(--bg) 62%);
+  background: radial-gradient(120% 100% at 50% 0%, var(--bg), var(--bg) 62%);
 }
 
 .header {
@@ -47,7 +47,7 @@
 .content {
   flex: 1;
   overflow-y: auto;
-  background: radial-gradient(120% 100% at 50% 0%, #f9fbff, var(--bg) 62%);
+  background: radial-gradient(120% 100% at 50% 0%, var(--bg), var(--bg) 62%);
 }
 
 .keypad-view {
@@ -415,7 +415,7 @@
       rgba(90, 141, 255, 0.2),
       rgba(90, 141, 255, 0) 56%
     ),
-    linear-gradient(180deg, #f9fbff, #eef4ff 62%, #e5effe);
+    linear-gradient(180deg, var(--bg), var(--surface-2) 62%, var(--surface-3));
   color: #12213a;
   position: relative;
   overflow: hidden;
@@ -457,7 +457,7 @@
   position: relative;
   border-radius: 18px;
   min-height: 120px;
-  background: linear-gradient(180deg, #f3f8ff, #dce8ff);
+  background: linear-gradient(180deg, var(--surface-2), var(--surface-3));
   border: 1px solid rgba(80, 112, 184, 0.24);
   display: flex;
   align-items: center;

@@ -138,6 +138,14 @@
   --kbd: rgba(0, 0, 0, 0.08);
   --kbd-border: rgba(0, 0, 0, 0.14);
   --selection: rgba(0, 122, 255, 0.18);
+
+  /* Light mode surface helpers */
+  --color-surface-translucent: rgba(255, 255, 255, 0.72);
+  --color-surface-elevated: #ffffff;
+  --color-surface-grouped: #f2f2f7;
+  --color-fill: rgba(120, 120, 128, 0.16);
+  --color-fill-secondary: rgba(120, 120, 128, 0.12);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.08);
 }
 
 .gcphone-app.theme-dark {
@@ -161,10 +169,86 @@
   --kbd-border: rgba(255, 255, 255, 0.14);
   --selection: rgba(10, 132, 255, 0.26);
 
-  /* Sombras adaptadas para dark mode - opacidad reducida */
+  /* Dark mode surface helpers */
+  --color-surface-translucent: rgba(28, 28, 30, 0.72);
+  --color-surface-elevated: #2c2c2e;
+  --color-surface-grouped: #1c1c1e;
+  --color-fill: rgba(120, 120, 128, 0.36);
+  --color-fill-secondary: rgba(120, 120, 128, 0.32);
+
+  /* Shadows - reduced for dark mode */
   --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.24);
   --shadow-2: 0 6px 18px rgba(0, 0, 0, 0.32);
   --shadow-3: 0 14px 34px rgba(0, 0, 0, 0.42);
+  --shadow-sm: 0 0.5px 1px rgba(0, 0, 0, 0.2);
+
+  /* Force dark backgrounds on common patterns */
+  background-color: var(--bg);
+  color: var(--text);
+
+  /* Fix gradient backgrounds in apps */
+  input, textarea, select {
+    background-color: var(--surface-2);
+    color: var(--text);
+    border-color: var(--border);
+
+    &::placeholder {
+      color: var(--text-3);
+    }
+  }
+
+  /* Fix buttons that assume light mode */
+  .ios-btn, .ios-action-btn {
+    color: var(--tint);
+  }
+
+  .ios-btn-primary {
+    color: #fff;
+  }
+
+  .ios-btn-danger {
+    color: var(--danger);
+  }
+
+  /* Fix cards and lists */
+  .ios-card, .ios-list {
+    background: var(--surface);
+    border-color: var(--border);
+  }
+
+  .ios-row {
+    border-color: var(--separator);
+  }
+
+  .ios-label {
+    color: var(--text);
+  }
+
+  .ios-value {
+    color: var(--text-2);
+  }
+
+  .ios-section-title {
+    color: var(--text-3);
+  }
+
+  /* Fix segment controls */
+  .ios-segment {
+    background: rgba(120, 120, 128, 0.24);
+    border-color: var(--border);
+  }
+
+  .ios-segment-btn-active {
+    background: var(--surface-2);
+    color: var(--text);
+  }
+
+  /* Fix chips */
+  .ios-chip {
+    background: var(--surface-2);
+    border-color: var(--border);
+    color: var(--text);
+  }
 }
 
 .ios18-switch {
