@@ -71,12 +71,33 @@
 .vehicleCard {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px;
+  gap: var(--s-3);
+  padding: var(--s-3);
   background: var(--surface, #fff);
-  border: 1px solid var(--border, rgba(0, 0, 0, 0.12));
-  border-radius: 14px;
-  margin-bottom: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  margin-bottom: var(--s-2);
+  box-shadow: var(--shadow-1);
+  cursor: pointer;
+  transition:
+    transform var(--dur-1) var(--ease-standard),
+    box-shadow var(--dur-2) var(--ease-standard);
+  animation: garage-card-in var(--dur-3) var(--ease-standard) both;
+
+  &:active {
+    transform: scale(0.98);
+  }
+}
+
+@keyframes garage-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .vehicleIcon {
@@ -131,13 +152,13 @@
 }
 
 .garageBadge {
-  background: color-mix(in srgb, var(--success, #34c759) 15%, var(--surface, #fff));
-  color: #1f7d3d;
+  background: color-mix(in srgb, var(--success) 14%, var(--surface));
+  color: var(--success);
 }
 
 .impoundedBadge {
-  background: color-mix(in srgb, var(--danger, #ff3b30) 14%, var(--surface, #fff));
-  color: #a82522;
+  background: color-mix(in srgb, var(--danger) 14%, var(--surface));
+  color: var(--danger);
 }
 
 .locationBadge {
@@ -160,17 +181,34 @@
 
 .emptyState {
   text-align: center;
-  padding: 42px 20px;
-  color: var(--text-3, rgba(17, 17, 17, 0.52));
+  padding: var(--s-9) var(--s-6);
+  color: var(--text-3);
+
+  &::before {
+    content: '';
+    display: block;
+    width: 48px;
+    height: 48px;
+    margin: 0 auto var(--s-3);
+    border-radius: var(--r-lg);
+    background: color-mix(in srgb, var(--surface-2) 80%, var(--bg));
+    border: 1px solid var(--border);
+    background-image: url('./img/icons_ios/garage.svg');
+    background-size: 24px;
+    background-repeat: no-repeat;
+    background-position: center;
+    opacity: 0.4;
+  }
 
   p {
     margin: 0;
-    font-size: 15px;
+    font-size: var(--fs-footnote);
   }
 
   .emptyHint {
-    font-size: 13px;
-    margin-top: 7px;
+    font-size: var(--fs-caption1);
+    margin-top: var(--s-2);
+    color: var(--text-3);
   }
 }
 
@@ -290,21 +328,21 @@
 
 .statusGarage {
   span {
-    background: color-mix(in srgb, var(--success, #34c759) 18%, var(--surface, #fff));
+    background: color-mix(in srgb, var(--success) 16%, var(--surface));
   }
 
   strong {
-    color: #1f7d3d;
+    color: var(--success);
   }
 }
 
 .statusImpounded {
   span {
-    background: color-mix(in srgb, var(--danger, #ff3b30) 18%, var(--surface, #fff));
+    background: color-mix(in srgb, var(--danger) 16%, var(--surface));
   }
 
   strong {
-    color: #a82522;
+    color: var(--danger);
   }
 }
 

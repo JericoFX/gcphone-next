@@ -775,7 +775,7 @@ const showMockPhone = (overrides: AnyRecord = {}) => {
 
 const bootMockPhone = () => {
   emitMessage('initPhone', phonePayload());
-  showMockPhone();
+  showMockPhone({ useLockScreen: true, forceLockScreen: true });
 };
 
 let nextContactId = 4;
