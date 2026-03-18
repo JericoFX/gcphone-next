@@ -1437,6 +1437,25 @@ RegisterNUICallback('emergencySOS', function(_, cb)
     end)
 end)
 
+-- Notes
+RegisterNUICallback('notesGetAll', function(_, cb)
+    lib.callback('gcphone:notes:getAll', false, function(notes)
+        cb(notes or {})
+    end)
+end)
+
+RegisterNUICallback('notesSave', function(data, cb)
+    lib.callback('gcphone:notes:save', false, function(success, noteId)
+        cb({ success = success and true or false, id = noteId })
+    end, data or {})
+end)
+
+RegisterNUICallback('notesDelete', function(data, cb)
+    lib.callback('gcphone:notes:delete', false, function(success)
+        cb({ success = success and true or false })
+    end, data or {})
+end)
+
 -- Weather: read GTA V weather from natives (CLIENT-ONLY)
 RegisterNUICallback('getWeatherData', function(_, cb)
     local weatherHash1, weatherHash2, pct = GetWeatherTypeTransition()

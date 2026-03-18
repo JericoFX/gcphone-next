@@ -38,6 +38,7 @@ client_scripts {
     'client/location_tracking.lua',
     'client/phone_drop.lua',
     'client/music.lua',
+    'client/txadmin.lua',
 }
 
 server_scripts {
@@ -81,6 +82,7 @@ server_scripts {
     'server/modules/location_tracking.lua',
     'server/modules/phone_drop.lua',
     'server/modules/music.lua',
+    'server/modules/notes.lua',
     'server/modules/retention.lua',
     'server/modules/darkrooms.lua',
 }
