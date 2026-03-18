@@ -110,11 +110,11 @@ export function AppStoreApp() {
       <div class={styles.heroGrid}>
         <div class={styles.heroCard}>
           <strong>{installedCount()}</strong>
-          <span>En inicio</span>
+          <span>{t('appstore.on_home', language()) || 'En inicio'}</span>
         </div>
         <div class={styles.heroCard}>
           <strong>{availableCount()}</strong>
-          <span>Disponibles</span>
+          <span>{t('appstore.available', language()) || 'Disponibles'}</span>
         </div>
       </div>
 
@@ -134,7 +134,7 @@ export function AppStoreApp() {
 
       <ScreenState loading={loading()} error={error()} empty={filteredApps().length === 0} emptyTitle={t('appstore.empty_title', language())} emptyDescription={t('appstore.empty_description', language())}>
         <Show when={featuredApps().length > 0}>
-          <div class="ios-section-title">Destacadas</div>
+          <div class="ios-section-title">{t('appstore.featured', language()) || 'Destacadas'}</div>
           <div class={styles.featuredRail}>
             <For each={featuredApps()}>
               {(app) => (
@@ -158,20 +158,20 @@ export function AppStoreApp() {
                   <div>
                     <div class={styles.rowTitleLine}>
                       <div class="ios-label">{appName(app.id, app.name, language())}</div>
-                      <span class={styles.statusChip}>{isInstalledOnHome(app.id) ? 'En inicio' : isInstalledInMenu(app.id) ? 'En menu' : 'Oculta'}</span>
+                      <span class={styles.statusChip}>{isInstalledOnHome(app.id) ? (t('appstore.on_home', language()) || 'En inicio') : isInstalledInMenu(app.id) ? (t('appstore.in_menu', language()) || 'En menu') : (t('appstore.hidden', language()) || 'Oculta')}</span>
                     </div>
                     <div class="ios-value">{categoryLabel(APP_CATEGORY[app.id] || 'utility')}</div>
                   </div>
                 </div>
                 <div class={styles.rowActions}>
-                  <button class={styles.openBtn} onClick={() => router.navigate(app.route)}>Abrir</button>
+                  <button class={styles.openBtn} onClick={() => router.navigate(app.route)}>{t('appstore.open', language()) || 'Abrir'}</button>
                   <Show when={installingId() !== app.id} fallback={<div class={styles.progressText}>{progress()}%</div>}>
                     <button
                       class="ios-btn"
                       classList={{ 'ios-btn-success': !isInstalledOnHome(app.id), 'ios-btn-danger': isInstalledOnHome(app.id) }}
                       onClick={() => void toggleInstall(app.id)}
                     >
-                      {isInstalledOnHome(app.id) ? 'Quitar' : 'Agregar'}
+                      {isInstalledOnHome(app.id) ? (t('appstore.remove', language()) || 'Quitar') : (t('appstore.add', language()) || 'Agregar')}
                     </button>
                   </Show>
                 </div>

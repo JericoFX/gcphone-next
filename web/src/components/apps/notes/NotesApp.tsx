@@ -1,8 +1,10 @@
-import { For, Show, createEffect, createSignal, onCleanup } from 'solid-js';
+import { For, Show, createSignal, onMount } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
+import { fetchNui } from '../../../utils/fetchNui';
 import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { AppScaffold } from '../../shared/layout';
 import { ScreenState } from '../../shared/ui/ScreenState';
+import { getStoredLanguage, t } from '../../../i18n';
 import styles from './NotesApp.module.scss';
 
 interface NoteItem {
@@ -12,21 +14,12 @@ interface NoteItem {
   color: string;
 }
 
-const NOTE_COLORS = [
-  '#FFF6C7',
-  '#FFE2B8',
-  '#FDE2E4',
-  '#DFF4EA',
-  '#DCEEFF',
-  '#ECE7FF',
-];
+const NOTE_COLORS = ['#FFF6C7', '#FFE2B8', '#FDE2E4', '#DFF4EA', '#DCEEFF', '#ECE7FF'];
 
 export function NotesApp() {
   const router = useRouter();
-  const [notes, setNotes] = createSignal<NoteItem[]>([
-    { id: 1, title: 'Compras', content: 'Agua, pan, cafe', color: '#FFF6C7' },
-    { id: 2, title: 'Recordatorio', content: 'Pasar por mecanico', color: '#DCEEFF' },
-  ]);
+  const language = () => getStoredLanguage();
+  const [notes, setNotes] = createSignal<NoteItem[]>([]);
   const [active, setActive] = createSignal<NoteItem | null>(null);
   const [isComposerOpen, setIsComposerOpen] = createSignal(false);
   const [title, setTitle] = createSignal('');
@@ -36,32 +29,32 @@ export function NotesApp() {
 
   usePhoneKeyHandler({
     Backspace: () => {
-      if (isComposerOpen()) {
-        closeComposer();
-        return;
-      }
+      if (isComposerOpen()) { closeComposer(); return; }
       router.goBack();
     },
   });
 
-  createEffect(() => {
-    const handle = setTimeout(() => setLoading(false), 120);
-    onCleanup(() => clearTimeout(handle));
-  });
+  const loadNotes = async () => {
+    setLoading(true);
+    const list = await fetchNui<NoteItem[]>('notesGetAll', {}, []);
+    setNotes(list || []);
+    setLoading(false);
+  };
+
+  onMount(() => { void loadNotes(); });
 
   const openComposer = (note?: NoteItem) => {
     if (note) {
       setActive(note);
-      setTitle(note.title);
-      setContent(note.content);
-      setColor(note.color);
+      setTitle(note.title || '');
+      setContent(note.content || '');
+      setColor(note.color || NOTE_COLORS[0]);
     } else {
       setActive(null);
       setTitle('');
       setContent('');
       setColor(NOTE_COLORS[0]);
     }
-
     setIsComposerOpen(true);
   };
 
@@ -73,112 +66,91 @@ export function NotesApp() {
     setColor(NOTE_COLORS[0]);
   };
 
-  const save = () => {
+  const save = async () => {
     const nextTitle = title().trim();
     const nextContent = content().trim();
     if (!nextTitle && !nextContent) return;
 
-    if (active()) {
-      setNotes((prev) =>
-        prev.map((note) => (
-          note.id === active()!.id
-            ? { ...note, title: nextTitle, content: nextContent, color: color() }
-            : note
-        ))
-      );
-      closeComposer();
-      return;
-    }
+    const payload: Record<string, unknown> = {
+      title: nextTitle,
+      content: nextContent,
+      color: color(),
+    };
+    if (active()) payload.id = active()!.id;
 
-    setNotes((prev) => [{ id: Date.now(), title: nextTitle, content: nextContent, color: color() }, ...prev]);
-    closeComposer();
+    const result = await fetchNui<{ success?: boolean; id?: number }>('notesSave', payload, { success: false });
+    if (result?.success) {
+      closeComposer();
+      await loadNotes();
+    }
   };
 
-  const remove = (id: number) => {
-    setNotes((prev) => prev.filter((note) => note.id !== id));
+  const remove = async (id: number) => {
+    await fetchNui<{ success?: boolean }>('notesDelete', { id }, { success: false });
+    setNotes((prev) => prev.filter((n) => n.id !== id));
     if (active()?.id === id) closeComposer();
   };
 
   const shareNoteByMail = (note: Pick<NoteItem, 'title' | 'content'>) => {
-    router.navigate('mail', {
-      compose: '1',
-      subject: note.title || 'Nota compartida',
-      body: note.content || '',
-    });
+    router.navigate('mail', { compose: '1', subject: note.title || t('notes.shared_note', language()) || 'Nota compartida', body: note.content || '' });
   };
 
   const notePreview = (note: Pick<NoteItem, 'content'>) => {
     const text = (note.content || '').trim();
-    if (!text) return 'Nota vacia';
+    if (!text) return t('notes.empty_note', language()) || 'Nota vacia';
     return text.length > 110 ? `${text.slice(0, 110)}...` : text;
   };
 
   const noteMeta = (note: Pick<NoteItem, 'title' | 'content'>) => {
-    const wordCount = `${Math.max(1, `${note.title} ${note.content}`.trim().split(/\s+/).filter(Boolean).length)} palabras`;
-    const lineCount = `${Math.max(1, (note.content || '').split('\n').filter((line) => line.trim().length > 0).length)} lineas`;
-    return `${wordCount} · ${lineCount}`;
+    const words = Math.max(1, `${note.title} ${note.content}`.trim().split(/\s+/).filter(Boolean).length);
+    const lines = Math.max(1, (note.content || '').split('\n').filter((l) => l.trim().length > 0).length);
+    return `${words} ${t('notes.words', language()) || 'palabras'} · ${lines} ${t('notes.lines', language()) || 'lineas'}`;
   };
 
   return (
     <AppScaffold
-      title="Notas"
+      title={t('notes.title', language()) || 'Notas'}
       onBack={() => (isComposerOpen() ? closeComposer() : router.goBack())}
       action={{ icon: '+', onClick: () => openComposer() }}
     >
-      <ScreenState loading={loading()} empty={!isComposerOpen() && notes().length === 0} emptyTitle="Sin notas" emptyDescription="Crea tu primera nota con el boton +.">
+      <ScreenState loading={loading()} empty={!isComposerOpen() && notes().length === 0} emptyTitle={t('notes.empty_title', language()) || 'Sin notas'} emptyDescription={t('notes.empty_desc', language()) || 'Crea tu primera nota con el boton +.'}>
         <Show when={!isComposerOpen()} fallback={(
           <section class={styles.editorShell}>
             <div class={`ios-card ${styles.editorCard}`}>
               <div class={styles.editorHeader}>
                 <div>
-                  <span class={styles.eyebrow}>{active() ? 'EDITANDO' : 'NUEVA NOTA'}</span>
-                  <h3>{active() ? 'Ajusta tu nota' : 'Escribe algo rapido'}</h3>
+                  <span class={styles.eyebrow}>{active() ? (t('notes.editing', language()) || 'EDITANDO') : (t('notes.new_note', language()) || 'NUEVA NOTA')}</span>
+                  <h3>{active() ? (t('notes.adjust', language()) || 'Ajusta tu nota') : (t('notes.write_quick', language()) || 'Escribe algo rapido')}</h3>
                 </div>
                 <button class={`ios-btn ${styles.mailButton}`} onClick={() => shareNoteByMail({ title: title(), content: content() })}>
                   Mail
                 </button>
               </div>
 
-              <input class="ios-input" type="text" placeholder="Titulo" value={title()} onInput={(e) => setTitle(e.currentTarget.value)} />
-              <textarea class={`ios-textarea ${styles.editorTextarea}`} placeholder="Escribe una nota..." value={content()} onInput={(e) => setContent(e.currentTarget.value)} />
+              <input class="ios-input" type="text" placeholder={t('notes.title_placeholder', language()) || 'Titulo'} value={title()} onInput={(e) => setTitle(e.currentTarget.value)} />
+              <textarea class={`ios-textarea ${styles.editorTextarea}`} placeholder={t('notes.content_placeholder', language()) || 'Escribe una nota...'} value={content()} onInput={(e) => setContent(e.currentTarget.value)} />
 
               <div class={styles.colorBlock}>
                 <div>
-                  <span class={styles.eyebrow}>COLOR</span>
-                  <p>Elige un tono suave para organizar tus notas.</p>
+                  <span class={styles.eyebrow}>{t('notes.color', language()) || 'COLOR'}</span>
                 </div>
                 <div class={styles.palette}>
                   <For each={NOTE_COLORS}>
                     {(swatch) => (
-                      <button
-                        type="button"
-                        class={styles.swatch}
-                        classList={{ [styles.swatchSelected]: color() === swatch }}
-                        style={{ background: swatch }}
-                        onClick={() => setColor(swatch)}
-                        aria-label={`Seleccionar color ${swatch}`}
-                      />
+                      <button type="button" class={styles.swatch} classList={{ [styles.swatchSelected]: color() === swatch }} style={{ background: swatch }} onClick={() => setColor(swatch)} />
                     )}
                   </For>
                 </div>
               </div>
 
               <div class={styles.editorActions}>
-                <button class="ios-btn" onClick={closeComposer}>Cancelar</button>
-                <button class="ios-btn ios-btn-primary" onClick={save}>Guardar</button>
+                <button class="ios-btn" onClick={closeComposer}>{t('action.cancel', language()) || 'Cancelar'}</button>
+                <button class="ios-btn ios-btn-primary" onClick={() => void save()}>{t('notes.save', language()) || 'Guardar'}</button>
               </div>
             </div>
           </section>
         )}>
           <div class={styles.listShell}>
-            <div class={`ios-card ${styles.overviewCard}`}>
-              <div>
-                <span class={styles.eyebrow}>TU ESPACIO</span>
-                <h3>{notes().length} notas disponibles</h3>
-              </div>
-              <p>Tarjetas limpias, colores suaves y acciones rapidas sin romper el estilo del telefono.</p>
-            </div>
-
             <div class={styles.list}>
               <For each={notes()}>
                 {(note) => (
@@ -186,17 +158,14 @@ export function NotesApp() {
                     <div class={styles.cardAccent} />
                     <div class={styles.cardBody}>
                       <div class={styles.cardHeader}>
-                        <div>
-                          <strong>{note.title || 'Sin titulo'}</strong>
-                          <span>{noteMeta(note)}</span>
-                        </div>
-                        <div class={styles.noteBadge}>Nota</div>
+                        <strong>{note.title || t('notes.untitled', language()) || 'Sin titulo'}</strong>
+                        <span>{noteMeta(note)}</span>
                       </div>
                       <p>{notePreview(note)}</p>
                       <div class={styles.actions}>
                         <button class="ios-btn" onClick={() => shareNoteByMail(note)}>Mail</button>
-                        <button class="ios-btn" onClick={() => openComposer(note)}>Editar</button>
-                        <button class="ios-btn ios-btn-danger" onClick={() => remove(note.id)}>Eliminar</button>
+                        <button class="ios-btn" onClick={() => openComposer(note)}>{t('action.edit', language()) || 'Editar'}</button>
+                        <button class="ios-btn ios-btn-danger" onClick={() => void remove(note.id)}>{t('action.delete', language()) || 'Eliminar'}</button>
                       </div>
                     </div>
                   </article>
