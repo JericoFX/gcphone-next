@@ -896,6 +896,13 @@
 
     "wallet.select_recipient": "Selecionar destinatario",
     "wallet.pending_requests": "Solicitacoes pendentes",
-    "wallet.awaiting": "Aguardando"
+    "wallet.awaiting": "Aguardando",
+
+    "garage.request_error": "Nao foi possivel solicitar o veiculo",
+    "garage.vehicle_on_way": "Seu veiculo esta esperando, siga o GPS.",
+    "garage.gps_set": "GPS marcado",
+    "garage.go_to_impound": "GPS ao deposito",
+    "garage.gps_to_vehicle": "GPS ao veiculo",
+    "garage.impound": "Deposito"
   }
 }

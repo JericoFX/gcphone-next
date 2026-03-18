@@ -1,19 +1,6 @@
 -- Garage vehicle spawn handler
 -- Receives vehicle data from server after gcphone:garage:requestVehicle validates ownership
 
-local function GetSpawnPoint()
-    local ped = cache.ped
-    local coords = GetEntityCoords(ped)
-    local heading = GetEntityHeading(ped)
-
-    -- Offset 3m in front of the player
-    local rad = heading * math.pi / 180.0
-    local x = coords.x + (-math.sin(rad) * 3.0)
-    local y = coords.y + (math.cos(rad) * 3.0)
-
-    return vector3(x, y, coords.z), heading
-end
-
 local function LoadModel(model)
     local hash = type(model) == 'number' and model or joaat(model)
     if not IsModelValid(hash) then return nil end
@@ -61,11 +48,14 @@ end
 
 local function GiveVehicleKeys(vehicle, plate)
     if Config.Framework == 'qbcore' or Config.Framework == 'qbox' then
-        -- qb-vehiclekeys or qbx_vehiclekeys
         pcall(function()
             TriggerEvent('vehiclekeys:client:SetOwner', plate)
         end)
     end
+end
+
+local function SetGpsWaypoint(x, y)
+    SetNewWaypoint(x + 0.0, y + 0.0)
 end
 
 RegisterNetEvent('gcphone:garage:spawnVehicle', function(vehicle)
@@ -81,8 +71,27 @@ RegisterNetEvent('gcphone:garage:spawnVehicle', function(vehicle)
         return
     end
 
-    local spawnPos, heading = GetSpawnPoint()
-    local veh = CreateVehicle(hash, spawnPos.x, spawnPos.y, spawnPos.z, heading, true, false)
+    -- Use spawn point from server (nearest garage) or fallback to player position
+    local spawnX = tonumber(vehicle._spawnX)
+    local spawnY = tonumber(vehicle._spawnY)
+    local spawnZ = tonumber(vehicle._spawnZ)
+    local spawnH = tonumber(vehicle._spawnH) or 0.0
+    local spawnLabel = vehicle._spawnLabel
+
+    if not spawnX or not spawnY or not spawnZ then
+        -- Fallback: 3m in front of the player
+        local ped = cache.ped
+        local coords = GetEntityCoords(ped)
+        local heading = GetEntityHeading(ped)
+        local rad = heading * math.pi / 180.0
+        spawnX = coords.x + (-math.sin(rad) * 3.0)
+        spawnY = coords.y + (math.cos(rad) * 3.0)
+        spawnZ = coords.z
+        spawnH = heading
+        spawnLabel = nil
+    end
+
+    local veh = CreateVehicle(hash, spawnX, spawnY, spawnZ, spawnH, true, false)
 
     if not DoesEntityExist(veh) then
         SetModelAsNoLongerNeeded(hash)
@@ -94,22 +103,28 @@ RegisterNetEvent('gcphone:garage:spawnVehicle', function(vehicle)
         return
     end
 
-    -- Set plate before properties (properties may override)
     if vehicle.plate then
         SetVehicleNumberPlateText(veh, vehicle.plate)
     end
 
     ApplyVehicleProperties(veh, vehicle.properties)
     GiveVehicleKeys(veh, vehicle.plate)
-
-    -- Place on ground properly
     SetVehicleOnGroundProperly(veh)
     SetModelAsNoLongerNeeded(hash)
 
-    -- Notify success
-    lib.notify({
-        title = 'Garage',
-        description = ('Vehiculo %s listo'):format(vehicle.model_name or vehicle.plate or ''),
-        type = 'success',
-    })
+    -- Set GPS waypoint to the spawn point so the player can find it
+    if spawnLabel then
+        SetGpsWaypoint(spawnX, spawnY)
+        lib.notify({
+            title = 'Garage',
+            description = ('Tu %s te espera en %s'):format(vehicle.model_name or vehicle.plate or 'vehiculo', spawnLabel),
+            type = 'success',
+        })
+    else
+        lib.notify({
+            title = 'Garage',
+            description = ('Vehiculo %s listo'):format(vehicle.model_name or vehicle.plate or ''),
+            type = 'success',
+        })
+    end
 end)

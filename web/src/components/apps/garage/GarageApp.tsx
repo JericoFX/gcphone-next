@@ -128,8 +128,25 @@ export function GarageApp() {
       plate,
     );
     if (!result?.success) {
-      uiAlert(result?.error || 'No se pudo solicitar el vehiculo');
+      uiAlert(result?.error || t('garage.request_error', language()) || 'No se pudo solicitar el vehiculo');
+    } else {
+      uiAlert(t('garage.vehicle_on_way', language()) || 'Tu vehiculo te espera, sigue el GPS.');
     }
+  };
+
+  const goToImpound = async () => {
+    const loc = await fetchNui<{ x?: number; y?: number; z?: number; label?: string }>('garageGetImpoundLocation', {}, {});
+    if (loc?.x && loc?.y) {
+      await fetchNui('garageSetGps', { x: loc.x, y: loc.y });
+      uiAlert(`${t('garage.gps_set', language()) || 'GPS marcado'}: ${loc.label || t('garage.impound', language()) || 'Deposito'}`);
+    }
+  };
+
+  const goToVehicleLocation = async () => {
+    const vehicle = selectedVehicle();
+    if (!vehicle?.location_x || !vehicle?.location_y) return;
+    await fetchNui('garageSetGps', { x: vehicle.location_x, y: vehicle.location_y });
+    uiAlert(t('garage.gps_set', language()) || 'GPS marcado');
   };
 
   const shareLocation = async () => {
@@ -360,16 +377,32 @@ export function GarageApp() {
               </Show>
 
               {/* Actions */}
-              <Show when={!selectedVehicle().impounded}>
-                <div class={styles.detailActions}>
+              <div class={styles.detailActions}>
+                <Show when={!selectedVehicle().impounded}>
                   <button
                     class={styles.requestBtn}
                     onClick={() => requestVehicle(selectedVehicle().plate)}
                   >
                      {t('garage.request_vehicle', language())}
                   </button>
-                </div>
-              </Show>
+                </Show>
+                <Show when={selectedVehicle().impounded}>
+                  <button
+                    class={styles.mapBtn}
+                    onClick={() => void goToImpound()}
+                  >
+                    {t('garage.go_to_impound', language()) || 'GPS al deposito'}
+                  </button>
+                </Show>
+                <Show when={selectedVehicle().has_location && !selectedVehicle().impounded}>
+                  <button
+                    class={styles.mapBtn}
+                    onClick={() => void goToVehicleLocation()}
+                  >
+                    {t('garage.gps_to_vehicle', language()) || 'GPS al vehiculo'}
+                  </button>
+                </Show>
+              </div>
             </div>
           </div>
         </Show>

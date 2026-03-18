@@ -93,26 +93,73 @@ lib.callback.register('gcphone:garage:getLocationHistory', function(source, plat
     ]], { identifier, plate }) or {}
 end)
 
--- Request vehicle (spawn)
+-- Find nearest point from a list to the player
+local function FindNearestPoint(source, points)
+    if not points or #points == 0 then return nil end
+
+    local ped = GetPlayerPed(source)
+    if not ped or ped <= 0 then return points[1] end
+
+    local playerCoords = GetEntityCoords(ped)
+    local nearest = points[1]
+    local nearestDist = math.huge
+
+    for i = 1, #points do
+        local p = points[i]
+        local dx = playerCoords.x - (p.x or 0)
+        local dy = playerCoords.y - (p.y or 0)
+        local dz = playerCoords.z - (p.z or 0)
+        local dist = dx * dx + dy * dy + dz * dz
+        if dist < nearestDist then
+            nearestDist = dist
+            nearest = p
+        end
+    end
+
+    return nearest
+end
+
+-- Request vehicle (spawn at nearest garage spawn point)
 lib.callback.register('gcphone:garage:requestVehicle', function(source, plate)
     local identifier = GetIdentifier(source)
     if not identifier or not plate then return false end
-    
+
     local vehicle = MySQL.single.await(
         'SELECT * FROM phone_garage WHERE identifier = ? AND plate = ?',
         { identifier, plate }
     )
-    
+
     if not vehicle then return false end
-    
-    -- Check if vehicle is not impounded
+
+    -- Impounded vehicles cannot be spawned
     if vehicle.impounded == 1 then
         return false, 'Vehicle is impounded'
     end
-    
+
+    -- Find nearest spawn point from config
+    local spawnPoints = Config.Garage and Config.Garage.SpawnPoints
+    local spawnPoint = FindNearestPoint(source, spawnPoints)
+
+    if spawnPoint then
+        vehicle._spawnX = spawnPoint.x
+        vehicle._spawnY = spawnPoint.y
+        vehicle._spawnZ = spawnPoint.z
+        vehicle._spawnH = spawnPoint.h or 0.0
+        vehicle._spawnLabel = spawnPoint.label
+    end
+
     TriggerClientEvent('gcphone:garage:spawnVehicle', source, vehicle)
-    
+
     return true
+end)
+
+-- Get nearest impound location for GPS
+lib.callback.register('gcphone:garage:getImpoundLocation', function(source)
+    local impounds = Config.Garage and Config.Garage.Impounds
+    if not impounds or #impounds == 0 then return nil end
+
+    local nearest = FindNearestPoint(source, impounds)
+    return nearest
 end)
 
 -- Share vehicle location with contact
