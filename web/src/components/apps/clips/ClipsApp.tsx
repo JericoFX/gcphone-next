@@ -103,6 +103,7 @@ export function ClipsApp() {
   const [deleteClipId, setDeleteClipId] = createSignal<number | null>(null);
   const [showOnboarding, setShowOnboarding] = createSignal(false);
   let onboardingChecked = false;
+  let onboardingDismissed = false;
   const [showProfileModal, setShowProfileModal] = createSignal(false);
   const [profilePrivate, setProfilePrivate] = createSignal(false);
   const [profileAvatar, setProfileAvatar] = createSignal('');
@@ -139,7 +140,9 @@ export function ClipsApp() {
     setMyAccount(account);
     if (!onboardingChecked) {
       onboardingChecked = true;
-      setShowOnboarding(!account?.username);
+      if (!account?.username && !onboardingDismissed) {
+        setShowOnboarding(true);
+      }
     }
 
     const tab = currentTab();
@@ -303,7 +306,6 @@ export function ClipsApp() {
 
   const openProfileEditor = async () => {
     const account = await fetchNui<SharedSnapAccount | null>('clipsGetAccount', {});
-    if (!account?.username) { setShowOnboarding(true); return; }
     setProfilePrivate(!!account.is_private);
     setProfileAvatar(account.avatar || '');
     setShowProfileModal(true);
@@ -683,7 +685,7 @@ export function ClipsApp() {
         usernameReadOnly
         displayNameReadOnly
         onCreate={createClipsAccount}
-        onClose={() => setShowOnboarding(false)}
+        onClose={() => { onboardingDismissed = true; setShowOnboarding(false); }}
       />
 
       <MediaLightbox url={viewerUrl()} onClose={() => setViewerUrl(null)} />
