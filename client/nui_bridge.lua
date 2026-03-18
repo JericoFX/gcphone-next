@@ -1424,3 +1424,9 @@ RegisterNetEvent('gcphone:wavechatGroupMessage', function(payload)
         data = payload
     })
 end)
+
+RegisterNUICallback('emergencySOS', function(_, cb)
+    lib.callback('gcphone:emergencySOS', false, function(result)
+        cb(result or { success = false })
+    end)
+end)
