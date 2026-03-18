@@ -485,6 +485,27 @@ export function YellowPagesApp() {
                 <span>{t('yellowpages.private_chat', language())}</span>
               </div>
             </button>
+
+            <Show when={sellerInfo()?.phone_number}>
+              <button class={styles.contactOption} onClick={async () => {
+                const seller = sellerInfo();
+                if (!seller?.phone_number) return;
+                const result = await fetchNui<{ success?: boolean }>('addContact', {
+                  display: seller.seller_name || seller.title || 'Vendedor',
+                  number: seller.phone_number,
+                }, { success: true });
+                if (result?.success) {
+                  setShowContactModal(false);
+                  uiAlert('Contacto guardado');
+                }
+              }}>
+                <span class={styles.contactIcon}><img src="./img/icons_ios/ui-user.svg" alt="" /></span>
+                <div class={styles.contactInfo}>
+                  <strong>Agregar contacto</strong>
+                  <span>Guardar en tu lista de contactos</span>
+                </div>
+              </button>
+            </Show>
           </div>
           
           <ModalActions>
