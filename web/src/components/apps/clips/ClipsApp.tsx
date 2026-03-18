@@ -1,4 +1,4 @@
-import { For, Show, createEffect, createMemo, createSignal } from 'solid-js';
+import { For, Show, createEffect, createMemo, createSignal, onCleanup } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { fetchNui } from '../../../utils/fetchNui';
 import { timeAgo } from '../../../utils/misc';
@@ -327,6 +327,15 @@ export function ClipsApp() {
     const idx = Math.round(scrollContainer.scrollTop / scrollContainer.clientHeight);
     setCurrentClipIndex(Math.max(0, Math.min(clips().length - 1, idx)));
   };
+
+  // Stop all videos when leaving the app
+  const stopAllVideos = () => {
+    if (!scrollContainer) return;
+    const videos = scrollContainer.querySelectorAll('video');
+    videos.forEach((v) => { v.pause(); v.currentTime = 0; });
+  };
+
+  onCleanup(stopAllVideos);
 
   return (
     <div class={styles.root}>

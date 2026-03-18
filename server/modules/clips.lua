@@ -100,27 +100,24 @@ lib.callback.register('gcphone:clips:getFeed', function(source, data)
 
     local account = identifier and GetSnapAccount(identifier) or nil
 
+    local accountId = account and account.id or 0
+
     local clips = MySQL.query.await([[
         SELECT c.*, COALESCE(NULLIF(n.clips_username, ''), a.username) AS username, a.display_name, a.avatar,
-               (SELECT COUNT(*) FROM phone_clips_comments WHERE clip_id = c.id) as comments_count,
-               CASE WHEN c.account_id = ? THEN 1 ELSE 0 END as is_own
+               (SELECT COUNT(*) FROM phone_clips_comments WHERE clip_id = c.id) AS comments_count,
+               CASE WHEN c.account_id = ? THEN 1 ELSE 0 END AS is_own,
+               CASE WHEN EXISTS (SELECT 1 FROM phone_clips_likes WHERE clip_id = c.id AND account_id = ?) THEN 1 ELSE 0 END AS liked
         FROM phone_clips_posts c
         JOIN phone_snap_accounts a ON c.account_id = a.id
         LEFT JOIN phone_numbers n ON n.identifier = a.identifier
         ORDER BY c.created_at DESC
         LIMIT ? OFFSET ?
-    ]], { account and account.id or 0, limit, offset }) or {}
-    
-    if account then
-        for _, clip in ipairs(clips) do
-            local liked = MySQL.scalar.await(
-                'SELECT 1 FROM phone_clips_likes WHERE clip_id = ? AND account_id = ?',
-                { clip.id, account.id }
-            )
-            clip.liked = liked ~= nil
-        end
+    ]], { accountId, accountId, limit, offset }) or {}
+
+    for _, clip in ipairs(clips) do
+        clip.liked = clip.liked == 1
     end
-    
+
     return clips
 end)
 
@@ -140,24 +137,21 @@ lib.callback.register('gcphone:clips:getMyClips', function(source, data)
 
     local clips = MySQL.query.await([[
         SELECT c.*, COALESCE(NULLIF(n.clips_username, ''), a.username) AS username, a.display_name, a.avatar,
-               (SELECT COUNT(*) FROM phone_clips_comments WHERE clip_id = c.id) as comments_count,
-               1 as is_own
+               (SELECT COUNT(*) FROM phone_clips_comments WHERE clip_id = c.id) AS comments_count,
+               1 AS is_own,
+               CASE WHEN EXISTS (SELECT 1 FROM phone_clips_likes WHERE clip_id = c.id AND account_id = ?) THEN 1 ELSE 0 END AS liked
         FROM phone_clips_posts c
         JOIN phone_snap_accounts a ON c.account_id = a.id
         LEFT JOIN phone_numbers n ON n.identifier = a.identifier
         WHERE c.account_id = ?
         ORDER BY c.created_at DESC
         LIMIT ? OFFSET ?
-    ]], { account.id, limit, offset }) or {}
-    
+    ]], { account.id, account.id, limit, offset }) or {}
+
     for _, clip in ipairs(clips) do
-        local liked = MySQL.scalar.await(
-            'SELECT 1 FROM phone_clips_likes WHERE clip_id = ? AND account_id = ?',
-            { clip.id, account.id }
-        )
-        clip.liked = liked ~= nil
+        clip.liked = clip.liked == 1
     end
-    
+
     return clips
 end)
 lib.callback.register('gcphone:clips:publish', function(source, data)
@@ -241,29 +235,22 @@ lib.callback.register('gcphone:clips:toggleLike', function(source, data)
     )
     
     if existing then
-        MySQL.execute.await(
-            'DELETE FROM phone_clips_likes WHERE clip_id = ? AND account_id = ?',
-            { postId, account.id }
-        )
-        MySQL.update.await(
-            'UPDATE phone_clips_posts SET likes = GREATEST(0, likes - 1) WHERE id = ?',
-            { postId }
-        )
+        MySQL.transaction({
+            { 'DELETE FROM phone_clips_likes WHERE clip_id = ? AND account_id = ?', { postId, account.id } },
+            { 'UPDATE phone_clips_posts SET likes = GREATEST(0, likes - 1) WHERE id = ?', { postId } },
+        })
         return { liked = false }
     else
-        MySQL.insert.await(
-            'INSERT INTO phone_clips_likes (clip_id, account_id) VALUES (?, ?)',
-            { postId, account.id }
-        )
-        MySQL.update.await(
-            'UPDATE phone_clips_posts SET likes = likes + 1 WHERE id = ?',
-            { postId }
-        )
+        MySQL.transaction({
+            { 'INSERT INTO phone_clips_likes (clip_id, account_id) VALUES (?, ?)', { postId, account.id } },
+            { 'UPDATE phone_clips_posts SET likes = likes + 1 WHERE id = ?', { postId } },
+        })
         return { liked = true }
     end
 end)
 
 lib.callback.register('gcphone:clips:getComments', function(source, data)
+    if not RequirePlayerIdentifier(source) then return {} end
     if type(data) ~= 'table' then return {} end
     local clipId = tonumber(data.clipId)
     if not clipId then return {} end
