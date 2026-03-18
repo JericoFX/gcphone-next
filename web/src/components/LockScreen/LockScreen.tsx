@@ -62,6 +62,7 @@ export function LockScreen() {
   const [emergencyDial, setEmergencyDial] = createSignal('');
   const [emergencyStatus, setEmergencyStatus] = createSignal('');
   const [imeiModalOpen, setImeiModalOpen] = createSignal(false);
+  const [sosStatus, setSosStatus] = createSignal<'idle' | 'sending' | 'sent'>('idle');
   const language = () => phoneState.settings.language || 'es';
   const swipeUnlockEnabled = () => phoneState.settings.swipeUnlock === true;
 
@@ -85,6 +86,12 @@ export function LockScreen() {
   });
 
   const musicVolumePercent = createMemo(() => Math.round(musicState().volume * 100));
+
+  const musicTitle = createMemo(() => {
+    const current = musicState();
+    if (current.isPlaying && current.title) return current.title;
+    return '';
+  });
 
   const applyMusicState = (payload?: Partial<MusicSessionState>) => {
     if (!payload || typeof payload !== 'object') return;
@@ -315,6 +322,13 @@ export function LockScreen() {
         <div class={styles.date}>{formatClockDate(currentTime())}</div>
       </div>
 
+      <Show when={musicTitle()}>
+        <div class={styles.nowPlayingWidget}>
+          <img src="./img/icons_ios/music.svg" alt="" />
+          <span>{musicTitle()}</span>
+        </div>
+      </Show>
+
       <div class={styles.contentArea}>
         <LockScreenWidgets
           compact={false}
@@ -452,6 +466,18 @@ export function LockScreen() {
             <span class={styles.swipeUnlockLabel}>Desliza hacia arriba</span>
           </div>
         </Show>
+        <button
+          class={sosStatus() === 'sent' ? styles.sosBtnSent : styles.sosBtn}
+          disabled={sosStatus() === 'sending'}
+          onClick={async () => {
+            setSosStatus('sending');
+            await fetchNui('emergencySOS', {});
+            setSosStatus('sent');
+            window.setTimeout(() => setSosStatus('idle'), 2000);
+          }}
+        >
+          {sosStatus() === 'sent' ? 'Enviado!' : 'SOS'}
+        </button>
         <button class={styles.bottomBtn} onClick={() => setEmergencySheetOpen(true)}>SOS</button>
       </div>
     </div>

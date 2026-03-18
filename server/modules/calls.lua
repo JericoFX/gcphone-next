@@ -602,3 +602,39 @@ exports('GetCallHistory', function(identifier, requestSource)
 
     return GetCallHistory(identifier)
 end)
+
+lib.callback.register('gcphone:emergencySOS', function(source)
+    local identifier = GetIdentifier(source)
+    if not identifier then return { success = false } end
+
+    local myNumber = GetPhoneNumber(identifier)
+    if not myNumber then return { success = false } end
+
+    local ped = GetPlayerPed(source)
+    local coords = GetEntityCoords(ped)
+    local playerName = GetName(source) or 'Ciudadano'
+
+    local emergencyNumbers = Config.Setup and Config.Setup.EmergencyContacts or {}
+    local notified = 0
+
+    for _, entry in ipairs(emergencyNumbers) do
+        local targetNumber = type(entry) == 'table' and entry.number or tostring(entry)
+        local targetIdentifier = GetIdentifierByPhone(targetNumber)
+        if targetIdentifier then
+            local targetSource = GetSourceFromIdentifier(targetIdentifier)
+            if targetSource then
+                TriggerClientEvent('gcphone:notify', targetSource, {
+                    appId = 'calls',
+                    title = 'SOS EMERGENCIA',
+                    message = string.format('%s necesita ayuda! GPS: %.1f, %.1f', playerName, coords.x, coords.y),
+                    priority = 'high',
+                    route = 'maps',
+                    data = { x = coords.x, y = coords.y, label = 'SOS ' .. playerName },
+                })
+                notified = notified + 1
+            end
+        end
+    end
+
+    return { success = true, notified = notified, x = coords.x, y = coords.y }
+end)
