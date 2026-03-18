@@ -503,6 +503,33 @@
   padding: var(--s-6) var(--s-4);
 }
 
+.request-actions {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.request-accept,
+.request-reject {
+  border: none;
+  border-radius: var(--r-sm);
+  padding: 4px 10px;
+  font-size: var(--fs-caption1);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.request-accept {
+  background: var(--color-success, #34c759);
+  color: #fff;
+}
+
+.request-reject {
+  background: var(--color-danger, #ff3b30);
+  color: #fff;
+}
+
 @media (max-width: 360px) {
   .formGrid,
   .segmentedGrid,
