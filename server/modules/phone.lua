@@ -1335,6 +1335,17 @@ exports('MarkPhoneAsStolenByIMEI', function(imei, reason, reporter)
         }
     end
 
+    -- Notify the owner if online
+    if result and result.identifier then
+        local ownerSource = GetSourceFromIdentifier(result.identifier)
+        if ownerSource then
+            TriggerClientEvent('gcphone:phoneMarkedStolen', ownerSource, {
+                isStolen = true,
+                reason = reason or '',
+            })
+        end
+    end
+
     return {
         success = true,
         phone = result,
@@ -1551,6 +1562,17 @@ exports('MarkPhoneAsStolenByNumber', function(phoneNumber, reason, reporter)
             success = false,
             error = result,
         }
+    end
+
+    -- Notify the owner if online
+    if result and result.identifier then
+        local ownerSource = GetSourceFromIdentifier(result.identifier)
+        if ownerSource then
+            TriggerClientEvent('gcphone:phoneMarkedStolen', ownerSource, {
+                isStolen = true,
+                reason = reason or '',
+            })
+        end
     end
 
     return {

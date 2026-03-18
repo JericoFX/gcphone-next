@@ -248,6 +248,35 @@ RegisterNetEvent('gcphone:forceClosePhone', function()
     end
 end)
 
+RegisterNetEvent('gcphone:phoneMarkedStolen', function(data)
+    if type(data) ~= 'table' then return end
+
+    -- Update NUI stolen state
+    SendNUIMessage({
+        action = 'phone:stolenUpdate',
+        data = {
+            isStolen = data.isStolen ~= false,
+            reason = data.reason or '',
+        }
+    })
+
+    -- Push notification
+    SendNUIMessage({
+        action = 'phone:notification',
+        data = {
+            id = 'phone-stolen-alert',
+            appId = 'system',
+            title = 'Alerta de seguridad',
+            message = data.isStolen ~= false
+                and ('Tu telefono ha sido reportado como robado' .. (data.reason and data.reason ~= '' and (': ' .. data.reason) or ''))
+                or 'Tu telefono ya no esta reportado como robado',
+            icon = './img/icons_ios/ui-warning.svg',
+            priority = 'high',
+            duration = 8000,
+        }
+    })
+end)
+
 ---Toggle the phone open/closed state.
 ---@return nil
 exports('TogglePhone', TogglePhone)

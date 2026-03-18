@@ -314,6 +314,12 @@ export const PhoneFrame: ParentComponent & { Router: () => JSX.Element } = (
               onOpenRoute={(route, data) => router.navigate(route, data)}
             />
           </div>
+          <Show when={phoneState.accessMode === 'foreign-readonly'}>
+            <div class={styles.foreignStrip}>
+              <span>{phoneState.accessOwnerName || 'Telefono ajeno'}</span>
+              <span>&nbsp;&mdash;&nbsp;Solo lectura</span>
+            </div>
+          </Show>
           {props.children}
 
           <Show when={!phoneState.requiresSetup && !phoneState.locked}>
