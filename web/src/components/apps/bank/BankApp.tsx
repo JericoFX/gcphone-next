@@ -29,6 +29,14 @@ export function BankApp() {
   const [contacts, setContacts] = createSignal<any[]>([]);
   const [loading, setLoading] = createSignal(true);
   const [error, setError] = createSignal<string | null>(null);
+  const [txFilter, setTxFilter] = createSignal<'all' | 'in' | 'out'>('all');
+
+  const filteredTransactions = () => {
+    const f = txFilter();
+    if (f === 'all') return transactions();
+    if (f === 'in') return transactions().filter((tx: any) => tx.amount >= 0);
+    return transactions().filter((tx: any) => tx.amount < 0);
+  };
   const [incomingInvoice, setIncomingInvoice] = createSignal<BankInvoice | null>(null);
   const [lastRouteKey, setLastRouteKey] = createSignal('');
   
@@ -157,12 +165,17 @@ export function BankApp() {
         {/* Transactions Section */}
         <div class={styles.section}>
           <div class={styles.sectionTitle}>{t('bank.movements', language())}</div>
+          <div class={styles.txFilters}>
+            <button classList={{ [styles.txFilterActive]: txFilter() === 'all' }} onClick={() => setTxFilter('all')}>Todos</button>
+            <button classList={{ [styles.txFilterActive]: txFilter() === 'in' }} onClick={() => setTxFilter('in')}>Recibidos</button>
+            <button classList={{ [styles.txFilterActive]: txFilter() === 'out' }} onClick={() => setTxFilter('out')}>Enviados</button>
+          </div>
           <Show when={loading()} fallback={
-            <Show when={transactions().length > 0} fallback={
+            <Show when={filteredTransactions().length > 0} fallback={
               <EmptyState class={styles.emptyState} title={t('bank.no_movements', language())} description={t('bank.no_movements_desc', language())} />
             }>
               <div class={styles.transactionsList}>
-                <For each={transactions()}>
+                <For each={filteredTransactions()}>
                   {(tx) => (
                     <div class={styles.transactionItem}>
                       <div class={styles.transactionInfo}>
