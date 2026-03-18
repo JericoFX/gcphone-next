@@ -64,6 +64,7 @@ export function ClipsApp() {
   const [statusMessage, setStatusMessage] = createSignal('');
   const [deleteClipId, setDeleteClipId] = createSignal<number | null>(null);
   const [showOnboarding, setShowOnboarding] = createSignal(false);
+  let onboardingChecked = false;
   const [showProfileModal, setShowProfileModal] = createSignal(false);
   const [profilePrivate, setProfilePrivate] = createSignal(false);
   const [showUpload, setShowUpload] = createSignal(false);
@@ -96,7 +97,10 @@ export function ClipsApp() {
 
     const account = await fetchNui<SharedSnapAccount | null>('clipsGetAccount', {});
     setMyAccount(account);
-    setShowOnboarding(!account?.username);
+    if (!onboardingChecked) {
+      onboardingChecked = true;
+      setShowOnboarding(!account?.username);
+    }
 
     const tab = currentTab();
     let cacheKey: string;
