@@ -379,7 +379,7 @@
   grid-template-columns: auto auto 1fr auto;
   align-items: center;
   gap: 6px;
-  margin: 8px 8px calc(8px + var(--phone-bottom-ui-gap, 0px));
+  margin: 8px 8px 8px;
   padding: 6px;
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.9);

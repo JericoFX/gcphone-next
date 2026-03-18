@@ -1,0 +1,553 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<AudioWaveContainer>
+  <Version value="1" />
+  <ChunkIndices value="True" />
+  <MultiChannel value="True" />
+  <Streams>
+    <Item>
+      <Name>call_1</Name>
+      <FileName>call_1.wav</FileName>
+      <Chunks>
+        <Item>
+          <Type>peak</Type>
+        </Item>
+        <Item>
+          <Type>data</Type>
+        </Item>
+        <Item>
+          <Type>format</Type>
+          <Codec>ADPCM</Codec>
+          <Samples value="464256" />
+          <SampleRate value="48000" />
+          <Headroom value="-200" />
+          <PlayBegin value="0" />
+          <PlayEnd value="0" />
+          <LoopBegin value="0" />
+          <LoopEnd value="0" />
+          <LoopPoint value="-1" />
+          <Peak unk="0" />
+        </Item>
+      </Chunks>
+    </Item>
+    <Item>
+      <Name>call_2</Name>
+      <FileName>call_2.wav</FileName>
+      <Chunks>
+        <Item>
+          <Type>peak</Type>
+        </Item>
+        <Item>
+          <Type>data</Type>
+        </Item>
+        <Item>
+          <Type>format</Type>
+          <Codec>ADPCM</Codec>
+          <Samples value="370925" />
+          <SampleRate value="44100" />
+          <Headroom value="-200" />
+          <PlayBegin value="0" />
+          <PlayEnd value="0" />
+          <LoopBegin value="0" />
+          <LoopEnd value="0" />
+          <LoopPoint value="-1" />
+          <Peak unk="0" />
+        </Item>
+      </Chunks>
+    </Item>
+    <Item>
+      <Name>call_3</Name>
+      <FileName>call_3.wav</FileName>
+      <Chunks>
+        <Item>
+          <Type>peak</Type>
+        </Item>
+        <Item>
+          <Type>data</Type>
+        </Item>
+        <Item>
+          <Type>format</Type>
+          <Codec>ADPCM</Codec>
+          <Samples value="417024" />
+          <SampleRate value="48000" />
+          <Headroom value="-200" />
+          <PlayBegin value="0" />
+          <PlayEnd value="0" />
+          <LoopBegin value="0" />
+          <LoopEnd value="0" />
+          <LoopPoint value="-1" />
+          <Peak unk="0" />
+        </Item>
+      </Chunks>
+    </Item>
+    <Item>
+      <Name>call_4</Name>
+      <FileName>call_4.wav</FileName>
+      <Chunks>
+        <Item>
+          <Type>peak</Type>
+        </Item>
+        <Item>
+          <Type>data</Type>
+        </Item>
+        <Item>
+          <Type>format</Type>
+          <Codec>ADPCM</Codec>
+          <Samples value="381289" />
+          <SampleRate value="44100" />
+          <Headroom value="-200" />
+          <PlayBegin value="0" />
+          <PlayEnd value="0" />
+          <LoopBegin value="0" />
+          <LoopEnd value="0" />
+          <LoopPoint value="-1" />
+          <Peak unk="0" />
+        </Item>
+      </Chunks>
+    </Item>
+    <Item>
+      <Name>call_5</Name>
+      <FileName>call_5.wav</FileName>
+      <Chunks>
+        <Item>
+          <Type>peak</Type>
+        </Item>
+        <Item>
+          <Type>data</Type>
+        </Item>
+        <Item>
+          <Type>format</Type>
+          <Codec>ADPCM</Codec>
+          <Samples value="422743" />
+          <SampleRate value="44100" />
+          <Headroom value="-200" />
+          <PlayBegin value="0" />
+          <PlayEnd value="0" />
+          <LoopBegin value="0" />
+          <LoopEnd value="0" />
+          <LoopPoint value="-1" />
+          <Peak unk="0" />
+        </Item>
+      </Chunks>
+    </Item>
+    <Item>
+      <Name>call_6</Name>
+      <FileName>call_6.wav</FileName>
+      <Chunks>
+        <Item>
+          <Type>peak</Type>
+        </Item>
+        <Item>
+          <Type>data</Type>
+        </Item>
+        <Item>
+          <Type>format</Type>
+          <Codec>ADPCM</Codec>
+          <Samples value="388212" />
+          <SampleRate value="44100" />
+          <Headroom value="-200" />
+          <PlayBegin value="0" />
+          <PlayEnd value="0" />
+          <LoopBegin value="0" />
+          <LoopEnd value="0" />
+          <LoopPoint value="-1" />
+          <Peak unk="0" />
+        </Item>
+      </Chunks>
+    </Item>
+    <Item>
+      <Name>call_7</Name>
+      <FileName>call_7.wav</FileName>
+      <Chunks>
+        <Item>
+          <Type>peak</Type>
+        </Item>
+        <Item>
+          <Type>data</Type>
+        </Item>
+        <Item>
+          <Type>format</Type>
+          <Codec>ADPCM</Codec>
+          <Samples value="342128" />
+          <SampleRate value="44100" />
+          <Headroom value="-200" />
+          <PlayBegin value="0" />
+          <PlayEnd value="0" />
+          <LoopBegin value="0" />
+          <LoopEnd value="0" />
+          <LoopPoint value="-1" />
+          <Peak unk="0" />
+        </Item>
+      </Chunks>
+    </Item>
+    <Item>
+      <Name>call_8</Name>
+      <FileName>call_8.wav</FileName>
+      <Chunks>
+        <Item>
+          <Type>peak</Type>
+        </Item>
+        <Item>
+          <Type>data</Type>
+        </Item>
+        <Item>
+          <Type>format</Type>
+          <Codec>ADPCM</Codec>
+          <Samples value="509184" />
+          <SampleRate value="48000" />
+          <Headroom value="-200" />
+          <PlayBegin value="0" />
+          <PlayEnd value="0" />
+          <LoopBegin value="0" />
+          <LoopEnd value="0" />
+          <LoopPoint value="-1" />
+          <Peak unk="0" />
+        </Item>
+      </Chunks>
+    </Item>
+    <Item>
+      <Name>call_9_left</Name>
+      <FileName>call_9.wav</FileName>
+      <StreamFormat>
+        <Codec>ADPCM</Codec>
+        <Samples value="6723045" />
+        <SampleRate value="44100" />
+        <Headroom value="-200" />
+      </StreamFormat>
+    </Item>
+    <Item>
+      <Name>call_9_right</Name>
+      <FileName>call_9.wav</FileName>
+      <StreamFormat>
+        <Codec>ADPCM</Codec>
+        <Samples value="6723045" />
+        <SampleRate value="44100" />
+        <Headroom value="-200" />
+      </StreamFormat>
+    </Item>
+    <Item>
+      <Name>call_10</Name>
+      <FileName>call_10.wav</FileName>
+      <Chunks>
+        <Item>
+          <Type>peak</Type>
+        </Item>
+        <Item>
+          <Type>data</Type>
+        </Item>
+        <Item>
+          <Type>format</Type>
+          <Codec>ADPCM</Codec>
+          <Samples value="5008878" />
+          <SampleRate value="44100" />
+          <Headroom value="-200" />
+          <PlayBegin value="0" />
+          <PlayEnd value="0" />
+          <LoopBegin value="0" />
+          <LoopEnd value="0" />
+          <LoopPoint value="-1" />
+          <Peak unk="0" />
+        </Item>
+      </Chunks>
+    </Item>
+    <Item>
+      <Name>call_11</Name>
+      <FileName>call_11.wav</FileName>
+      <Chunks>
+        <Item>
+          <Type>peak</Type>
+        </Item>
+        <Item>
+          <Type>data</Type>
+        </Item>
+        <Item>
+          <Type>format</Type>
+          <Codec>ADPCM</Codec>
+          <Samples value="5656310" />
+          <SampleRate value="44100" />
+          <Headroom value="-200" />
+          <PlayBegin value="0" />
+          <PlayEnd value="0" />
+          <LoopBegin value="0" />
+          <LoopEnd value="0" />
+          <LoopPoint value="-1" />
+          <Peak unk="0" />
+        </Item>
+      </Chunks>
+    </Item>
+    <Item>
+      <Name>call_12</Name>
+      <FileName>call_12.wav</FileName>
+      <Chunks>
+        <Item>
+          <Type>peak</Type>
+        </Item>
+        <Item>
+          <Type>data</Type>
+        </Item>
+        <Item>
+          <Type>format</Type>
+          <Codec>ADPCM</Codec>
+          <Samples value="5501916" />
+          <SampleRate value="44100" />
+          <Headroom value="-200" />
+          <PlayBegin value="0" />
+          <PlayEnd value="0" />
+          <LoopBegin value="0" />
+          <LoopEnd value="0" />
+          <LoopPoint value="-1" />
+          <Peak unk="0" />
+        </Item>
+      </Chunks>
+    </Item>
+    <Item>
+      <Name>call_13</Name>
+      <FileName>call_13.wav</FileName>
+      <Chunks>
+        <Item>
+          <Type>peak</Type>
+        </Item>
+        <Item>
+          <Type>data</Type>
+        </Item>
+        <Item>
+          <Type>format</Type>
+          <Codec>ADPCM</Codec>
+          <Samples value="5240447" />
+          <SampleRate value="44100" />
+          <Headroom value="-200" />
+          <PlayBegin value="0" />
+          <PlayEnd value="0" />
+          <LoopBegin value="0" />
+          <LoopEnd value="0" />
+          <LoopPoint value="-1" />
+          <Peak unk="0" />
+        </Item>
+      </Chunks>
+    </Item>
+    <Item>
+      <Name>call_vibrando</Name>
+      <FileName>call_vibrando.wav</FileName>
+      <Chunks>
+        <Item>
+          <Type>peak</Type>
+        </Item>
+        <Item>
+          <Type>data</Type>
+        </Item>
+        <Item>
+          <Type>format</Type>
+          <Codec>ADPCM</Codec>
+          <Samples value="366912" />
+          <SampleRate value="24000" />
+          <Headroom value="-200" />
+          <PlayBegin value="0" />
+          <PlayEnd value="0" />
+          <LoopBegin value="0" />
+          <LoopEnd value="0" />
+          <LoopPoint value="-1" />
+          <Peak unk="0" />
+        </Item>
+      </Chunks>
+    </Item>
+    <Item>
+      <Name>sonando</Name>
+      <FileName>sonando.wav</FileName>
+      <Chunks>
+        <Item>
+          <Type>peak</Type>
+        </Item>
+        <Item>
+          <Type>data</Type>
+        </Item>
+        <Item>
+          <Type>format</Type>
+          <Codec>ADPCM</Codec>
+          <Samples value="398576" />
+          <SampleRate value="44100" />
+          <Headroom value="-200" />
+          <PlayBegin value="0" />
+          <PlayEnd value="0" />
+          <LoopBegin value="0" />
+          <LoopEnd value="0" />
+          <LoopPoint value="-1" />
+          <Peak unk="0" />
+        </Item>
+      </Chunks>
+    </Item>
+    <Item>
+      <Name>sonando_corto</Name>
+      <FileName>sonando_corto.wav</FileName>
+      <Chunks>
+        <Item>
+          <Type>peak</Type>
+        </Item>
+        <Item>
+          <Type>data</Type>
+        </Item>
+        <Item>
+          <Type>format</Type>
+          <Codec>ADPCM</Codec>
+          <Samples value="26496" />
+          <SampleRate value="24000" />
+          <Headroom value="-200" />
+          <PlayBegin value="0" />
+          <PlayEnd value="0" />
+          <LoopBegin value="0" />
+          <LoopEnd value="0" />
+          <LoopPoint value="-1" />
+          <Peak unk="0" />
+        </Item>
+      </Chunks>
+    </Item>
+    <Item>
+      <Name>nueva_notificacion</Name>
+      <FileName>nueva_notificacion.wav</FileName>
+      <Chunks>
+        <Item>
+          <Type>peak</Type>
+        </Item>
+        <Item>
+          <Type>data</Type>
+        </Item>
+        <Item>
+          <Type>format</Type>
+          <Codec>ADPCM</Codec>
+          <Samples value="24192" />
+          <SampleRate value="48000" />
+          <Headroom value="-200" />
+          <PlayBegin value="0" />
+          <PlayEnd value="0" />
+          <LoopBegin value="0" />
+          <LoopEnd value="0" />
+          <LoopPoint value="-1" />
+          <Peak unk="0" />
+        </Item>
+      </Chunks>
+    </Item>
+    <Item>
+      <Name>nueva_notificacion_vibrando</Name>
+      <FileName>nueva_notificacion_vibrando.wav</FileName>
+      <Chunks>
+        <Item>
+          <Type>peak</Type>
+        </Item>
+        <Item>
+          <Type>data</Type>
+        </Item>
+        <Item>
+          <Type>format</Type>
+          <Codec>ADPCM</Codec>
+          <Samples value="27072" />
+          <SampleRate value="24000" />
+          <Headroom value="-200" />
+          <PlayBegin value="0" />
+          <PlayEnd value="0" />
+          <LoopBegin value="0" />
+          <LoopEnd value="0" />
+          <LoopPoint value="-1" />
+          <Peak unk="0" />
+        </Item>
+      </Chunks>
+    </Item>
+    <Item>
+      <Name>nueva_notificacion2</Name>
+      <FileName>nueva_notificacion2.wav</FileName>
+      <Chunks>
+        <Item>
+          <Type>peak</Type>
+        </Item>
+        <Item>
+          <Type>data</Type>
+        </Item>
+        <Item>
+          <Type>format</Type>
+          <Codec>ADPCM</Codec>
+          <Samples value="89832" />
+          <SampleRate value="44100" />
+          <Headroom value="-200" />
+          <PlayBegin value="0" />
+          <PlayEnd value="0" />
+          <LoopBegin value="0" />
+          <LoopEnd value="0" />
+          <LoopPoint value="-1" />
+          <Peak unk="0" />
+        </Item>
+      </Chunks>
+    </Item>
+    <Item>
+      <Name>nueva_notificacion3</Name>
+      <FileName>nueva_notificacion3.wav</FileName>
+      <Chunks>
+        <Item>
+          <Type>peak</Type>
+        </Item>
+        <Item>
+          <Type>data</Type>
+        </Item>
+        <Item>
+          <Type>format</Type>
+          <Codec>ADPCM</Codec>
+          <Samples value="55296" />
+          <SampleRate value="48000" />
+          <Headroom value="-200" />
+          <PlayBegin value="0" />
+          <PlayEnd value="0" />
+          <LoopBegin value="0" />
+          <LoopEnd value="0" />
+          <LoopPoint value="-1" />
+          <Peak unk="0" />
+        </Item>
+      </Chunks>
+    </Item>
+    <Item>
+      <Name>pop</Name>
+      <FileName>pop.wav</FileName>
+      <Chunks>
+        <Item>
+          <Type>peak</Type>
+        </Item>
+        <Item>
+          <Type>data</Type>
+        </Item>
+        <Item>
+          <Type>format</Type>
+          <Codec>ADPCM</Codec>
+          <Samples value="34560" />
+          <SampleRate value="48000" />
+          <Headroom value="-200" />
+          <PlayBegin value="0" />
+          <PlayEnd value="0" />
+          <LoopBegin value="0" />
+          <LoopEnd value="0" />
+          <LoopPoint value="-1" />
+          <Peak unk="0" />
+        </Item>
+      </Chunks>
+    </Item>
+    <Item>
+      <Name>pop2</Name>
+      <FileName>pop2.wav</FileName>
+      <Chunks>
+        <Item>
+          <Type>peak</Type>
+        </Item>
+        <Item>
+          <Type>data</Type>
+        </Item>
+        <Item>
+          <Type>format</Type>
+          <Codec>ADPCM</Codec>
+          <Samples value="49536" />
+          <SampleRate value="48000" />
+          <Headroom value="-200" />
+          <PlayBegin value="0" />
+          <PlayEnd value="0" />
+          <LoopBegin value="0" />
+          <LoopEnd value="0" />
+          <LoopPoint value="-1" />
+          <Peak unk="0" />
+        </Item>
+      </Chunks>
+    </Item>
+  </Streams>
+</AudioWaveContainer>

@@ -82,18 +82,6 @@
   padding: 12px;
   display: grid;
   gap: 8px;
-  animation: multitask-panel-rise 300ms cubic-bezier(0.32, 0.72, 0, 1);
-}
-
-@keyframes multitask-panel-rise {
-  from {
-    opacity: 0;
-    transform: translateY(40px) scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
 }
 
 .multitask-card {
@@ -102,24 +90,6 @@
   display: grid;
   grid-template-columns: 1fr auto;
   align-items: center;
-  animation: multitask-card-in 260ms cubic-bezier(0.32, 0.72, 0, 1) backwards;
-  
-  &:nth-child(1) { animation-delay: 60ms; }
-  &:nth-child(2) { animation-delay: 100ms; }
-  &:nth-child(3) { animation-delay: 140ms; }
-  &:nth-child(4) { animation-delay: 180ms; }
-  &:nth-child(5) { animation-delay: 220ms; }
-}
-
-@keyframes multitask-card-in {
-  from {
-    opacity: 0;
-    transform: translateX(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
 }
 
 .multitask-open {
