@@ -107,6 +107,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
 
   &:hover {
     background-color: var(--surface-2);
@@ -115,6 +116,17 @@
   &:active {
     background-color: var(--surface-3);
   }
+}
+
+.speed-dial-dot {
+  position: absolute;
+  bottom: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--tint);
 }
 
 .call-btn {

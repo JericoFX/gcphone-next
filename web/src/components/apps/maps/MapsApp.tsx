@@ -431,13 +431,23 @@ export function MapsApp() {
           onClose={() => {
             setShowLocationsSheet(false);
           }}
-          actions={locations().map((location) => ({
-            label: `${location.from}: ${location.message || 'Ubicacion'}`,
-            onClick: () => {
-              void setGps(location.x, location.y);
-              setShowLocationsSheet(false);
+          actions={[
+            ...locations().map((location) => ({
+              label: `${location.from}: ${location.message || 'Ubicacion'}`,
+              onClick: () => {
+                void setGps(location.x, location.y);
+                setShowLocationsSheet(false);
+              },
+            })),
+            {
+              label: 'Dejar de compartir mi ubicacion',
+              tone: 'danger' as const,
+              onClick: async () => {
+                await fetchNui('stopLiveLocation', {}, { success: false });
+                setShowLocationsSheet(false);
+              },
             },
-          }))}
+          ]}
         />
 
         <ActionSheet

@@ -982,6 +982,22 @@ export function SettingsApp() {
         </div>
       </Show>
 
+      <Show when={liveLocationEnabled()}>
+        <button
+          class={styles.clearBtn}
+          style={{ color: '#d84444', 'font-weight': '700', 'border-color': '#d84444', 'margin-top': '12px' }}
+          onClick={async () => {
+            const response = await fetchNui<{ success?: boolean }>('stopLiveLocation', {}, { success: false });
+            if (response?.success) {
+              setLiveLocationEnabled(false);
+              setLiveLocationStatus(t('settings.live_disabled', language()));
+            }
+          }}
+        >
+          Dejar de compartir
+        </button>
+      </Show>
+
       <Show when={liveLocationStatus()}>
         <div class={`${styles.statusMsg} ${liveLocationEnabled() ? styles.success : styles.error}`}>
           {liveLocationStatus()}
