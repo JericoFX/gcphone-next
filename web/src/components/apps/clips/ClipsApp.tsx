@@ -105,6 +105,7 @@ export function ClipsApp() {
   const [showProfileModal, setShowProfileModal] = createSignal(false);
   const [profilePrivate, setProfilePrivate] = createSignal(false);
   const [profileAvatar, setProfileAvatar] = createSignal('');
+  const [showAvatarPicker, setShowAvatarPicker] = createSignal(false);
   const [showUpload, setShowUpload] = createSignal(false);
   const [uploadMedia, setUploadMedia] = createSignal('');
   const [uploadCaption, setUploadCaption] = createSignal('');
@@ -536,10 +537,8 @@ export function ClipsApp() {
         </Show>
       </div>
 
-      {/* ── FAB ── */}
-      <Show when={storageReady()}>
-        <button class={styles.fab} onClick={() => setShowUpload(true)}>+</button>
-      </Show>
+      {/* ── FAB (absolute inside root, not fixed — FiveM CEF transform breaks fixed) ── */}
+      <button class={styles.fab} onClick={() => setShowUpload(true)}>+</button>
 
       {/* ── Comments overlay ── */}
       <Show when={showComments()}>
@@ -612,33 +611,53 @@ export function ClipsApp() {
         </ModalActions>
       </Modal>
 
-      {/* ── Profile Modal ── */}
-      <Modal open={showProfileModal()} title="Perfil" onClose={() => setShowProfileModal(false)} size="sm">
-        <div class={styles.profileCard}>
-          <div class={styles.profileAvatarLg}>
-            <Show when={profileAvatar()} fallback={
-              <span>{(myAccount()?.display_name || 'U').charAt(0).toUpperCase()}</span>
-            }>
-              <img src={profileAvatar()} alt="" />
+      {/* ── Profile bottom sheet ── */}
+      <Show when={showProfileModal()}>
+        <div class={styles.profileOverlay} onClick={() => setShowProfileModal(false)}>
+          <div class={styles.profileSheet} onClick={(e) => e.stopPropagation()}>
+            <div class={styles.profileSheetHandle} />
+
+            {/* Avatar — click to change */}
+            <div class={styles.profileAvatarWrap} onClick={() => setShowAvatarPicker(v => !v)}>
+              <div class={styles.profileAvatarLg}>
+                <Show when={profileAvatar()} fallback={
+                  <span>{(myAccount()?.display_name || 'U').charAt(0).toUpperCase()}</span>
+                }>
+                  <img src={profileAvatar()} alt="" />
+                </Show>
+              </div>
+              <div class={styles.profileAvatarEdit}>✎</div>
+            </div>
+            <strong class={styles.profileName}>{myAccount()?.display_name || 'Usuario'}</strong>
+            <span class={styles.profileHandle}>@{myAccount()?.username || 'clips'}</span>
+
+            {/* Avatar picker (iOS action sheet style) */}
+            <Show when={showAvatarPicker()}>
+              <div class={styles.avatarPicker}>
+                <button onClick={() => { void attachAvatarFromGallery(); setShowAvatarPicker(false); }}>
+                  <img src="./img/icons_ios/gallery.svg" alt="" /> Galeria
+                </button>
+                <button onClick={() => { router.navigate('camera', { target: 'clips-avatar' }); setShowAvatarPicker(false); }}>
+                  <img src="./img/icons_ios/camera.svg" alt="" /> Camara
+                </button>
+                <button onClick={() => { attachAvatarByUrl(); setShowAvatarPicker(false); }}>
+                  <img src="./img/icons_ios/ui-link.svg" alt="" /> URL
+                </button>
+              </div>
             </Show>
+
+            {/* Private toggle */}
+            <label class={styles.toggleRow}>
+              <span>Cuenta privada</span>
+              <div class={`${styles.iosSwitch} ${profilePrivate() ? styles.iosSwitchOn : ''}`} onClick={(e) => { e.preventDefault(); setProfilePrivate(!profilePrivate()); }}>
+                <div class={styles.iosSwitchThumb} />
+              </div>
+            </label>
+
+            <button class={styles.profileSaveBtn} onClick={() => void saveProfile()}>Guardar</button>
           </div>
-          <strong>{myAccount()?.display_name || 'Usuario'}</strong>
-          <span class={styles.profileHandle}>@{myAccount()?.username || 'clips'}</span>
         </div>
-        <div class={styles.avatarActions}>
-          <button onClick={() => void attachAvatarFromGallery()}>Galeria</button>
-          <button onClick={() => router.navigate('camera', { target: 'clips-avatar' })}>Camara</button>
-          <button onClick={attachAvatarByUrl}>URL</button>
-        </div>
-        <label class={styles.toggleRow}>
-          <input type="checkbox" checked={profilePrivate()} onChange={(e) => setProfilePrivate(e.currentTarget.checked)} />
-          <span>Cuenta privada</span>
-        </label>
-        <ModalActions>
-          <ModalButton label="Cancelar" onClick={() => setShowProfileModal(false)} />
-          <ModalButton label="Guardar" tone="primary" onClick={() => void saveProfile()} />
-        </ModalActions>
-      </Modal>
+      </Show>
 
       {/* ── Delete confirm ── */}
       <Modal open={deleteClipId() !== null} title="Eliminar clip" onClose={() => setDeleteClipId(null)} size="sm">
