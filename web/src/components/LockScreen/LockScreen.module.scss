@@ -1,22 +1,38 @@
+// ---------------------------------------------------------------------------
+// LockScreen — Premium minimal lock screen
+// Uses CSSGUIDE tokens throughout. No hardcoded hex colors.
+// ---------------------------------------------------------------------------
+
 .lock-screen {
-  --ls-surface: rgba(238, 243, 251, 0.28);
-  --ls-surface-strong: rgba(244, 248, 255, 0.4);
-  --ls-border: rgba(255, 255, 255, 0.22);
+  --ls-glass: rgba(255, 255, 255, 0.12);
+  --ls-glass-strong: rgba(255, 255, 255, 0.18);
+  --ls-glass-border: rgba(255, 255, 255, 0.16);
+  --ls-glass-highlight: rgba(255, 255, 255, 0.22);
+  --ls-text-primary: rgba(255, 255, 255, 0.96);
   --ls-text-soft: rgba(247, 250, 255, 0.94);
   --ls-text-muted: rgba(231, 240, 255, 0.72);
-  --ls-shadow: 0 18px 40px rgba(8, 14, 26, 0.2);
-  --ls-highlight: rgba(255, 255, 255, 0.44);
-  --ls-material: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(232, 240, 252, 0.08));
+  --ls-shadow: var(--shadow-3);
+  --ls-material: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.06),
+    rgba(255, 255, 255, 0.02)
+  );
+
   position: relative;
   width: 100%;
   height: 100%;
-  padding: calc(var(--safe-t) + 4px) 12px calc(var(--safe-b) + 6px);
+  padding: calc(var(--safe-t) + var(--s-1)) var(--s-3) calc(var(--safe-b) + var(--s-2));
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  color: #eff6ff;
+  gap: var(--s-2);
+  color: var(--ls-text-primary);
   overflow: hidden;
+  font-family: var(--font-sans);
 }
+
+// ---------------------------------------------------------------------------
+// Wallpaper layers
+// ---------------------------------------------------------------------------
 
 .wallpaper-bg {
   position: absolute;
@@ -31,9 +47,9 @@
   inset: 0;
   z-index: 1;
   background:
-    linear-gradient(180deg, rgba(6, 12, 24, 0.08) 0%, rgba(7, 12, 22, 0.28) 100%),
-    radial-gradient(ellipse at top, rgba(255, 255, 255, 0.14) 0%, transparent 52%),
-    radial-gradient(circle at 50% 120%, rgba(79, 132, 255, 0.18) 0%, transparent 42%);
+    linear-gradient(180deg, rgba(0, 0, 0, 0.25) 0%, transparent 18%),
+    linear-gradient(180deg, transparent 72%, rgba(0, 0, 0, 0.35) 100%),
+    radial-gradient(ellipse at 50% 0%, rgba(255, 255, 255, 0.08) 0%, transparent 50%);
 }
 
 .wallpaper-noise {
@@ -45,6 +61,10 @@
   pointer-events: none;
 }
 
+// ---------------------------------------------------------------------------
+// Z-index stacking for content layers
+// ---------------------------------------------------------------------------
+
 .time-block,
 .content-area,
 .unlock-sheet,
@@ -54,41 +74,60 @@
   z-index: 3;
 }
 
+// ---------------------------------------------------------------------------
+// Time display — large, thin, centered
+// ---------------------------------------------------------------------------
+
 .time-block {
   text-align: center;
-  margin-top: 2px;
+  margin-top: var(--s-1);
 }
 
 .time {
-  font-size: 78px;
-  line-height: 0.95;
-  font-weight: 250;
-  letter-spacing: -0.05em;
-  text-shadow: 0 8px 26px rgba(0, 0, 0, 0.28);
+  font-size: 64px;
+  line-height: 1;
+  font-weight: 200;
+  letter-spacing: -0.04em;
+  text-shadow:
+    0 2px 12px rgba(0, 0, 0, 0.3),
+    0 0 40px rgba(0, 0, 0, 0.1);
 }
 
 .date {
   margin-top: var(--s-1);
-  font-size: var(--fs-footnote);
+  font-size: 16px;
+  font-weight: 400;
   text-transform: capitalize;
   color: var(--ls-text-soft);
+  letter-spacing: 0.01em;
 }
+
+// ---------------------------------------------------------------------------
+// Now-playing music widget — frosted glass pill
+// ---------------------------------------------------------------------------
 
 .now-playing-widget {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 14px;
+  gap: var(--s-2);
+  padding: var(--s-2) var(--s-3);
   border-radius: var(--r-pill);
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  color: #fff;
-  font-size: 12px;
+  background: var(--ls-glass);
+  backdrop-filter: blur(var(--blur-2));
+  -webkit-backdrop-filter: blur(var(--blur-2));
+  border: 1px solid var(--ls-glass-border);
+  color: var(--ls-text-primary);
+  font-size: var(--fs-caption1);
   font-weight: 600;
   max-width: 200px;
-  margin: 0 auto 8px;
+  margin: 0 auto var(--s-2);
   position: relative;
   z-index: 3;
+  transition: background var(--dur-2) var(--ease-standard);
+
+  &:active {
+    background: var(--ls-glass-strong);
+  }
 
   img {
     width: 14px;
@@ -102,6 +141,10 @@
     white-space: nowrap;
   }
 }
+
+// ---------------------------------------------------------------------------
+// Content area
+// ---------------------------------------------------------------------------
 
 .content-area {
   flex: 1;
@@ -149,14 +192,20 @@
   max-height: 104px;
 }
 
+// ---------------------------------------------------------------------------
+// Shared glass surfaces — widget panels, notification center, unlock sheet, buttons
+// ---------------------------------------------------------------------------
+
 .widget-panel,
 .notification-center,
 .unlock-sheet,
 .unlock-sheet-collapsed,
 .bottom-btn {
   position: relative;
-  border: 1px solid var(--ls-border);
+  border: 1px solid var(--ls-glass-border);
   background: var(--ls-material);
+  backdrop-filter: blur(var(--blur-2));
+  -webkit-backdrop-filter: blur(var(--blur-2));
   box-shadow: var(--ls-shadow);
 }
 
@@ -165,6 +214,7 @@
   overflow: hidden;
 }
 
+// Noise texture overlay
 .widget-panel::before,
 .notification-center::before,
 .unlock-sheet::before,
@@ -176,8 +226,10 @@
   opacity: 0.04;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
   pointer-events: none;
+  border-radius: inherit;
 }
 
+// Top highlight sheen
 .widget-panel::after,
 .notification-center::after,
 .unlock-sheet::after,
@@ -190,18 +242,22 @@
   inset: 0;
   border-radius: inherit;
   pointer-events: none;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.2), transparent 28%);
-  opacity: 0.55;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.15), transparent 30%);
+  opacity: 0.5;
 }
 
 .widget-panel {
   display: grid;
   gap: var(--s-3);
-  padding: var(--s-3) 14px;
+  padding: var(--s-3) var(--s-3);
   border-radius: var(--r-xl);
   min-height: 146px;
   grid-template-rows: auto minmax(0, 1fr);
 }
+
+// ---------------------------------------------------------------------------
+// Widget header and metadata
+// ---------------------------------------------------------------------------
 
 .widget-header,
 .notification-center-header,
@@ -221,14 +277,14 @@
 .device-identity-row,
 .bottom-actions {
   justify-content: space-between;
-  gap: 10px;
+  gap: var(--s-3);
 }
 
 .widget-label {
   font-size: var(--fs-caption2);
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: rgba(218, 232, 255, 0.78);
+  color: var(--ls-text-muted);
 }
 
 .widget-meta {
@@ -240,17 +296,21 @@
   display: block;
   font-size: var(--fs-subhead);
   line-height: var(--lh-normal);
-  color: #fff;
+  color: var(--ls-text-primary);
 }
 
 .widget-flag {
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: rgba(255, 107, 107, 0.2);
-  color: #ffd1d1;
+  padding: 2px var(--s-2);
+  border-radius: var(--r-pill);
+  background: color-mix(in srgb, var(--danger) 20%, transparent);
+  color: color-mix(in srgb, var(--danger) 60%, rgba(255, 255, 255, 0.9));
   font-size: 10px;
   font-weight: 700;
 }
+
+// ---------------------------------------------------------------------------
+// Device info rows
+// ---------------------------------------------------------------------------
 
 .device-info-rows {
   display: grid;
@@ -265,10 +325,14 @@
 
 .device-identity-row strong {
   font-size: var(--fs-caption1);
-  color: #fff;
+  color: var(--ls-text-primary);
   text-align: right;
   word-break: break-all;
 }
+
+// ---------------------------------------------------------------------------
+// Music controls
+// ---------------------------------------------------------------------------
 
 .music-controls {
   gap: var(--s-2);
@@ -293,12 +357,21 @@
 .sheet-actions button {
   height: 36px;
   border-radius: var(--r-md);
-  padding: 0 12px;
+  padding: 0 var(--s-3);
   font-size: var(--fs-footnote);
   font-weight: 700;
-  color: #fff;
-  background: var(--ls-surface);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  color: var(--ls-text-primary);
+  background: var(--ls-glass);
+  border: 1px solid var(--ls-glass-border);
+  backdrop-filter: blur(var(--blur-1));
+  -webkit-backdrop-filter: blur(var(--blur-1));
+  transition: background var(--dur-2) var(--ease-standard),
+              transform var(--dur-1) var(--ease-standard);
+
+  &:active {
+    background: var(--ls-glass-strong);
+    transform: scale(0.97);
+  }
 }
 
 .music-panel {
@@ -312,10 +385,19 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 999px;
-  color: #fff;
-  background: var(--ls-surface);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  border-radius: var(--r-pill);
+  color: var(--ls-text-primary);
+  background: var(--ls-glass);
+  border: 1px solid var(--ls-glass-border);
+  backdrop-filter: blur(var(--blur-1));
+  -webkit-backdrop-filter: blur(var(--blur-1));
+  transition: background var(--dur-2) var(--ease-standard),
+              transform var(--dur-1) var(--ease-standard);
+
+  &:active {
+    background: var(--ls-glass-strong);
+    transform: scale(0.95);
+  }
 }
 
 .music-icon-btn svg {
@@ -330,7 +412,12 @@
 .bottom-btn:disabled,
 .notification-card:disabled {
   opacity: 0.45;
+  cursor: not-allowed;
 }
+
+// ---------------------------------------------------------------------------
+// Volume controls
+// ---------------------------------------------------------------------------
 
 .volume-controls {
   gap: var(--s-2);
@@ -339,16 +426,22 @@
 .volume-btn {
   width: 28px;
   height: 28px;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   font-size: 18px;
-  color: #fff;
-  background: var(--ls-surface);
+  color: var(--ls-text-primary);
+  background: var(--ls-glass);
+  border: 1px solid var(--ls-glass-border);
+  transition: background var(--dur-2) var(--ease-standard);
+
+  &:active {
+    background: var(--ls-glass-strong);
+  }
 }
 
 .volume-bar {
   flex: 1;
   height: 8px;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: rgba(255, 255, 255, 0.1);
   overflow: hidden;
 }
@@ -357,8 +450,12 @@
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, rgba(183, 218, 255, 0.88), rgba(255, 255, 255, 0.98));
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0.9));
 }
+
+// ---------------------------------------------------------------------------
+// Carousel dots
+// ---------------------------------------------------------------------------
 
 .carousel-dots {
   display: flex;
@@ -369,14 +466,20 @@
 .dot-btn {
   width: 7px;
   height: 7px;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: rgba(255, 255, 255, 0.24);
+  transition: width var(--dur-2) var(--ease-standard),
+              background var(--dur-2) var(--ease-standard);
 }
 
 .dot-btn-active {
   width: 18px;
-  background: linear-gradient(90deg, rgba(255, 255, 255, 0.88), rgba(188, 220, 255, 0.96));
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0.95));
 }
+
+// ---------------------------------------------------------------------------
+// Notification center
+// ---------------------------------------------------------------------------
 
 .notification-center {
   min-height: 0;
@@ -402,18 +505,20 @@
 .notification-card {
   width: 100%;
   text-align: left;
-  padding: 11px 12px;
+  padding: 11px var(--s-3);
   border-radius: var(--r-lg);
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  background: rgba(255, 255, 255, 0.18);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  border: 1px solid var(--ls-glass-border);
+  background: var(--ls-glass-strong);
+  backdrop-filter: blur(var(--blur-1));
+  -webkit-backdrop-filter: blur(var(--blur-1));
+  transition: background var(--dur-2) var(--ease-standard);
 }
 
 .notification-card p {
   margin: 5px 0 0;
   font-size: var(--fs-footnote);
-  color: rgba(232, 241, 255, 0.9);
-  line-height: 1.4;
+  color: var(--ls-text-soft);
+  line-height: var(--lh-normal);
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -425,16 +530,16 @@
 }
 
 .notification-card-interactive:active {
-  background: rgba(255, 255, 255, 0.26);
+  background: rgba(255, 255, 255, 0.28);
 }
 
 .notification-top {
-  gap: 8px;
+  gap: var(--s-2);
 }
 
 .notification-top strong {
   font-size: var(--fs-footnote);
-  color: #fff;
+  color: var(--ls-text-primary);
 }
 
 .notification-top span {
@@ -443,18 +548,357 @@
 }
 
 .notification-empty {
-  padding: 18px 10px;
+  padding: var(--s-5) var(--s-3);
   text-align: center;
   border-radius: var(--r-lg);
-  background: rgba(255, 255, 255, 0.14);
-  color: rgba(232, 241, 255, 0.72);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--ls-text-muted);
   font-size: var(--fs-footnote);
 }
+
+// ---------------------------------------------------------------------------
+// Unlock sheet — bottom sheet with rounded top, grabber, PIN dots, keypad
+// ---------------------------------------------------------------------------
 
 .unlock-sheet,
 .unlock-sheet-collapsed {
   border-radius: var(--r-2xl) var(--r-2xl) var(--r-xl) var(--r-xl);
 }
+
+.unlock-sheet {
+  padding: var(--s-3) var(--s-3) var(--s-3);
+  display: grid;
+  gap: var(--s-2);
+}
+
+// Grabber handle
+.sheet-handle {
+  justify-self: center;
+  width: 42px;
+  height: 5px;
+  border-radius: var(--r-pill);
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.unlock-sheet-collapsed {
+  position: absolute;
+  left: var(--s-3);
+  right: var(--s-3);
+  bottom: calc(var(--safe-b) + 54px);
+  padding: var(--s-3);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  z-index: 4;
+}
+
+.expand-keypad-btn {
+  min-width: 122px;
+}
+
+.pending-hint {
+  font-size: var(--fs-caption1);
+  color: var(--ls-text-muted);
+}
+
+// ---------------------------------------------------------------------------
+// PIN code entry
+// ---------------------------------------------------------------------------
+
+.code-container {
+  display: grid;
+  justify-items: center;
+  gap: var(--s-2);
+}
+
+.unlock-title {
+  font-size: var(--fs-footnote);
+  font-weight: 700;
+  color: var(--ls-text-primary);
+}
+
+.dots {
+  display: flex;
+  gap: var(--s-3);
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.15);
+  transition: background var(--dur-2) var(--ease-standard),
+              border-color var(--dur-2) var(--ease-standard),
+              transform var(--dur-1) var(--ease-standard);
+}
+
+.filled {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: rgba(255, 255, 255, 0.95);
+  transform: scale(1.15);
+}
+
+.error-dot {
+  background: var(--danger);
+  border-color: var(--danger);
+  animation: dot-shake var(--dur-3) var(--ease-standard);
+}
+
+@keyframes dot-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-3px); }
+  40% { transform: translateX(3px); }
+  60% { transform: translateX(-2px); }
+  80% { transform: translateX(2px); }
+}
+
+.error-msg {
+  font-size: var(--fs-footnote);
+  color: color-mix(in srgb, var(--danger) 70%, rgba(255, 255, 255, 0.8));
+}
+
+// ---------------------------------------------------------------------------
+// Keypad — glass buttons
+// ---------------------------------------------------------------------------
+
+.keypad {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--s-2);
+  justify-items: center;
+}
+
+.key,
+.key-spacer {
+  width: 56px;
+  height: 56px;
+}
+
+.key {
+  border-radius: var(--r-pill);
+  border: 1px solid var(--ls-glass-border);
+  background: var(--ls-glass);
+  backdrop-filter: blur(var(--blur-1));
+  -webkit-backdrop-filter: blur(var(--blur-1));
+  color: var(--ls-text-primary);
+  font-size: 24px;
+  font-weight: 300;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    var(--shadow-1);
+  transition: background var(--dur-1) var(--ease-standard),
+              transform var(--dur-1) var(--ease-standard);
+}
+
+.key:active {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(0.94);
+}
+
+// ---------------------------------------------------------------------------
+// Sheet actions (cancel / confirm buttons)
+// ---------------------------------------------------------------------------
+
+.sheet-actions {
+  justify-content: space-between;
+  gap: var(--s-2);
+}
+
+.sheet-actions button {
+  flex: 1;
+}
+
+.sheet-actions button:last-child {
+  color: rgba(0, 0, 0, 0.85);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(230, 240, 255, 0.9));
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+// ---------------------------------------------------------------------------
+// Bottom actions — circular glass-effect buttons
+// ---------------------------------------------------------------------------
+
+.bottom-actions {
+  padding: 0 var(--s-1);
+  margin-top: var(--s-1);
+  z-index: 5;
+}
+
+.swipe-unlock-dock {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-2);
+  padding: 0 var(--s-2);
+  touch-action: none;
+}
+
+// ---------------------------------------------------------------------------
+// Swipe unlock — vertical track with handle and glow
+// ---------------------------------------------------------------------------
+
+.swipe-unlock-track {
+  position: relative;
+  width: 34px;
+  height: 52px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--ls-glass-border);
+  background: var(--ls-glass);
+  backdrop-filter: blur(var(--blur-1));
+  -webkit-backdrop-filter: blur(var(--blur-1));
+  overflow: hidden;
+}
+
+.swipe-unlock-fill {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.1),
+    rgba(255, 255, 255, 0.4)
+  );
+  transition: height var(--dur-1) var(--ease-standard);
+}
+
+.swipe-unlock-handle {
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  bottom: 4px;
+  height: 18px;
+  border-radius: var(--r-pill);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(0, 0, 0, 0.8);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(230, 240, 255, 0.9));
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.15),
+    0 0 12px rgba(255, 255, 255, 0.15);
+  transition: box-shadow var(--dur-2) var(--ease-standard);
+
+  &:active {
+    box-shadow:
+      0 2px 8px rgba(0, 0, 0, 0.2),
+      0 0 20px rgba(255, 255, 255, 0.3);
+  }
+}
+
+.swipe-unlock-arrow {
+  font-size: 12px;
+  line-height: 1;
+}
+
+.swipe-unlock-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ls-text-soft);
+}
+
+// ---------------------------------------------------------------------------
+// Bottom buttons — uniform 44px circular frosted glass
+// ---------------------------------------------------------------------------
+
+.bottom-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  color: var(--ls-text-soft);
+  font-size: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--ls-glass);
+  border: 1px solid var(--ls-glass-border);
+  backdrop-filter: blur(var(--blur-1));
+  -webkit-backdrop-filter: blur(var(--blur-1));
+  transition: background var(--dur-2) var(--ease-standard),
+              transform var(--dur-1) var(--ease-standard),
+              box-shadow var(--dur-2) var(--ease-standard);
+
+  &:active {
+    background: var(--ls-glass-highlight);
+    transform: scale(0.93);
+  }
+}
+
+.bottom-btn img {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+}
+
+.bottom-btn-active {
+  border-color: color-mix(in srgb, var(--warning) 50%, transparent);
+  background: color-mix(in srgb, var(--warning) 25%, transparent);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--warning) 25%, transparent);
+}
+
+// ---------------------------------------------------------------------------
+// SOS button — red-tinted glass, same 44px size
+// ---------------------------------------------------------------------------
+
+.sos-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  color: color-mix(in srgb, var(--danger) 30%, rgba(255, 255, 255, 0.9));
+  font-size: 11px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  appearance: none;
+  background: color-mix(in srgb, var(--danger) 20%, rgba(0, 0, 0, 0.4));
+  border: 1px solid color-mix(in srgb, var(--danger) 35%, transparent);
+  backdrop-filter: blur(var(--blur-1));
+  -webkit-backdrop-filter: blur(var(--blur-1));
+  box-shadow: var(--shadow-1);
+  transition: background var(--dur-2) var(--ease-standard),
+              transform var(--dur-1) var(--ease-standard),
+              box-shadow var(--dur-2) var(--ease-standard);
+}
+
+.sos-btn:active {
+  background: color-mix(in srgb, var(--danger) 35%, rgba(0, 0, 0, 0.4));
+  transform: scale(0.93);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--danger) 25%, transparent);
+}
+
+.sos-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.sos-btn-sent {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  color: color-mix(in srgb, var(--success) 30%, rgba(255, 255, 255, 0.9));
+  font-size: 9px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  appearance: none;
+  background: color-mix(in srgb, var(--success) 25%, rgba(0, 0, 0, 0.4));
+  border: 1px solid color-mix(in srgb, var(--success) 35%, transparent);
+  backdrop-filter: blur(var(--blur-1));
+  -webkit-backdrop-filter: blur(var(--blur-1));
+  box-shadow: var(--shadow-1);
+  transition: background var(--dur-2) var(--ease-standard);
+}
+
+// ---------------------------------------------------------------------------
+// Emergency sheet — dark overlay with clean modal
+// ---------------------------------------------------------------------------
 
 .emergency-sheet-overlay,
 .imei-modal-overlay {
@@ -463,21 +907,25 @@
   z-index: 4;
   display: grid;
   place-items: end center;
-  padding: 12px;
-  background: rgba(8, 12, 18, 0.4);
+  padding: var(--s-3);
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(var(--blur-1));
+  -webkit-backdrop-filter: blur(var(--blur-1));
 }
 
 .emergency-sheet,
 .imei-modal-card {
   width: 100%;
   border-radius: var(--r-2xl);
-  border: 1px solid var(--ls-border);
+  border: 1px solid var(--ls-glass-border);
   background: color-mix(in srgb, rgba(20, 24, 34, 0.94) 84%, transparent);
-  box-shadow: 0 22px 40px rgba(0, 0, 0, 0.36);
+  backdrop-filter: blur(var(--blur-3));
+  -webkit-backdrop-filter: blur(var(--blur-3));
+  box-shadow: var(--shadow-3);
 }
 
 .emergency-sheet {
-  padding: 14px;
+  padding: var(--s-3);
   display: grid;
   gap: var(--s-2);
 }
@@ -496,13 +944,13 @@
 
 .emergency-header strong {
   display: block;
-  font-size: 20px;
+  font-size: var(--fs-title3);
 }
 
 .emergency-header span,
 .emergency-status {
-  font-size: 12px;
-  color: rgba(232, 241, 255, 0.76);
+  font-size: var(--fs-caption1);
+  color: var(--ls-text-muted);
 }
 
 .emergency-call-btn,
@@ -516,17 +964,29 @@
 .emergency-call-btn,
 .emergency-action-btn,
 .emergency-tag {
-  border-radius: 999px;
-  padding: 8px 12px;
+  border-radius: var(--r-pill);
+  padding: var(--s-2) var(--s-3);
   font-size: var(--fs-footnote);
   font-weight: 700;
-  color: #eef5ff;
-  background: var(--ls-surface-strong);
+  color: var(--ls-text-soft);
+  background: var(--ls-glass-strong);
+  border: 1px solid var(--ls-glass-border);
+  transition: background var(--dur-2) var(--ease-standard),
+              transform var(--dur-1) var(--ease-standard);
+
+  &:active {
+    transform: scale(0.97);
+  }
 }
 
 .emergency-call-btn {
-  background: rgba(62, 187, 106, 0.92);
-  color: #07130b;
+  background: color-mix(in srgb, var(--success) 85%, rgba(0, 0, 0, 0.2));
+  color: rgba(0, 0, 0, 0.85);
+  border-color: transparent;
+
+  &:active {
+    background: color-mix(in srgb, var(--success) 75%, rgba(0, 0, 0, 0.2));
+  }
 }
 
 .emergency-tag-row {
@@ -542,10 +1002,17 @@
 .emergency-key {
   aspect-ratio: 1;
   border-radius: 50%;
-  background: var(--ls-surface-strong);
-  color: #fff;
+  background: var(--ls-glass-strong);
+  border: 1px solid var(--ls-glass-border);
+  color: var(--ls-text-primary);
   font-size: 24px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  transition: background var(--dur-1) var(--ease-standard),
+              transform var(--dur-1) var(--ease-standard);
+
+  &:active {
+    background: rgba(255, 255, 255, 0.28);
+    transform: scale(0.94);
+  }
 }
 
 .emergency-actions {
@@ -560,15 +1027,19 @@
   margin: 0;
 }
 
+// ---------------------------------------------------------------------------
+// IMEI modal
+// ---------------------------------------------------------------------------
+
 .imei-modal-overlay {
   place-items: center;
 }
 
 .imei-modal-card {
   max-width: 260px;
-  padding: 18px;
+  padding: var(--s-5);
   display: grid;
-  gap: 12px;
+  gap: var(--s-3);
   text-align: center;
 }
 
@@ -579,247 +1050,4 @@
 
 .imei-modal-card p {
   word-break: break-all;
-}
-
-.unlock-sheet {
-  padding: 10px 10px 12px;
-  display: grid;
-  gap: var(--s-2);
-}
-
-.sheet-handle {
-  justify-self: center;
-  width: 42px;
-  height: 6px;
-  border-radius: 999px;
-  background: rgba(236, 244, 255, 0.3);
-}
-
-.unlock-sheet-collapsed {
-  position: absolute;
-  left: 12px;
-  right: 12px;
-  bottom: calc(var(--safe-b) + 54px);
-  padding: 10px 12px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  z-index: 4;
-}
-
-.expand-keypad-btn {
-  min-width: 122px;
-}
-
-.pending-hint {
-  font-size: 12px;
-  color: var(--ls-text-muted);
-}
-
-.code-container {
-  display: grid;
-  justify-items: center;
-  gap: var(--s-2);
-}
-
-.unlock-title {
-  font-size: var(--fs-footnote);
-  font-weight: 700;
-  color: #fdfefe;
-}
-
-.dots {
-  display: flex;
-  gap: var(--s-3);
-}
-
-.dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  border: 1.5px solid rgba(255, 255, 255, 0.68);
-  background: rgba(255, 255, 255, 0.24);
-}
-
-.filled {
-  background: #fff;
-  border-color: #fff;
-}
-
-.error-dot {
-  background: #ff7272;
-  border-color: #ff7272;
-}
-
-.error-msg {
-  font-size: var(--fs-footnote);
-  color: #ffb7b7;
-}
-
-.keypad {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 6px;
-  justify-items: center;
-}
-
-.key,
-.key-spacer {
-  width: 56px;
-  height: 56px;
-}
-
-.key {
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.24), rgba(224, 235, 250, 0.14));
-  color: #fff;
-  font-size: 24px;
-  font-weight: 400;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 8px 18px rgba(8, 16, 30, 0.14);
-}
-
-.key:active {
-  background: rgba(255, 255, 255, 0.32);
-}
-
-.sheet-actions {
-  justify-content: space-between;
-  gap: var(--s-2);
-}
-
-.sheet-actions button {
-  flex: 1;
-}
-
-.sheet-actions button:last-child {
-  color: #0f172a;
-  background: linear-gradient(180deg, #f7fbff, #e2efff);
-}
-
-.bottom-actions {
-  padding: 0 4px;
-  margin-top: 2px;
-  z-index: 5;
-}
-
-.swipe-unlock-dock {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--s-2);
-  padding: 0 8px;
-  touch-action: none;
-}
-
-.swipe-unlock-track {
-  position: relative;
-  width: 34px;
-  height: 52px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(223, 234, 248, 0.18));
-  overflow: hidden;
-}
-
-.swipe-unlock-fill {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  border-radius: inherit;
-  background: linear-gradient(180deg, rgba(183, 218, 255, 0.18), rgba(183, 218, 255, 0.64));
-}
-
-.swipe-unlock-handle {
-  position: absolute;
-  left: 4px;
-  right: 4px;
-  bottom: 4px;
-  height: 18px;
-  border-radius: 999px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #0f172a;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(220, 234, 255, 0.92));
-  box-shadow: 0 8px 18px rgba(8, 16, 28, 0.18);
-}
-
-.swipe-unlock-arrow {
-  font-size: 12px;
-  line-height: 1;
-}
-
-.swipe-unlock-label {
-  font-size: 11px;
-  font-weight: 700;
-  color: rgba(247, 250, 255, 0.96);
-}
-
-.bottom-btn {
-  width: 42px;
-  height: 42px;
-  border-radius: 50%;
-  color: #eef5ff;
-  font-size: 18px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.24), rgba(226, 236, 248, 0.16));
-}
-
-.bottom-btn img {
-  width: 18px;
-  height: 18px;
-  object-fit: contain;
-}
-
-.bottom-btn-active {
-  border-color: rgba(255, 212, 102, 0.5);
-  background: rgba(255, 198, 79, 0.3);
-  box-shadow: 0 0 18px rgba(255, 198, 79, 0.25);
-}
-
-.sos-btn {
-  width: 42px;
-  height: 42px;
-  border-radius: 50%;
-  color: #ffeaea;
-  font-size: 11px;
-  font-weight: 700;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  appearance: none;
-  background: color-mix(in srgb, var(--danger, #ff4d4d) 20%, rgba(0, 0, 0, 0.4));
-  border: 1px solid color-mix(in srgb, var(--danger, #ff4d4d) 40%, transparent);
-  box-shadow: var(--ls-shadow);
-}
-
-.sos-btn:active {
-  background: color-mix(in srgb, var(--danger, #ff4d4d) 35%, rgba(0, 0, 0, 0.4));
-}
-
-.sos-btn:disabled {
-  opacity: 0.45;
-}
-
-.sos-btn-sent {
-  width: 42px;
-  height: 42px;
-  border-radius: 50%;
-  color: #e0ffe8;
-  font-size: 9px;
-  font-weight: 700;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  appearance: none;
-  background: color-mix(in srgb, var(--success, #3ebb6a) 30%, rgba(0, 0, 0, 0.4));
-  border: 1px solid color-mix(in srgb, var(--success, #3ebb6a) 40%, transparent);
-  box-shadow: var(--ls-shadow);
 }
