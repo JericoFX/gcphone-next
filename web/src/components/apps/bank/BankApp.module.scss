@@ -3,35 +3,39 @@
   display: flex;
   flex-direction: column;
   background: var(--bg);
+  overflow: hidden;
 }
 
 .balanceSection {
   padding: var(--s-4);
   background: linear-gradient(135deg, var(--success) 0%, #30b350 100%);
-  margin: var(--s-4);
+  margin: var(--s-4) var(--s-4) 0;
   border-radius: var(--r-xl);
   color: white;
-  box-shadow: var(--shadow-lg);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--success) 30%, transparent);
+  flex-shrink: 0;
 }
 
 .balanceLabel {
-  font-size: var(--fs-footnote);
-  opacity: 0.9;
+  font-size: var(--fs-caption2);
+  font-weight: 700;
+  opacity: 0.85;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 8px;
+  letter-spacing: 0.06em;
+  margin-bottom: var(--s-2);
 }
 
 .balanceAmount {
-  font-size: 40px;
+  font-size: 36px;
   font-weight: 700;
-  letter-spacing: -0.5px;
-  margin-bottom: 16px;
+  letter-spacing: -0.02em;
+  margin-bottom: var(--s-4);
+  font-variant-numeric: tabular-nums;
 }
 
 .balanceActions {
   display: flex;
-  gap: var(--s-3);
+  gap: var(--s-2);
 }
 
 .actionBtn {
@@ -39,30 +43,36 @@
   background: rgba(255, 255, 255, 0.2);
   border: none;
   color: white;
-  padding: 12px 16px;
+  padding: var(--s-3);
   border-radius: var(--r-md);
   font-size: var(--fs-footnote);
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
-  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, opacity 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+  transition: transform var(--dur-1) var(--ease-standard), background var(--dur-2) var(--ease-standard);
 
-  &:hover {
+  &:active {
+    transform: scale(0.96);
     background: rgba(255, 255, 255, 0.3);
   }
 }
 
+/* ── Transactions section ── */
+
 .section {
   flex: 1;
-  padding: 0 var(--s-4);
-  overflow-y: auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: var(--s-3) var(--s-4) var(--s-4);
+  overflow: hidden;
 }
 
 .sectionTitle {
-  font-size: var(--fs-title3);
+  font-size: var(--fs-headline);
   font-weight: 700;
-  color: var(--surface);
-  margin-bottom: 12px;
-  padding-left: 4px;
+  color: var(--text);
+  margin-bottom: var(--s-2);
+  padding-left: var(--s-1);
 }
 
 .tx-filters {
@@ -70,9 +80,10 @@
   gap: var(--s-1);
   margin-bottom: var(--s-3);
   padding: var(--s-1);
-  background: rgba(255, 255, 255, 0.08);
+  background: color-mix(in srgb, var(--surface-2) 80%, var(--bg));
   border-radius: var(--r-pill);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--border);
+  flex-shrink: 0;
 
   button {
     flex: 1;
@@ -80,58 +91,79 @@
     border: none;
     border-radius: var(--r-pill);
     background: transparent;
-    color: rgba(255, 255, 255, 0.5);
+    color: var(--text-3);
     font-size: var(--fs-caption1);
     font-weight: 600;
     cursor: pointer;
-    transition: background var(--dur-2) var(--ease-standard), color var(--dur-2) var(--ease-standard);
+    transition:
+      background var(--dur-2) var(--ease-standard),
+      color var(--dur-2) var(--ease-standard);
   }
 }
 
 .tx-filter-active {
-  background: rgba(255, 255, 255, 0.15) !important;
-  color: #fff !important;
+  background: var(--surface) !important;
+  color: var(--text) !important;
+  box-shadow: var(--shadow-1);
 }
 
 .transactionsList {
-  background: var(--color-surface-elevated);
-  border-radius: var(--r-xl);
-  overflow: hidden;
-  box-shadow: var(--shadow-sm);
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  background: var(--surface);
+  border-radius: var(--r-lg);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-1);
 }
 
 .transactionItem {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px;
-  border-bottom: 1px solid var(--bg);
+  padding: var(--s-3) var(--s-4);
+  border-bottom: 1px solid var(--separator);
+  animation: tx-in var(--dur-3) var(--ease-standard) both;
 
   &:last-child {
     border-bottom: none;
   }
 }
 
+@keyframes tx-in {
+  from { opacity: 0; transform: translateY(3px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 .transactionInfo {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
 }
 
 .transactionTitle {
-  font-size: var(--fs-body);
-  font-weight: 500;
-  color: var(--surface);
+  font-size: var(--fs-footnote);
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .transactionDate {
-  font-size: var(--fs-footnote);
+  font-size: var(--fs-caption2);
   color: var(--text-3);
+  font-weight: 600;
 }
 
 .transactionAmount {
-  font-size: var(--fs-body);
-  font-weight: 600;
+  font-size: var(--fs-footnote);
+  font-weight: 700;
+  flex-shrink: 0;
+  padding-left: var(--s-3);
+  font-variant-numeric: tabular-nums;
 
   &.positive {
     color: var(--success);
@@ -142,127 +174,146 @@
   }
 }
 
+/* ── Empty / Error ── */
+
 .errorMessage {
-  margin-top: 8px;
+  margin-top: var(--s-2);
   text-align: center;
   color: var(--danger);
-  font-size: 14px;
+  font-size: var(--fs-footnote);
 }
 
 .emptyState {
   text-align: center;
-  padding: 40px 20px;
+  padding: var(--s-8) var(--s-4);
   color: var(--text-3);
 
   p:first-child {
-    font-size: var(--fs-body);
-    font-weight: 500;
-    margin-bottom: 8px;
+    font-size: var(--fs-footnote);
+    font-weight: 600;
+    margin-bottom: var(--s-2);
   }
 
   p:last-child {
-    font-size: var(--fs-footnote);
+    font-size: var(--fs-caption1);
   }
 }
 
+/* ── Transfer modal ── */
+
 .modalOverlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  padding: 20px;
+  padding: var(--s-4);
+  animation: fade-in var(--dur-2) var(--ease-standard);
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .modalContent {
   background: var(--surface);
   border-radius: var(--r-2xl);
-  padding: 24px;
+  border: 1px solid var(--border);
+  padding: var(--s-6);
   width: 100%;
   max-width: 320px;
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--shadow-3);
+  animation: modal-up var(--dur-3) var(--ease-standard);
+}
+
+@keyframes modal-up {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 }
 
 .modalTitle {
   font-size: var(--fs-title3);
   font-weight: 700;
-  color: var(--surface);
-  margin-bottom: 20px;
+  color: var(--text);
+  margin-bottom: var(--s-5);
   text-align: center;
 }
 
 .formGroup {
-  margin-bottom: 16px;
+  margin-bottom: var(--s-4);
 
   label {
     display: block;
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--text-3);
-    margin-bottom: 6px;
+    font-size: var(--fs-caption1);
+    font-weight: 600;
+    color: var(--text-2);
+    margin-bottom: var(--s-2);
   }
 
   input, select {
     width: 100%;
-    height: 48px;
-    padding: 0 16px;
+    height: 44px;
+    padding: 0 var(--s-4);
     border: 1px solid var(--border);
-    border-radius: 12px;
-    font-size: 16px;
-    background: var(--bg);
-    color: var(--surface);
-    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, opacity 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+    border-radius: var(--r-md);
+    font-size: var(--fs-body);
+    background: var(--surface-2);
+    color: var(--text);
+    outline: none;
+    transition: border-color var(--dur-2) var(--ease-standard);
 
     &:focus {
-      outline: none;
-      border-color: var(--success);
+      border-color: color-mix(in srgb, var(--success) 50%, var(--border));
       background: var(--surface);
+    }
+
+    &::placeholder {
+      color: var(--text-3);
     }
   }
 }
 
 .modalActions {
   display: flex;
-  gap: var(--s-3);
-  margin-top: 24px;
+  gap: var(--s-2);
+  margin-top: var(--s-5);
 }
 
 .cancelBtn {
   flex: 1;
-  height: 48px;
-  border: none;
+  height: 44px;
+  border: 1px solid var(--border);
   border-radius: var(--r-md);
-  background: var(--bg);
-  color: var(--text-3);
-  font-size: var(--fs-body);
-  font-weight: 600;
+  background: var(--surface-2);
+  color: var(--text-2);
+  font-size: var(--fs-footnote);
+  font-weight: 700;
   cursor: pointer;
-  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, opacity 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+  transition: transform var(--dur-1) var(--ease-standard);
 
-  &:hover {
-    background: var(--border);
+  &:active {
+    transform: scale(0.97);
   }
 }
 
 .sendBtn {
   flex: 1;
-  height: 48px;
+  height: 44px;
   border: none;
   border-radius: var(--r-md);
   background: var(--success);
   color: white;
-  font-size: var(--fs-body);
-  font-weight: 600;
+  font-size: var(--fs-footnote);
+  font-weight: 700;
   cursor: pointer;
-  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, opacity 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--success) 28%, transparent);
+  transition: transform var(--dur-1) var(--ease-standard);
 
-  &:hover {
-    background: #30b350;
+  &:active {
+    transform: scale(0.97);
   }
 
   &:disabled {
