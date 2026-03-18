@@ -11,6 +11,7 @@ interface SettingsAppearanceProps {
   phoneActions: any;
   urlInput: () => string;
   setUrlInput: (v: string) => void;
+  onStatus?: (msg: string) => void;
 }
 
 export function SettingsAppearance(props: SettingsAppearanceProps) {
@@ -20,15 +21,20 @@ export function SettingsAppearance(props: SettingsAppearanceProps) {
     { id: 'auto', name: 'Automatico', icon: ICONS.shuffle },
   ];
 
+  const setWallpaperWithFeedback = (url: string) => {
+    props.phoneActions.setWallpaper(url);
+    props.onStatus?.(t('settings.wallpaper_changed', props.language()) || 'Fondo actualizado');
+  };
+
   const randomWallpaper = () => {
     const random = Math.floor(Math.random() * 1000);
-    props.phoneActions.setWallpaper(`https://picsum.photos/seed/${random}/326/742`);
+    setWallpaperWithFeedback(`https://picsum.photos/seed/${random}/326/742`);
   };
 
   const applyUrlWallpaper = () => {
     const value = props.urlInput().trim();
     if (!value) return;
-    props.phoneActions.setWallpaper(value);
+    setWallpaperWithFeedback(value);
     props.setUrlInput('');
   };
 
@@ -42,7 +48,7 @@ export function SettingsAppearance(props: SettingsAppearanceProps) {
         <div class={styles.wallpaperGrid}>
           <For each={wallpapers}>
             {(wallpaper) => (
-              <button class={styles.wallpaperItem} classList={{ [styles.selected]: props.phoneState.settings.wallpaper === wallpaper }} onClick={() => props.phoneActions.setWallpaper(wallpaper)}>
+              <button class={styles.wallpaperItem} classList={{ [styles.selected]: props.phoneState.settings.wallpaper === wallpaper }} onClick={() => setWallpaperWithFeedback(wallpaper)}>
                 <img src={wallpaper} alt="Wallpaper" />
               </button>
             )}

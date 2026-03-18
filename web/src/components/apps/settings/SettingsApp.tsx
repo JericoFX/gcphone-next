@@ -34,7 +34,13 @@ export function SettingsApp() {
   const [liveLocationStatus, setLiveLocationStatus] = createSignal('');
   const [autoReplyEnabled, setAutoReplyEnabled] = createSignal(false);
   const [autoReplyMessage, setAutoReplyMessage] = createSignal('');
+  const [statusToast, setStatusToast] = createSignal('');
   const language = () => phoneState.settings.language || 'es';
+
+  const showToast = (msg: string) => {
+    setStatusToast(msg);
+    setTimeout(() => setStatusToast(''), 2500);
+  };
 
   usePhoneKeyHandler({
     Backspace: () => {
@@ -127,6 +133,9 @@ export function SettingsApp() {
 
   return (
     <AppScaffold title={getTitle()} subtitle={undefined} onBack={() => section() !== 'main' ? setSection('main') : router.goBack()} bodyClass={`${styles.app} ${styles.settingsCanvas}`} bodyPadding="none">
+      <Show when={statusToast()}>
+        <div class={styles.settingsToast}>{statusToast()}</div>
+      </Show>
       <Show when={phoneState.accessMode === 'foreign-readonly'}>
         <div class={styles.content}>
           <InlineNotice title={t('settings.foreign_phone', language())} message={t('settings.foreign_phone_desc', language(), { name: phoneState.accessOwnerName || t('common.other_person', language()) })} />
@@ -137,7 +146,7 @@ export function SettingsApp() {
           <SettingsMain language={language} notifications={notifications} notificationsActions={notificationsActions} autoReplyEnabled={autoReplyEnabled} setAutoReplyEnabled={setAutoReplyEnabled} autoReplyMessage={autoReplyMessage} setAutoReplyMessage={setAutoReplyMessage} liveLocationEnabled={liveLocationEnabled} onNavigate={(s) => setSection(s as SettingsSection)} />
         </Match>
         <Match when={section() === 'appearance'}>
-          <SettingsAppearance language={language} phoneState={phoneState} phoneActions={phoneActions} urlInput={urlInput} setUrlInput={setUrlInput} />
+          <SettingsAppearance language={language} phoneState={phoneState} phoneActions={phoneActions} urlInput={urlInput} setUrlInput={setUrlInput} onStatus={showToast} />
         </Match>
         <Match when={section() === 'sound'}>
           <SettingsSound language={language} phoneState={phoneState} phoneActions={phoneActions} toneCatalog={toneCatalog} previewToneId={previewToneId} onPreview={playRingtonePreview} />
