@@ -38,6 +38,20 @@ interface InvoicePayload {
   expiresAt?: number;
 }
 
+interface WalletRequest {
+  id: number;
+  requester_phone: string;
+  requester_name?: string;
+  target_phone: string;
+  target_name?: string;
+  amount: number;
+  title: string;
+  method: string;
+  status: string;
+  created_at: string;
+  expires_at: string;
+}
+
 interface NearbyPlayer {
   serverId: number;
   name: string;
@@ -55,6 +69,8 @@ export function WalletApp() {
   const [contacts, setContacts] = createSignal<{ display: string; number: string }[]>([]);
   const [nearbyPlayers, setNearbyPlayers] = createSignal<NearbyPlayer[]>([]);
   const [loading, setLoading] = createSignal(true);
+  const [pendingIncoming, setPendingIncoming] = createSignal<WalletRequest[]>([]);
+  const [pendingOutgoing, setPendingOutgoing] = createSignal<WalletRequest[]>([]);
 
   const [showNfcRadar, setShowNfcRadar] = createSignal(false);
   const [showCreateInvoice, setShowCreateInvoice] = createSignal(false);
@@ -105,10 +121,11 @@ export function WalletApp() {
 
   const load = async () => {
     setLoading(true);
-    const [walletData, contactData, nearby] = await Promise.all([
+    const [walletData, contactData, nearby, pendingData] = await Promise.all([
       fetchNui<{ balance?: number; cards?: WalletCard[]; transactions?: WalletTx[] }>('walletGetState', {}, { balance: 0, cards: [], transactions: [] }),
       fetchNui<{ display: string; number: string }[]>('getContactsForTransfer', {}, []),
       fetchNui<NearbyPlayer[]>('getNearbyPlayers', {}, []),
+      fetchNui<{ incoming?: WalletRequest[]; outgoing?: WalletRequest[] }>('walletGetPendingRequests', {}, { incoming: [], outgoing: [] }),
     ]);
 
     batch(() => {
@@ -117,6 +134,8 @@ export function WalletApp() {
       setTx(walletData.transactions || []);
       setContacts(contactData || []);
       setNearbyPlayers(nearby || []);
+      setPendingIncoming(pendingData?.incoming || []);
+      setPendingOutgoing(pendingData?.outgoing || []);
       setLoading(false);
     });
   };
@@ -238,6 +257,12 @@ export function WalletApp() {
 
     setIncomingInvoice(null);
     void load();
+  };
+
+  const respondWalletRequest = async (requestId: number, accept: boolean) => {
+    const result = await fetchNui<{ success?: boolean }>('walletRespondRequest', { requestId, accept }, { success: false });
+    if (result?.success) void load();
+    else if (accept) uiAlert(t('wallet.error.payment_failed', language()));
   };
 
   const openInvoiceModal = () => {
@@ -362,6 +387,51 @@ export function WalletApp() {
                     <button class={styles.cardDelete} onClick={() => void removeCard(card.id)}>
                       <img src="./img/icons_ios/ui-close.svg" alt="" />
                     </button>
+                  </div>
+                )}
+              </For>
+            </div>
+          </div>
+        </Show>
+
+        {/* ── Pending Requests ── */}
+        <Show when={!loading() && (pendingIncoming().length > 0 || pendingOutgoing().length > 0)}>
+          <div class={styles.section}>
+            <div class={styles.sectionTitle}>{t('wallet.pending_requests', language()) || 'Solicitudes pendientes'}</div>
+            <div class={styles.transactionsList}>
+              <For each={pendingIncoming()}>
+                {(req) => (
+                  <div class={styles.transactionItem}>
+                    <div class={styles.txIcon} classList={{ [styles.txIn]: true }}>↓</div>
+                    <div class={styles.transactionInfo}>
+                      <div class={styles.transactionTitle}>{req.title || t('wallet.invoice', language())}</div>
+                      <div class={styles.transactionDate}>{req.requester_name || req.requester_phone}</div>
+                    </div>
+                    <div class={styles.transactionAmount} classList={{ [styles.out]: true }}>
+                      {formatMoney(req.amount)}
+                    </div>
+                    <div class={styles.requestActions}>
+                      <button class={styles.requestAccept} onClick={() => void respondWalletRequest(req.id, true)}>
+                        {t('wallet.pay_bank', language()) || 'Pagar'}
+                      </button>
+                      <button class={styles.requestReject} onClick={() => void respondWalletRequest(req.id, false)}>
+                        {t('wallet.reject', language()) || 'Rechazar'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </For>
+              <For each={pendingOutgoing()}>
+                {(req) => (
+                  <div class={styles.transactionItem}>
+                    <div class={styles.txIcon} classList={{ [styles.txOut]: true }}>↑</div>
+                    <div class={styles.transactionInfo}>
+                      <div class={styles.transactionTitle}>{req.title || t('wallet.invoice', language())}</div>
+                      <div class={styles.transactionDate}>{req.target_name || req.target_phone} &mdash; {t('wallet.awaiting', language()) || 'Esperando'}</div>
+                    </div>
+                    <div class={styles.transactionAmount} classList={{ [styles.in]: true }}>
+                      {formatMoney(req.amount)}
+                    </div>
                   </div>
                 )}
               </For>
