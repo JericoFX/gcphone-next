@@ -198,7 +198,7 @@
     height: 44px;
     border-radius: 50%;
     border: none;
-    background-color: #34c759;
+    background-color: var(--success);
     margin: 0;
 
     img {
@@ -348,7 +348,7 @@
   height: 72px;
   border-radius: 50%;
   border: none;
-  background: linear-gradient(180deg, #ff574d, #ff3b30);
+  background: linear-gradient(180deg, #ff574d, var(--danger));
   box-shadow: 0 10px 30px rgba(255, 59, 48, 0.5);
   cursor: pointer;
   display: flex;
@@ -371,7 +371,7 @@
   height: 72px;
   border-radius: 50%;
   border: none;
-  background: linear-gradient(180deg, #34c759, #248a3d);
+  background: linear-gradient(180deg, var(--success), #248a3d);
   box-shadow: 0 10px 30px rgba(52, 199, 89, 0.5);
   cursor: pointer;
   display: flex;
@@ -554,7 +554,7 @@
   .status {
     font-size: 16px;
     font-weight: 700;
-    color: #34c759;
+    color: var(--success);
 
     &::before {
       content: '';
@@ -563,7 +563,7 @@
       height: 8px;
       margin-right: 8px;
       border-radius: 999px;
-      background: #34c759;
+      background: var(--success);
       animation: call-pulse 1.5s ease-in-out infinite;
       vertical-align: middle;
     }
@@ -576,7 +576,7 @@
   .timer-warning {
     font-size: 14px;
     font-weight: 600;
-    color: #ff9500;
+    color: var(--warning);
     background: rgba(255, 149, 0, 0.1);
     padding: 6px 14px;
     border-radius: 999px;
@@ -670,7 +670,7 @@
   height: 76px;
   border-radius: 50%;
   border: none;
-  background: linear-gradient(180deg, #ff574d, #ff3b30);
+  background: linear-gradient(180deg, #ff574d, var(--danger));
   box-shadow: 0 12px 28px rgba(255, 59, 48, 0.4);
   cursor: pointer;
   transition: transform 120ms ease;

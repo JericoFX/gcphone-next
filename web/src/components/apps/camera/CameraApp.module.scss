@@ -89,7 +89,7 @@
 .sliderValue {
   font-size: 11px;
   font-weight: 600;
-  color: #FFD60A;
+  color: var(--warning);
 }
 
 // Vertical range input styling
@@ -116,7 +116,7 @@
     width: 20px;
     height: 20px;
     border-radius: 50%;
-    background: #FFD60A;
+    background: var(--warning);
     border: 2px solid #fff;
     margin-top: -8px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
@@ -143,7 +143,7 @@
     width: 20px;
     height: 20px;
     border-radius: 50%;
-    background: #FFD60A;
+    background: var(--warning);
     border: 2px solid #fff;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
     transition: transform 0.1s ease;
@@ -159,7 +159,7 @@
 
   // Different colors for each slider
   .leftSlider &::-webkit-slider-thumb {
-    background: #FFD60A;
+    background: var(--warning);
   }
 
   .rightSlider &::-webkit-slider-thumb {
@@ -167,7 +167,7 @@
   }
 
   .leftSlider &::-moz-range-thumb {
-    background: #FFD60A;
+    background: var(--warning);
   }
 
   .rightSlider &::-moz-range-thumb {
@@ -239,7 +239,7 @@
 .brandLabel {
   font-size: 13px;
   font-weight: 600;
-  color: #FFD60A;
+  color: var(--warning);
   letter-spacing: 0.5px;
 }
 
@@ -300,8 +300,8 @@
 }
 
 .minimalBtnActive {
-  background: #ffffff;
-  color: #111111;
+  background: var(--surface);
+  color: var(--text);
 }
 
 // Filter chips row
@@ -345,8 +345,8 @@
 }
 
 .quickZoomBtnActive {
-  background: #ffffff;
-  color: #111111;
+  background: var(--surface);
+  color: var(--text);
 }
 
 .filterChip {
@@ -370,8 +370,8 @@
 }
 
 .filterChipActive {
-  background: #FFD60A;
-  border-color: #FFD60A;
+  background: var(--warning);
+  border-color: var(--warning);
 
   .filterChipLabel {
     color: #000;
@@ -415,8 +415,8 @@
 }
 
 .utilityBtnActive {
-  background: #ffffff;
-  color: #111111;
+  background: var(--surface);
+  color: var(--text);
 }
 
 // Filter colors
@@ -461,9 +461,9 @@
 }
 
 .clipsBtnPrimary {
-  background: #ffffff;
-  color: #111111;
-  border-color: #ffffff;
+  background: var(--surface);
+  color: var(--text);
+  border-color: var(--surface);
 }
 
 // Bottom controls with shutter
@@ -558,7 +558,7 @@
     height: 80px;
     object-fit: cover;
     border-radius: 8px;
-    border: 2px solid #FFD60A;
+    border: 2px solid var(--warning);
   }
 }
 
@@ -570,7 +570,7 @@
     padding: 6px 12px;
     border: none;
     border-radius: 6px;
-    background: #FFD60A;
+    background: var(--warning);
     color: #000;
     font-size: 12px;
     font-weight: 500;
