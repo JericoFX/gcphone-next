@@ -46,6 +46,11 @@ RegisterNetEvent('gcphone:liveLocation:started', function(data)
 end)
 
 RegisterNetEvent('gcphone:liveLocation:updated', function(data)
+    if not data then return end
+    SendNUIMessage({
+        action = 'gcphone:liveLocation:updated',
+        data = data,
+    })
 end)
 
 RegisterNUICallback('startLiveLocation', function(data, cb)

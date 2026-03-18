@@ -184,6 +184,11 @@ local function CaptureCurrentFrame(data, cb)
         return
     end
 
+    if GetResourceState('screenshot-basic') ~= 'started' then
+        cb({ url = nil, error = 'screenshot_basic_not_running' })
+        return
+    end
+
     exports['screenshot-basic']:requestScreenshotUpload(uploadUrl, uploadField, function(uploadData)
         local resp = json.decode(uploadData)
         if resp and resp.files and resp.files[1] then

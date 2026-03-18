@@ -135,7 +135,7 @@ RegisterNUICallback('setListeningPeerId', function(data, cb)
         maxVolume = libmath.clamp(tonumber(type(data) == 'table' and data.maxVolume or nil) or 1.0, 0.0, 1.0),
         distanceCurve = libmath.clamp(tonumber(type(data) == 'table' and data.distanceCurve or nil) or 1.0, 0.5, 4.0),
         volumeSmoothing = libmath.clamp(tonumber(type(data) == 'table' and data.volumeSmoothing or nil) or 0.1, 0.05, 1.0),
-        useMumbleRangeClamp = type(data) == 'table' and data.useMumbleRangeClamp ~= false or true,
+        useMumbleRangeClamp = not (type(data) == 'table' and data.useMumbleRangeClamp == false),
         updateIntervalMs = math.floor(libmath.clamp(tonumber(type(data) == 'table' and data.updateIntervalMs or nil) or 80.0, 80.0, 1500.0)),
         currentVolume = 0.0,
         listening = false,

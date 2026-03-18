@@ -169,14 +169,15 @@ local function RunLocalFlashlightLoop()
 
     CreateThread(function()
         while flashlightState.enabled do
-            Wait(0)
-
             if IsPhoneRenderable() then
+                Wait(0)
                 DrawPhoneFlashlightForPed(cache.ped, {
                     scale = 1.0,
                     kelvin = flashlightState.kelvin,
                     lumens = flashlightState.lumens,
                 })
+            else
+                Wait(200)
             end
         end
 
@@ -293,6 +294,7 @@ CreateThread(function()
             Wait(0)
             local myCoords = GetEntityCoords(cache.ped)
             local syncDistance = Clamp(Config.Flashlight and Config.Flashlight.SyncDistance or 30.0, 5.0, 60.0)
+            local anyVisible = false
             for serverId, profile in pairs(remoteFlashlights) do
                 local player = GetPlayerFromServerId(serverId)
                 if player ~= -1 then
@@ -300,6 +302,7 @@ CreateThread(function()
                     if ped ~= 0 and DoesEntityExist(ped) then
                         local coords = GetEntityCoords(ped)
                         if #(myCoords - coords) <= syncDistance then
+                            anyVisible = true
                             DrawPhoneFlashlightForPed(ped, {
                                 scale = 0.9,
                                 kelvin = profile.kelvin,
@@ -308,6 +311,9 @@ CreateThread(function()
                         end
                     end
                 end
+            end
+            if not anyVisible then
+                Wait(200)
             end
         end
     end

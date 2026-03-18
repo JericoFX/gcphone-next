@@ -19,7 +19,7 @@ local function EnsureAnimDict(dict)
             return false
         end
 
-        Wait(0)
+        Wait(10)
     end
 
     loadedDicts[dict] = true

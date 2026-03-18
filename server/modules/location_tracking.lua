@@ -8,7 +8,7 @@ local LIVE_LOCATION_CLEANUP_MS = 60000
 local LastLocationUpdateAt = {}
 
 local function RebuildRecipientCache()
-    local rows = MySQL.query_async(
+    local rows = MySQL.query.await(
         'SELECT sender_phone, recipient_phone FROM phone_live_locations WHERE expires_at > NOW()'
     ) or {}
 
@@ -38,8 +38,10 @@ local function ClearRecipientsForSender(senderPhone)
     ActiveLocationRecipients[senderPhone] = nil
 end
 
-local function GetPlayerByPhone(phoneNumber)
-    if not phoneNumber then return nil end
+local PhoneToSourceCache = {}
+
+local function RebuildPhoneToSourceCache()
+    PhoneToSourceCache = {}
     local players = GetPlayers()
     for _, playerSrc in ipairs(players) do
         local src = tonumber(playerSrc)
@@ -47,8 +49,33 @@ local function GetPlayerByPhone(phoneNumber)
             local identifier = GetIdentifier(src)
             if identifier then
                 local phone = GetPhoneNumber(identifier)
-                if phone and phone == phoneNumber then
-                    return src
+                if phone then
+                    PhoneToSourceCache[phone] = src
+                end
+            end
+        end
+    end
+end
+
+local function GetPlayerByPhone(phoneNumber)
+    if not phoneNumber then return nil end
+    local cached = PhoneToSourceCache[phoneNumber]
+    if cached and GetPlayerName(cached) then
+        return cached
+    end
+    PhoneToSourceCache[phoneNumber] = nil
+    local players = GetPlayers()
+    for _, playerSrc in ipairs(players) do
+        local src = tonumber(playerSrc)
+        if src then
+            local identifier = GetIdentifier(src)
+            if identifier then
+                local phone = GetPhoneNumber(identifier)
+                if phone then
+                    PhoneToSourceCache[phone] = src
+                    if phone == phoneNumber then
+                        return src
+                    end
                 end
             end
         end
@@ -57,7 +84,7 @@ local function GetPlayerByPhone(phoneNumber)
 end
 
 local function CleanExpiredLocations()
-    MySQL.query_async('DELETE FROM phone_live_locations WHERE expires_at < NOW()')
+    MySQL.query.await('DELETE FROM phone_live_locations WHERE expires_at < NOW()')
     RebuildRecipientCache()
     LastLiveLocationCleanupAt = GetGameTimer()
 end
@@ -122,11 +149,11 @@ lib.callback.register('gcphone:liveLocation:start', function(source, data)
         return { success = false, error = 'NO_RECIPIENTS' }
     end
 
-    MySQL.query_async('DELETE FROM phone_live_locations WHERE sender_phone = ?', { senderPhone })
+    MySQL.query.await('DELETE FROM phone_live_locations WHERE sender_phone = ?', { senderPhone })
 
     local inserted = 0
     for _, recipientPhone in ipairs(recipientList) do
-        MySQL.insert_async(
+        MySQL.insert.await(
             'INSERT INTO phone_live_locations (sender_phone, sender_name, recipient_phone, x, y, expires_at) VALUES (?, ?, ?, ?, ?, ?)',
             { senderPhone, senderName, recipientPhone, x, y, expiresAt }
         )
@@ -164,7 +191,7 @@ lib.callback.register('gcphone:liveLocation:stop', function(source)
         return { success = false, error = 'PHONE_NOT_FOUND' }
     end
 
-    MySQL.query_async('DELETE FROM phone_live_locations WHERE sender_phone = ?', { senderPhone })
+    MySQL.query.await('DELETE FROM phone_live_locations WHERE sender_phone = ?', { senderPhone })
     ClearRecipientsForSender(senderPhone)
 
     return { success = true }
@@ -183,7 +210,7 @@ lib.callback.register('gcphone:liveLocation:getActive', function(source)
 
     CleanupExpiredLocationsIfNeeded()
 
-    local locations = MySQL.query_async(
+    local locations = MySQL.query.await(
         'SELECT sender_phone, sender_name, x, y, expires_at FROM phone_live_locations WHERE recipient_phone = ? AND expires_at > NOW()',
         { myPhone }
     ) or {}
@@ -210,7 +237,7 @@ RegisterNetEvent('gcphone:liveLocation:updatePosition', function()
     local coords = GetEntityCoords(GetPlayerPed(src))
     local x, y = coords.x, coords.y
 
-    MySQL.query_async(
+    MySQL.query.await(
         'UPDATE phone_live_locations SET x = ?, y = ?, updated_at = NOW() WHERE sender_phone = ? AND expires_at > NOW()',
         { x, y, senderPhone }
     )
@@ -228,5 +255,12 @@ RegisterNetEvent('gcphone:liveLocation:updatePosition', function()
 end)
 
 AddEventHandler('playerDropped', function()
-    LastLocationUpdateAt[source] = nil
+    local src = source
+    LastLocationUpdateAt[src] = nil
+    for phone, cachedSrc in pairs(PhoneToSourceCache) do
+        if cachedSrc == src then
+            PhoneToSourceCache[phone] = nil
+            break
+        end
+    end
 end)
