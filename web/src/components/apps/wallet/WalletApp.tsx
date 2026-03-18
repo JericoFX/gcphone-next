@@ -1,4 +1,4 @@
-import { For, Show, createEffect, createMemo, createSignal, onMount } from 'solid-js';
+import { For, Show, createEffect, createMemo, createSignal, onMount, batch } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { fetchNui } from '../../../utils/fetchNui';
 import { useNuiActions } from '../../../utils/useNui';
@@ -109,12 +109,14 @@ export function WalletApp() {
       fetchNui<NearbyPlayer[]>('getNearbyPlayers', {}, []),
     ]);
 
-    setBalance(Number(walletData.balance || 0));
-    setCards(walletData.cards || []);
-    setTx(walletData.transactions || []);
-    setContacts(contactData || []);
-    setNearbyPlayers(nearby || []);
-    setLoading(false);
+    batch(() => {
+      setBalance(Number(walletData.balance || 0));
+      setCards(walletData.cards || []);
+      setTx(walletData.transactions || []);
+      setContacts(contactData || []);
+      setNearbyPlayers(nearby || []);
+      setLoading(false);
+    });
   };
 
   const openAddCardModal = () => {

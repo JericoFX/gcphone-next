@@ -1,4 +1,4 @@
-import { createMemo, createSignal, Show, createEffect, For, onMount } from 'solid-js';
+import { createMemo, createSignal, Show, createEffect, For, onMount, batch } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { fetchNui } from '../../../utils/fetchNui';
 import { useNuiActions } from '../../../utils/useNui';
@@ -34,15 +34,17 @@ export function BankApp() {
   
   const loadData = async () => {
     setLoading(true);
-    const bal = await fetchNui('getBankBalance', undefined, 15000);
-    setBalance(bal || 0);
-    
-    const trans = await fetchNui('getBankTransactions', undefined, []);
-    setTransactions(trans || []);
-    
-    const cont = await fetchNui('getContactsForTransfer', undefined, []);
-    setContacts(cont || []);
-    setLoading(false);
+    const [bal, trans, cont] = await Promise.all([
+      fetchNui('getBankBalance', undefined, 15000),
+      fetchNui('getBankTransactions', undefined, []),
+      fetchNui('getContactsForTransfer', undefined, []),
+    ]);
+    batch(() => {
+      setBalance(bal || 0);
+      setTransactions(trans || []);
+      setContacts(cont || []);
+      setLoading(false);
+    });
   };
   
   onMount(() => {

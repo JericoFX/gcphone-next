@@ -6,9 +6,10 @@ export function usePollingTask(task: () => void | Promise<void>, intervalMs: () 
 
     void task();
 
+    const interval = intervalMs();
     const timer = window.setInterval(() => {
       void task();
-    }, intervalMs());
+    }, interval);
 
     onCleanup(() => {
       window.clearInterval(timer);

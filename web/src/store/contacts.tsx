@@ -1,4 +1,4 @@
-import { createContext, useContext, ParentComponent, onMount } from 'solid-js';
+import { createContext, useContext, ParentComponent, onMount, batch } from 'solid-js';
 import { createStore } from 'solid-js/store';
 import { fetchNui } from '../utils/fetchNui';
 import { useNuiCustomEvent } from '../utils/useNui';
@@ -33,8 +33,10 @@ export const ContactsProvider: ParentComponent = (props) => {
     fetch: async () => {
       setState('loading', true);
       const contacts = await fetchNui<Contact[]>('getContacts', undefined, []);
-      setState('contacts', contacts || []);
-      setState('loading', false);
+      batch(() => {
+        setState('contacts', contacts || []);
+        setState('loading', false);
+      });
     },
     
     add: async (display: string, number: string, avatar?: string) => {
