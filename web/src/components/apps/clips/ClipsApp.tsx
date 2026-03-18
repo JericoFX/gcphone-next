@@ -104,6 +104,7 @@ export function ClipsApp() {
   let onboardingChecked = false;
   const [showProfileModal, setShowProfileModal] = createSignal(false);
   const [profilePrivate, setProfilePrivate] = createSignal(false);
+  const [profileAvatar, setProfileAvatar] = createSignal('');
   const [showUpload, setShowUpload] = createSignal(false);
   const [uploadMedia, setUploadMedia] = createSignal('');
   const [uploadCaption, setUploadCaption] = createSignal('');
@@ -301,11 +302,25 @@ export function ClipsApp() {
     const account = await fetchNui<SharedSnapAccount | null>('clipsGetAccount', {});
     if (!account?.username) { setShowOnboarding(true); return; }
     setProfilePrivate(!!account.is_private);
+    setProfileAvatar(account.avatar || '');
     setShowProfileModal(true);
   };
 
+  const attachAvatarFromGallery = async () => {
+    const gallery = await fetchNui<any[]>('getGallery', undefined, []);
+    const image = gallery?.find((item: any) => item?.url && !item.url.match(/\.(mp4|webm|mov)$/i));
+    if (image?.url) setProfileAvatar(sanitizeMediaUrl(image.url) || '');
+  };
+
+  const attachAvatarByUrl = () => {
+    const input = prompt('URL del avatar:');
+    const url = sanitizeMediaUrl(input || '');
+    if (url) setProfileAvatar(url);
+  };
+
   const saveProfile = async () => {
-    const ok = await fetchNui<{ success?: boolean }>('clipsUpdateAccount', { isPrivate: profilePrivate() });
+    const avatar = sanitizeMediaUrl(profileAvatar());
+    const ok = await fetchNui<{ success?: boolean }>('clipsUpdateAccount', { isPrivate: profilePrivate(), avatar: avatar || undefined });
     if (ok?.success) {
       setStatusMessage(t('snap.profile_updated', language()));
       setShowProfileModal(false);
@@ -601,14 +616,19 @@ export function ClipsApp() {
       <Modal open={showProfileModal()} title="Perfil" onClose={() => setShowProfileModal(false)} size="sm">
         <div class={styles.profileCard}>
           <div class={styles.profileAvatarLg}>
-            <Show when={myAccount()?.avatar} fallback={
+            <Show when={profileAvatar()} fallback={
               <span>{(myAccount()?.display_name || 'U').charAt(0).toUpperCase()}</span>
             }>
-              <img src={myAccount()!.avatar!} alt="" />
+              <img src={profileAvatar()} alt="" />
             </Show>
           </div>
           <strong>{myAccount()?.display_name || 'Usuario'}</strong>
           <span class={styles.profileHandle}>@{myAccount()?.username || 'clips'}</span>
+        </div>
+        <div class={styles.avatarActions}>
+          <button onClick={() => void attachAvatarFromGallery()}>Galeria</button>
+          <button onClick={() => router.navigate('camera', { target: 'clips-avatar' })}>Camara</button>
+          <button onClick={attachAvatarByUrl}>URL</button>
         </div>
         <label class={styles.toggleRow}>
           <input type="checkbox" checked={profilePrivate()} onChange={(e) => setProfilePrivate(e.currentTarget.checked)} />
