@@ -421,7 +421,19 @@ export function LockScreen() {
 
             <div class={styles.emergencyActions}>
               <button class={styles.emergencyActionBtn} onClick={deleteEmergencyDial}>⌫</button>
-              <button class={styles.emergencyActionBtn} onClick={clearEmergencyDial}>C</button>
+              <button
+                class={styles.emergencyActionBtn}
+                classList={{ [styles.emergencySosSent]: sosStatus() === 'sent' }}
+                disabled={sosStatus() === 'sending'}
+                onClick={async () => {
+                  setSosStatus('sending');
+                  await fetchNui('emergencySOS', {});
+                  setSosStatus('sent');
+                  window.setTimeout(() => setSosStatus('idle'), 2000);
+                }}
+              >
+                {sosStatus() === 'sent' ? 'Enviado!' : 'SOS'}
+              </button>
               <button class={styles.emergencyActionBtn} onClick={() => setEmergencySheetOpen(false)}>Cerrar</button>
             </div>
 
@@ -466,19 +478,7 @@ export function LockScreen() {
             <span class={styles.swipeUnlockLabel}>Desliza hacia arriba</span>
           </div>
         </Show>
-        <button
-          class={sosStatus() === 'sent' ? styles.sosBtnSent : styles.sosBtn}
-          disabled={sosStatus() === 'sending'}
-          onClick={async () => {
-            setSosStatus('sending');
-            await fetchNui('emergencySOS', {});
-            setSosStatus('sent');
-            window.setTimeout(() => setSosStatus('idle'), 2000);
-          }}
-        >
-          {sosStatus() === 'sent' ? 'Enviado!' : 'SOS'}
-        </button>
-        <button class={styles.bottomBtn} onClick={() => setEmergencySheetOpen(true)}>SOS</button>
+        <button class={styles.sosBtn} onClick={() => setEmergencySheetOpen(true)}>SOS</button>
       </div>
     </div>
   );
