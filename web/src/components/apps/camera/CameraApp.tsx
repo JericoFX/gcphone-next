@@ -175,10 +175,13 @@ export function CameraApp() {
   };
 
   const applyQuickZoom = async (index: number) => {
+    const values = quickZooms();
+    const mockIndex = Math.max(0, Math.min(index - 1, values.length - 1));
+    const mockFov = values[mockIndex] ?? fov();
     const result = await fetchNui<{ success?: boolean; fov?: number }>(
       'cameraSetQuickZoom',
       { index },
-      { success: true, fov: fov() },
+      { success: true, fov: mockFov },
     );
     if (result?.success && typeof result.fov === 'number') {
       setFov(Math.round(result.fov));
@@ -452,8 +455,7 @@ export function CameraApp() {
       }
     }
     const nextIndex = (nearestIndex + 1) % values.length;
-    await applyQuickZoom(nextIndex);
-    console.log(nextIndex);
+    await applyQuickZoom(nextIndex + 1);
   };
 
   return (

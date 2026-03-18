@@ -127,7 +127,7 @@ local function RemovePhoneProp()
 end
 
 local function ShowPhonePayload(data)
-    if not data then return end
+    if type(data) ~= 'table' then return end
 
     menuIsOpen = true
     PhoneState.isOpen = true

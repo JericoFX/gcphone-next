@@ -191,6 +191,18 @@ end
 
 local PendingInvoices = {}
 
+CreateThread(function()
+    while true do
+        Wait(30000)
+        local now = os.time()
+        for id, invoice in pairs(PendingInvoices) do
+            if now > invoice.expiresAt then
+                PendingInvoices[id] = nil
+            end
+        end
+    end
+end)
+
 local function BuildInvoiceId(source)
     return tostring(os.time()) .. ':' .. tostring(source) .. ':' .. tostring(math.random(1000, 9999))
 end
