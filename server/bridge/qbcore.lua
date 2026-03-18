@@ -1,3 +1,5 @@
+if Config.Framework ~= 'qbcore' and Config.Framework ~= 'qbox' then return end
+
 local Core = nil
 local Framework = nil
 
