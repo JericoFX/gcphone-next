@@ -20,85 +20,9 @@ import { SocialOnboardingModal, type SocialOnboardingPayload } from '../../share
 import { AppFAB, AppScaffold } from '../../shared/layout';
 import { useLiveFlashlight } from '../../../hooks/useLiveFlashlight';
 import { getStoredLanguage, t } from '../../../i18n';
+import type { NewsArticle, NewsScaleform, MockLiveMessage, LiveJoinResponse, NewsProfile, LiveReaction } from './NewsTypes';
+import { articleMediaUrl, isLiveArticle, articleAuthor, buildClockTime, NEWS_MOCK_USERS, NEWS_MOCK_LINES, LIVE_REACTIONS } from './NewsTypes';
 import styles from './NewsApp.module.scss';
-
-interface NewsArticle {
-  id: number;
-  title: string;
-  content: string;
-  author_name?: string;
-  author_avatar?: string;
-  author_verified?: boolean | number;
-  created_at?: string;
-  category?: string;
-  media_url?: string;
-  mediaUrl?: string;
-  is_live?: boolean | number;
-  live_viewers?: number;
-}
-
-interface NewsScaleform {
-  preset: 'breaking' | 'ticker' | 'flash';
-  headline: string;
-  subtitle: string;
-  ticker: string;
-}
-
-interface MockLiveMessage {
-  id: number;
-  rawId?: string;
-  authorId?: string;
-  user: string;
-  text: string;
-  at: string;
-}
-
-interface LiveJoinResponse {
-  success?: boolean;
-  viewers?: number;
-  messages?: Array<{ id?: string; authorId?: string; username?: string; display?: string; content?: string; createdAt?: number }>;
-}
-
-interface NewsProfile {
-  username?: string;
-  display_name?: string;
-  avatar?: string;
-  bio?: string;
-  is_private?: boolean | number;
-}
-
-interface LiveReaction {
-  id: number;
-  emoji: string;
-}
-
-const NEWS_MOCK_USERS = ['Cronista', 'Mika', 'Luna', 'Santi', 'Mery'];
-const NEWS_MOCK_LINES = [
-  'Cobertura impecable',
-  'Gracias por informar en vivo',
-  'Se escucha claro',
-  'Actualicen sobre trafico por favor',
-  'Muy buen trabajo equipo',
-];
-const LIVE_REACTIONS = ['🔥', '👏', '🛰', '🚨'];
-
-function articleMediaUrl(article?: NewsArticle | null) {
-  if (!article) return '';
-  return sanitizeMediaUrl(article.media_url || article.mediaUrl || '') || '';
-}
-
-function isLiveArticle(article?: NewsArticle | null) {
-  return article?.is_live === true || article?.is_live === 1;
-}
-
-function articleAuthor(article?: NewsArticle | null) {
-  return sanitizeText(article?.author_name || '', 80) || 'Redaccion';
-}
-
-function buildClockTime() {
-  const now = new Date();
-  return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-}
 
 export function NewsApp() {
   const router = useRouter();
