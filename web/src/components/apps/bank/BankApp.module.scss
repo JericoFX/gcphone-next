@@ -65,6 +65,34 @@
   padding-left: 4px;
 }
 
+.tx-filters {
+  display: flex;
+  gap: var(--s-1);
+  margin-bottom: var(--s-3);
+  padding: var(--s-1);
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: var(--r-pill);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+
+  button {
+    flex: 1;
+    min-height: 28px;
+    border: none;
+    border-radius: var(--r-pill);
+    background: transparent;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: var(--fs-caption1);
+    font-weight: 600;
+    cursor: pointer;
+    transition: background var(--dur-2) var(--ease-standard), color var(--dur-2) var(--ease-standard);
+  }
+}
+
+.tx-filter-active {
+  background: rgba(255, 255, 255, 0.15) !important;
+  color: #fff !important;
+}
+
 .transactionsList {
   background: var(--color-surface-elevated);
   border-radius: var(--r-xl);
