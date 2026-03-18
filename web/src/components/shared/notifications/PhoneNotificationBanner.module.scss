@@ -21,7 +21,7 @@
   width: calc(100% - 18px);
   min-height: 46px;
   border-radius: 16px;
-  background: var(--color-surface-translucent, linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(244, 248, 255, 0.88)));
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(244, 248, 255, 0.03));
   color: #101a2a;
   display: flex;
   align-items: center;

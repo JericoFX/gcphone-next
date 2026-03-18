@@ -2,6 +2,7 @@ import { createEffect, onCleanup } from 'solid-js';
 import { useNotifications, usePhone } from '../../store';
 import { useInternalEvent } from '../../utils/internalEvents';
 import { phoneAudio, type AudioProfile, type ToneCategory } from '../../utils/phoneAudio';
+import { fetchNui } from '../../utils/fetchNui';
 
 type PreviewDetail = {
   toneId?: string;
@@ -27,6 +28,19 @@ type NativeCallToneDetail = {
   toneId?: string;
   placeholder?: boolean;
 };
+
+type NativeAudioResult = {
+  success?: boolean;
+};
+
+async function tryNativeAudio(callback: string, data: Record<string, unknown>): Promise<boolean> {
+  try {
+    const result = await fetchNui<NativeAudioResult>(callback, data);
+    return result?.success === true;
+  } catch {
+    return false;
+  }
+}
 
 export function PhoneAudioController() {
   const [phoneState] = usePhone();
@@ -54,16 +68,21 @@ export function PhoneAudioController() {
   const stopCallAudio = () => {
     phoneAudio.stop('incoming-call');
     phoneAudio.stop('outgoing-call');
+    fetchNui('stopNativeOutgoing').catch(() => {});
   };
 
   const stopPreview = () => {
     phoneAudio.stop('tone-preview');
   };
 
-  const playAlertTone = (channel: string, category: ToneCategory) => {
+  const playAlertTone = async (channel: string, category: ToneCategory) => {
     const toneId = category === 'message'
       ? phoneState.settings.messageTone
       : phoneState.settings.notificationTone;
+
+    const nativeCallback = category === 'message' ? 'playNativeMessage' : 'playNativeNotification';
+    const ok = await tryNativeAudio(nativeCallback, { toneId });
+    if (ok) return;
 
     phoneAudio.playTone(channel, {
       toneId,
@@ -76,6 +95,7 @@ export function PhoneAudioController() {
 
   const onIncomingCall = (detail: IncomingCallDetail | undefined) => {
     phoneAudio.stop('outgoing-call');
+    fetchNui('stopNativeOutgoing').catch(() => {});
     if (nativeIncomingCallActive || detail?.nativeTone === true) {
       phoneAudio.stop('incoming-call');
       return;
@@ -98,9 +118,12 @@ export function PhoneAudioController() {
     });
   };
 
-  const onPlaySound = (detail: SoundDetail | undefined) => {
+  const onPlaySound = async (detail: SoundDetail | undefined) => {
     if (!detail?.sound) return;
     if (detail.sound === 'calling_loop' || detail.sound === 'calling_short') {
+      const ok = await tryNativeAudio('playNativeOutgoing', { sound: detail.sound });
+      if (ok) return;
+
       phoneAudio.playNamed('outgoing-call', {
         sound: detail.sound,
         volume: typeof detail.volume === 'number' ? detail.volume : masterVolume(),
@@ -117,6 +140,7 @@ export function PhoneAudioController() {
     if (!detail?.sound) return;
     if (detail.sound === 'calling_loop' || detail.sound === 'calling_short') {
       phoneAudio.stop('outgoing-call');
+      fetchNui('stopNativeOutgoing').catch(() => {});
     }
   };
 

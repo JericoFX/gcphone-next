@@ -262,10 +262,10 @@ export const NotificationsProvider: ParentComponent = (props) => {
       setState('notificationCenterOpen', !!value);
     },
     toggleNotificationCompactMode: () => {
-      setState('notificationCompactMode', true);
+      setState('notificationCompactMode', (prev) => !prev);
     },
-    setControlTilePreset: () => {
-      setState('controlTilePreset', 'compact');
+    setControlTilePreset: (value) => {
+      setState('controlTilePreset', value);
     },
     applyControlTileOrderPreset: (value) => {
       if (value === 'commute') {
