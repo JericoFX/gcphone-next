@@ -52,6 +52,7 @@ local function HandlePhoneInteraction(phoneId)
                 options = {
                     { value = 'inspect', label = 'Ver metadata' },
                     { value = 'unlock', label = 'Abrir solo lectura' },
+                    { value = 'pickup', label = 'Recoger telefono' },
                 }
             }
         })
@@ -72,6 +73,32 @@ local function HandlePhoneInteraction(phoneId)
                         result.phone.imei
                     ),
                     centered = true
+                })
+            end
+
+            interactionBusy = false
+        end, { phoneId = phoneId })
+
+        return
+    end
+
+    if action[1] == 'pickup' then
+        lib.callback('gcphone:pickupPhone', false, function(result)
+            if result and result.success then
+                RemovePhonePoint(phoneId)
+                RemovePhoneObject(phoneId)
+                currentDroppedPhones[phoneId] = nil
+
+                lib.notify({
+                    title = 'Telefono recogido',
+                    description = result.phone and ('De: %s (%s)'):format(result.phone.owner or '?', result.phone.phoneNumber or '?') or 'Telefono recogido del suelo',
+                    type = 'success'
+                })
+            else
+                lib.notify({
+                    title = 'Error',
+                    description = result and result.error or 'No se pudo recoger el telefono',
+                    type = 'error'
                 })
             end
 
@@ -107,9 +134,20 @@ local function HandlePhoneInteraction(phoneId)
                 end
                 lib.notify({
                     title = 'Telefono desbloqueado',
-                    description = ('Acceso de solo lectura a %s'):format(result.phone.owner or 'N/A'),
+                    description = ('Acceso de solo lectura a %s'):format(result.phone and result.phone.owner or 'N/A'),
                     type = 'success'
                 })
+
+                -- Show forensic report if available
+                if result.report and result.report ~= '' then
+                    SetTimeout(800, function()
+                        lib.alertDialog({
+                            header = 'Informe forense',
+                            content = result.report,
+                            centered = false,
+                        })
+                    end)
+                end
             else
                 lib.notify({
                     title = 'PIN incorrecto',

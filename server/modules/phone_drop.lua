@@ -268,7 +268,7 @@ lib.callback.register('gcphone:pickupPhone', function(source, data)
     droppedPhones[phoneId] = nil
     TriggerClientEvent('gcphone:phonePickedUp', -1, phoneId)
 
-    local ownerName = GetName(source) or 'Desconocido'
+    local ownerName = ResolveOwnerName(droppedPhone.owner_identifier)
 
     return {
         success = true,
