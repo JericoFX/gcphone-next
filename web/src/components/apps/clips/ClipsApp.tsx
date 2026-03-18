@@ -6,6 +6,7 @@ import { sanitizeMediaUrl, sanitizeText } from '../../../utils/sanitize';
 import { useAppCache } from '../../../hooks';
 import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { usePhone } from '../../../store/phone';
+import { isEnvBrowser } from '../../../utils/misc';
 import { MediaLightbox } from '../../shared/ui/MediaLightbox';
 import { FormField, Modal, ModalActions, ModalButton } from '../../shared/ui/Modal';
 import { EmojiPickerButton } from '../../shared/ui/EmojiPicker';
@@ -44,6 +45,42 @@ interface SharedSnapAccount {
 }
 
 type ClipTab = 'feed' | 'following' | 'myVideos';
+
+const MOCK_CLIPS: Clip[] = [
+  {
+    id: 901,
+    username: 'carlos_m',
+    display_name: 'Carlos Mendoza',
+    media_url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+    caption: 'Persecucion en la autopista 🔥',
+    likes: 142,
+    liked: false,
+    comments_count: 23,
+    is_own: false,
+  },
+  {
+    id: 902,
+    username: 'ana_t',
+    display_name: 'Ana Torres',
+    media_url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
+    caption: 'Nuevo tuneo del Dominator 💎',
+    likes: 89,
+    liked: true,
+    comments_count: 7,
+    is_own: false,
+  },
+  {
+    id: 903,
+    username: 'pedro_r',
+    display_name: 'Pedro Ruiz',
+    media_url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4',
+    caption: 'Drift en el muelle',
+    likes: 56,
+    liked: false,
+    comments_count: 3,
+    is_own: true,
+  },
+];
 
 export function ClipsApp() {
   const router = useRouter();
@@ -117,10 +154,11 @@ export function ClipsApp() {
       endpoint = 'clipsGetFeed';
     }
 
+    const mockFallback = isEnvBrowser() ? MOCK_CLIPS : [];
     const cached = cache.get<Clip[]>(cacheKey);
-    const list = cached ?? await fetchNui<Clip[]>(endpoint, { limit: 40, offset: 0 }, []);
-    if (!cached) cache.set(cacheKey, list || [], 60000);
-    setClips(list || []);
+    const list = cached ?? await fetchNui<Clip[]>(endpoint, { limit: 40, offset: 0 }, mockFallback);
+    if (!cached && list.length > 0) cache.set(cacheKey, list, 60000);
+    setClips(list.length > 0 ? list : mockFallback);
     setCurrentClipIndex(0);
     setLoading(false);
   };
@@ -539,6 +577,7 @@ export function ClipsApp() {
         avatarHint={myAccount()?.avatar || ''}
         bioHint={myAccount()?.bio || ''}
         isPrivateHint={myAccount()?.is_private === 1 || myAccount()?.is_private === true}
+        usernameReadOnly
         displayNameReadOnly
         onCreate={createClipsAccount}
         onClose={() => setShowOnboarding(false)}
