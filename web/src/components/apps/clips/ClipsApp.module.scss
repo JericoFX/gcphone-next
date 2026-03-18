@@ -23,8 +23,6 @@
   border: 1px solid var(--border);
   border-radius: var(--r-pill);
   background: var(--color-surface-translucent);
-  backdrop-filter: blur(var(--blur-2));
-  -webkit-backdrop-filter: blur(var(--blur-2));
   z-index: 10;
 }
 
@@ -102,8 +100,6 @@
   width: 64px;
   height: 64px;
   background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(var(--blur-2));
-  -webkit-backdrop-filter: blur(var(--blur-2));
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: var(--r-pill);
   display: grid;
@@ -182,8 +178,6 @@
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: var(--r-pill);
   background: rgba(0, 0, 0, 0.35);
-  backdrop-filter: blur(var(--blur-1));
-  -webkit-backdrop-filter: blur(var(--blur-1));
   color: #fff;
   font-size: 20px;
   cursor: pointer;
@@ -302,8 +296,6 @@
   padding: 3px 8px;
   border-radius: var(--r-pill);
   background: rgba(255, 255, 255, 0.12);
-  backdrop-filter: blur(var(--blur-1));
-  -webkit-backdrop-filter: blur(var(--blur-1));
   border: 1px solid rgba(255, 255, 255, 0.1);
   color: rgba(255, 255, 255, 0.88);
   font-size: 10px;
@@ -372,8 +364,6 @@
 
 .fabTooltip {
   background: rgba(0, 0, 0, 0.75);
-  backdrop-filter: blur(var(--blur-1));
-  -webkit-backdrop-filter: blur(var(--blur-1));
   color: #fff;
   padding: var(--s-2) var(--s-3);
   border-radius: var(--r-md);
@@ -408,8 +398,6 @@
   display: flex;
   align-items: flex-end;
   background: rgba(0, 0, 0, 0.35);
-  backdrop-filter: blur(var(--blur-1));
-  -webkit-backdrop-filter: blur(var(--blur-1));
   z-index: 190;
 }
 
@@ -509,8 +497,6 @@
   border-bottom: none;
   border-radius: var(--r-xl) var(--r-xl) 0 0;
   background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(var(--blur-2));
-  -webkit-backdrop-filter: blur(var(--blur-2));
 
   h4 { color: #fff; }
 }
@@ -519,8 +505,6 @@
   border-left: 1px solid rgba(255, 255, 255, 0.14);
   border-right: 1px solid rgba(255, 255, 255, 0.14);
   background: rgba(0, 0, 0, 0.35);
-  backdrop-filter: blur(var(--blur-1));
-  -webkit-backdrop-filter: blur(var(--blur-1));
 }
 
 .ownerCommentsModal > .commentInput {
@@ -528,8 +512,6 @@
   border-top: none;
   border-radius: 0 0 var(--r-xl) var(--r-xl);
   background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(var(--blur-2));
-  -webkit-backdrop-filter: blur(var(--blur-2));
 }
 
 // ── Comments list ──
@@ -730,8 +712,6 @@
   border: none;
   border-radius: var(--r-pill);
   background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(var(--blur-1));
-  -webkit-backdrop-filter: blur(var(--blur-1));
   color: #fff;
   display: grid;
   place-items: center;
@@ -816,8 +796,6 @@
 
 .floatingMessage {
   background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(var(--blur-1));
-  -webkit-backdrop-filter: blur(var(--blur-1));
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--r-lg);
   padding: var(--s-2) var(--s-3);
@@ -906,8 +884,6 @@
   height: 40px;
   border-radius: var(--r-pill);
   background: rgba(0, 0, 0, 0.45);
-  backdrop-filter: blur(var(--blur-1));
-  -webkit-backdrop-filter: blur(var(--blur-1));
   border: 1px solid rgba(255, 255, 255, 0.1);
   color: #fff;
   font-size: 18px;
@@ -941,8 +917,6 @@
   position: absolute;
   inset: 0;
   background: rgba(0, 0, 0, 0.88);
-  backdrop-filter: blur(var(--blur-2));
-  -webkit-backdrop-filter: blur(var(--blur-2));
   z-index: 100;
   display: flex;
   flex-direction: column;
@@ -1105,8 +1079,6 @@
   right: 0;
   top: 100%;
   background: rgba(20, 20, 24, 0.95);
-  backdrop-filter: blur(var(--blur-2));
-  -webkit-backdrop-filter: blur(var(--blur-2));
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: var(--r-lg);
   padding: var(--s-1) 0;
