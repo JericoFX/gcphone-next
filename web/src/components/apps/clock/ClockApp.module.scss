@@ -1,37 +1,44 @@
 .hero-alarm {
   display: grid;
-  gap: 6px;
-  margin-bottom: 12px;
-  padding: 14px;
-  border-radius: 18px;
-  background: linear-gradient(135deg, #f9fafc, #edf3ff);
-  border: 1px solid rgba(58, 91, 176, 0.12);
+  gap: var(--s-2);
+  margin-bottom: var(--s-3);
+  padding: var(--s-4);
+  border-radius: var(--r-xl);
+  background:
+    radial-gradient(100% 80% at 50% 0%, color-mix(in srgb, var(--tint) 8%, transparent), transparent 60%),
+    var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-1);
 }
 
 .hero-alarm span {
-  font-size: 11px;
-  color: var(--text-soft);
+  font-size: var(--fs-caption2);
+  font-weight: 700;
+  color: var(--text-3);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
 }
 
 .hero-alarm strong {
   display: block;
-  margin-top: 4px;
-  font-size: 26px;
+  margin-top: var(--s-1);
+  font-size: var(--fs-large, 2.125rem);
+  font-weight: 700;
   color: var(--text);
+  letter-spacing: -0.02em;
 }
 
 .hero-alarm small {
-  color: var(--text-soft);
+  font-size: var(--fs-caption1);
+  color: var(--text-3);
 }
 
 .timer-card {
-  padding: 12px;
+  padding: var(--s-4);
   display: grid;
-  gap: 8px;
+  gap: var(--s-3);
   border: 1px solid var(--border);
-  border-radius: var(--r-lg);
+  border-radius: var(--r-xl);
   background: var(--surface);
   box-shadow: var(--shadow-1);
 }
@@ -39,20 +46,22 @@
 .preset-row {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  gap: var(--s-2);
 }
 
 .big-clock {
-  font-size: 34px;
-  font-weight: 800;
+  font-size: 42px;
+  font-weight: 200;
   text-align: center;
   color: var(--text);
-  letter-spacing: 0.04em;
-  padding: 8px 0;
+  letter-spacing: 0.02em;
+  padding: var(--s-4) 0;
+  font-variant-numeric: tabular-nums;
+  font-family: var(--font-sans);
 }
 
 .actions {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  gap: var(--s-2);
 }

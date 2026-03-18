@@ -599,7 +599,7 @@ const state: BrowserMockState = {
   theme: 'light',
   language: 'es',
   audioProfile: 'normal',
-  requiresSetup: true,
+  requiresSetup: false,
   contacts: [
     { id: 1, display: 'Maria Garcia', number: '555-1111', favorite: true },
     { id: 2, display: 'Juan Perez', number: '555-2222', favorite: false },
@@ -748,7 +748,7 @@ const resetMockPhoneData = () => {
   state.theme = 'light';
   state.language = 'es';
   state.audioProfile = 'normal';
-  state.requiresSetup = true;
+  state.requiresSetup = false;
   state.contacts = [];
   state.messages = [];
   state.calls = [];
@@ -1255,7 +1255,7 @@ export function setupBrowserMock() {
       showMockPhone();
     },
     showSetup: () => {
-      state.requiresSetup = true;
+      state.requiresSetup = false;
       showMockPhone();
     },
     showLocked: () => {
