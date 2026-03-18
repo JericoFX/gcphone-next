@@ -67,7 +67,7 @@
       rgba(88, 203, 124, 0.2),
       transparent 58%
     ),
-    linear-gradient(180deg, #f8fff9 0%, #eefaf0 54%, #e6f4e9 100%);
+    linear-gradient(180deg, color-mix(in srgb, var(--success) 4%, var(--bg)), color-mix(in srgb, var(--success) 6%, var(--bg)) 54%, color-mix(in srgb, var(--success) 8%, var(--bg)) 100%);
 }
 
 .search-row {
@@ -225,7 +225,7 @@
       rgba(96, 204, 130, 0.18),
       transparent 58%
     ),
-    linear-gradient(180deg, #f8fff9 0%, #eef8f1 56%, #e7f2eb 100%);
+    linear-gradient(180deg, color-mix(in srgb, var(--success) 4%, var(--bg)), color-mix(in srgb, var(--success) 6%, var(--bg)) 56%, color-mix(in srgb, var(--success) 8%, var(--bg)) 100%);
 }
 
 .thread-header {

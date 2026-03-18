@@ -1,7 +1,7 @@
 .body {
   display: flex;
   flex-direction: column;
-  background: radial-gradient(120% 90% at 50% 0%, #f9fbff, var(--bg, #f2f2f7) 62%);
+  background: radial-gradient(120% 90% at 50% 0%, color-mix(in srgb, var(--tint) 4%, var(--bg)), var(--bg) 62%);
 }
 
 .garageApp {
@@ -215,7 +215,7 @@
 .detailModal {
   position: fixed;
   inset: 0;
-  background: radial-gradient(120% 90% at 50% 0%, #f9fbff, var(--bg, #f2f2f7) 62%);
+  background: radial-gradient(120% 90% at 50% 0%, color-mix(in srgb, var(--tint) 4%, var(--bg)), var(--bg) 62%);
   z-index: 200;
   overflow-y: auto;
 }
