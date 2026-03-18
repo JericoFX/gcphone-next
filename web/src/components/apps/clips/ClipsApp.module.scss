@@ -418,10 +418,10 @@
 // ── FAB ──
 
 .fab {
-  position: fixed;
-  bottom: calc(24px + var(--safe-b, 0px));
-  right: 16px;
-  z-index: 250;
+  position: absolute;
+  bottom: calc(20px + var(--safe-b, 0px));
+  right: 12px;
+  z-index: 50;
   width: 44px;
   height: 44px;
   border-radius: 12px;
@@ -648,51 +648,110 @@
 // Profile modal
 // ═══════════════════════════════════════════════════════════════════
 
-.profileCard {
+// ── Profile bottom sheet ──
+
+.profileOverlay {
+  position: absolute;
+  inset: 0;
+  z-index: 200;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: flex-end;
+  animation: fadeIn 150ms ease;
+}
+
+.profileSheet {
+  width: 100%;
+  background: var(--surface, #fff);
+  border-radius: 20px 20px 0 0;
+  padding: 8px 20px 24px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  padding: 16px;
+  gap: 6px;
+  animation: sheetUp 250ms ease;
+}
 
-  strong { font-size: 15px; color: var(--text); }
+@keyframes sheetUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+.profileSheetHandle {
+  width: 36px;
+  height: 4px;
+  border-radius: 99px;
+  background: rgba(0, 0, 0, 0.15);
+  margin-bottom: 8px;
+}
+
+.profileAvatarWrap {
+  position: relative;
+  cursor: pointer;
+
+  &:active { transform: scale(0.95); }
+}
+
+.profileAvatarLg {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--tint, #0a84ff), #5856d6);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+
+  img { width: 100%; height: 100%; object-fit: cover; }
+  span { font-size: 22px; font-weight: 700; color: #fff; }
+}
+
+.profileAvatarEdit {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--tint, #0a84ff);
+  color: #fff;
+  font-size: 11px;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--surface, #fff);
+}
+
+.profileName {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
 }
 
 .profileHandle {
   font-size: 12px;
   color: var(--tint);
   font-weight: 600;
-}
-
-.profileAvatarLg {
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, var(--tint, #0a84ff), #5856d6);
-  display: grid;
-  place-items: center;
-  overflow: hidden;
   margin-bottom: 4px;
-
-  img { width: 100%; height: 100%; object-fit: cover; }
-  span { font-size: 20px; font-weight: 700; color: #fff; }
 }
 
-.avatarActions {
+.avatarPicker {
   display: flex;
   gap: 6px;
-  justify-content: center;
-  padding: 4px 0;
+  padding: 8px 0;
+  animation: fadeIn 150ms ease;
 
   button {
-    padding: 5px 12px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 8px 14px;
     border: 1px solid var(--border);
     border-radius: var(--r-pill);
     background: var(--surface);
-    color: var(--tint);
-    font-size: 11px;
+    color: var(--text);
+    font-size: 12px;
     font-weight: 600;
 
+    img { width: 14px; height: 14px; opacity: 0.6; }
     &:active { transform: scale(0.95); }
   }
 }
@@ -700,14 +759,60 @@
 .toggleRow {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 0;
+  justify-content: space-between;
+  width: 100%;
+  padding: 10px 0;
   font-size: 13px;
+  font-weight: 600;
   color: var(--text);
+  border-top: 1px solid var(--border, rgba(0,0,0,0.08));
+}
 
-  input {
-    width: 18px;
-    height: 18px;
-    accent-color: var(--tint);
+.iosSwitch {
+  width: 42px;
+  height: 24px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.12);
+  position: relative;
+  transition: background 200ms ease;
+  cursor: pointer;
+}
+
+.iosSwitchOn {
+  background: var(--success, #34c759);
+}
+
+.iosSwitchThumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  transition: transform 200ms ease;
+
+  .iosSwitchOn & {
+    transform: translateX(18px);
   }
+}
+
+.profileSaveBtn {
+  width: 100%;
+  height: 40px;
+  border: none;
+  border-radius: 12px;
+  background: var(--tint, #0a84ff);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  margin-top: 4px;
+
+  &:active { transform: scale(0.98); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
