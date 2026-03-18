@@ -39,6 +39,7 @@ client_scripts {
     'client/phone_drop.lua',
     'client/music.lua',
     'client/txadmin.lua',
+    'client/garage.lua',
 }
 
 server_scripts {
