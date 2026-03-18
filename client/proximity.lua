@@ -91,6 +91,23 @@ ox_target:addGlobalPlayer({
         end
     },
     {
+        name = 'gcphone_sharePhoto',
+        icon = 'fa-solid fa-image',
+        label = 'Compartir foto NFC',
+        distance = Config.Proximity.SharePhotoDistance,
+        canInteract = function(entity, distance)
+            return IsPhoneOpenSafe() and distance <= Config.Proximity.SharePhotoDistance
+        end,
+        onSelect = function(data)
+            local targetServerId = GetPlayerServerId(NetworkGetPlayerIndexFromPed(data.entity))
+
+            SendNUIMessage({
+                action = 'phone:openRoute',
+                data = { route = 'gallery', data = { nfcAction = 'share_photo', targetServerId = targetServerId, requestId = GetGameTimer() } }
+            })
+        end
+    },
+    {
         name = 'gcphone_shareDocument',
         icon = 'fa-solid fa-id-card',
         label = 'Mostrar documento NFC',
@@ -237,6 +254,24 @@ RegisterNetEvent('gcphone:receiveSharedPost', function(data)
     lib.notify({ 
         title = 'Publicacion compartida',
         description = data.from .. ' te ha compartido una publicacion',
+        type = 'info'
+    })
+end)
+
+RegisterNetEvent('gcphone:receiveSharedPhoto', function(data)
+    SendNUIMessage({
+        action = 'receiveSharedPhoto',
+        data = data
+    })
+
+    SendNUIMessage({
+        action = 'phone:openRoute',
+        data = { route = 'gallery', data = { nfcAction = 'received_photo', sharedPhoto = data, requestId = GetGameTimer() } }
+    })
+
+    lib.notify({
+        title = 'Foto recibida',
+        description = (data.from or 'Alguien') .. ' te ha compartido una foto',
         type = 'info'
     })
 end)

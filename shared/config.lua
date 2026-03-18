@@ -606,6 +606,7 @@ Config.Proximity = {
     FriendRequestDistance = 5.0,
     ShareDocumentDistance = 2.0,
     ShareWalletDistance = 2.0,
+    SharePhotoDistance = 3.0,
 }
 
 Config.FixePhone = {
