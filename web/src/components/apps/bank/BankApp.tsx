@@ -115,7 +115,7 @@ export function BankApp() {
     }, { success: false });
 
     if (!result?.success && accept) {
-      setError(result?.error || 'No se pudo pagar la factura');
+      setError(result?.error || t('bank.invoice_error', language()) || 'No se pudo pagar la factura');
       return;
     }
 
@@ -140,7 +140,7 @@ export function BankApp() {
       setTransferTarget('');
       loadData();
     } else {
-      setError('No se pudo completar la transferencia.');
+      setError(t('bank.transfer_error', language()) || 'No se pudo completar la transferencia.');
     }
   };
   
@@ -166,9 +166,9 @@ export function BankApp() {
         <div class={styles.section}>
           <div class={styles.sectionTitle}>{t('bank.movements', language())}</div>
           <div class={styles.txFilters}>
-            <button classList={{ [styles.txFilterActive]: txFilter() === 'all' }} onClick={() => setTxFilter('all')}>Todos</button>
-            <button classList={{ [styles.txFilterActive]: txFilter() === 'in' }} onClick={() => setTxFilter('in')}>Recibidos</button>
-            <button classList={{ [styles.txFilterActive]: txFilter() === 'out' }} onClick={() => setTxFilter('out')}>Enviados</button>
+            <button classList={{ [styles.txFilterActive]: txFilter() === 'all' }} onClick={() => setTxFilter('all')}>{t('bank.filter_all', language()) || 'Todos'}</button>
+            <button classList={{ [styles.txFilterActive]: txFilter() === 'in' }} onClick={() => setTxFilter('in')}>{t('bank.filter_in', language()) || 'Recibidos'}</button>
+            <button classList={{ [styles.txFilterActive]: txFilter() === 'out' }} onClick={() => setTxFilter('out')}>{t('bank.filter_out', language()) || 'Enviados'}</button>
           </div>
           <Show when={loading()} fallback={
             <Show when={filteredTransactions().length > 0} fallback={
