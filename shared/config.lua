@@ -489,14 +489,20 @@ Config.Snap = {
 Config.Garage = {
     MaxVehicles = 20,
 
-    -- Coordenadas de depositos (impound). El telefono muestra "Ir con GPS" al mas cercano.
+    -- Seed locations loaded at startup. Other resources can add more at runtime via exports:
+    --   exports['gcphone-next']:RegisterGarageSpawnPoint(id, { label, x, y, z, h })
+    --   exports['gcphone-next']:RegisterImpoundLocation(id, { label, x, y, z })
+    --   exports['gcphone-next']:RemoveGarageSpawnPoint(id)
+    --   exports['gcphone-next']:RemoveImpoundLocation(id)
+    --   exports['gcphone-next']:GetNearestSpawnPoint(source) → point|nil
+    --   exports['gcphone-next']:GetNearestImpound(source)    → point|nil
+
     Impounds = {
         { label = 'Deposito LSPD', x = 409.09, y = -1622.65, z = 29.29 },
         { label = 'Deposito Sandy', x = 1649.67, y = 3789.61, z = 34.79 },
         { label = 'Deposito Paleto', x = -225.09, y = 6320.72, z = 31.49 },
     },
 
-    -- Coordenadas de garages para spawn de vehiculos solicitados
     SpawnPoints = {
         { label = 'Garage LS', x = -339.15, y = -764.86, z = 33.97, h = 180.0 },
         { label = 'Garage Sandy', x = 1726.47, y = 3710.42, z = 34.26, h = 20.0 },
