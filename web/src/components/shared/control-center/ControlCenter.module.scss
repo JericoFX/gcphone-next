@@ -22,15 +22,23 @@
   background: transparent;
 }
 
-/* ── Overlay & Sheet base ── */
+/* ── Glass system (shared with lock screen aesthetic) ── */
 
 .overlay {
+  --cc-glass: rgba(255, 255, 255, 0.1);
+  --cc-glass-strong: rgba(255, 255, 255, 0.16);
+  --cc-glass-border: rgba(255, 255, 255, 0.12);
+  --cc-text: rgba(255, 255, 255, 0.95);
+  --cc-text-soft: rgba(255, 255, 255, 0.7);
+  --cc-text-muted: rgba(255, 255, 255, 0.45);
+
   position: absolute;
   inset: 0;
   z-index: 90;
   background:
-    radial-gradient(120% 55% at 50% -6%, color-mix(in srgb, var(--surface) 18%, transparent), transparent 52%),
-    linear-gradient(180deg, color-mix(in srgb, var(--bg) 88%, transparent), color-mix(in srgb, var(--bg) 92%, transparent));
+    linear-gradient(180deg, rgba(0, 0, 0, 0.65) 0%, rgba(0, 0, 0, 0.75) 100%);
+  backdrop-filter: blur(var(--blur-3, 40px));
+  -webkit-backdrop-filter: blur(var(--blur-3, 40px));
 }
 
 .sheet {
@@ -39,8 +47,8 @@
   padding: var(--s-3);
   display: flex;
   flex-direction: column;
-  color: var(--text);
-  animation: sheet-drop var(--dur-3, 260ms) var(--ease-standard, cubic-bezier(.2,.8,.2,1));
+  color: var(--cc-text);
+  animation: sheet-drop var(--dur-3) var(--ease-standard);
   touch-action: pan-y;
   overflow-y: auto;
   overflow-x: hidden;
@@ -67,6 +75,7 @@
     font-size: var(--fs-headline);
     font-weight: 700;
     letter-spacing: -0.01em;
+    color: var(--cc-text);
   }
 }
 
@@ -74,7 +83,7 @@
   font-size: var(--fs-caption2);
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--text-3);
+  color: var(--cc-text-soft);
   font-weight: 700;
 }
 
@@ -82,7 +91,7 @@
   width: 36px;
   height: 5px;
   border-radius: var(--r-pill);
-  background: color-mix(in srgb, var(--text) 20%, transparent);
+  background: rgba(255, 255, 255, 0.28);
   margin-top: var(--s-1);
 }
 
@@ -94,9 +103,8 @@
   gap: var(--s-2);
   padding: var(--s-2);
   border-radius: var(--r-xl);
-  background: color-mix(in srgb, var(--surface) 72%, transparent);
-  border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
-  box-shadow: var(--shadow-1);
+  background: var(--cc-glass);
+  border: 1px solid var(--cc-glass-border);
 }
 
 .connectivity-tile {
@@ -107,23 +115,23 @@
   min-height: 44px;
   border: none;
   border-radius: var(--r-lg);
-  background: color-mix(in srgb, var(--surface-2) 60%, transparent);
-  color: var(--text);
+  background: var(--cc-glass);
+  color: var(--cc-text);
   cursor: pointer;
   transition:
     transform var(--dur-1) var(--ease-standard),
-    background var(--dur-2) var(--ease-standard),
-    box-shadow var(--dur-2) var(--ease-standard);
+    background var(--dur-2) var(--ease-standard);
 
   &:active {
     transform: scale(0.96);
+    background: var(--cc-glass-strong);
   }
 }
 
 .connectivity-tile-active {
   background: var(--tint);
   color: #fff;
-  box-shadow: 0 4px 14px color-mix(in srgb, var(--tint) 32%, transparent);
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--tint) 40%, transparent);
 
   .tile-icon {
     background: rgba(255, 255, 255, 0.24);
@@ -142,7 +150,7 @@
   width: 28px;
   height: 28px;
   border-radius: var(--r-pill);
-  background: color-mix(in srgb, var(--tint) 12%, transparent);
+  background: rgba(255, 255, 255, 0.12);
   display: grid;
   place-items: center;
   flex-shrink: 0;
@@ -150,21 +158,22 @@
   img {
     width: 14px;
     height: 14px;
-    opacity: 0.85;
+    opacity: 0.9;
+    filter: brightness(0) invert(1);
   }
 }
 
 .tile-label {
   font-size: var(--fs-caption1);
   font-weight: 600;
-  color: var(--text);
+  color: var(--cc-text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   line-height: var(--lh-tight);
 }
 
-/* ── Quick action tiles (round buttons) ── */
+/* ── Quick action tiles ── */
 
 .quick-row {
   display: flex;
@@ -175,39 +184,36 @@
 .quick-tile {
   width: 52px;
   height: 52px;
-  border: none;
+  border: 1px solid var(--cc-glass-border);
   border-radius: var(--r-xl);
-  background: color-mix(in srgb, var(--surface) 72%, transparent);
-  border: 1px solid color-mix(in srgb, var(--border) 50%, transparent);
-  box-shadow: var(--shadow-1);
+  background: var(--cc-glass);
   display: grid;
   place-items: center;
   cursor: pointer;
   transition:
     transform var(--dur-1) var(--ease-standard),
-    background var(--dur-2) var(--ease-standard),
-    box-shadow var(--dur-2) var(--ease-standard);
+    background var(--dur-2) var(--ease-standard);
 
   img {
     width: 20px;
     height: 20px;
-    opacity: 0.72;
+    opacity: 0.85;
+    filter: brightness(0) invert(1);
   }
 
   &:active {
     transform: scale(0.92);
-    background: color-mix(in srgb, var(--surface) 90%, transparent);
+    background: var(--cc-glass-strong);
   }
 }
 
 .quick-tile-active {
   background: var(--tint);
-  box-shadow: 0 6px 16px color-mix(in srgb, var(--tint) 36%, transparent);
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--tint) 40%, transparent);
   border-color: transparent;
 
   img {
     opacity: 1;
-    filter: brightness(0) invert(1);
   }
 }
 
@@ -215,9 +221,8 @@
 
 .slider-module {
   border-radius: var(--r-lg);
-  background: color-mix(in srgb, var(--surface) 72%, transparent);
-  border: 1px solid color-mix(in srgb, var(--border) 50%, transparent);
-  box-shadow: var(--shadow-1);
+  background: var(--cc-glass);
+  border: 1px solid var(--cc-glass-border);
   padding: var(--s-3);
   display: grid;
   gap: var(--s-2);
@@ -231,14 +236,14 @@
   span {
     font-size: var(--fs-caption1);
     font-weight: 600;
-    color: var(--text-2);
+    color: var(--cc-text-soft);
     flex: 1;
   }
 
   strong {
     font-size: var(--fs-caption1);
     font-weight: 700;
-    color: var(--text);
+    color: var(--cc-text);
     min-width: 36px;
     text-align: right;
   }
@@ -247,11 +252,11 @@
 .slider-icon {
   width: 16px;
   height: 16px;
-  opacity: 0.6;
+  opacity: 0.7;
   flex-shrink: 0;
+  filter: brightness(0) invert(1);
 }
 
-// iOS 18 slider — reuse global .ios-slider from existing SCSS
 .slider {
   width: 100%;
 }
@@ -268,9 +273,8 @@
 .summary-card {
   min-height: 48px;
   border-radius: var(--r-lg);
-  background: color-mix(in srgb, var(--surface) 72%, transparent);
-  border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
-  box-shadow: var(--shadow-1);
+  background: var(--cc-glass);
+  border: 1px solid var(--cc-glass-border);
   display: grid;
   align-content: center;
   justify-items: start;
@@ -279,7 +283,7 @@
   span {
     font-size: 10px;
     font-weight: 700;
-    color: var(--text-3);
+    color: var(--cc-text-muted);
     letter-spacing: 0.04em;
     text-transform: uppercase;
   }
@@ -287,7 +291,7 @@
   strong {
     font-size: var(--fs-footnote);
     font-weight: 700;
-    color: var(--text);
+    color: var(--cc-text);
   }
 }
 
@@ -316,12 +320,14 @@
     height: 12px;
     border-radius: 4px;
     flex-shrink: 0;
+    filter: brightness(0) invert(1);
+    opacity: 0.6;
   }
 
   span {
     font-size: var(--fs-caption2);
     font-weight: 700;
-    color: var(--text-3);
+    color: var(--cc-text-muted);
     letter-spacing: 0.05em;
   }
 }
@@ -332,24 +338,27 @@
   border-radius: var(--r-pill);
   min-height: 22px;
   padding: 0 10px;
-  background: color-mix(in srgb, var(--tint) 12%, transparent);
-  color: var(--tint);
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--cc-text-soft);
   font-size: 10px;
   font-weight: 700;
   cursor: pointer;
+
+  &:active {
+    background: rgba(255, 255, 255, 0.18);
+  }
 }
 
 .notification-item {
   border: none;
   border-radius: var(--r-lg);
-  background: color-mix(in srgb, var(--surface) 72%, transparent);
-  color: var(--text);
+  background: var(--cc-glass);
+  color: var(--cc-text);
   text-align: left;
   padding: var(--s-3);
   display: grid;
   gap: 2px;
-  border: 1px solid color-mix(in srgb, var(--border) 50%, transparent);
-  box-shadow: var(--shadow-1);
+  border: 1px solid var(--cc-glass-border);
   cursor: pointer;
   transition: transform var(--dur-1) var(--ease-standard);
 
@@ -364,24 +373,25 @@
     align-items: center;
     justify-content: space-between;
     gap: 6px;
+    color: var(--cc-text);
 
     small {
       font-size: var(--fs-caption2);
       font-weight: 600;
-      color: var(--text-3);
+      color: var(--cc-text-muted);
     }
   }
 
   span {
     font-size: var(--fs-caption1);
-    color: var(--text-2);
+    color: var(--cc-text-soft);
     line-height: var(--lh-normal);
   }
 }
 
 .empty {
   font-size: var(--fs-footnote);
-  color: var(--text-3);
+  color: var(--cc-text-muted);
   text-align: center;
   padding-top: var(--s-6);
 }
@@ -390,7 +400,7 @@
   margin-top: 2px;
   font-size: var(--fs-caption2);
   font-weight: 700;
-  color: var(--text-3);
+  color: var(--cc-text-muted);
   padding-left: 4px;
 }
 
@@ -420,8 +430,8 @@
 }
 
 .clear-btn {
-  background: color-mix(in srgb, var(--surface-2) 76%, transparent);
-  color: var(--tint);
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--cc-text-soft);
 }
 
 .close-btn {
@@ -442,7 +452,7 @@
   }
 }
 
-/* ── iOS 18 slider (global, keep for compatibility) ── */
+/* ── Slider globals (dark variant for glass overlay) ── */
 
 :global(.ios-slider) {
   width: 100%;
@@ -450,7 +460,7 @@
   appearance: none;
   height: 4px;
   border-radius: 2px;
-  background: color-mix(in srgb, var(--text-3) 24%, transparent);
+  background: rgba(255, 255, 255, 0.15);
   outline: none;
   cursor: pointer;
 
@@ -461,15 +471,15 @@
       to right,
       var(--tint) 0%,
       var(--tint) var(--value-percent, 50%),
-      color-mix(in srgb, var(--text-3) 24%, transparent) var(--value-percent, 50%),
-      color-mix(in srgb, var(--text-3) 24%, transparent) 100%
+      rgba(255, 255, 255, 0.15) var(--value-percent, 50%),
+      rgba(255, 255, 255, 0.15) 100%
     );
   }
 
   &::-moz-range-track {
     height: 4px;
     border-radius: 2px;
-    background: color-mix(in srgb, var(--text-3) 24%, transparent);
+    background: rgba(255, 255, 255, 0.15);
   }
 
   &::-webkit-slider-thumb {
@@ -478,14 +488,13 @@
     width: 24px;
     height: 24px;
     border-radius: 50%;
-    background: var(--surface);
+    background: #fff;
     cursor: pointer;
     margin-top: -10px;
     box-shadow:
-      0 0.5px 2px rgba(0, 0, 0, 0.12),
-      0 2px 4px rgba(0, 0, 0, 0.08),
-      0 0 0 0.5px rgba(0, 0, 0, 0.04);
-    transition: transform var(--dur-1) var(--ease-inout);
+      0 1px 3px rgba(0, 0, 0, 0.3),
+      0 2px 6px rgba(0, 0, 0, 0.15);
+    transition: transform var(--dur-1) var(--ease-standard);
 
     &:active {
       transform: scale(0.92);
@@ -496,13 +505,12 @@
     width: 24px;
     height: 24px;
     border-radius: 50%;
-    background: var(--surface);
+    background: #fff;
     cursor: pointer;
     border: none;
     box-shadow:
-      0 0.5px 2px rgba(0, 0, 0, 0.12),
-      0 2px 4px rgba(0, 0, 0, 0.08),
-      0 0 0 0.5px rgba(0, 0, 0, 0.04);
+      0 1px 3px rgba(0, 0, 0, 0.3),
+      0 2px 6px rgba(0, 0, 0, 0.15);
   }
 
   &::-moz-range-progress {
@@ -540,13 +548,12 @@
     width: 24px;
     height: 24px;
     border-radius: 50%;
-    background: var(--surface);
+    background: #fff;
     cursor: pointer;
     margin-top: -10px;
     box-shadow:
-      0 0.5px 2px rgba(0, 0, 0, 0.24),
-      0 2px 6px rgba(0, 0, 0, 0.16),
-      0 0 0 0.5px rgba(0, 0, 0, 0.08);
+      0 1px 3px rgba(0, 0, 0, 0.3),
+      0 2px 6px rgba(0, 0, 0, 0.15);
 
     &:active {
       transform: scale(0.92);
