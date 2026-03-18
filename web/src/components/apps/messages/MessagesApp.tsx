@@ -381,7 +381,8 @@ function ConversationView(props: {
   const language = () => getStoredLanguage();
   let messagesEnd: HTMLDivElement | undefined;
   const [showAttachSheet, setShowAttachSheet] = createSignal(false);
-  
+  const [selectedMessage, setSelectedMessage] = createSignal<string | null>(null);
+
   onMount(() => {
     messagesEnd?.scrollIntoView({ behavior: 'auto' });
   });
@@ -413,6 +414,7 @@ function ConversationView(props: {
                 [styles.sent]: msg.owner === 1,
                 [styles.received]: msg.owner === 0
               }}
+              onClick={() => setSelectedMessage(sanitizeText(msg.message || '', 800))}
             >
               <Show when={parseSharedContactMessage(msg.message)} fallback={
                 <>
@@ -503,6 +505,44 @@ function ConversationView(props: {
           { label: t('messages.attach_url', language()), onClick: props.onAttachUrl },
           { label: t('maps.share_location', language()), onClick: props.onSendLocation },
           { label: t('messages.remove_attachment', language()), tone: 'danger', onClick: props.onClearAttachment },
+        ]}
+      />
+
+      <ActionSheet
+        open={selectedMessage() !== null}
+        title="Mensaje"
+        onClose={() => setSelectedMessage(null)}
+        actions={[
+          {
+            label: 'Guardar en Notas',
+            tone: 'primary',
+            onClick: () => {
+              const text = selectedMessage();
+              if (!text) return;
+              try {
+                const raw = localStorage.getItem('gcphone:notes');
+                const notes: any[] = raw ? JSON.parse(raw) : [];
+                notes.push({ id: Date.now(), title: 'Mensaje guardado', content: text, color: '#007aff' });
+                localStorage.setItem('gcphone:notes', JSON.stringify(notes));
+                uiAlert('Mensaje guardado en Notas');
+              } catch {
+                uiAlert('Error al guardar nota');
+              }
+              setSelectedMessage(null);
+            },
+          },
+          {
+            label: 'Copiar texto',
+            onClick: () => {
+              const text = selectedMessage();
+              if (text) navigator.clipboard.writeText(text).catch(() => {});
+              setSelectedMessage(null);
+            },
+          },
+          {
+            label: 'Cerrar',
+            onClick: () => setSelectedMessage(null),
+          },
         ]}
       />
     </AppScaffold>

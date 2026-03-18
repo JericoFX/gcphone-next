@@ -5,6 +5,7 @@ import { fetchNui } from '../../../utils/fetchNui';
 import { useNuiEvent } from '../../../utils/useNui';
 import { formatPhoneNumber, generateColorForString, timeAgo } from '../../../utils/misc';
 import { sanitizePhone, sanitizeText } from '../../../utils/sanitize';
+import { uiPrompt } from '../../../utils/uiDialog';
 import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { ScreenState } from '../../shared/ui/ScreenState';
 import { SkeletonList } from '../../shared/ui/SkeletonList';
@@ -46,6 +47,54 @@ export function CallsApp() {
   const [videoParticipants, setVideoParticipants] = createSignal<string[]>([]);
   const [localVideoIdentity, setLocalVideoIdentity] = createSignal('');
   const language = () => phoneState.settings.language || 'es';
+  const [speedDials, setSpeedDials] = createSignal<Record<string, { number: string; name: string }>>(
+    JSON.parse(localStorage.getItem('gcphone:speedDials') || '{}'),
+  );
+  let longPressTimer: number | undefined;
+
+  const handleKeyPointerDown = (key: string) => {
+    if (!['1','2','3','4','5','6','7','8','9'].includes(key)) return;
+    longPressTimer = window.setTimeout(() => {
+      longPressTimer = undefined;
+      const entry = speedDials()[key];
+      if (entry) {
+        void startCall(entry.number, entry.name);
+      } else {
+        void (async () => {
+          const result = await uiPrompt(`Asignar marcado rapido al ${key}`, {
+            title: 'Marcado Rapido',
+            placeholder: 'Numero de telefono',
+          });
+          if (result && result.trim()) {
+            const sanitized = sanitizePhone(result.trim());
+            if (!sanitized) return;
+            setSpeedDials((prev) => {
+              const next = { ...prev, [key]: { number: sanitized, name: sanitized } };
+              localStorage.setItem('gcphone:speedDials', JSON.stringify(next));
+              return next;
+            });
+          }
+        })();
+      }
+    }, 800);
+  };
+
+  const handleKeyPointerUp = (key: string) => {
+    if (longPressTimer !== undefined) {
+      clearTimeout(longPressTimer);
+      longPressTimer = undefined;
+      dialKeyPress(key);
+    }
+  };
+
+  const handleKeyPointerLeave = (key: string) => {
+    if (longPressTimer !== undefined) {
+      clearTimeout(longPressTimer);
+      longPressTimer = undefined;
+      dialKeyPress(key);
+    }
+  };
+
   const mediaHosts = new Map<string, HTMLDivElement>();
   const participantTracks = new Map<string, MediaTrackEntry[]>();
   const isReadOnly = () => phoneState.accessMode === 'foreign-readonly';
@@ -340,6 +389,7 @@ export function CallsApp() {
   };
 
   onCleanup(() => {
+    if (longPressTimer !== undefined) clearTimeout(longPressTimer);
     resetCallUi();
   });
 
@@ -418,11 +468,23 @@ export function CallsApp() {
                 
                 <div class={styles.keypad}>
                   <For each={keypadKeys}>
-                    {(key) => (
-                      <button class={styles.key} onClick={() => dialKeyPress(key)}>
-                        {key}
-                      </button>
-                    )}
+                    {(key) => {
+                      const isSpeedDialKey = ['1','2','3','4','5','6','7','8','9'].includes(key);
+                      return (
+                        <button
+                          class={styles.key}
+                          onClick={isSpeedDialKey ? undefined : () => dialKeyPress(key)}
+                          onPointerDown={isSpeedDialKey ? () => handleKeyPointerDown(key) : undefined}
+                          onPointerUp={isSpeedDialKey ? () => handleKeyPointerUp(key) : undefined}
+                          onPointerLeave={isSpeedDialKey ? () => handleKeyPointerLeave(key) : undefined}
+                        >
+                          {key}
+                          <Show when={isSpeedDialKey && speedDials()[key]}>
+                            <span class={styles.speedDialDot} />
+                          </Show>
+                        </button>
+                      );
+                    }}
                   </For>
                 </div>
                 
