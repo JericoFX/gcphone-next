@@ -108,6 +108,12 @@ exports('triggerHook', function(event, payload)
     return triggerHook(event, payload)
 end)
 
-rawset(_G, 'RegisterPhoneHook', registerHook)
-rawset(_G, 'TriggerPhoneHook', triggerHook)
-rawset(_G, 'RemovePhoneHooks', removeResourceHooks)
+GCPhone = GCPhone or {}
+GCPhone.RegisterHook = registerHook
+GCPhone.TriggerHook = triggerHook
+GCPhone.RemoveHooks = removeResourceHooks
+
+-- Backward-compat globals (will be removed in a future major version)
+RegisterPhoneHook = registerHook
+TriggerPhoneHook = triggerHook
+RemovePhoneHooks = removeResourceHooks

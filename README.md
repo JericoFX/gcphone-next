@@ -1,377 +1,191 @@
-# gcphone-next (fork)
+# gcphone-next
 
-**gcphone-next** is a fork / derivative work of **gcphone**.
+A modernized FiveM phone resource built with **SolidJS**, **ox_lib**, and **oxmysql**.
 
-Upstream project:
-- Repository: https://github.com/manueljlz/gcphone
-- Original author(s): manueljlz and contributors
-- Original project age: ~6+ years of legacy codebase
-
-This fork modernizes the architecture while respecting upstream license terms and attribution.
-
----
-## Images
-
-![Captura de pantalla_3-3-2026_141826_localhost](https://github.com/user-attachments/assets/54695d8c-2f70-4c7a-b5be-873634229f96)
-
-![Video](https://files.fm/f/tgdtdgzwnn)
-
-## What is this
-
-A modernized FiveM phone resource featuring:
-
-- SolidJS NUI (rewritten UI layer)
-- Lua client/server modular structure
-- LiveKit video-call bridge
-- Optional Socket.IO realtime chat server
-- YouTube server-side music search (API key never exposed to NUI)
-- Storage provider abstraction system
-- Data retention worker
-- Dark Rooms (async forum-style system)
-- Wallet + Documents core apps
-- App scaffold for external developers
+Fork of [gcphone](https://github.com/manueljlz/gcphone) by manueljlz — fully rewritten architecture.
 
 ---
 
-## What changed from upstream
+## Features
 
-Major architectural upgrades:
+- **27+ apps**: Contacts, Messages, Calls, Chirp, Snap, Clips, Mail, Bank, Wallet, Documents, Gallery, Garage, Music, News, Dark Rooms, Yellow Pages, Market, WaveChat, Notes, Weather, Maps, Clock, Camera, Notifications, and more
+- **SolidJS NUI** with iOS 18-inspired design
+- **LiveKit WebRTC** video/voice calls
+- **Socket.IO** real-time messaging (optional)
+- **Native audio** system with custom AWC sounds
+- **QBCore, QBox, and ESX** framework support via bridge pattern
+- **ox_inventory** optional phone item requirement
+- **100% parameterized SQL** via oxmysql
+- **NUI auth** with per-session token rotation and request signing
+- **Rate limiting** per action/player
+- **Hook system** for external resource integration
+- **Data retention** worker for history cleanup
+- **Storage providers**: FiveManage, server folder, local, or custom
 
-- Full NUI rewrite to SolidJS
-- Modular server-side structure
-- LiveKit integration (server token bridge)
-- JWT-authenticated Socket.IO bridge
-- Storage providers abstraction
-- Retention system for history cleanup
-- New apps (Wallet / Documents)
-- Dark Rooms extended features (anonymous, password, attachments, voting)
+## Tech Stack
 
-This fork is not a drop-in replacement for legacy gcphone.
-It is a structural modernization.
+| Layer | Technology |
+|-------|-----------|
+| Server | Lua 5.4, ox_lib, oxmysql |
+| Client | Lua 5.4, ox_lib |
+| NUI | SolidJS, TypeScript, Vite, SCSS |
+| Calls | LiveKit (WebRTC) |
+| Chat | Socket.IO (optional) |
+| Audio | GTA V AWC native sounds |
 
----
+## Requirements
 
-## Recent updates (Mar 2026)
+- FiveM server build **5181+** with **OneSync**
+- [ox_lib](https://github.com/overextended/ox_lib)
+- [oxmysql](https://github.com/overextended/oxmysql)
+- [gcphone_sounds](https://github.com/JericoFX/gcphone_sounds) (native audio bank)
+- QBCore, QBox, or ESX framework
 
-This is the latest stabilization pass applied to this fork.
+## Quick Start
 
-### Security and validation
+```bash
+# 1. Clone into your resources folder
+git clone https://github.com/JericoFX/gcphone-next.git
 
-- Added NUI request hardening with per-session token rotation, request sequence, and request signature.
-- Added callback gate in client Lua before executing NUI callbacks.
-- Added player-state checks for critical flows in QBCore bridge and server modules.
-- Wallet, Clips, and Documents callbacks now verify source/target player state before sensitive actions.
+# 2. Build the NUI
+cd gcphone-next/web
+bun install
+bun run build
 
-### Frontend behavior
+# 3. Add to server.cfg
+ensure oxmysql
+ensure ox_lib
+ensure qb-core          # or es_extended
+ensure gcphone_sounds
+ensure gcphone-next
+```
 
-- Replaced browser `alert/prompt/confirm` usage with in-phone dialog/alert flows.
-- Moved dialogs to render inside the phone screen container (not centered on full viewport).
-- Replaced emoji-based controls in Gallery with icon assets.
-- Refactored repeated tab/button markup in updated apps into small reusable components.
+## Configuration
 
-### FiveM compatibility
+### LiveKit Setup (video calls)
 
-- Removed `backdrop-filter` usage from app styles to avoid runtime issues in FiveM NUI.
+Use the interactive PowerShell wizard to configure LiveKit automatically:
 
-### Localization
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\livekit\setup-livekit.ps1
+```
 
-- Added JSON-based locale structure for easy maintenance.
-- Integrated `ox_lib` locale support on Lua side using `lib.locale()` and `shared/locales/*.json`.
+The wizard generates `.env`, `livekit.yaml`, start/stop scripts, and prints the exact convars for your `server.cfg`. See [LiveKit Setup Guide](docs/guides/livekit-setup.md) for full details.
 
-### Codebase cleanup
+### server.cfg
 
-- Resolved pending merge conflicts in server modules.
-- Removed stale inline comments in updated hot paths.
-
----
-
-## Self-host WebRTC (LiveKit OSS)
-
-This fork already includes a LiveKit token bridge and browser client integration.
-
-If you want to host your own WebRTC backend, use:
-
-- `tools/livekit/setup-livekit.bat` (interactive setup)
-- `tools/livekit/start-livekit.bat` (start stack)
-- `tools/livekit/stop-livekit.bat` (stop stack)
-
-The setup script generates:
-
-- `tools/livekit/.env`
-- `tools/livekit/livekit.yaml`
-
-It also prints the exact convars you must set in your FiveM server config:
-
+```cfg
+# LiveKit (optional - for video calls, generated by setup-livekit.ps1)
 setr livekit_host "ws://YOUR_SERVER_IP:7880"
 setr livekit_api_key "YOUR_KEY"
 setr livekit_api_secret "YOUR_SECRET"
 setr livekit_room_prefix "gcphone"
 setr livekit_max_call_duration "300"
 
-### Default networking notes
+# Socket.IO (optional - for real-time chat)
+setr gcphone_socket_host "ws://YOUR_SERVER_IP:3001"
+setr gcphone_socket_jwt_secret "YOUR_SECRET"
+```
 
-- `ws://127.0.0.1:7880` is local-only.
-- For public production access, use a reachable host/IP and open required ports.
-- The provided compose stack exposes:
-  - TCP `7880` (signal/ws)
-  - TCP `7881` (RTC TCP fallback)
-  - UDP `50000-50100` (RTC media)
+### Config.lua
 
-### Important
+All configuration is in `shared/config.lua`:
 
-- STUN-only setups can fail in strict NAT/firewall environments.
-- For stronger production compatibility, configure TURN/TLS.
-- See `tools/livekit/README.md` for quickstart and operations.
-- Keep `livekit_api_key` and `livekit_api_secret` server-side only (`server.cfg`/convars).
-- Do not hardcode LiveKit credentials in web/client files.
-- Download setup scripts only from this repository's GitHub.
+- `Config.Phone` — Key bindings, number format, default settings, phone item requirement
+- `Config.Features` — Toggle apps on/off (AppStore, WaveChat, DarkRooms, Clips, etc.)
+- `Config.Security` — Rate limits per action
+- `Config.Storage` — Media upload provider (FiveManage, server folder, local, custom)
+- `Config.LiveKit` / `Config.Socket` — Real-time service settings
+- Per-app config: `Config.Chirp`, `Config.Snap`, `Config.Wallet`, etc.
 
----
+### ox_inventory Integration
 
-## Operacion del resource
+To require a phone item in ox_inventory before opening:
 
-### Dependencias
+```lua
+-- shared/config.lua
+Config.Phone.RequireItem = true
+Config.Phone.ItemName = 'phone'   -- item name in ox_inventory
+```
 
-- `ox_lib`
-- `oxmysql`
-- `qb-core`
-- server build con `onesync`
+When `RequireItem = false` (default), everyone can use the phone without an inventory item.
 
-### Orden de arranque recomendado
+## Documentation
+
+Full documentation is available in the `docs/` directory and can be served with VitePress:
+
+```bash
+cd docs
+npx vitepress dev
+```
+
+See [docs/index.md](docs/index.md) for the documentation index.
+
+## Boot Order
 
 1. `oxmysql`
 2. `ox_lib`
-3. `qb-core`
-4. servicios externos opcionales (LiveKit / Socket)
-5. `gcphone-next`
+3. `qb-core` (or `es_extended`)
+4. `gcphone_sounds`
+5. External services (LiveKit / Socket.IO) if enabled
+6. `gcphone-next`
 
-### Config server.cfg (LiveKit)
+## Notifications API
 
-setr livekit_host "ws://IP_DEL_SERVIDOR:7880"
-setr livekit_api_key "TU_KEY"
-setr livekit_api_secret "TU_SECRET"
-setr livekit_room_prefix "gcphone"
-setr livekit_max_call_duration "300"
-
-Notas:
-
-- `livekit_host` debe empezar con `ws://` o `wss://`.
-- `livekit_api_key` y `livekit_api_secret` son server-side only.
-
-### Config server.cfg (Socket opcional)
-
-setr gcphone_socket_host "ws://IP_DEL_SERVIDOR:3001"
-setr gcphone_socket_jwt_secret "TU_SECRET"
-
-Notas:
-
-- Socket es opcional, activar solo si realmente se usa.
-- el JWT secret del socket server debe coincidir con `gcphone_socket_jwt_secret`.
-
-### Verificacion rapida despues de reinicio
-
-1. abrir telefono y validar carga inicial.
-2. probar una accion social (follow/request o publicar).
-3. probar llamada/LiveKit si esta habilitado.
-4. revisar consola por errores de callback/convar.
-
-### Troubleshooting rapido
-
-- `MISSING_HOST` o `INVALID_HOST_SCHEME` (LiveKit): revisar `livekit_host`.
-- 401 en LiveKit token: revisar key/secret y host correctos.
-- `MISSING_SOCKET_HOST` o `INVALID_SOCKET_HOST_SCHEME`: revisar `gcphone_socket_host`.
-- setup de LiveKit que "se cierra": ejecutar `tools\\livekit\\setup-livekit.bat` desde `cmd` para ver el error exacto.
-
-### Estandar Lua (resumen)
-
-- usar `lib.callback.register` con validacion defensiva en server.
-- no confiar en estado cliente para ownership/permisos.
-- usar sanitizacion de input y rate-limit en acciones spameables.
-- mantener error codes estables para debug (`INVALID_PAYLOAD`, `RATE_LIMITED`, etc.).
-
-### Notifications API
-
-El recurso ya expone helpers para mandar notificaciones al telefono desde otros resources.
-
-Comportamiento importante:
-
-- si la notificacion trae `route`, al tocarla abre esa ruta en el telefono.
-- si la app esta silenciada, no aparece salvo que `priority = 'high'`.
-- si `Do Not Disturb` esta activo, no aparece salvo que `priority = 'high'`.
-- si `sticky = true`, no se oculta sola.
-- si no es sticky, usa `durationMs` y luego se descarta automaticamente.
-
-Payload soportado:
-
-- `appId`: id de app (`messages`, `chirp`, `mail`, etc.)
-- `title`: titulo de la notificacion
-- `message`: texto visible
-- `icon`: glifo corto o texto breve
-- `durationMs`: tiempo visible en ms
-- `sticky`: si queda fija hasta cerrar manualmente
-- `priority`: `low` | `normal` | `high`
-- `route`: ruta a abrir al clickear
-- `data`: payload adicional para la ruta
-
-#### Server export
+Send notifications from other resources:
 
 ```lua
+-- Server export
 exports['gcphone-next']:SendPhoneNotification(source, {
     appId = 'messages',
-    title = 'Mensajes',
-    message = 'Nuevo mensaje de Rafa',
-    icon = '✉',
+    title = 'Messages',
+    message = 'New message from Rafa',
+    icon = './img/icons_ios/messages.svg',
     priority = 'normal',
     durationMs = 2600,
     route = 'messages',
-    data = {
-        conversation = '5551234'
-    }
+    data = { conversation = '5551234' }
 })
-```
 
-Broadcast:
-
-```lua
+-- Broadcast to all
 exports['gcphone-next']:SendPhoneNotification(-1, {
     appId = 'system',
-    title = 'Servidor',
-    message = 'Habra reinicio en 10 minutos',
-    icon = 'i',
+    title = 'Server',
+    message = 'Restart in 10 minutes',
     priority = 'high'
 })
-```
 
-#### Client export
-
-```lua
+-- Client export
 exports['gcphone-next']:NotifyPhone({
     appId = 'chirp',
     title = 'Chirp',
-    message = 'Maria hizo rechirp de tu chirp.',
-    icon = '↻',
-    priority = 'high',
+    message = 'Someone rechirped your post',
+    priority = 'normal',
     durationMs = 2600,
-    route = 'chirp'
 })
 ```
 
-#### Persistent notification
+## Hook System
+
+Register hooks from external resources:
 
 ```lua
-exports['gcphone-next']:AddPersistentNotification(identifier, {
-    appId = 'mail',
-    title = 'Mail',
-    message = 'Tienes un correo nuevo pendiente'
-})
+exports['gcphone-next']:registerHook('callStarted', function(payload)
+    print('Call started:', payload.phoneNumber)
+end, { print = true })
 ```
 
-#### Como pensar `appId`, `route`, `data` y `meta`
-
-- `appId`: define a que app pertenece la notificacion para mute/unread/badges. Debe ser un id real del front como `messages`, `mail`, `bank`, `wavechat`, `news`, `yellowpages`.
-- `route`: define a que pantalla navega el telefono cuando el jugador toca la notificacion.
-- `data`: parametros opcionales de esa ruta. Ejemplo: abrir un chat concreto o centrar un mapa.
-- `meta`: payload persistente opcional guardado en DB; sirve para auditoria o contexto extra, pero la UI no navega con `meta`.
-
-Ejemplo para abrir una conversacion:
-
-```lua
-exports['gcphone-next']:AddPersistentNotification(identifier, {
-    appId = 'messages',
-    title = 'Mensajes',
-    message = 'Nuevo mensaje de Rafa',
-    route = 'messages',
-    data = {
-        phoneNumber = '555-1111'
-    }
-})
-```
-
-Ejemplo para abrir Maps con coordenadas:
-
-```lua
-exports['gcphone-next']:AddPersistentNotification(identifier, {
-    appId = 'maps',
-    title = 'GPS',
-    message = 'Nueva ubicacion recibida',
-    route = 'maps',
-    data = {
-        x = 123.4,
-        y = 456.7
-    }
-})
-```
-
-### Sensitive exports and identifier ownership
-
-Los exports server-side que leen datos privados por `identifier` ahora exigen `requestSource` y validan ownership antes de devolver datos.
-
-Esto aplica a exports como:
-
-- `GetContacts(identifier, requestSource)`
-- `GetGallery(identifier, requestSource)`
-- `GetMessages(identifier, requestSource)`
-- `GetConversation(identifier, phoneNumber, requestSource)`
-- `GetCallHistory(identifier, requestSource)`
-- `GetPhoneNumber(identifier, requestSource)`
-- `GetPhoneByIdentifier(identifier, requestSource)`
-
-Ejemplo correcto:
-
-```lua
-local src = source
-local identifier = exports['gcphone-next']:GetIdentifier(src)
-local contacts = exports['gcphone-next']:GetContacts(identifier, src)
-```
-
-Si `requestSource` no coincide con el owner real del `identifier`, el export devuelve vacio, `nil` o `UNAUTHORIZED` segun el caso.
-
-#### Browser mock helpers
-
-En browser/devtools puedes probar los banners con:
-
-```js
-window.gcphoneMock.hiddenNotification()
-window.gcphoneMock.hiddenNotificationBurst()
-window.gcphoneMock.hiddenNotificationSticky()
-```
-
-Eso sirve para revisar el estado "telefono guardado" y las transiciones de cola sin entrar al juego.
-
-### Lluvia de ideas (rendimiento)
-
-- reemplazar `transition: all` restante por transiciones de propiedades especificas (`transform`, `opacity`, `background-color`, etc.).
-- revisar apps con listas largas y mover filtros/derivados a `createMemo` para evitar recomputes innecesarios.
-- virtualizar listas pesadas que todavia no usan `VirtualList`.
-- revisar callbacks sociales mas usados y aplicar cooldown por accion/usuario segun `Config.Security.RateLimits`.
-- agregar comando de health (`gcphone_health`) con estado de DB, LiveKit, Socket y callbacks criticos.
-- reducir trabajo por tick en cliente y mover validaciones sensibles al server.
-- unificar cache TTL de apps sociales para evitar doble fetch al navegar rapido.
-- eliminar queries redundantes en flujos follow/request y consolidar lecturas post-accion.
-
----
+Available hooks: `numberDialed`, `callStarted`, `emergencyCallStarted`, `contactAdded`, `contactUpdated`, `contactDeleted`, `messageSent`, `mailAccountCreated`, `phoneSetupCompleted`, `deviceUnlocked`, `imeiViewed`
 
 ## Attribution
 
-This repository contains a derivative work of:
-https://github.com/manueljlz/gcphone
-
+This repository is a derivative work of [gcphone](https://github.com/manueljlz/gcphone).
 All original credits remain with the upstream authors.
-Please refer to the original repository for historical contributors.
-
----
 
 ## License
 
-This project inherits and complies with the upstream license terms.
-
-The original LICENSE file from:
-https://github.com/manueljlz/gcphone
-
-must remain included in this repository.
-
-Any additional modifications are distributed under the same license unless otherwise stated.
+GPL-3.0 — see [LICENSE.md](LICENSE.md)
 
 ---
 
-Maintained by: JericoFX
+Maintained by **JericoFX**
