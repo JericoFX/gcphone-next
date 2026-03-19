@@ -40,11 +40,13 @@ client_scripts {
     'client/music.lua',
     'client/txadmin.lua',
     'client/garage.lua',
+    'client/cityride.lua',
 }
 
 server_scripts {
     'server/js/livekit.js',
     'server/js/socket_auth.js',
+    'server/js/youtube_search.js',
     '@oxmysql/lib/MySQL.lua',
     'server/modules/database.lua',
     'server/main.lua',
@@ -70,8 +72,10 @@ server_scripts {
     'server/modules/snap.lua',
     'server/modules/social.lua',
     'server/modules/garage.lua',
-    'server/modules/market.lua',
+    -- 'server/modules/market.lua', -- Removed: unused, replaced by yellowpages
     'server/modules/yellowpages.lua',
+    'server/modules/matchmylove.lua',
+    'server/modules/services.lua',
     'server/modules/news.lua',
     'server/modules/clips.lua',
     'server/modules/live.lua',
@@ -86,6 +90,8 @@ server_scripts {
     'server/modules/notes.lua',
     'server/modules/retention.lua',
     'server/modules/darkrooms.lua',
+    'server/modules/radio.lua',
+    'server/modules/cityride.lua',
 }
 
 dependencies {

@@ -104,7 +104,7 @@ lib.callback.register('gcphone:clips:getFeed', function(source, data)
 
     local clips = MySQL.query.await([[
         SELECT c.*, COALESCE(NULLIF(n.clips_username, ''), a.username) AS username, a.display_name, a.avatar,
-               (SELECT COUNT(*) FROM phone_clips_comments WHERE clip_id = c.id) AS comments_count,
+               c.comments_count,
                CASE WHEN c.account_id = ? THEN 1 ELSE 0 END AS is_own,
                CASE WHEN EXISTS (SELECT 1 FROM phone_clips_likes WHERE clip_id = c.id AND account_id = ?) THEN 1 ELSE 0 END AS liked
         FROM phone_clips_posts c
@@ -137,7 +137,7 @@ lib.callback.register('gcphone:clips:getMyClips', function(source, data)
 
     local clips = MySQL.query.await([[
         SELECT c.*, COALESCE(NULLIF(n.clips_username, ''), a.username) AS username, a.display_name, a.avatar,
-               (SELECT COUNT(*) FROM phone_clips_comments WHERE clip_id = c.id) AS comments_count,
+               c.comments_count,
                1 AS is_own,
                CASE WHEN EXISTS (SELECT 1 FROM phone_clips_likes WHERE clip_id = c.id AND account_id = ?) THEN 1 ELSE 0 END AS liked
         FROM phone_clips_posts c

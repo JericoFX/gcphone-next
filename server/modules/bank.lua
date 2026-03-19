@@ -43,6 +43,7 @@ lib.callback.register('gcphone:getBankTransactions', function(source)
 end)
 
 lib.callback.register('gcphone:transferMoney', function(source, data)
+    if IsPhoneReadOnly(source) then return false, 'READ_ONLY' end
     local identifier = GetIdentifier(source)
     if not identifier then return false, 'Invalid source' end
     if type(data) ~= 'table' then return false, 'Invalid data' end

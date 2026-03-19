@@ -339,3 +339,113 @@ export function muteSnapLiveUser(liveId: string, username: string): Promise<Snap
     });
   });
 }
+
+// ── MatchMyLove Chat Socket ──
+
+export interface MmlSocketMessage {
+  id: string;
+  matchId: number;
+  senderId: string;
+  senderName: string;
+  content: string;
+  createdAt: number;
+}
+
+type MmlAck = { success?: boolean; error?: string; message?: MmlSocketMessage };
+type MmlJoinAck = { success?: boolean; error?: string; messages?: MmlSocketMessage[] };
+
+let mmlSocket: Socket | null = null;
+let mmlCurrentHandlers: {
+  onMessage?: (message: MmlSocketMessage) => void;
+  onTyping?: (payload: { matchId: number; identifier: string; name: string; typing: boolean }) => void;
+  onDisconnect?: () => void;
+  onReconnect?: () => void;
+} | null = null;
+
+export function disconnectMmlSocket() {
+  if (mmlSocket) {
+    mmlSocket.disconnect();
+    mmlSocket = null;
+  }
+  mmlCurrentHandlers = null;
+}
+
+export function connectMmlSocket(host: string, token: string, handlers?: {
+  onMessage?: (message: MmlSocketMessage) => void;
+  onTyping?: (payload: { matchId: number; identifier: string; name: string; typing: boolean }) => void;
+  onDisconnect?: () => void;
+  onReconnect?: () => void;
+}) {
+  disconnectMmlSocket();
+  mmlCurrentHandlers = handlers || null;
+  mmlSocket = io(host, {
+    auth: { token },
+    transports: ['websocket'],
+    reconnection: true,
+    reconnectionAttempts: 5,
+    reconnectionDelay: 1000,
+    reconnectionDelayMax: 5000,
+    randomizationFactor: 0.5,
+  });
+
+  if (handlers?.onMessage) {
+    mmlSocket.on('matchmylove:message', handlers.onMessage);
+  }
+  if (handlers?.onTyping) {
+    mmlSocket.on('matchmylove:typing', handlers.onTyping);
+  }
+  if (handlers?.onDisconnect) {
+    mmlSocket.on('disconnect', handlers.onDisconnect);
+  }
+  mmlSocket.io.on('reconnect', () => {
+    mmlCurrentHandlers?.onReconnect?.();
+  });
+  mmlSocket.on('connect_error', (error) => {
+    if (error.message === 'INVALID_TOKEN' || error.message === 'TOKEN_EXPIRED') {
+      disconnectMmlSocket();
+    }
+  });
+
+  return mmlSocket;
+}
+
+export function isMmlSocketConnected() {
+  return Boolean(mmlSocket && mmlSocket.connected);
+}
+
+export function joinMmlRoom(matchId: number): Promise<MmlJoinAck> {
+  return new Promise<MmlJoinAck>((resolve) => {
+    if (!mmlSocket || !mmlSocket.connected) {
+      resolve({ success: false, error: 'SOCKET_OFFLINE', messages: [] });
+      return;
+    }
+    mmlSocket.emit('matchmylove:joinRoom', { matchId }, (payload: MmlJoinAck) => {
+      resolve(payload || { success: false, messages: [] });
+    });
+  });
+}
+
+export function leaveMmlRoom(matchId: number) {
+  mmlSocket?.emit('matchmylove:leaveRoom', { matchId });
+}
+
+export function sendMmlMessage(matchId: number, content: string): Promise<MmlAck> {
+  return new Promise<MmlAck>((resolve) => {
+    if (!mmlSocket || !mmlSocket.connected) {
+      resolve({ success: false, error: 'SOCKET_OFFLINE' });
+      return;
+    }
+    const safe = String(content || '').replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, 500);
+    if (!safe) {
+      resolve({ success: false, error: 'EMPTY_MESSAGE' });
+      return;
+    }
+    mmlSocket.emit('matchmylove:send', { matchId, content: safe }, (payload: MmlAck) => {
+      resolve(payload || { success: false });
+    });
+  });
+}
+
+export function sendMmlTyping(matchId: number, typing: boolean) {
+  mmlSocket?.emit('matchmylove:typing', { matchId, typing });
+}

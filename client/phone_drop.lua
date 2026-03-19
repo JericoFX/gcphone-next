@@ -6,6 +6,10 @@ local phonePoints = {}
 local uiPhoneId = nil
 local interactionBusy = false
 
+-- PIN brute-force protection: progressive cooldown per phone
+local pinAttempts = {} -- phoneId -> { count, nextAllowedAt }
+local PIN_COOLDOWNS = { 0, 3000, 8000, 20000, 60000 } -- ms after 0,1,2,3,4+ failures
+
 local function CreatePhoneObject(coords)
     local model = "prop_npc_phone_01"
     lib.requestModel(model)
@@ -109,6 +113,18 @@ local function HandlePhoneInteraction(phoneId)
     end
 
     if action[1] == 'unlock' then
+        local attempt = pinAttempts[phoneId]
+        if attempt and attempt.nextAllowedAt > GetGameTimer() then
+            local secsLeft = math.ceil((attempt.nextAllowedAt - GetGameTimer()) / 1000)
+            lib.notify({
+                title = 'Dispositivo bloqueado',
+                description = ('Espera %d segundos antes de intentar de nuevo'):format(secsLeft),
+                type = 'error'
+            })
+            interactionBusy = false
+            return
+        end
+
         local pinInput = lib.inputDialog('Intentar desbloqueo', {
             {
                 type = 'input',
@@ -127,6 +143,7 @@ local function HandlePhoneInteraction(phoneId)
 
         lib.callback('gcphone:unlockDroppedPhone', false, function(result)
             if result and result.success then
+                pinAttempts[phoneId] = nil
                 if result.payload then
                     ShowPhonePayload(result.payload)
                 else
@@ -149,9 +166,16 @@ local function HandlePhoneInteraction(phoneId)
                     end)
                 end
             else
+                local attempt = pinAttempts[phoneId] or { count = 0, nextAllowedAt = 0 }
+                attempt.count = attempt.count + 1
+                local cooldownIdx = math.min(attempt.count, #PIN_COOLDOWNS)
+                attempt.nextAllowedAt = GetGameTimer() + (PIN_COOLDOWNS[cooldownIdx] or 60000)
+                pinAttempts[phoneId] = attempt
+
+                local secsLeft = math.ceil((PIN_COOLDOWNS[cooldownIdx] or 60000) / 1000)
                 lib.notify({
                     title = 'PIN incorrecto',
-                    description = 'No se pudo desbloquear el dispositivo',
+                    description = secsLeft > 0 and ('Bloqueado por %d segundos'):format(secsLeft) or 'No se pudo desbloquear el dispositivo',
                     type = 'error'
                 })
             end

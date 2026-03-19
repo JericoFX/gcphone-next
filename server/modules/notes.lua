@@ -1,3 +1,12 @@
+local SecurityResource = GetCurrentResourceName()
+local function HitRateLimit(source, key, windowMs, maxHits)
+    local ok, blocked = pcall(function()
+        return exports[SecurityResource]:HitRateLimit(source, key, windowMs, maxHits)
+    end)
+    if not ok then return false end
+    return blocked == true
+end
+
 local function GetIdentifierSafe(source)
     local src = tonumber(source)
     if not src or src <= 0 then return nil end
@@ -15,6 +24,8 @@ lib.callback.register('gcphone:notes:getAll', function(source)
 end)
 
 lib.callback.register('gcphone:notes:save', function(source, data)
+    if IsPhoneReadOnly(source) then return false end
+    if HitRateLimit(source, 'notes_save', 1000, 3) then return false end
     local identifier = GetIdentifierSafe(source)
     if not identifier then return false end
     if type(data) ~= 'table' then return false end
@@ -45,6 +56,8 @@ lib.callback.register('gcphone:notes:save', function(source, data)
 end)
 
 lib.callback.register('gcphone:notes:delete', function(source, data)
+    if IsPhoneReadOnly(source) then return false end
+    if HitRateLimit(source, 'notes_delete', 1000, 3) then return false end
     local identifier = GetIdentifierSafe(source)
     if not identifier then return false end
     if type(data) ~= 'table' then return false end

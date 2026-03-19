@@ -1,6 +1,15 @@
 -- Creado/Modificado por JericoFX
 -- YellowPages - Backend
 
+local SecurityResource = GetCurrentResourceName()
+local function HitRateLimit(source, key, windowMs, maxHits)
+    local ok, blocked = pcall(function()
+        return exports[SecurityResource]:HitRateLimit(source, key, windowMs, maxHits)
+    end)
+    if not ok then return false end
+    return blocked == true
+end
+
 local function SanitizeText(value, maxLength)
     if type(value) ~= 'string' then return '' end
     local text = value:gsub('[%z\1-\31\127]', '')
@@ -33,6 +42,7 @@ end
 
 -- Get all listings with seller info
 lib.callback.register('gcphone:yellowpages:getListings', function(source, data)
+    if HitRateLimit(source, 'yp_listings', 1500, 4) then return {} end
     local identifier = GetIdentifier(source)
     data = type(data) == 'table' and data or {}
     local category = data.category or 'all'
@@ -90,6 +100,8 @@ end)
 
 -- Create listing
 lib.callback.register('gcphone:yellowpages:createListing', function(source, data)
+    if IsPhoneReadOnly(source) then return false, 'READ_ONLY' end
+    if HitRateLimit(source, 'yp_create', 3000, 1) then return false, 'RATE_LIMITED' end
     local identifier = GetIdentifier(source)
     if not identifier then return false, 'Not authenticated' end
     
@@ -142,6 +154,8 @@ end)
 
 -- Delete listing (only own)
 lib.callback.register('gcphone:yellowpages:deleteListing', function(source, listingId)
+    if IsPhoneReadOnly(source) then return false end
+    if HitRateLimit(source, 'yp_delete', 1500, 2) then return false end
     local identifier = GetIdentifier(source)
     if not identifier then return false end
     
@@ -194,6 +208,8 @@ end)
 
 -- Share location for listing
 lib.callback.register('gcphone:yellowpages:shareLocation', function(source, listingId)
+    if IsPhoneReadOnly(source) then return false end
+    if HitRateLimit(source, 'yp_location', 2000, 2) then return false end
     local identifier = GetIdentifier(source)
     if not identifier then return false end
     
