@@ -1,4 +1,53 @@
+GCPhone = GCPhone or {}
+
 local Bridge = nil
+
+-- Validate critical Config shapes at load time with safe fallbacks.
+-- Prevents nil-index crashes when a config section is missing.
+do
+    Config = Config or {}
+    Config.Phone = Config.Phone or {}
+    Config.Phone.NumberPrefix = Config.Phone.NumberPrefix or { 555 }
+    Config.Phone.DefaultSettings = Config.Phone.DefaultSettings or {
+        wallpaper = './img/background/back001.jpg',
+        ringtone = 'call_1',
+        callRingtone = 'call_1',
+        notificationTone = 'notif_1',
+        messageTone = 'msg_1',
+        volume = 0.5,
+        lockCode = '0000',
+        theme = 'light',
+        language = 'es',
+        audioProfile = 'normal',
+    }
+    Config.Phone.Setup = Config.Phone.Setup or { RequireOnFirstUse = true, MinPinLength = 4, MaxPinLength = 4, EmergencyContacts = {} }
+    Config.Phone.ExportAllowlist = Config.Phone.ExportAllowlist or {}
+    Config.Security = Config.Security or {}
+    Config.Security.RateLimits = Config.Security.RateLimits or {}
+    Config.Features = Config.Features or {}
+    Config.Wallet = Config.Wallet or { InitialBalance = 2500, MaxTransferAmount = 500000, ProximityDistance = 3.0 }
+    Config.NativeAudio = Config.NativeAudio or {}
+    Config.NativeAudio.DefaultByCategory = Config.NativeAudio.DefaultByCategory or { ringtone = 'call_1', notification = 'notif_1', message = 'msg_1', vibrate = 'buzz_short_01' }
+    Config.NativeAudio.Catalog = Config.NativeAudio.Catalog or {}
+    Config.NativeAudio.LegacyMap = Config.NativeAudio.LegacyMap or {}
+    Config.Contacts = Config.Contacts or {}
+    Config.Messages = Config.Messages or {}
+    Config.Calls = Config.Calls or {}
+    Config.LiveKit = Config.LiveKit or {}
+    Config.Camera = Config.Camera or {}
+    Config.Gallery = Config.Gallery or {}
+    Config.Storage = Config.Storage or {}
+    Config.Mail = Config.Mail or {}
+    Config.Garage = Config.Garage or {}
+    Config.Market = Config.Market or {}
+    Config.News = Config.News or {}
+    Config.Proximity = Config.Proximity or {}
+    Config.Chirp = Config.Chirp or {}
+    Config.Snap = Config.Snap or {}
+    Config.Music = Config.Music or {}
+    Config.Documents = Config.Documents or {}
+    Config.Bank = Config.Bank or {}
+end
 
 ---@alias GCPhoneNotificationPriority 'low'|'normal'|'high'
 

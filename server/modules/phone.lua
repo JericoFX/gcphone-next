@@ -821,7 +821,24 @@ local function ResetPhone(identifier)
     )
 end
 
+local function PlayerHasPhoneItem(source)
+    if not Config.Phone.RequireItem then return true end
+
+    local itemName = Config.Phone.ItemName or 'phone'
+    local hasOxInventory = GetResourceState('ox_inventory') == 'started'
+    if not hasOxInventory then return true end
+
+    local ok, count = pcall(exports.ox_inventory.Search, exports.ox_inventory, source, 'count', itemName)
+    if not ok then return true end
+
+    return type(count) == 'number' and count >= 1
+end
+
 lib.callback.register('gcphone:getPhoneData', function(source)
+    if not PlayerHasPhoneItem(source) then
+        return { blocked = true, error = 'NO_PHONE_ITEM' }
+    end
+
     local identifier = GetPhoneOwnerIdentifier(source, true)
     local phone = identifier == GetIdentifier(source) and GetOrCreatePhone(source) or GetPhoneByIdentifier(identifier)
     if not phone then return nil end
@@ -1580,6 +1597,11 @@ exports('MarkPhoneAsStolenByNumber', function(phoneNumber, reason, reporter)
         phone = result,
     }
 end)
+
+---Check if a player has a phone item (ox_inventory). Always true when RequireItem is false.
+---@param source integer
+---@return boolean
+exports('PlayerHasPhoneItem', PlayerHasPhoneItem)
 
 ---Clear stolen state for a phone using its phone number.
 ---@param phoneNumber string
