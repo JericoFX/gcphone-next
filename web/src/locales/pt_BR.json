@@ -182,6 +182,8 @@
     "settings.language": "Idioma",
     "settings.volume": "Volume",
     "settings.audio_profile": "Perfil de audio",
+    "settings.streamer_mode": "Modo Streamer",
+    "settings.streamer_mode_desc": "Nao ouvir a musica de outros jogadores",
     "settings.context": "Contexto",
     "settings.ringtone": "Toque",
     "settings.pin_lock": "Bloqueio por PIN",

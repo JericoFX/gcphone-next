@@ -2,6 +2,18 @@
 
 All notable changes to gcphone-next will be documented in this file.
 
+## [2.2.0] - 2026-03-19
+
+### Added
+- **Streamer Mode** — toggle in Settings > Sound that mutes spatial music/radio from other players. Persisted per-player in database (migration v19). Server-side enforcement via olisound.
+
+### Changed
+- **Docs** — removed obsolete Piped API and YouTube Data API key references from music, radio, and getting-started docs. Updated dependencies to reflect bundled youtube-sr and olisound.
+- **Docs: getting-started** — added Automated Setup section for `setup-livekit.ps1` wizard (Docker install, config generation, firewall ports, server.cfg convars). Added Native Audio and Open Source sections.
+
+### Removed
+- All references to Piped API (`Config.APIs.Piped`) and `gcphone_youtube_api_key` convar from documentation.
+
 ## [2.1.0] - 2026-03-19
 
 ### Added

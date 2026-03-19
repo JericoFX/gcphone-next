@@ -1,7 +1,7 @@
 import { For } from 'solid-js';
 import { SectionHeader } from '../../shared/ui/SectionBlock';
 import { t } from '../../../i18n';
-import { audioProfiles, CheckIcon, Group, IconImage, ICONS } from './settingsShared';
+import { audioProfiles, Cell, CheckIcon, Group, IconImage, ICONS } from './settingsShared';
 import type { PhoneToneCatalog, ToneCategory } from '../../../utils/phoneAudio';
 import styles from './SettingsApp.module.scss';
 
@@ -64,6 +64,18 @@ export function SettingsSound(props: SettingsSoundProps) {
             </button>
           )}
         </For>
+      </Group>
+
+      <SectionHeader title={t('settings.streamer_mode', props.language()).toUpperCase()} />
+      <Group>
+        <Cell
+          icon={ICONS.mute}
+          title={t('settings.streamer_mode', props.language())}
+          subtitle={t('settings.streamer_mode_desc', props.language())}
+          right="switch"
+          switchValue={props.phoneState.settings.streamerMode ?? false}
+          onSwitch={() => props.phoneActions.setStreamerMode(!(props.phoneState.settings.streamerMode ?? false))}
+        />
       </Group>
 
       <SectionHeader title={t('settings.ringtone', props.language()).toUpperCase()} />

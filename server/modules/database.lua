@@ -1379,6 +1379,16 @@ local MIGRATIONS = {
                    OR `imei` = ''
                    OR `imei` NOT REGEXP '^[0-9]{15}$']]
         }
+    },
+
+    {
+        version = 19,
+        name = "phone_streamer_mode",
+        description = "Add streamer_mode flag to phone_numbers",
+        statements = {
+            [[ALTER TABLE `phone_numbers`
+                ADD COLUMN IF NOT EXISTS `streamer_mode` TINYINT(1) NOT NULL DEFAULT 0 AFTER `audio_profile`]]
+        }
     }
 }
 

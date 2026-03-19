@@ -89,6 +89,14 @@ local function GetPlayerCoords(source)
     return GetEntityCoords(ped)
 end
 
+local function MuteForStreamerPlayers(soundName)
+    local streamers = GCPhone and GCPhone.StreamerModePlayers
+    if not streamers then return end
+    for src in pairs(streamers) do
+        exports['olisound']:Destroy(src, soundName)
+    end
+end
+
 local function DestroyRadioMusic(stationId)
     local station = ActiveStations[stationId]
     if not station or not station.music then return end
@@ -394,6 +402,7 @@ lib.callback.register('gcphone:radio:playMusic', function(source, data)
     else
         exports['olisound']:PlayUrlPos(-1, soundName, youtubeUrl, volume, coords, false)
         exports['olisound']:Distance(-1, soundName, distance)
+        MuteForStreamerPlayers(soundName)
     end
     exports['olisound']:setVolumeMax(isPrivate and source or -1, soundName, volume)
 
@@ -494,6 +503,7 @@ local function UpdateRadioMusicPositions()
                 local coords = GetPlayerCoords(srcNum)
                 if coords then
                     exports['olisound']:Position(-1, station.music.soundName, coords)
+                    MuteForStreamerPlayers(station.music.soundName)
                 end
             end
         end

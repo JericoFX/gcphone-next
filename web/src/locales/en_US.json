@@ -182,6 +182,8 @@
     "settings.language": "Language",
     "settings.volume": "Volume",
     "settings.audio_profile": "Audio profile",
+    "settings.streamer_mode": "Streamer Mode",
+    "settings.streamer_mode_desc": "Mute other players' music",
     "settings.context": "Context",
     "settings.ringtone": "Ringtone",
     "settings.pin_lock": "PIN lock",

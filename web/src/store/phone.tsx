@@ -63,7 +63,8 @@ const defaultSettings: PhoneSettings = {
   screenLockEnabled: true,
   theme: 'light',
   language: 'es',
-  audioProfile: 'normal'
+  audioProfile: 'normal',
+  streamerMode: false
 };
 
 function readSwipeUnlockPreference() {
@@ -369,6 +370,11 @@ export const PhoneProvider: ParentComponent = (props) => {
       if (isReadOnly()) return;
       setState('settings', 'audioProfile', audioProfile);
       fetchNui('setAudioProfile', { audioProfile });
+    },
+    setStreamerMode: (enabled: boolean) => {
+      if (isReadOnly()) return;
+      setState('settings', 'streamerMode', enabled);
+      fetchNui('setStreamerMode', { enabled });
     },
     setLockCode: (code: string) => {
       if (isReadOnly()) return;

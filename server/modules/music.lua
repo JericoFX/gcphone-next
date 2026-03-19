@@ -101,6 +101,14 @@ local function BuildSoundName(source)
     return 'gcphone_music_' .. tostring(source)
 end
 
+local function MuteForStreamerPlayers(soundName)
+    local streamers = GCPhone and GCPhone.StreamerModePlayers
+    if not streamers then return end
+    for src in pairs(streamers) do
+        exports['olisound']:Destroy(src, soundName)
+    end
+end
+
 local function DestroyForSource(source)
     local current = ActiveMusicBySource[source]
     if not current then return end
@@ -166,6 +174,7 @@ local function PlayForSource(source, data)
     else
         exports['olisound']:PlayUrlPos(-1, soundName, streamUrl, volume, coords, false)
         exports['olisound']:Distance(-1, soundName, distance)
+        MuteForStreamerPlayers(soundName)
     end
     exports['olisound']:setVolumeMax(isPrivate and source or -1, soundName, volume)
 
@@ -337,6 +346,7 @@ local function UpdateActiveMusicPositions()
                 local coords = GetPlayerCoords(srcNum)
                 if coords then
                     exports['olisound']:Position(-1, current.name, coords)
+                    MuteForStreamerPlayers(current.name)
                 end
             end
         end
