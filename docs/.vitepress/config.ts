@@ -42,6 +42,10 @@ export default defineConfig({
           { text: 'Snap', link: '/apps/snap' },
           { text: 'Wallet', link: '/apps/wallet' },
           { text: 'Yellow Pages', link: '/apps/yellowpages' },
+          { text: 'Radio', link: '/apps/radio' },
+          { text: 'Services', link: '/apps/services' },
+          { text: 'MatchMyLove', link: '/apps/matchmylove' },
+          { text: 'CityRide', link: '/apps/cityride' },
         ],
       },
       {
