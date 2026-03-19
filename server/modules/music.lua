@@ -15,12 +15,6 @@ local function SafeString(value, maxLen)
     return text
 end
 
-local function UrlEncode(str)
-    return (str:gsub('([^%w%-_%.~])', function(c)
-        return string.format('%%%02X', string.byte(c))
-    end))
-end
-
 local function ClampNumber(value, minValue, maxValue, fallback)
     local num = tonumber(value)
     if not num then return fallback end
@@ -65,25 +59,7 @@ local function CanRunMusicAction(source)
     return true
 end
 
-local function HttpGetJson(url)
-    local p = promise.new()
-    PerformHttpRequest(url, function(statusCode, body)
-        if statusCode < 200 or statusCode >= 300 or type(body) ~= 'string' or body == '' then
-            p:resolve(nil)
-            return
-        end
-
-        local ok, payload = pcall(function()
-            return json.decode(body)
-        end)
-
-        p:resolve(ok and payload or nil)
-    end, 'GET', '', {
-        ['Content-Type'] = 'application/json'
-    })
-
-    return Citizen.Await(p)
-end
+local ForcePrivate = GetConvar('gcphone_music_force_private', 'false') == 'true'
 
 local function ExtractYoutubeVideoId(value)
     if type(value) ~= 'string' or value == '' then return nil end
@@ -113,69 +89,12 @@ local function ExtractYoutubeVideoId(value)
     return nil
 end
 
-local function GetYoutubeApiKey()
-    return SafeString(GetConvar('gcphone_youtube_api_key', ''), 200)
+local function BuildYoutubeWatchUrl(videoId)
+    return 'https://www.youtube.com/watch?v=' .. videoId
 end
 
-local function GetPipedApiBaseUrl()
-    local configured = SafeString(GetConvar('gcphone_music_piped_api_url', ''), 200)
-    if configured ~= '' and IsSafeHttpUrl(configured) then
-        return configured:gsub('/+$', '')
-    end
-
-    local cfgDefault = Config and Config.APIs and Config.APIs.Piped and Config.APIs.Piped.BaseUrl or ''
-    cfgDefault = SafeString(cfgDefault, 200)
-    if cfgDefault == '' then
-        return 'https://pipedapi.kavin.rocks'
-    end
-
-    cfgDefault = cfgDefault:gsub('/+$', '')
-    if cfgDefault:find('piped.video', 1, true) then
-        return cfgDefault .. '/api/v1'
-    end
-
-    return cfgDefault
-end
-
-local function BuildYoutubeSearchUrl(query, maxResults)
-    local apiKey = GetYoutubeApiKey()
-    if apiKey == '' then return nil end
-
-    return ('https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=%d&q=%s&key=%s')
-        :format(maxResults, UrlEncode(query), UrlEncode(apiKey))
-end
-
-local function ResolveYoutubeAudioStream(videoId)
-    local baseUrl = GetPipedApiBaseUrl()
-    if baseUrl == '' then return nil end
-
-    local payload = HttpGetJson(('%s/streams/%s'):format(baseUrl, UrlEncode(videoId)))
-    if type(payload) ~= 'table' or type(payload.audioStreams) ~= 'table' then
-        return nil
-    end
-
-    local bestUrl = nil
-    local bestBitrate = -1
-
-    for _, stream in ipairs(payload.audioStreams) do
-        local streamUrl = type(stream) == 'table' and stream.url or nil
-        local mimeType = type(stream) == 'table' and tostring(stream.mimeType or '') or ''
-        local bitrate = tonumber(stream and stream.bitrate) or 0
-        local videoOnly = stream and stream.videoOnly == true
-
-        if streamUrl and IsSafeHttpUrl(streamUrl) and not videoOnly and mimeType:find('audio/', 1, true) then
-            if bitrate > bestBitrate then
-                bestBitrate = bitrate
-                bestUrl = streamUrl
-            end
-        end
-    end
-
-    return bestUrl
-end
-
-local function EnsureXSoundReady()
-    return GetResourceState('xsound') == 'started'
+local function EnsureOliSoundReady()
+    return GetResourceState('olisound') == 'started'
 end
 
 local function BuildSoundName(source)
@@ -185,8 +104,9 @@ end
 local function DestroyForSource(source)
     local current = ActiveMusicBySource[source]
     if not current then return end
-    if EnsureXSoundReady() then
-        exports['xsound']:Destroy(-1, current.name)
+    if EnsureOliSoundReady() then
+        local target = current.private and source or -1
+        exports['olisound']:Destroy(target, current.name)
     end
     ActiveMusicBySource[source] = nil
 end
@@ -202,8 +122,8 @@ local function NotifyState(source, payload)
 end
 
 local function PlayForSource(source, data)
-    if not EnsureXSoundReady() then
-        NotifyState(source, { success = false, error = 'XSOUND_NOT_STARTED' })
+    if not EnsureOliSoundReady() then
+        NotifyState(source, { success = false, error = 'OLISOUND_NOT_STARTED' })
         return
     end
 
@@ -221,11 +141,7 @@ local function PlayForSource(source, data)
 
     local streamUrl = nil
     if videoId then
-        streamUrl = ResolveYoutubeAudioStream(videoId)
-        if not streamUrl then
-            NotifyState(source, { success = false, error = 'STREAM_RESOLVE_FAILED' })
-            return
-        end
+        streamUrl = BuildYoutubeWatchUrl(videoId)
     else
         if not IsSafeHttpUrl(rawUrl) then
             NotifyState(source, { success = false, error = 'INVALID_URL' })
@@ -243,10 +159,15 @@ local function PlayForSource(source, data)
     DestroyForSource(source)
 
     local soundName = BuildSoundName(source)
+    local isPrivate = ForcePrivate or (type(data) == 'table' and data.private == true)
 
-    exports['xsound']:PlayUrlPos(-1, soundName, streamUrl, volume, coords, false)
-    exports['xsound']:Distance(-1, soundName, distance)
-    exports['xsound']:setVolumeMax(-1, soundName, volume)
+    if isPrivate then
+        exports['olisound']:PlayUrl(source, soundName, streamUrl, volume, false)
+    else
+        exports['olisound']:PlayUrlPos(-1, soundName, streamUrl, volume, coords, false)
+        exports['olisound']:Distance(-1, soundName, distance)
+    end
+    exports['olisound']:setVolumeMax(isPrivate and source or -1, soundName, volume)
 
     ActiveMusicBySource[source] = {
         name = soundName,
@@ -255,6 +176,7 @@ local function PlayForSource(source, data)
         distance = distance,
         videoId = videoId,
         paused = false,
+        private = isPrivate,
         title = SafeString(type(data) == 'table' and data.title or '', 120),
     }
 
@@ -266,6 +188,7 @@ local function PlayForSource(source, data)
         videoId = videoId,
         volume = volume,
         distance = distance,
+        private = isPrivate,
     })
 end
 
@@ -295,27 +218,10 @@ local function SearchCatalog(source, data)
         }
     end
 
-    local apiKey = GetYoutubeApiKey()
-    if apiKey == '' then
-        return {
-            success = false,
-            error = 'YOUTUBE_API_KEY_MISSING',
-            results = {}
-        }
-    end
-
     local maxResults = ClampNumber(type(data) == 'table' and data.limit or nil, 1, 20, (Config.Music and Config.Music.MaxResults) or 12)
-    local requestUrl = BuildYoutubeSearchUrl(query, maxResults)
-    if not requestUrl then
-        return {
-            success = false,
-            error = 'INVALID_REQUEST',
-            results = {}
-        }
-    end
 
-    local payload = HttpGetJson(requestUrl)
-    if type(payload) ~= 'table' or type(payload.items) ~= 'table' then
+    local raw = exports[cache.resource]:youtubeSearch(query, maxResults)
+    if type(raw) ~= 'string' or raw == '' then
         return {
             success = false,
             error = 'SEARCH_FAILED',
@@ -323,35 +229,16 @@ local function SearchCatalog(source, data)
         }
     end
 
-    local out = {}
-    local count = 0
-    for _, item in ipairs(payload.items) do
-        local id = item and item.id
-        local snippet = item and item.snippet
-        local videoId = type(id) == 'table' and SafeString(id.videoId or '', 32) or ''
-        if videoId ~= '' and type(snippet) == 'table' then
-            local thumbs = snippet.thumbnails or {}
-            local thumb = (thumbs.medium and thumbs.medium.url) or (thumbs.default and thumbs.default.url) or (thumbs.high and thumbs.high.url) or ''
-
-            count = count + 1
-            out[count] = {
-                videoId = videoId,
-                title = SafeString(snippet.title or '', 160),
-                channel = SafeString(snippet.channelTitle or '', 80),
-                thumbnail = SafeString(thumb, 500),
-                publishedAt = SafeString(snippet.publishedAt or '', 40),
-                url = 'https://www.youtube.com/watch?v=' .. videoId,
-            }
-            if count >= maxResults then
-                break
-            end
-        end
+    local ok, payload = pcall(json.decode, raw)
+    if not ok or type(payload) ~= 'table' then
+        return {
+            success = false,
+            error = 'SEARCH_FAILED',
+            results = {}
+        }
     end
 
-    return {
-        success = true,
-        results = out
-    }
+    return payload
 end
 
 lib.callback.register('gcphone:music:searchCatalog', function(source, data)
@@ -364,7 +251,7 @@ end)
 
 lib.callback.register('gcphone:music:canSearchCatalog', function()
     return {
-        enabled = GetYoutubeApiKey() ~= ''
+        enabled = true
     }
 end)
 
@@ -384,8 +271,9 @@ RegisterNetEvent('gcphone:music:pause', function()
     if not GetIdentifier(source) then return end
     if not CanRunMusicAction(source) then return end
     local current = ActiveMusicBySource[source]
-    if not current or not EnsureXSoundReady() then return end
-    exports['xsound']:Pause(-1, current.name)
+    if not current or not EnsureOliSoundReady() then return end
+    local target = current.private and source or -1
+    exports['olisound']:Pause(target, current.name)
     current.paused = true
     NotifyState(source, { success = true, isPlaying = true, isPaused = true })
 end)
@@ -395,8 +283,9 @@ RegisterNetEvent('gcphone:music:resume', function()
     if not GetIdentifier(source) then return end
     if not CanRunMusicAction(source) then return end
     local current = ActiveMusicBySource[source]
-    if not current or not EnsureXSoundReady() then return end
-    exports['xsound']:Resume(-1, current.name)
+    if not current or not EnsureOliSoundReady() then return end
+    local target = current.private and source or -1
+    exports['olisound']:Resume(target, current.name)
     current.paused = false
     NotifyState(source, { success = true, isPlaying = true, isPaused = false })
 end)
@@ -414,7 +303,7 @@ RegisterNetEvent('gcphone:music:setVolume', function(data)
     if not GetIdentifier(source) then return end
     if not CanRunMusicAction(source) then return end
     local current = ActiveMusicBySource[source]
-    if not current or not EnsureXSoundReady() then return end
+    if not current or not EnsureOliSoundReady() then return end
 
     local maxDistance = ClampNumber((Config.Music and Config.Music.MaxDistance), 5.0, 80.0, 30.0)
     local newVolume = ClampNumber(type(data) == 'table' and data.volume or nil, 0.0, 1.0, current.volume)
@@ -423,8 +312,11 @@ RegisterNetEvent('gcphone:music:setVolume', function(data)
     current.volume = newVolume
     current.distance = newDistance
 
-    exports['xsound']:setVolumeMax(-1, current.name, newVolume)
-    exports['xsound']:Distance(-1, current.name, newDistance)
+    local target = current.private and source or -1
+    exports['olisound']:setVolumeMax(target, current.name, newVolume)
+    if not current.private then
+        exports['olisound']:Distance(-1, current.name, newDistance)
+    end
 
     NotifyState(source, {
         success = true,
@@ -436,15 +328,15 @@ RegisterNetEvent('gcphone:music:setVolume', function(data)
 end)
 
 local function UpdateActiveMusicPositions()
-    if EnsureXSoundReady() then
+    if EnsureOliSoundReady() then
         for source, current in pairs(ActiveMusicBySource) do
             local srcNum = tonumber(source)
             if not srcNum or GetPlayerName(srcNum) == nil then
                 DestroyForSource(source)
-            else
+            elseif not current.private then
                 local coords = GetPlayerCoords(srcNum)
                 if coords then
-                    exports['xsound']:Position(-1, current.name, coords)
+                    exports['olisound']:Position(-1, current.name, coords)
                 end
             end
         end

@@ -54,6 +54,10 @@ export function MusicApp() {
   const [busyAction, setBusyAction] = createSignal(false);
   const [status, setStatus] = createSignal('Busca una pista y reproduccela para toda la zona.');
   const [catalogEnabled, setCatalogEnabled] = createSignal(true);
+  const [privateMode, setPrivateMode] = createSignal(false);
+  const [disclaimerDismissed, setDisclaimerDismissed] = createSignal(
+    window.localStorage.getItem('gcphone:music:disclaimerDismissed') === 'true'
+  );
 
   const stateLabel = createMemo(() => {
     if (isPaused()) return 'Pausado';
@@ -65,6 +69,11 @@ export function MusicApp() {
     const value = title?.trim() || t('music.no_music', language());
     window.localStorage.setItem('gcphone:musicNowPlaying', value);
     window.dispatchEvent(new StorageEvent('storage', { key: 'gcphone:musicNowPlaying', newValue: value }));
+  };
+
+  const dismissDisclaimer = () => {
+    setDisclaimerDismissed(true);
+    window.localStorage.setItem('gcphone:music:disclaimerDismissed', 'true');
   };
 
   const applyServerState = (payload?: MusicStatePayload) => {
@@ -165,6 +174,7 @@ export function MusicApp() {
       title: track.title,
       volume: applyAudioProfile(volume() / 100),
       distance: distance(),
+      private: privateMode(),
     });
 
     setNowPlaying(track.title || 'YouTube');
@@ -187,6 +197,7 @@ export function MusicApp() {
       title: 'URL manual',
       volume: applyAudioProfile(volume() / 100),
       distance: distance(),
+      private: privateMode(),
     });
 
     setNowPlaying('URL manual');
@@ -245,6 +256,15 @@ export function MusicApp() {
 
   return (
     <AppScaffold title={t('music.title', language())} onBack={() => router.goBack()} bodyClass={styles.content}>
+        <Show when={!disclaimerDismissed()}>
+          <div class={styles.disclaimer}>
+            <span class={styles.disclaimerText}>
+              Este recurso no se hace responsable del contenido musical reproducido. El uso es responsabilidad exclusiva del usuario.
+            </span>
+            <button class={styles.disclaimerClose} onClick={dismissDisclaimer}>✕</button>
+          </div>
+        </Show>
+
         <section class={styles.hero}>
           <div class={styles.heroBackdrop} />
           <div class={styles.heroText}>
@@ -315,6 +335,16 @@ export function MusicApp() {
         <section class="ios-list">
           <div class="ios-row">
             <span class="ios-label">{t('music.controls', language())}</span>
+          </div>
+
+          <div class={styles.toggleRow}>
+            <span class={styles.toggleLabel}>Solo yo</span>
+            <button
+              classList={{ [styles.toggle]: true, [styles.toggleActive]: privateMode() }}
+              onClick={() => setPrivateMode(!privateMode())}
+            >
+              <span class={styles.toggleKnob} />
+            </button>
           </div>
 
           <div class={styles.controls}>

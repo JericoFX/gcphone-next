@@ -248,11 +248,13 @@ local function CanAccessIdentifierExport(identifier, requestSource)
 end
 
 lib.callback.register('gcphone:getMessages', function(source)
+    if HitRateLimit(source, 'get_messages', 2000, 3) then return {} end
     local identifier = GetPhoneOwnerIdentifier(source, true)
     return GetMessages(identifier)
 end)
 
 lib.callback.register('gcphone:getConversation', function(source, phoneNumber)
+    if HitRateLimit(source, 'get_conversation', 1000, 5) then return {} end
     local identifier = GetPhoneOwnerIdentifier(source, true)
     return GetConversation(identifier, phoneNumber)
 end)
@@ -641,6 +643,11 @@ AddEventHandler('gcphone:wavechat:persistBatch', function(requestId, entries)
     local reqId = tonumber(requestId) or 0
     if reqId < 1 or type(entries) ~= 'table' then
         emit('gcphone:wavechat:persistBatchResult', reqId, false, 0, 'INVALID_BATCH')
+        return
+    end
+
+    if #entries > 50 then
+        emit('gcphone:wavechat:persistBatchResult', reqId, false, 0, 'BATCH_TOO_LARGE')
         return
     end
 
