@@ -1,4 +1,8 @@
-GcPhoneUtils = GcPhoneUtils or {}
+GCPhone = GCPhone or {}
+GCPhone.Utils = GCPhone.Utils or {}
+
+-- Backward-compat alias (will be removed in a future major version)
+GcPhoneUtils = GCPhone.Utils
 
 local RESOURCE_NAME = GetCurrentResourceName()
 

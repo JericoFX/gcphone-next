@@ -187,6 +187,11 @@ Config.Phone = {
     KeyOpen = 288,
     KeyTakeCall = 38,
 
+    -- ox_inventory item check: when true, player must have the item to open the phone.
+    -- Set to false (default) to allow everyone to use the phone without an inventory item.
+    RequireItem = false,
+    ItemName = 'phone',
+
     NumberFormat = 'XXX-XXXX',
     NumberPrefix = { 555, 556, 557, 558, 559 },
 

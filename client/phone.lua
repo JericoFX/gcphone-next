@@ -135,7 +135,7 @@ local function ShowPhonePayload(data)
     EnsurePhoneProp()
     UpdateNuiInputState(true)
 
-    data.nuiAuthToken = RotateNuiAuthToken()
+    data.nuiAuthToken = GCPhone.RotateNuiAuthToken()
     SendNUIMessage({
         action = 'showPhone',
         data = data
@@ -146,9 +146,19 @@ end
 
 function OpenPhoneUsingServerData()
     lib.callback('gcphone:getPhoneData', false, function(data)
-        if data then
-            ShowPhonePayload(data)
+        if not data then return end
+
+        if data.blocked then
+            lib.notify({
+                title = 'Telefono',
+                description = data.error == 'NO_PHONE_ITEM' and 'No tienes un telefono' or 'No se pudo abrir el telefono',
+                type = 'error',
+            })
+            menuIsOpen = false
+            return
         end
+
+        ShowPhonePayload(data)
     end)
 end
 
