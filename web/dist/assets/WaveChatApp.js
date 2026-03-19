@@ -1,1 +1,1 @@
-import"./app-appstore.js";import"./app-contacts.js";import"./app-calls.js";import"./app-bank.js";import"./app-chirp.js";import"./app-darkrooms.js";import"./app-snap.js";import{t as e}from"./app-wavechat.js";export{e as WaveChatApp};
+import"./app-appstore.js";import"./app-contacts.js";import"./app-calls.js";import"./app-bank.js";import"./app-chirp.js";import"./app-darkrooms.js";import"./app-matchmylove.js";import{t as e}from"./app-wavechat.js";export{e as WaveChatApp};

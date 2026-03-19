@@ -1,9 +1,9 @@
 fx_version 'cerulean'
 game 'gta5'
 
-author 'gcphone-next'
+author 'JericoFX'
 description 'Modern FiveM Phone - SolidJS + ox_lib + oxmysql'
-version '2.0.0'
+version '2.1.0'
 
 lua54 'yes'
 
@@ -12,7 +12,8 @@ ui_page 'web/dist/index.html'
 files {
     'web/dist/**/*',
     'web/dist/index.html',
-    
+    'version.txt',
+
     'shared/config.lua',
     'shared/locales/*.json',
 }

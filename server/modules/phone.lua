@@ -703,6 +703,8 @@ local function BuildPhonePayload(phone, source)
         accessMode = isForeignReadOnly and 'foreign-readonly' or 'own',
         accessOwnerName = isForeignReadOnly and context.ownerName or nil,
         accessPhoneId = isForeignReadOnly and context.phoneId or nil,
+        resourceVersion = GCPhone and GCPhone.Version or '0.0.0',
+        resourceAuthor = GCPhone and GCPhone.Author or 'JericoFX',
     }
 end
 
