@@ -2,7 +2,14 @@
 
 local ActiveCalls = {}
 local CallHistory = {}
-local LastCallId = 10
+
+local function GenerateCallId()
+    local id
+    repeat
+        id = math.random(100000, 999999)
+    until not ActiveCalls[id]
+    return id
+end
 local AirplaneModeBySource = {}
 local UsingPmaVoice = GetResourceState('pma-voice') == 'started'
 local LastCallStartBySource = {}
@@ -28,7 +35,8 @@ local function CanAccessIdentifierExport(identifier, requestSource)
 end
 
 local function SyncActiveCallsToGlobalState()
-    GlobalState.gcphoneActiveCalls = ActiveCalls
+    -- No-op: active calls are only accessed server-side via GetActiveCalls() export.
+    -- GlobalState was removed to avoid broadcasting call data to all clients.
 end
 
 local function IsValidCallId(value)
@@ -352,8 +360,7 @@ lib.callback.register('gcphone:startCall', function(source, data)
         end
     end
 
-    local callId = LastCallId
-    LastCallId = LastCallId + 1
+    local callId = GenerateCallId()
     
     local callData = {
         id = callId,

@@ -175,7 +175,13 @@ RegisterNetEvent('gcphone:notify', function(payload)
 end)
 
 exports('GetPhoneState', function()
-    return PhoneState
+    return {
+        isOpen = PhoneState.isOpen,
+        phoneNumber = PhoneState.phoneNumber,
+        hasFocus = PhoneState.hasFocus,
+        useMouse = PhoneState.useMouse,
+        airplaneMode = PhoneState.airplaneMode,
+    }
 end)
 
 exports('IsPhoneOpen', function()

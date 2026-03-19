@@ -1,4 +1,6 @@
 local RateLimitBuckets = {}
+local IdentifierBuckets = {}
+local SourceToIdentifier = {}
 
 local function SafeString(value, maxLen)
     if type(value) ~= 'string' then return nil end
@@ -45,20 +47,11 @@ CreateThread(function()
     EnsureSecurityTables()
 end)
 
-local function HitRateLimit(source, key, windowMs, maxHits)
-    source = tonumber(source)
-    if not source or source <= 0 then return false end
-    key = SafeString(tostring(key or ''), 40) or 'default'
-    windowMs = tonumber(windowMs) or 1000
-    maxHits = tonumber(maxHits) or 1
-    if windowMs < 100 then windowMs = 100 end
-    if maxHits < 1 then maxHits = 1 end
-
-    local now = GetGameTimer()
-    RateLimitBuckets[source] = RateLimitBuckets[source] or {}
-    local bucket = RateLimitBuckets[source][key]
+local function CheckBucket(buckets, owner, key, windowMs, maxHits, now)
+    buckets[owner] = buckets[owner] or {}
+    local bucket = buckets[owner][key]
     if not bucket then
-        RateLimitBuckets[source][key] = { start = now, count = 1 }
+        buckets[owner][key] = { start = now, count = 1 }
         return false
     end
 
@@ -70,6 +63,38 @@ local function HitRateLimit(source, key, windowMs, maxHits)
 
     bucket.count = bucket.count + 1
     return bucket.count > maxHits
+end
+
+local function HitRateLimit(source, key, windowMs, maxHits)
+    source = tonumber(source)
+    if not source or source <= 0 then return false end
+    key = SafeString(tostring(key or ''), 40) or 'default'
+    windowMs = tonumber(windowMs) or 1000
+    maxHits = tonumber(maxHits) or 1
+    if windowMs < 100 then windowMs = 100 end
+    if maxHits < 1 then maxHits = 1 end
+
+    local now = GetGameTimer()
+
+    -- Resolve identifier for this source (cached per session)
+    local identifier = SourceToIdentifier[source]
+    if not identifier and type(GetIdentifier) == 'function' then
+        identifier = GetIdentifier(source)
+        if identifier then
+            SourceToIdentifier[source] = identifier
+        end
+    end
+
+    -- Check source-level bucket (fast path)
+    local blockedBySource = CheckBucket(RateLimitBuckets, source, key, windowMs, maxHits, now)
+
+    -- Also check identifier-level bucket (survives reconnects)
+    if identifier then
+        local blockedByIdentifier = CheckBucket(IdentifierBuckets, identifier, key, windowMs, maxHits, now)
+        return blockedBySource or blockedByIdentifier
+    end
+
+    return blockedBySource
 end
 
 local function IsBlockedByIdentifier(identifier, targetPhone)
@@ -197,4 +222,27 @@ exports('RecordReport', RecordReport)
 
 AddEventHandler('playerDropped', function()
     RateLimitBuckets[source] = nil
+    SourceToIdentifier[source] = nil
+    -- IdentifierBuckets intentionally NOT cleared — survives reconnects
+end)
+
+-- Periodic cleanup of stale identifier buckets (every 5 minutes)
+CreateThread(function()
+    while true do
+        Wait(300000)
+        local now = GetGameTimer()
+        for id, keys in pairs(IdentifierBuckets) do
+            local hasActive = false
+            for key, bucket in pairs(keys) do
+                if (now - bucket.start) > 60000 then
+                    keys[key] = nil
+                else
+                    hasActive = true
+                end
+            end
+            if not hasActive then
+                IdentifierBuckets[id] = nil
+            end
+        end
+    end
 end)

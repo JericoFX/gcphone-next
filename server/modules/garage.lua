@@ -1,6 +1,15 @@
 -- Creado/Modificado por JericoFX
 -- Garage - Backend Mejorado
 
+local SecurityResource = GetCurrentResourceName()
+local function HitRateLimit(source, key, windowMs, maxHits)
+    local ok, blocked = pcall(function()
+        return exports[SecurityResource]:HitRateLimit(source, key, windowMs, maxHits)
+    end)
+    if not ok then return false end
+    return blocked == true
+end
+
 local VehicleLocationMessages = {
     es = 'Ubicacion del vehiculo',
     en = 'Vehicle location',
@@ -10,6 +19,7 @@ local VehicleLocationMessages = {
 
 -- Get vehicles with location info
 lib.callback.register('gcphone:garage:getVehicles', function(source)
+    if HitRateLimit(source, 'garage_vehicles', 2000, 3) then return {} end
     local identifier = GetIdentifier(source)
     if not identifier then return {} end
     
