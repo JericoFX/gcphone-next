@@ -1,5 +1,32 @@
 GCPhone = GCPhone or {}
 
+local RESOURCE_NAME = GetCurrentResourceName()
+
+local function ReadLocalVersion()
+    local raw = LoadResourceFile(RESOURCE_NAME, 'version.txt')
+    if type(raw) ~= 'string' then return '0.0.0' end
+    return raw:gsub('%s+', '')
+end
+
+GCPhone.Version = ReadLocalVersion()
+GCPhone.Author = GetResourceMetadata(RESOURCE_NAME, 'author', 0) or 'JericoFX'
+
+local function CheckRemoteVersion()
+    PerformHttpRequest('https://raw.githubusercontent.com/JericoFX/gcphone-next/main/version.txt', function(status, body)
+        if status ~= 200 or type(body) ~= 'string' then return end
+
+        local remote = body:gsub('%s+', '')
+        if remote == '' then return end
+
+        if remote ~= GCPhone.Version then
+            print(string.format('^3[gcphone-next]^7 New version available: %s (current: %s)', remote, GCPhone.Version))
+            print('^3[gcphone-next]^7 https://github.com/JericoFX/gcphone-next/releases')
+        else
+            print(string.format('^2[gcphone-next]^7 Up to date (v%s)', GCPhone.Version))
+        end
+    end, 'GET', '', { ['User-Agent'] = 'gcphone-next/' .. GCPhone.Version })
+end
+
 local Bridge = nil
 
 -- Validate critical Config shapes at load time with safe fallbacks.
@@ -156,10 +183,20 @@ CreateThread(function()
     }
 
     print(('^2[gcphone-next]^7 %s'):format(L('server_initialized')))
-    
+
     -- Check database version
     local dbVersion = exports['gcphone-next'].GetDatabaseVersion and exports['gcphone-next'].GetDatabaseVersion() or 0
     print(string.format('^2[gcphone-next]^7 %s', L('database_version', dbVersion)))
+
+    CheckRemoteVersion()
+end)
+
+exports('GetVersion', function()
+    return GCPhone.Version
+end)
+
+exports('GetAuthor', function()
+    return GCPhone.Author
 end)
 
 exports('GetBridge', function()

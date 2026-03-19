@@ -1,24 +1,35 @@
-name: Build
+name: Build & Release
 
 on:
   push:
     branches: [main]
-    paths:
-      - 'web/**'
-      - 'docs/**'
-      - '.github/workflows/build.yml'
   pull_request:
     branches: [main]
-    paths:
-      - 'web/**'
-      - 'docs/**'
 
 jobs:
-  build-frontend:
-    name: Build Frontend
+  build:
+    name: Build
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      version_changed: ${{ steps.check.outputs.changed }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Read version
+        id: version
+        run: echo "version=$(cat version.txt | tr -d '[:space:]')" >> "$GITHUB_OUTPUT"
+
+      - name: Check if version changed
+        id: check
+        run: |
+          if git diff HEAD~1 -- version.txt | grep -q '^[+-][0-9]'; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - uses: oven-sh/setup-bun@v2
         with:
@@ -32,7 +43,7 @@ jobs:
         working-directory: web
         run: bun run typecheck
 
-      - name: Build
+      - name: Build frontend
         working-directory: web
         run: bun run build
 
@@ -53,7 +64,7 @@ jobs:
         with:
           node-version: 20
 
-      - name: Install VitePress
+      - name: Build VitePress
         working-directory: docs
         run: npx vitepress build
 
@@ -65,7 +76,7 @@ jobs:
           retention-days: 7
 
   deploy-docs:
-    name: Deploy Docs to GitHub Pages
+    name: Deploy Docs
     needs: build-docs
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
@@ -87,6 +98,61 @@ jobs:
         with:
           path: docs-dist
 
-      - name: Deploy to GitHub Pages
+      - name: Deploy
         id: deployment
         uses: actions/deploy-pages@v4
+
+  release:
+    name: Release
+    needs: build
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push' && needs.build.outputs.version_changed == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: web-dist
+          path: web/dist/
+
+      - name: Create release zip
+        run: |
+          VERSION="${{ needs.build.outputs.version }}"
+          ZIP_NAME="gcphone-next-v${VERSION}.zip"
+
+          zip -r "$ZIP_NAME" \
+            fxmanifest.lua \
+            shared/ \
+            client/ \
+            server/ \
+            web/dist/ \
+            '[gcphone_sounds]/' \
+            CHANGELOG.md \
+            LICENSE.md \
+            -x "*.git*" \
+            -x "version.txt" \
+            -x "*.claude*" \
+            -x "CLAUDE.md"
+
+          echo "ZIP_NAME=$ZIP_NAME" >> "$GITHUB_ENV"
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+
+      - name: Extract changelog for this version
+        run: |
+          VERSION="${{ needs.build.outputs.version }}"
+          awk "/^## \[${VERSION}\]/{found=1; next} /^## \[/{if(found) exit} found{print}" CHANGELOG.md > release_notes.md
+          if [ ! -s release_notes.md ]; then
+            echo "Release v${VERSION}" > release_notes.md
+          fi
+
+      - name: Create tag and release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ env.VERSION }}
+          name: gcphone-next v${{ env.VERSION }}
+          body_path: release_notes.md
+          files: ${{ env.ZIP_NAME }}
+          draft: false
+          prerelease: false
