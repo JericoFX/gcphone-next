@@ -4,7 +4,7 @@ title: Music
 
 # Music
 
-Spatial music player using xsound. Searches YouTube via the API, resolves audio streams through Piped, and plays them as 3D positional audio that nearby players can hear.
+Spatial music player using olisound. Searches YouTube via the API, resolves audio streams through Piped, and plays them as 3D positional audio that nearby players can hear.
 
 ## Database Tables
 
@@ -59,7 +59,7 @@ Config.APIs.Piped = {
 
 ## Dependencies
 
-- **xsound** -- required for spatial audio playback
+- **olisound** -- required for spatial audio playback
 - YouTube Data API key (convar `gcphone_youtube_api_key`) -- required for search
 - Piped API -- required for resolving audio streams
 

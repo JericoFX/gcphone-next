@@ -8,7 +8,7 @@ Fork of [gcphone](https://github.com/manueljlz/gcphone) by manueljlz — fully r
 
 ## Features
 
-- **27+ apps**: Contacts, Messages, Calls, Chirp, Snap, Clips, Mail, Bank, Wallet, Documents, Gallery, Garage, Music, News, Dark Rooms, Yellow Pages, Market, WaveChat, Notes, Weather, Maps, Clock, Camera, Notifications, and more
+- **30+ apps**: Contacts, Messages, Calls, Chirp, Snap, Clips, Mail, Bank, Wallet, Documents, Gallery, Garage, Music, News, Dark Rooms, Yellow Pages, WaveChat, Notes, Weather, Maps, Clock, Camera, Notifications, Radio, Services, MatchMyLove, CityRide, and more
 - **SolidJS NUI** with iOS 18-inspired design
 - **LiveKit WebRTC** video/voice calls
 - **Socket.IO** real-time messaging (optional)
