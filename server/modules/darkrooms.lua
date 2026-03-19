@@ -320,11 +320,7 @@ lib.callback.register('gcphone:darkrooms:votePost', function(source, data)
         )
     end
 
-    local delta = nextValue - previousValue
-    if delta ~= 0 then
-        MySQL.update.await('UPDATE phone_darkrooms_posts SET score = score + ? WHERE id = ?', { delta, postId })
-    end
-
+    -- score maintained by trg_darkrooms_votes_ai/au/ad
     local score = MySQL.scalar.await('SELECT score FROM phone_darkrooms_posts WHERE id = ? LIMIT 1', { postId }) or 0
     return { success = true, score = tonumber(score) or 0, myVote = nextValue }
 end)
@@ -363,8 +359,7 @@ lib.callback.register('gcphone:darkrooms:createComment', function(source, data)
         { postId, identifier, authorName ~= '' and authorName or 'Anonimo', content, mediaUrl, anonymous and 1 or 0 }
     )
 
-    MySQL.update.await('UPDATE phone_darkrooms_posts SET comments_count = comments_count + 1 WHERE id = ?', { postId })
-
+    -- comments_count maintained by trg_darkrooms_comments_ai
     local comment = MySQL.single.await(
         'SELECT id, post_id, author_identifier, author_name, content, media_url, is_anonymous, created_at FROM phone_darkrooms_comments WHERE id = ?',
         { commentId }

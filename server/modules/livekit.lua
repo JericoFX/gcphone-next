@@ -29,7 +29,10 @@ local function NextRequestId()
 end
 
 local function IsParticipantOfCall(callId, source)
-    local calls = GlobalState.gcphoneActiveCalls or {}
+    local ok, calls = pcall(function()
+        return exports[GetCurrentResourceName()]:GetActiveCalls()
+    end)
+    if not ok or not calls then return false end
     local call = calls[callId]
     if not call then return false end
     return source == call.transmitterSrc or source == call.receiverSrc
@@ -137,23 +140,35 @@ lib.callback.register('gcphone:livekit:getToken', function(source, data)
             return { success = false, error = 'NOT_CALL_PARTICIPANT' }
         end
     else
-        local liveId = roomName:match('^snaplive%-(%d+)$')
-        if not liveId then
-            return { success = false, error = 'INVALID_ROOM_FORMAT' }
-        end
+        local radioId = roomName:match('^radio%-(%d+)$')
+        if radioId then
+            radioId = tonumber(radioId)
+            if not radioId then
+                return { success = false, error = 'INVALID_RADIO_ID' }
+            end
 
-        liveId = tonumber(liveId)
-        if not liveId then
-            return { success = false, error = 'INVALID_LIVE_ID' }
-        end
+            -- Radio room: canPublish is determined by the request (host=true, listener=false)
+            -- The radio module validates host/listener status independently
+            grants.canPublish = grants.canPublish
+        else
+            local liveId = roomName:match('^snaplive%-(%d+)$')
+            if not liveId then
+                return { success = false, error = 'INVALID_ROOM_FORMAT' }
+            end
 
-        local valid, isOwner = IsSnapLiveParticipant(liveId, source)
-        if not valid then
-            return { success = false, error = 'NOT_LIVE_PARTICIPANT' }
-        end
+            liveId = tonumber(liveId)
+            if not liveId then
+                return { success = false, error = 'INVALID_LIVE_ID' }
+            end
 
-        -- Verified: only stream owner can publish in snap live room
-        grants.canPublish = isOwner
+            local valid, isOwner = IsSnapLiveParticipant(liveId, source)
+            if not valid then
+                return { success = false, error = 'NOT_LIVE_PARTICIPANT' }
+            end
+
+            -- Verified: only stream owner can publish in snap live room
+            grants.canPublish = isOwner
+        end
     end
 
     local identity = SafeString('player:' .. tostring(identifier), 64)

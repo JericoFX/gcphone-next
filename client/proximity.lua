@@ -191,9 +191,10 @@ RegisterNUICallback('acceptContactRequest', function(data, cb)
 end)
 
 RegisterNUICallback('getNearbyPlayers', function(data, cb)
-    local maxDist = tonumber(type(data) == 'table' and data.maxDistance or nil)
-        or Config.Proximity.SharePhotoDistance
-        or 5.0
+    local configMax = Config.Proximity.SharePhotoDistance or 5.0
+    local maxDist = tonumber(type(data) == 'table' and data.maxDistance or nil) or configMax
+    if maxDist > configMax then maxDist = configMax end
+    if maxDist < 1.0 then maxDist = 1.0 end
     local list = GetNearbyPlayers(maxDist)
     local payload = {}
 

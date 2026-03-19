@@ -1,5 +1,14 @@
 -- Creado/Modificado por JericoFX
 
+local SecurityResource = GetCurrentResourceName()
+local function HitRateLimit(source, key, windowMs, maxHits)
+    local ok, blocked = pcall(function()
+        return exports[SecurityResource]:HitRateLimit(source, key, windowMs, maxHits)
+    end)
+    if not ok then return false end
+    return blocked == true
+end
+
 local function GetContacts(identifier)
     if not identifier then return {} end
     
@@ -180,6 +189,7 @@ end)
 
 lib.callback.register('gcphone:shareContact', function(source, data)
     if IsPhoneReadOnly(source) then return false, 'READ_ONLY' end
+    if HitRateLimit(source, 'share_contact', 2000, 3) then return false, 'RATE_LIMITED' end
     local identifier = GetIdentifier(source)
     if not identifier then return false, 'Invalid source' end
 

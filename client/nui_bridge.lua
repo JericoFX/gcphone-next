@@ -706,41 +706,7 @@ RegisterNUICallback('socialDeleteNotification', function(data, cb)
     end, data or {})
 end)
 
-RegisterNUICallback('marketGetListings', function(data, cb)
-    lib.callback('gcphone:market:getListings', false, function(listings)
-        cb(listings or {})
-    end, data or {})
-end)
-
-RegisterNUICallback('marketCreateListing', function(data, cb)
-    lib.callback('gcphone:market:createListing', false, function(success, id)
-        cb(cbSuccess(success, nil, { id = id }))
-    end, data)
-end)
-
-RegisterNUICallback('marketGetMyListings', function(_, cb)
-    lib.callback('gcphone:market:getMyListings', false, function(listings)
-        cb(listings or {})
-    end)
-end)
-
-RegisterNUICallback('marketMarkAsSold', function(data, cb)
-    lib.callback('gcphone:market:markAsSold', false, function(success)
-        cb(cbSuccess(success))
-    end, tonumber(data.listingId))
-end)
-
-RegisterNUICallback('marketDeleteListing', function(data, cb)
-    lib.callback('gcphone:market:deleteListing', false, function(success)
-        cb(cbSuccess(success))
-    end, tonumber(data.listingId))
-end)
-
-RegisterNUICallback('marketContactSeller', function(data, cb)
-    lib.callback('gcphone:market:contactSeller', false, function(result)
-        cb(result)
-    end, data)
-end)
+-- Market NUI callbacks removed: feature replaced by YellowPages
 
 RegisterNUICallback('newsGetArticles', function(data, cb)
     lib.callback('gcphone:news:getArticles', false, function(articles)
@@ -1121,6 +1087,129 @@ end)
 RegisterNUICallback('yellowpagesRecordContact', function(data, cb)
     lib.callback('gcphone:yellowpages:recordContact', false, function(success)
         cb(cbSuccess(success))
+    end, data or {})
+end)
+
+-- MatchMyLove
+RegisterNUICallback('matchmyloveGetProfile', function(_, cb)
+    lib.callback('gcphone:matchmylove:getProfile', false, function(payload)
+        cb(payload)
+    end)
+end)
+
+RegisterNUICallback('matchmyloveCreateProfile', function(data, cb)
+    lib.callback('gcphone:matchmylove:createProfile', false, function(success, value)
+        cb(cbSuccess(success, success and nil or value, success and { profile = value } or nil))
+    end, data or {})
+end)
+
+RegisterNUICallback('matchmyloveUpdateProfile', function(data, cb)
+    lib.callback('gcphone:matchmylove:updateProfile', false, function(success, value)
+        cb(cbSuccess(success, success and nil or value, success and { profile = value } or nil))
+    end, data or {})
+end)
+
+RegisterNUICallback('matchmyloveDeleteProfile', function(_, cb)
+    lib.callback('gcphone:matchmylove:deleteProfile', false, function(success, message)
+        cb(cbSuccess(success, message))
+    end)
+end)
+
+RegisterNUICallback('matchmyloveGetCards', function(_, cb)
+    lib.callback('gcphone:matchmylove:getCards', false, function(payload)
+        cb(payload or {})
+    end)
+end)
+
+RegisterNUICallback('matchmyloveSwipe', function(data, cb)
+    lib.callback('gcphone:matchmylove:swipe', false, function(success, value)
+        cb(cbSuccess(success, success and nil or value, success and value or nil))
+    end, data or {})
+end)
+
+RegisterNUICallback('matchmyloveGetMatches', function(_, cb)
+    lib.callback('gcphone:matchmylove:getMatches', false, function(payload)
+        cb(payload or {})
+    end)
+end)
+
+RegisterNUICallback('matchmyloveGetMessages', function(data, cb)
+    lib.callback('gcphone:matchmylove:getMessages', false, function(payload)
+        cb(payload or {})
+    end, data or {})
+end)
+
+RegisterNUICallback('matchmyloveSendMessage', function(data, cb)
+    lib.callback('gcphone:matchmylove:sendMessage', false, function(success, value)
+        cb(cbSuccess(success, success and nil or value, success and { message = value } or nil))
+    end, data or {})
+end)
+
+RegisterNUICallback('matchmyloveUnmatch', function(data, cb)
+    lib.callback('gcphone:matchmylove:unmatch', false, function(success, message)
+        cb(cbSuccess(success, message))
+    end, data or {})
+end)
+
+-- Services
+RegisterNUICallback('servicesGetCategories', function(_, cb)
+    lib.callback('gcphone:services:getCategories', false, function(payload)
+        cb(payload or {})
+    end)
+end)
+
+RegisterNUICallback('servicesGetListings', function(data, cb)
+    lib.callback('gcphone:services:getListings', false, function(payload)
+        cb(payload or {})
+    end, data or {})
+end)
+
+RegisterNUICallback('servicesGetMyService', function(_, cb)
+    lib.callback('gcphone:services:getMyService', false, function(payload)
+        cb(payload)
+    end)
+end)
+
+RegisterNUICallback('servicesRegister', function(data, cb)
+    lib.callback('gcphone:services:register', false, function(success, service)
+        cb(cbSuccess(success, success and nil or service, success and { service = service } or nil))
+    end, data or {})
+end)
+
+RegisterNUICallback('servicesUpdateService', function(data, cb)
+    lib.callback('gcphone:services:updateService', false, function(success, message)
+        cb(cbSuccess(success, message))
+    end, data or {})
+end)
+
+RegisterNUICallback('servicesSetAvailability', function(data, cb)
+    lib.callback('gcphone:services:setAvailability', false, function(success)
+        cb(cbSuccess(success))
+    end, data or {})
+end)
+
+RegisterNUICallback('servicesDeleteService', function(_, cb)
+    lib.callback('gcphone:services:deleteService', false, function(success)
+        cb(cbSuccess(success))
+    end)
+end)
+
+RegisterNUICallback('servicesGetWorkerInfo', function(data, cb)
+    local serviceId = tonumber(type(data) == 'table' and data.serviceId or data)
+    lib.callback('gcphone:services:getWorkerInfo', false, function(payload)
+        cb(payload)
+    end, serviceId)
+end)
+
+RegisterNUICallback('servicesRateWorker', function(data, cb)
+    lib.callback('gcphone:services:rateWorker', false, function(success, message)
+        cb(cbSuccess(success, message))
+    end, data or {})
+end)
+
+RegisterNUICallback('servicesGetWorkerRatings', function(data, cb)
+    lib.callback('gcphone:services:getWorkerRatings', false, function(payload)
+        cb(payload or {})
     end, data or {})
 end)
 
@@ -1530,3 +1619,178 @@ RegisterNUICallback('getGameTime', function(_, cb)
         second = GetClockSeconds(),
     })
 end)
+
+-- Radio
+RegisterNUICallback('radioGetStations', function(_, cb)
+    lib.callback('gcphone:radio:getStations', false, function(stations)
+        cb(stations or {})
+    end)
+end)
+
+RegisterNUICallback('radioCreateStation', function(data, cb)
+    lib.callback('gcphone:radio:createStation', false, function(result)
+        cb(result or { success = false })
+    end, data or {})
+end)
+
+RegisterNUICallback('radioJoinStation', function(data, cb)
+    lib.callback('gcphone:radio:joinStation', false, function(result)
+        cb(result or { success = false })
+    end, data or {})
+end)
+
+RegisterNUICallback('radioLeaveStation', function(data, cb)
+    lib.callback('gcphone:radio:leaveStation', false, function(result)
+        cb(result or { success = false })
+    end, data or {})
+end)
+
+RegisterNUICallback('radioEndStation', function(data, cb)
+    lib.callback('gcphone:radio:endStation', false, function(result)
+        cb(result or { success = false })
+    end, data or {})
+end)
+
+RegisterNUICallback('radioSearchMusic', function(data, cb)
+    lib.callback('gcphone:radio:searchMusic', false, function(result)
+        cb(result or { success = false, results = {} })
+    end, data or {})
+end)
+
+RegisterNUICallback('radioPlayMusic', function(data, cb)
+    lib.callback('gcphone:radio:playMusic', false, function(result)
+        cb(result or { success = false })
+    end, data or {})
+end)
+
+RegisterNUICallback('radioStopMusic', function(data, cb)
+    lib.callback('gcphone:radio:stopMusic', false, function(result)
+        cb(result or { success = false })
+    end, data or {})
+end)
+
+RegisterNUICallback('radioSetMusicVolume', function(data, cb)
+    lib.callback('gcphone:radio:setMusicVolume', false, function(result)
+        cb(result or { success = false })
+    end, data or {})
+end)
+
+RegisterNetEvent('gcphone:radio:stationEnded', function(stationId)
+    SendNUIMessage({ action = 'gcphone:radio:stationEnded', data = stationId })
+end)
+
+RegisterNetEvent('gcphone:radio:musicUpdate', function(data)
+    SendNUIMessage({ action = 'gcphone:radio:musicUpdate', data = data })
+end)
+
+-- ── CityRide ──
+
+RegisterNUICallback('cityrideRegisterDriver', function(data, cb)
+    lib.callback('gcphone:cityride:registerDriver', false, function(payload)
+        cb(payload or { success = false, error = 'NO_RESPONSE' })
+    end, data or {})
+end)
+
+RegisterNUICallback('cityrideGetDriverProfile', function(_, cb)
+    lib.callback('gcphone:cityride:getDriverProfile', false, function(payload)
+        cb(payload or false)
+    end)
+end)
+
+RegisterNUICallback('cityrideUpdateDriver', function(data, cb)
+    lib.callback('gcphone:cityride:updateDriver', false, function(payload)
+        cb(payload or { success = false, error = 'NO_RESPONSE' })
+    end, data or {})
+end)
+
+RegisterNUICallback('cityrideSetDriverAvailability', function(data, cb)
+    lib.callback('gcphone:cityride:setDriverAvailability', false, function(payload)
+        cb(payload or { success = false, error = 'NO_RESPONSE' })
+    end, data or {})
+end)
+
+RegisterNUICallback('cityrideRequestRide', function(data, cb)
+    lib.callback('gcphone:cityride:requestRide', false, function(payload)
+        cb(payload or { success = false, error = 'NO_RESPONSE' })
+    end, data or {})
+end)
+
+RegisterNUICallback('cityrideGetAvailableRides', function(_, cb)
+    lib.callback('gcphone:cityride:getAvailableRides', false, function(payload)
+        cb(payload or {})
+    end)
+end)
+
+RegisterNUICallback('cityrideAcceptRide', function(data, cb)
+    lib.callback('gcphone:cityride:acceptRide', false, function(payload)
+        cb(payload or { success = false, error = 'NO_RESPONSE' })
+    end, data or {})
+end)
+
+RegisterNUICallback('cityrideConfirmPickup', function(data, cb)
+    lib.callback('gcphone:cityride:confirmPickup', false, function(payload)
+        cb(payload or { success = false, error = 'NO_RESPONSE' })
+    end, data or {})
+end)
+
+RegisterNUICallback('cityrideCompleteRide', function(data, cb)
+    lib.callback('gcphone:cityride:completeRide', false, function(payload)
+        cb(payload or { success = false, error = 'NO_RESPONSE' })
+    end, data or {})
+end)
+
+RegisterNUICallback('cityrideCancelRide', function(data, cb)
+    lib.callback('gcphone:cityride:cancelRide', false, function(payload)
+        cb(payload or { success = false, error = 'NO_RESPONSE' })
+    end, data or {})
+end)
+
+RegisterNUICallback('cityrideGetActiveRide', function(_, cb)
+    lib.callback('gcphone:cityride:getActiveRide', false, function(payload)
+        cb(payload or false)
+    end)
+end)
+
+RegisterNUICallback('cityrideGetRideHistory', function(_, cb)
+    lib.callback('gcphone:cityride:getRideHistory', false, function(payload)
+        cb(payload or {})
+    end)
+end)
+
+RegisterNUICallback('cityrideRateDriver', function(data, cb)
+    lib.callback('gcphone:cityride:rateDriver', false, function(payload)
+        cb(payload or { success = false, error = 'NO_RESPONSE' })
+    end, data or {})
+end)
+
+RegisterNUICallback('cityrideEstimatePrice', function(data, cb)
+    lib.callback('gcphone:cityride:estimatePrice', false, function(payload)
+        cb(payload or { price = 0, distance = 0 })
+    end, data or {})
+end)
+
+RegisterNUICallback('cityrideGetAvailableDriverCount', function(_, cb)
+    lib.callback('gcphone:cityride:getAvailableDriverCount', false, function(payload)
+        cb(payload or { count = 0 })
+    end)
+end)
+
+RegisterNUICallback('cityrideSetWaypoint', function(data, cb)
+    if type(data) == 'table' and data.x and data.y then
+        SetNewWaypoint(tonumber(data.x) + 0.0, tonumber(data.y) + 0.0)
+        cb(cbSuccess(true))
+    else
+        cb(cbSuccess(false))
+    end
+end)
+
+RegisterNUICallback('cityrideGetPlayerCoords', function(_, cb)
+    local ped = PlayerPedId()
+    local coords = GetEntityCoords(ped)
+    cb({
+        x = coords.x,
+        y = coords.y,
+        z = coords.z,
+    })
+end)
+
