@@ -366,6 +366,10 @@ Config.Features = {
     Music = true,
     YellowPages = true,
     Mail = true,
+    Services = true,
+    Radio = true,
+    MatchMyLove = true,
+    CityRide = true,
 }
 
 Config.Mail = {
@@ -394,6 +398,10 @@ Config.Security = {
         news = 2500,
         wallet = 900,
         walletRequest = 1300,
+        services = 1500,
+        radio = 2000,
+        matchmylove = 500,
+        cityride = 2000,
     }
 }
 
@@ -601,10 +609,49 @@ Config.APIs = {
         Enabled = true,
         APIKey = '',
     },
-    Piped = {
-        Enabled = true,
-        BaseUrl = 'https://piped.video',
+}
+
+Config.Services = {
+    Categories = {
+        { id = 'mechanic', label = 'Mecanico', icon = '🔧' },
+        { id = 'lawyer', label = 'Abogado', icon = '⚖️' },
+        { id = 'doctor', label = 'Doctor', icon = '🏥' },
+        { id = 'taxi', label = 'Taxi', icon = '🚕' },
+        { id = 'delivery', label = 'Delivery', icon = '📦' },
+        { id = 'security', label = 'Seguridad', icon = '🛡️' },
+        { id = 'realtor', label = 'Inmobiliaria', icon = '🏠' },
+        { id = 'other', label = 'Otro', icon = '📋' },
     },
+    MaxDescriptionLength = 500,
+}
+
+Config.Radio = {
+    MaxStationNameLength = 50,
+    MaxDescriptionLength = 200,
+    MaxStationsPerHost = 1,
+    Categories = {
+        { id = 'music', label = 'Musica', icon = '🎵' },
+        { id = 'news', label = 'Noticias', icon = '📰' },
+        { id = 'talk', label = 'Talk Show', icon = '🎙️' },
+        { id = 'emergency', label = 'Emergencia', icon = '🚨' },
+        { id = 'community', label = 'Comunidad', icon = '👥' },
+        { id = 'other', label = 'Otro', icon = '📻' },
+    },
+}
+
+Config.MatchMyLove = {
+    MaxPhotos = 6,
+    MaxInterests = 10,
+    MaxBioLength = 500,
+    MaxMessageLength = 500,
+    CardsPerFetch = 10,
+}
+
+Config.CityRide = {
+    PricePerUnit = 12,
+    MinPrice = 50,
+    MaxPrice = 50000,
+    RequestTimeoutSeconds = 120,
 }
 
 Config.Framework = 'qbcore'

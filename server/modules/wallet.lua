@@ -342,6 +342,7 @@ lib.callback.register('gcphone:wallet:removeCard', function(source, data)
 end)
 
 lib.callback.register('gcphone:wallet:transfer', function(source, data)
+    if IsPhoneReadOnly(source) then return { success = false, error = 'READ_ONLY' } end
     local identifier = RequirePlayerIdentifier(source)
     if not identifier then return { success = false, error = 'INVALID_SOURCE' } end
     if type(data) ~= 'table' then return { success = false, error = 'INVALID_DATA' } end
@@ -381,6 +382,7 @@ lib.callback.register('gcphone:wallet:transfer', function(source, data)
 end)
 
 lib.callback.register('gcphone:wallet:proximityTransfer', function(source, data)
+    if IsPhoneReadOnly(source) then return { success = false, error = 'READ_ONLY' } end
     local identifier = RequirePlayerIdentifier(source)
     if not identifier then return { success = false, error = 'INVALID_SOURCE' } end
     if type(data) ~= 'table' then return { success = false, error = 'INVALID_DATA' } end
@@ -443,6 +445,7 @@ lib.callback.register('gcphone:wallet:proximityTransfer', function(source, data)
 end)
 
 lib.callback.register('gcphone:wallet:createRequest', function(source, data)
+    if IsPhoneReadOnly(source) then return { success = false, error = 'READ_ONLY' } end
     local requesterIdentifier = RequirePlayerIdentifier(source)
     if not requesterIdentifier then return { success = false, error = 'INVALID_SOURCE' } end
     if type(data) ~= 'table' then return { success = false, error = 'INVALID_DATA' } end
@@ -541,6 +544,7 @@ lib.callback.register('gcphone:wallet:getPendingRequests', function(source)
 end)
 
 lib.callback.register('gcphone:wallet:respondRequest', function(source, data)
+    if IsPhoneReadOnly(source) then return { success = false, error = 'READ_ONLY' } end
     local responderIdentifier = RequirePlayerIdentifier(source)
     if not responderIdentifier then return { success = false, error = 'INVALID_SOURCE' } end
     if type(data) ~= 'table' then return { success = false, error = 'INVALID_DATA' } end
@@ -829,4 +833,42 @@ end)
 lib.callback.register('gcphone:wallet:respondNfcInvoice', function(source, data)
     data = data or {}
     return RespondInvoice(source, data)
+end)
+
+---Execute a wallet transfer between two identifiers (no source/proximity checks).
+---Used by internal modules like CityRide for automated payments.
+---@param senderIdentifier string
+---@param receiverIdentifier string
+---@param amount number
+---@param title? string
+---@return boolean, table
+exports('WalletTransferByIdentifier', function(senderIdentifier, receiverIdentifier, amount, title)
+    local amountValue = SafeNumber(amount, 1, Config.Wallet and Config.Wallet.MaxTransferAmount or 500000)
+    local transferTitle = SafeString(title, 64) or 'Transferencia'
+
+    if not senderIdentifier or not receiverIdentifier then
+        return false, { error = 'INVALID_IDENTIFIERS' }
+    end
+    if not amountValue then
+        return false, { error = 'INVALID_AMOUNT' }
+    end
+    if senderIdentifier == receiverIdentifier then
+        return false, { error = 'INVALID_TARGET' }
+    end
+
+    local receiverPhone = GetPhoneNumber(receiverIdentifier) or ''
+    local success, payload = ExecuteWalletTransfer(senderIdentifier, receiverIdentifier, receiverPhone, amountValue, transferTitle)
+
+    if success then
+        local receiverSource = GetSourceFromIdentifier(receiverIdentifier)
+        if receiverSource then
+            PushWalletNotification(receiverSource, 'Wallet', ('Recibiste $%s'):format(math.floor(amountValue)))
+        end
+        local senderSource = GetSourceFromIdentifier(senderIdentifier)
+        if senderSource then
+            PushWalletNotification(senderSource, 'Wallet', ('Pago enviado: $%s'):format(math.floor(amountValue)))
+        end
+    end
+
+    return success, payload
 end)

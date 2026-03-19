@@ -1,3 +1,12 @@
+local SecurityResource = GetCurrentResourceName()
+local function HitRateLimit(source, key, windowMs, maxHits)
+    local ok, blocked = pcall(function()
+        return exports[SecurityResource]:HitRateLimit(source, key, windowMs, maxHits)
+    end)
+    if not ok then return false end
+    return blocked == true
+end
+
 local function SafeString(value, maxLen)
     if type(value) ~= 'string' then return nil end
     local trimmed = value:gsub('%s+', ' '):gsub('^%s+', ''):gsub('%s+$', '')
@@ -82,6 +91,7 @@ end)
 
 lib.callback.register('gcphone:documents:create', function(source, data)
     if IsPhoneReadOnly(source) then return { success = false, error = 'READ_ONLY' } end
+    if HitRateLimit(source, 'doc_create', 2000, 2) then return { success = false, error = 'RATE_LIMITED' } end
     local identifier = RequirePlayerIdentifier(source)
     if not identifier then return { success = false, error = 'INVALID_SOURCE' } end
     if type(data) ~= 'table' then return { success = false, error = 'INVALID_DATA' } end
@@ -114,6 +124,7 @@ end)
 
 lib.callback.register('gcphone:documents:delete', function(source, data)
     if IsPhoneReadOnly(source) then return { success = false, error = 'READ_ONLY' } end
+    if HitRateLimit(source, 'doc_delete', 1500, 2) then return { success = false, error = 'RATE_LIMITED' } end
     local identifier = RequirePlayerIdentifier(source)
     if not identifier then return { success = false, error = 'INVALID_SOURCE' } end
     local id = tonumber(type(data) == 'table' and data.documentId or nil)

@@ -48,6 +48,7 @@ local function HitRateLimit(source, key, windowMs, maxHits)
 end
 
 lib.callback.register('gcphone:market:getListings', function(source, data)
+    if HitRateLimit(source, 'market_listings', 1500, 4) then return {} end
     data = type(data) == 'table' and data or {}
     local category = SanitizeText(data.category, 30)
     if category == '' then category = 'all' end

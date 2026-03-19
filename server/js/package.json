@@ -4,6 +4,7 @@
   "version": "1.0.0",
   "dependencies": {
     "jsonwebtoken": "^9.0.2",
-    "livekit-server-sdk": "^2.14.0"
+    "livekit-server-sdk": "^2.14.0",
+    "youtube-sr": "^4.3.11"
   }
 }

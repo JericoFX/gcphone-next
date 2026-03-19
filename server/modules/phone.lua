@@ -176,10 +176,14 @@ local AllowedApps = {
     notes = true,
     maps = true,
     weather = true,
+    matchmylove = true,
+    radio = true,
+    services = true,
+    cityride = true,
 }
 
 local DefaultLayout = {
-    home = { 'contacts', 'messages', 'mail', 'notifications', 'calls', 'settings', 'gallery', 'camera', 'bank', 'wallet', 'documents', 'wavechat', 'music', 'chirp', 'snap', 'clips', 'darkrooms', 'yellowpages', 'news', 'garage', 'clock', 'notes', 'maps', 'weather' },
+    home = { 'contacts', 'messages', 'mail', 'notifications', 'calls', 'settings', 'gallery', 'camera', 'bank', 'wallet', 'documents', 'wavechat', 'music', 'chirp', 'snap', 'clips', 'darkrooms', 'yellowpages', 'news', 'garage', 'clock', 'notes', 'maps', 'weather', 'matchmylove', 'radio', 'services', 'cityride' },
     menu = { 'appstore' }
 }
 
@@ -777,7 +781,7 @@ local function ResetPhone(identifier)
         { query = 'DELETE FROM phone_chat_group_invites WHERE inviter_identifier = ? OR target_identifier = ?', values = { identifier, identifier } },
         { query = 'DELETE FROM phone_chat_groups WHERE owner_identifier = ?', values = { identifier } },
         { query = 'DELETE FROM phone_wavechat_statuses WHERE identifier = ? OR phone_number = ?', values = { identifier, phone.phone_number } },
-        { query = 'DELETE FROM phone_market WHERE identifier = ? OR phone_number = ?', values = { identifier, phone.phone_number } },
+        -- phone_market removed
         { query = 'DELETE FROM phone_news WHERE identifier = ?', values = { identifier } },
         { query = 'DELETE FROM phone_friend_requests WHERE from_identifier = ? OR to_identifier = ?', values = { identifier, identifier } },
         { query = 'DELETE FROM phone_shared_locations WHERE from_identifier = ? OR to_identifier = ?', values = { identifier, identifier } },
@@ -924,6 +928,15 @@ lib.callback.register('gcphone:phone:completeSetup', function(source, data)
                 ON DUPLICATE KEY UPDATE username = VALUES(username), display_name = VALUES(display_name)
             ]],
             { identifier, clipsUsername, name }
+        )
+
+        MySQL.insert.await(
+            [[
+                INSERT INTO phone_matchmylove_profiles (identifier, display_name, age, bio, gender, looking_for, photos, interests, is_active)
+                VALUES (?, ?, 25, '', 'other', 'everyone', '[]', '[]', 1)
+                ON DUPLICATE KEY UPDATE display_name = VALUES(display_name)
+            ]],
+            { identifier, name }
         )
 
         if featureFlags.mail and mailAlias and mailEmail then

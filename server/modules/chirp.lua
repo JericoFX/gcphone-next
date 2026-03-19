@@ -19,21 +19,7 @@ local function GetRateLimitWindow(key, fallback)
     return Utils.GetRateLimitWindow(key, fallback)
 end
 
-local function RefreshFollowCounts(accountId, targetAccountId)
-    if accountId then
-        MySQL.update.await(
-            'UPDATE phone_chirp_accounts SET following = (SELECT COUNT(*) FROM phone_chirp_following WHERE follower_id = ?) WHERE id = ?',
-            { accountId, accountId }
-        )
-    end
-
-    if targetAccountId then
-        MySQL.update.await(
-            'UPDATE phone_chirp_accounts SET followers = (SELECT COUNT(*) FROM phone_chirp_following WHERE following_id = ?) WHERE id = ?',
-            { targetAccountId, targetAccountId }
-        )
-    end
-end
+-- Follow counts maintained by trg_phone_chirp_following_after_insert/delete
 
 local function UpsertSocialNotification(accountIdentifier, fromIdentifier, appType, notificationType, referenceId, referenceType, contentPreview)
     if not accountIdentifier or not fromIdentifier then return end
@@ -94,8 +80,8 @@ local function GetRechirpRows(account, scope, limit, offset)
     if scope == 'following' and account then
         return MySQL.query.await([[
             SELECT t.*, a.username, a.display_name, a.avatar, a.verified,
-                   (SELECT COUNT(*) FROM phone_chirp_comments WHERE tweet_id = t.id) as comments_count,
-                   (SELECT COUNT(*) FROM phone_chirp_rechirps WHERE original_tweet_id = t.id) as rechirps_count,
+                   t.replies as comments_count,
+                   t.rechirps as rechirps_count,
                    CASE WHEN t.account_id = ? THEN 1 ELSE 0 END as is_own,
                    'rechirp' as activity_type,
                    r.created_at as activity_created_at,
@@ -124,8 +110,8 @@ local function GetRechirpRows(account, scope, limit, offset)
     if scope == 'forYou' then
         return MySQL.query.await([[
             SELECT t.*, a.username, a.display_name, a.avatar, a.verified,
-                   (SELECT COUNT(*) FROM phone_chirp_comments WHERE tweet_id = t.id) as comments_count,
-                   (SELECT COUNT(*) FROM phone_chirp_rechirps WHERE original_tweet_id = t.id) as rechirps_count,
+                   t.replies as comments_count,
+                   t.rechirps as rechirps_count,
                    CASE WHEN t.account_id = ? THEN 1 ELSE 0 END as is_own,
                    'rechirp' as activity_type,
                    r.created_at as activity_created_at,
@@ -151,8 +137,8 @@ local function GetRechirpRows(account, scope, limit, offset)
     if scope == 'myActivity' and account then
         return MySQL.query.await([[
             SELECT t.*, a.username, a.display_name, a.avatar, a.verified,
-                   (SELECT COUNT(*) FROM phone_chirp_comments WHERE tweet_id = t.id) as comments_count,
-                   (SELECT COUNT(*) FROM phone_chirp_rechirps WHERE original_tweet_id = t.id) as rechirps_count,
+                   t.replies as comments_count,
+                   t.rechirps as rechirps_count,
                    'rechirp' as activity_type,
                    r.created_at as activity_created_at,
                    ? as activity_actor_display_name,
@@ -288,8 +274,8 @@ lib.callback.register('gcphone:chirp:getTweets', function(source, data)
         -- Tweets from followed accounts
         tweets = MySQL.query.await([[
             SELECT t.*, a.username, a.display_name, a.avatar, a.verified,
-                   (SELECT COUNT(*) FROM phone_chirp_comments WHERE tweet_id = t.id) as comments_count,
-                   (SELECT COUNT(*) FROM phone_chirp_rechirps WHERE original_tweet_id = t.id) as rechirps_count,
+                   t.replies as comments_count,
+                   t.rechirps as rechirps_count,
                    CASE WHEN t.account_id = ? THEN 1 ELSE 0 END as is_own
             FROM phone_chirp_tweets t
             JOIN phone_chirp_accounts a ON t.account_id = a.id
@@ -313,8 +299,8 @@ lib.callback.register('gcphone:chirp:getTweets', function(source, data)
         -- User's own tweets, likes, and comments
         local myTweets = MySQL.query.await([[
             SELECT t.*, a.username, a.display_name, a.avatar, a.verified,
-                   (SELECT COUNT(*) FROM phone_chirp_comments WHERE tweet_id = t.id) as comments_count,
-                   (SELECT COUNT(*) FROM phone_chirp_rechirps WHERE original_tweet_id = t.id) as rechirps_count,
+                   t.replies as comments_count,
+                   t.rechirps as rechirps_count,
                    1 as is_own,
                    'tweet' as activity_type,
                    t.created_at as activity_created_at
@@ -328,8 +314,8 @@ lib.callback.register('gcphone:chirp:getTweets', function(source, data)
         -- Liked tweets
         local likedTweets = MySQL.query.await([[
             SELECT t.*, a.username, a.display_name, a.avatar, a.verified,
-                   (SELECT COUNT(*) FROM phone_chirp_comments WHERE tweet_id = t.id) as comments_count,
-                   (SELECT COUNT(*) FROM phone_chirp_rechirps WHERE original_tweet_id = t.id) as rechirps_count,
+                   t.replies as comments_count,
+                   t.rechirps as rechirps_count,
                    1 as liked,
                    'like' as activity_type,
                    l.created_at as activity_created_at
@@ -361,8 +347,8 @@ lib.callback.register('gcphone:chirp:getTweets', function(source, data)
         local forYouAccountId = account and account.id or 0
         tweets = MySQL.query.await([[
             SELECT t.*, a.username, a.display_name, a.avatar, a.verified,
-                   (SELECT COUNT(*) FROM phone_chirp_comments WHERE tweet_id = t.id) as comments_count,
-                   (SELECT COUNT(*) FROM phone_chirp_rechirps WHERE original_tweet_id = t.id) as rechirps_count,
+                   t.replies as comments_count,
+                   t.rechirps as rechirps_count,
                    CASE WHEN t.account_id = ? THEN 1 ELSE 0 END as is_own
             FROM phone_chirp_tweets t
             JOIN phone_chirp_accounts a ON t.account_id = a.id
@@ -687,8 +673,6 @@ lib.callback.register('gcphone:chirp:follow', function(source, data)
             { account.id, targetAccountId }
         )
 
-        RefreshFollowCounts(account.id, targetAccountId)
-        
         return { following = false, requested = false }
     end
 
@@ -742,8 +726,6 @@ lib.callback.register('gcphone:chirp:follow', function(source, data)
           AND type = 'chirp'
           AND status = 'pending'
     ]], { identifier, targetAccount.identifier })
-
-    RefreshFollowCounts(account.id, targetAccountId)
 
     return { following = true, requested = false }
 end)
@@ -844,7 +826,6 @@ lib.callback.register('gcphone:chirp:respondFollowRequest', function(source, dat
         { requesterAccount.id, targetAccount.id }
     )
 
-    RefreshFollowCounts(requesterAccount.id, targetAccount.id)
     UpsertSocialNotification(request.from_identifier, identifier, 'chirp', 'follow_accepted', targetAccount.id, 'account', targetAccount.display_name)
 
     return true

@@ -1,0 +1,808 @@
+.body {
+  display: flex;
+  flex-direction: column;
+  background:
+    radial-gradient(120% 80% at 50% -10%, color-mix(in srgb, var(--success) 8%, var(--bg)), transparent 50%),
+    var(--bg);
+}
+
+.rideApp {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* ── Tabs ── */
+
+.tabs {
+  padding: 0 var(--s-3) var(--s-2);
+}
+
+/* ── Shared ── */
+
+.section {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 var(--s-3) calc(var(--s-5) + var(--phone-bottom-ui-gap, 0px));
+  display: grid;
+  gap: var(--s-2);
+  align-content: start;
+}
+
+.loading {
+  text-align: center;
+  padding: var(--s-6);
+  color: var(--text-3);
+  font-size: var(--fs-caption1);
+}
+
+/* ── Request Form (Passenger) ── */
+
+.requestForm {
+  display: grid;
+  gap: var(--s-3);
+  padding: var(--s-3);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  animation: cr-card-in var(--dur-3) var(--ease-standard) both;
+}
+
+@keyframes cr-card-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.formLabel {
+  font-size: var(--fs-caption1);
+  font-weight: 700;
+  color: var(--text-2);
+  margin: 0;
+}
+
+.formInput {
+  width: 100%;
+  min-height: 38px;
+  padding: var(--s-2) var(--s-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: var(--fs-footnote);
+  outline: none;
+  transition: border-color var(--dur-1) var(--ease-standard);
+
+  &:focus {
+    border-color: color-mix(in srgb, var(--success) 50%, var(--border));
+  }
+}
+
+.coordsRow {
+  display: flex;
+  gap: var(--s-2);
+  align-items: center;
+}
+
+.gpsBtn {
+  min-height: 38px;
+  padding: 0 var(--s-3);
+  border: 1px solid color-mix(in srgb, var(--success) 30%, var(--border));
+  border-radius: var(--r-md);
+  background: color-mix(in srgb, var(--success) 8%, var(--surface));
+  color: var(--success);
+  font-size: var(--fs-caption1);
+  font-weight: 700;
+  white-space: nowrap;
+  transition: transform var(--dur-1) var(--ease-standard);
+
+  &:active {
+    transform: scale(0.96);
+  }
+}
+
+.priceEstimate {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--s-3);
+  background: color-mix(in srgb, var(--success) 6%, var(--surface-2));
+  border-radius: var(--r-md);
+  border: 1px solid color-mix(in srgb, var(--success) 15%, var(--border));
+}
+
+.priceLabel {
+  font-size: var(--fs-caption1);
+  color: var(--text-3);
+  font-weight: 600;
+}
+
+.priceValue {
+  font-size: var(--fs-title3);
+  font-weight: 800;
+  color: var(--success);
+  font-variant-numeric: tabular-nums;
+}
+
+.distanceValue {
+  font-size: var(--fs-caption2);
+  color: var(--text-3);
+  font-weight: 600;
+}
+
+.requestBtn {
+  width: 100%;
+  min-height: 44px;
+  border: none;
+  border-radius: var(--r-lg);
+  background: linear-gradient(135deg, var(--success), color-mix(in srgb, var(--success) 90%, #fff));
+  color: #fff;
+  font-size: var(--fs-footnote);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  transition: transform var(--dur-1) var(--ease-standard);
+
+  &:active {
+    transform: scale(0.97);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    transform: none;
+  }
+}
+
+.cancelBtn {
+  width: 100%;
+  min-height: 40px;
+  border: 1px solid color-mix(in srgb, var(--danger) 30%, var(--border));
+  border-radius: var(--r-lg);
+  background: color-mix(in srgb, var(--danger) 6%, var(--surface));
+  color: var(--danger);
+  font-size: var(--fs-footnote);
+  font-weight: 700;
+  transition: transform var(--dur-1) var(--ease-standard);
+
+  &:active {
+    transform: scale(0.97);
+  }
+}
+
+/* ── Waiting View ── */
+
+.waitingView {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-4);
+  padding: var(--s-6) var(--s-3);
+  text-align: center;
+}
+
+.spinner {
+  width: 48px;
+  height: 48px;
+  border: 3px solid color-mix(in srgb, var(--success) 20%, transparent);
+  border-top-color: var(--success);
+  border-radius: 50%;
+  animation: cr-spin 1s linear infinite;
+}
+
+@keyframes cr-spin {
+  to { transform: rotate(360deg); }
+}
+
+.waitingText {
+  font-size: var(--fs-footnote);
+  color: var(--text-2);
+  font-weight: 600;
+}
+
+.waitingPrice {
+  font-size: var(--fs-title2);
+  font-weight: 800;
+  color: var(--success);
+}
+
+/* ── Ride Active View ── */
+
+.rideActiveView {
+  display: grid;
+  gap: var(--s-3);
+}
+
+.driverCard {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-3);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  animation: cr-card-in var(--dur-3) var(--ease-standard) both;
+}
+
+.driverAvatar {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--r-pill);
+  background: linear-gradient(135deg, var(--success), color-mix(in srgb, var(--success) 90%, #fff));
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  color: #fff;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.driverInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.driverName {
+  font-size: var(--fs-footnote);
+  font-weight: 700;
+  color: var(--text);
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.driverVehicle {
+  font-size: var(--fs-caption2);
+  color: var(--text-3);
+  font-weight: 600;
+}
+
+.driverRatingBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: var(--r-pill);
+  background: color-mix(in srgb, #ffcc00 10%, transparent);
+  color: #e6a800;
+}
+
+/* ── Status Steps ── */
+
+.statusSteps {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: var(--s-3);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+}
+
+.step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  position: relative;
+}
+
+.stepDot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--border);
+  border: 2px solid var(--border);
+  transition: all var(--dur-2) var(--ease-standard);
+  z-index: 1;
+}
+
+.stepActive .stepDot {
+  background: var(--success);
+  border-color: var(--success);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--success) 15%, transparent);
+}
+
+.stepCompleted .stepDot {
+  background: var(--success);
+  border-color: var(--success);
+}
+
+.stepLabel {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--text-3);
+  margin-top: 6px;
+  text-align: center;
+}
+
+.stepActive .stepLabel {
+  color: var(--success);
+}
+
+.stepCompleted .stepLabel {
+  color: var(--text-2);
+}
+
+.stepLine {
+  position: absolute;
+  top: 7px;
+  left: calc(50% + 9px);
+  right: calc(-50% + 9px);
+  height: 2px;
+  background: var(--border);
+}
+
+.stepCompleted .stepLine,
+.stepActive .stepLine {
+  background: var(--success);
+}
+
+.actionRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s-2);
+}
+
+.actionBtn {
+  min-height: 38px;
+  border: 1px solid color-mix(in srgb, var(--success) 30%, var(--border));
+  border-radius: var(--r-md);
+  background: color-mix(in srgb, var(--success) 8%, var(--surface));
+  color: var(--success);
+  font-size: var(--fs-caption1);
+  font-weight: 700;
+  transition: transform var(--dur-1) var(--ease-standard);
+
+  &:active {
+    transform: scale(0.96);
+  }
+}
+
+.progressBtn {
+  width: 100%;
+  min-height: 44px;
+  border: none;
+  border-radius: var(--r-lg);
+  background: linear-gradient(135deg, var(--success), color-mix(in srgb, var(--success) 90%, #fff));
+  color: #fff;
+  font-size: var(--fs-footnote);
+  font-weight: 700;
+  transition: transform var(--dur-1) var(--ease-standard);
+
+  &:active {
+    transform: scale(0.97);
+  }
+}
+
+/* ── Ride Complete View ── */
+
+.rideCompleteView {
+  display: grid;
+  gap: var(--s-3);
+  padding: var(--s-3);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  text-align: center;
+  animation: cr-card-in var(--dur-3) var(--ease-standard) both;
+}
+
+.completeIcon {
+  font-size: 36px;
+  margin: var(--s-2) 0;
+}
+
+.completeSummary {
+  display: grid;
+  gap: var(--s-1);
+}
+
+.completePrice {
+  font-size: var(--fs-title2);
+  font-weight: 800;
+  color: var(--success);
+}
+
+.completeDistance {
+  font-size: var(--fs-caption1);
+  color: var(--text-3);
+}
+
+/* ── Rating Section ── */
+
+.ratingSection {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-2) 0;
+}
+
+.ratingLabel {
+  font-size: var(--fs-caption1);
+  font-weight: 700;
+  color: var(--text-2);
+}
+
+.stars {
+  display: flex;
+  gap: var(--s-2);
+}
+
+.star {
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: none;
+  font-size: 28px;
+  cursor: pointer;
+  opacity: 0.3;
+  transition: all var(--dur-1) var(--ease-standard);
+  padding: 0;
+
+  &:active {
+    transform: scale(1.15);
+  }
+}
+
+.starActive {
+  opacity: 1;
+}
+
+/* ── Driver View ── */
+
+.driverView {
+  display: grid;
+  gap: var(--s-3);
+}
+
+.profileCard {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-3);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  animation: cr-card-in var(--dur-3) var(--ease-standard) both;
+}
+
+.profileInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.profileName {
+  font-size: var(--fs-footnote);
+  font-weight: 700;
+  color: var(--text);
+  margin: 0;
+}
+
+.profileStats {
+  font-size: var(--fs-caption2);
+  color: var(--text-3);
+}
+
+/* ── Toggle Switch ── */
+
+.toggleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--s-3);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+}
+
+.toggleLabel {
+  font-size: var(--fs-footnote);
+  font-weight: 700;
+  color: var(--text);
+}
+
+.toggleSwitch {
+  position: relative;
+  width: 50px;
+  height: 28px;
+  border: none;
+  border-radius: 14px;
+  background: var(--border);
+  cursor: pointer;
+  transition: background var(--dur-2) var(--ease-standard);
+  padding: 0;
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    transition: transform var(--dur-2) var(--ease-standard);
+  }
+}
+
+.toggleOn {
+  background: var(--success);
+
+  &::after {
+    transform: translateX(22px);
+  }
+}
+
+.onlineBadge,
+.offlineBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: var(--r-pill);
+}
+
+.onlineBadge {
+  background: color-mix(in srgb, var(--success) 10%, transparent);
+  color: var(--success);
+}
+
+.offlineBadge {
+  background: color-mix(in srgb, var(--text-3) 10%, transparent);
+  color: var(--text-3);
+}
+
+/* ── Request Card (Driver) ── */
+
+.requestCard {
+  display: grid;
+  gap: var(--s-2);
+  padding: var(--s-3);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  animation: cr-card-in var(--dur-3) var(--ease-standard) both;
+}
+
+.requestCardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.requestCardPrice {
+  font-size: var(--fs-title3);
+  font-weight: 800;
+  color: var(--success);
+}
+
+.requestCardDistance {
+  font-size: var(--fs-caption1);
+  color: var(--text-3);
+  font-weight: 600;
+}
+
+.requestCardPhone {
+  font-size: var(--fs-caption2);
+  color: var(--text-3);
+}
+
+.acceptBtn {
+  width: 100%;
+  min-height: 40px;
+  border: none;
+  border-radius: var(--r-lg);
+  background: linear-gradient(135deg, var(--success), color-mix(in srgb, var(--success) 90%, #fff));
+  color: #fff;
+  font-size: var(--fs-footnote);
+  font-weight: 700;
+  transition: transform var(--dur-1) var(--ease-standard);
+
+  &:active {
+    transform: scale(0.97);
+  }
+}
+
+/* ── Registration Form ── */
+
+.registrationForm {
+  display: grid;
+  gap: var(--s-3);
+  padding: var(--s-3);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  animation: cr-card-in var(--dur-3) var(--ease-standard) both;
+}
+
+.registrationTitle {
+  font-size: var(--fs-title3);
+  font-weight: 760;
+  color: var(--text);
+  margin: 0;
+  text-align: center;
+}
+
+.registrationHint {
+  font-size: var(--fs-caption1);
+  color: var(--text-3);
+  text-align: center;
+  margin: 0;
+}
+
+/* ── Edit form ── */
+
+.editForm {
+  display: grid;
+  gap: var(--s-2);
+  padding: var(--s-3);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+}
+
+.editFormTitle {
+  font-size: var(--fs-footnote);
+  font-weight: 700;
+  color: var(--text);
+  margin: 0;
+}
+
+.editRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--s-2);
+}
+
+.saveBtn {
+  width: 100%;
+  min-height: 38px;
+  border: none;
+  border-radius: var(--r-md);
+  background: linear-gradient(135deg, var(--success), color-mix(in srgb, var(--success) 90%, #fff));
+  color: #fff;
+  font-size: var(--fs-caption1);
+  font-weight: 700;
+  transition: transform var(--dur-1) var(--ease-standard);
+
+  &:active {
+    transform: scale(0.96);
+  }
+}
+
+/* ── History List ── */
+
+.historyList {
+  display: grid;
+  gap: var(--s-2);
+}
+
+.historyCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--s-3);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  animation: cr-card-in var(--dur-3) var(--ease-standard) both;
+}
+
+.historyCardInfo {
+  display: grid;
+  gap: 2px;
+}
+
+.historyCardDate {
+  font-size: var(--fs-caption2);
+  color: var(--text-3);
+}
+
+.historyCardRole {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.historyCardPrice {
+  font-size: var(--fs-footnote);
+  font-weight: 800;
+  color: var(--success);
+  font-variant-numeric: tabular-nums;
+}
+
+.historyCardOut {
+  color: var(--danger);
+}
+
+/* ── Map Overlay ── */
+
+.mapOverlay {
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+}
+
+.mapHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--s-2) var(--s-3);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+
+  span {
+    font-size: var(--fs-footnote);
+    font-weight: 700;
+    color: var(--text);
+  }
+}
+
+.mapCloseBtn {
+  min-height: 32px;
+  padding: 0 var(--s-3);
+  border: 1px solid color-mix(in srgb, var(--danger) 30%, var(--border));
+  border-radius: var(--r-md);
+  background: color-mix(in srgb, var(--danger) 6%, var(--surface));
+  color: var(--danger);
+  font-size: var(--fs-caption1);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.mapContainer {
+  flex: 1;
+  min-height: 0;
+}
+
+/* ── Driver Count Badge ── */
+
+.driverCountBadge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--s-2) var(--s-3);
+  border-radius: var(--r-md);
+  background: color-mix(in srgb, var(--success) 8%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--success) 20%, var(--border));
+  animation: cr-card-in var(--dur-3) var(--ease-standard) both;
+
+  span {
+    font-size: var(--fs-caption1);
+    font-weight: 700;
+    color: var(--success);
+  }
+}
+
+.driverCountZero {
+  background: color-mix(in srgb, var(--danger) 6%, var(--surface));
+  border-color: color-mix(in srgb, var(--danger) 20%, var(--border));
+
+  span {
+    color: var(--danger);
+  }
+}
+
+/* ── Section header ── */
+
+.sectionHeader {
+  font-size: var(--fs-caption1);
+  font-weight: 700;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: var(--s-1) 0;
+  margin: 0;
+}
