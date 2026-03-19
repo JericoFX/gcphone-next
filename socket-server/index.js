@@ -4,6 +4,69 @@ import jwt from 'jsonwebtoken';
 const port = Number(process.env.PORT || 3001);
 const jwtSecret = process.env.JWT_SECRET || '';
 const snapLiveRooms = new Map();
+const snapLiveRoomLastActive = new Map();
+const SNAP_ROOM_IDLE_TTL_MS = 3600000; // 1 hour
+
+// MatchMyLove chat rooms: matchId → { messages: [], lastActive: number }
+const mmlRooms = new Map();
+const mmlPersistQueue = [];
+const mmlPersistPending = new Map();
+let mmlPersistTimer = null;
+let mmlPersistRequestId = 1;
+const MML_BATCH_SIZE = 25;
+const MML_BATCH_DELAY_MS = 900;
+const MML_ROOM_IDLE_TTL_MS = 3600000; // 1 hour
+const mmlValidateCache = new Map(); // `${identifier}:${matchId}` → { valid, expiresAt }
+const MML_VALIDATE_TTL_MS = 120000; // 2 min cache
+
+// Per-identifier rate limits (survives reconnects / multi-socket)
+const identifierMessageTimestamps = new Map();
+const identifierReactionTimestamps = new Map();
+
+function hitIdentifierRateLimit(map, identifier, windowMs, maxHits) {
+  if (!identifier) return false;
+  const now = Date.now();
+  let stamps = map.get(identifier);
+  if (!stamps) {
+    stamps = [];
+    map.set(identifier, stamps);
+  }
+  // Prune old entries
+  while (stamps.length > 0 && now - stamps[0] > windowMs) stamps.shift();
+  if (stamps.length >= maxHits) return true;
+  stamps.push(now);
+  return false;
+}
+
+// Periodic cleanup: stale snap rooms and rate limit maps
+setInterval(() => {
+  const now = Date.now();
+  for (const [liveId, lastActive] of snapLiveRoomLastActive.entries()) {
+    if (now - lastActive > SNAP_ROOM_IDLE_TTL_MS) {
+      snapLiveRooms.delete(liveId);
+      snapLiveRoomLastActive.delete(liveId);
+    }
+  }
+  for (const [matchId, room] of mmlRooms.entries()) {
+    if (now - room.lastActive > MML_ROOM_IDLE_TTL_MS) {
+      mmlRooms.delete(matchId);
+    }
+  }
+  for (const [key, entry] of mmlValidateCache.entries()) {
+    if (now > entry.expiresAt) mmlValidateCache.delete(key);
+  }
+  for (const [id, stamps] of identifierMessageTimestamps.entries()) {
+    if (stamps.length === 0 || now - stamps[stamps.length - 1] > 60000) {
+      identifierMessageTimestamps.delete(id);
+    }
+  }
+  for (const [id, stamps] of identifierReactionTimestamps.entries()) {
+    if (stamps.length === 0 || now - stamps[stamps.length - 1] > 60000) {
+      identifierReactionTimestamps.delete(id);
+    }
+  }
+}, 60000);
+
 const wavePersistQueue = [];
 const wavePersistPending = new Map();
 let wavePersistTimer = null;
@@ -11,9 +74,13 @@ let wavePersistRequestId = 1;
 const WAVE_BATCH_SIZE = 25;
 const WAVE_BATCH_DELAY_MS = 900;
 
+const allowedOrigins = process.env.CORS_ORIGINS
+  ? process.env.CORS_ORIGINS.split(',').map((s) => s.trim())
+  : undefined;
+
 const io = new Server(port, {
   cors: {
-    origin: '*',
+    origin: allowedOrigins || '*',
   },
   transports: ['websocket'],
   pingTimeout: 60000,
@@ -131,6 +198,112 @@ on('gcphone:wavechat:persistBatchResult', (requestId, success, count, error) => 
   pending({ success: success === true, count: Number(count) || 0, error: typeof error === 'string' ? error : '' });
 });
 
+// ── MatchMyLove helpers ──
+
+function scheduleMmlPersistFlush() {
+  if (mmlPersistTimer) return;
+  mmlPersistTimer = setTimeout(() => {
+    mmlPersistTimer = null;
+    void flushMmlPersistQueue();
+  }, MML_BATCH_DELAY_MS);
+}
+
+function requestMmlPersist(batch) {
+  return new Promise((resolve) => {
+    const requestId = mmlPersistRequestId++;
+    mmlPersistPending.set(requestId, resolve);
+    emit('gcphone:matchmylove:persistBatch', requestId, batch);
+    setTimeout(() => {
+      const pending = mmlPersistPending.get(requestId);
+      if (!pending) return;
+      mmlPersistPending.delete(requestId);
+      pending({ success: false, count: 0, error: 'TIMEOUT' });
+    }, 5000);
+  });
+}
+
+async function flushMmlPersistQueue() {
+  if (mmlPersistQueue.length === 0) return;
+  const batch = mmlPersistQueue.splice(0, MML_BATCH_SIZE);
+  const result = await requestMmlPersist(batch);
+  if (!result?.success) {
+    console.warn('[matchmylove] failed to persist batch', result?.error || 'UNKNOWN');
+  }
+  if (mmlPersistQueue.length > 0) {
+    scheduleMmlPersistFlush();
+  }
+}
+
+function queueMmlPersist(entry) {
+  mmlPersistQueue.push(entry);
+  if (mmlPersistQueue.length >= MML_BATCH_SIZE) {
+    void flushMmlPersistQueue();
+    return;
+  }
+  scheduleMmlPersistFlush();
+}
+
+on('gcphone:matchmylove:persistBatchResult', (requestId, success, count, error) => {
+  const id = Number(requestId) || 0;
+  const pending = mmlPersistPending.get(id);
+  if (!pending) return;
+  mmlPersistPending.delete(id);
+  pending({ success: success === true, count: Number(count) || 0, error: typeof error === 'string' ? error : '' });
+});
+
+on('gcphone:matchmylove:validateMatchResult', (requestId, valid) => {
+  const id = Number(requestId) || 0;
+  const pending = mmlPersistPending.get(id);
+  if (!pending) return;
+  mmlPersistPending.delete(id);
+  pending({ success: valid === true });
+});
+
+function validateMmlMatch(identifier, matchId) {
+  const cacheKey = `${identifier}:${matchId}`;
+  const cached = mmlValidateCache.get(cacheKey);
+  if (cached && Date.now() < cached.expiresAt) {
+    return Promise.resolve(cached.valid);
+  }
+
+  return new Promise((resolve) => {
+    const reqId = mmlPersistRequestId++;
+    mmlPersistPending.set(reqId, (result) => {
+      const valid = result?.success === true;
+      mmlValidateCache.set(cacheKey, { valid, expiresAt: Date.now() + MML_VALIDATE_TTL_MS });
+      resolve(valid);
+    });
+    emit('gcphone:matchmylove:validateMatch', reqId, identifier, matchId);
+    setTimeout(() => {
+      const pending = mmlPersistPending.get(reqId);
+      if (!pending) return;
+      mmlPersistPending.delete(reqId);
+      pending({ success: false });
+    }, 3000);
+  });
+}
+
+function getMmlRoomName(matchId) {
+  return `matchmylove:${matchId}`;
+}
+
+function ensureMmlRoom(matchId) {
+  let room = mmlRooms.get(matchId);
+  if (!room) {
+    room = { messages: [], lastActive: Date.now() };
+    mmlRooms.set(matchId, room);
+  }
+  room.lastActive = Date.now();
+  return room;
+}
+
+function cleanupMmlSocket(socket) {
+  const joinedMatchId = socket.data.joinedMmlMatchId;
+  if (!joinedMatchId) return;
+  socket.leave(getMmlRoomName(joinedMatchId));
+  socket.data.joinedMmlMatchId = '';
+}
+
 function normalizeSnapLiveId(value) {
   const liveId = String(value || '').trim();
   return /^\d+$/.test(liveId) ? liveId : '';
@@ -158,6 +331,7 @@ function ensureSnapLiveRoom(liveId) {
     };
     snapLiveRooms.set(liveId, room);
   }
+  snapLiveRoomLastActive.set(liveId, Date.now());
   return room;
 }
 
@@ -299,6 +473,11 @@ io.on('connection', (socket) => {
       return;
     }
 
+    if (hitIdentifierRateLimit(identifierReactionTimestamps, socket.data.identifier, 3000, 5)) {
+      if (typeof ack === 'function') ack({ success: false, error: 'RATE_LIMITED' });
+      return;
+    }
+
     const entry = {
       id: `${nowMs()}-${Math.random().toString(36).slice(2, 8)}`,
       liveId,
@@ -424,6 +603,12 @@ io.on('connection', (socket) => {
     }
     eventState.recentMessages.push(stamp);
 
+    // Per-identifier rate limit (survives multi-socket / reconnects)
+    if (hitIdentifierRateLimit(identifierMessageTimestamps, socket.data.identifier, 5000, 8)) {
+      if (typeof ack === 'function') ack({ success: false, error: 'RATE_LIMITED' });
+      return;
+    }
+
     const room = `room:${roomId}`;
     const createdAt = stamp;
 
@@ -465,8 +650,104 @@ io.on('connection', (socket) => {
     if (typeof ack === 'function') ack({ success: true, messages: [] });
   });
 
+  // ── MatchMyLove Chat ──
+
+  socket.on('matchmylove:joinRoom', async (payload = {}, ack) => {
+    const matchId = toPositiveInt(payload.matchId);
+    if (!matchId || !socket.data.identifier) {
+      if (typeof ack === 'function') ack({ success: false, error: 'INVALID_PAYLOAD', messages: [] });
+      return;
+    }
+
+    const valid = await validateMmlMatch(socket.data.identifier, matchId);
+    if (!valid) {
+      if (typeof ack === 'function') ack({ success: false, error: 'FORBIDDEN', messages: [] });
+      return;
+    }
+
+    cleanupMmlSocket(socket);
+    const room = ensureMmlRoom(matchId);
+    socket.join(getMmlRoomName(matchId));
+    socket.data.joinedMmlMatchId = matchId;
+
+    if (typeof ack === 'function') {
+      ack({ success: true, messages: room.messages.slice(-20) });
+    }
+  });
+
+  socket.on('matchmylove:leaveRoom', (payload = {}) => {
+    const matchId = toPositiveInt(payload.matchId);
+    if (!matchId || socket.data.joinedMmlMatchId !== matchId) return;
+    cleanupMmlSocket(socket);
+  });
+
+  socket.on('matchmylove:send', async (payload = {}, ack) => {
+    const matchId = toPositiveInt(payload.matchId);
+    let content = String(payload.content || '').replace(/[\x00-\x1F\x7F]/g, '').trim();
+    if (!matchId || !content || socket.data.joinedMmlMatchId !== matchId || !socket.data.identifier) {
+      if (typeof ack === 'function') ack({ success: false, error: 'INVALID_PAYLOAD' });
+      return;
+    }
+
+    content = content.slice(0, 500);
+
+    if (hitIdentifierRateLimit(identifierMessageTimestamps, socket.data.identifier, 3000, 4)) {
+      if (typeof ack === 'function') ack({ success: false, error: 'RATE_LIMITED' });
+      return;
+    }
+
+    const room = mmlRooms.get(matchId);
+    if (!room) {
+      if (typeof ack === 'function') ack({ success: false, error: 'ROOM_NOT_FOUND' });
+      return;
+    }
+
+    const stamp = nowMs();
+    const message = {
+      id: `${stamp}-${Math.random().toString(36).slice(2, 8)}`,
+      matchId,
+      senderId: socket.data.identifier,
+      senderName: socket.data.name,
+      content,
+      createdAt: stamp,
+    };
+
+    room.messages.push(message);
+    while (room.messages.length > 20) room.messages.shift();
+    room.lastActive = stamp;
+
+    queueMmlPersist({
+      matchId,
+      senderIdentifier: socket.data.identifier,
+      content,
+    });
+
+    io.to(getMmlRoomName(matchId)).emit('matchmylove:message', message);
+    if (typeof ack === 'function') ack({ success: true, message });
+  });
+
+  socket.on('matchmylove:typing', (payload = {}) => {
+    const matchId = toPositiveInt(payload.matchId);
+    const typing = payload.typing === true;
+    if (!matchId || socket.data.joinedMmlMatchId !== matchId) return;
+
+    const stamp = nowMs();
+    const key = `mml:${matchId}`;
+    const lastTypingAt = eventState.typingByRoom.get(key) || 0;
+    if (typing && stamp - lastTypingAt < 350) return;
+    eventState.typingByRoom.set(key, stamp);
+
+    socket.to(getMmlRoomName(matchId)).emit('matchmylove:typing', {
+      matchId,
+      identifier: socket.data.identifier,
+      name: socket.data.name,
+      typing,
+    });
+  });
+
   socket.on('disconnect', () => {
     cleanupSnapSocket(socket);
+    cleanupMmlSocket(socket);
   });
 });
 

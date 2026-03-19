@@ -638,7 +638,7 @@ const state: BrowserMockState = {
     { id: 2, description: 'Transferencia enviada', amount: -1200, time: nowIso() },
   ],
   appLayout: {
-    home: ['contacts', 'messages', 'mail', 'calls', 'settings', 'gallery', 'camera', 'bank', 'wallet', 'documents', 'wavechat', 'music', 'chirp', 'snap', 'clips', 'darkrooms', 'yellowpages', 'news', 'garage', 'notes', 'maps', 'weather', 'notifications'],
+    home: ['contacts', 'messages', 'mail', 'calls', 'settings', 'gallery', 'camera', 'bank', 'wallet', 'documents', 'wavechat', 'music', 'chirp', 'snap', 'clips', 'darkrooms', 'yellowpages', 'news', 'garage', 'notes', 'maps', 'weather', 'notifications', 'clock', 'radio', 'services', 'matchmylove', 'cityride'],
     menu: ['appstore']
   },
   mailDomain: 'jericofx.gg',
@@ -761,7 +761,7 @@ const resetMockPhoneData = () => {
   state.emergencyContacts = [{ label: 'Emergencias', number: '911' }];
   state.flashlightEnabled = false;
   state.appLayout = {
-    home: ['contacts', 'messages', 'mail', 'calls', 'settings', 'gallery', 'camera', 'bank', 'wallet', 'documents', 'wavechat', 'music', 'chirp', 'snap', 'clips', 'darkrooms', 'yellowpages', 'news', 'garage', 'notes', 'maps', 'weather', 'notifications'],
+    home: ['contacts', 'messages', 'mail', 'calls', 'settings', 'gallery', 'camera', 'bank', 'wallet', 'documents', 'wavechat', 'music', 'chirp', 'snap', 'clips', 'darkrooms', 'yellowpages', 'news', 'garage', 'notes', 'maps', 'weather', 'notifications', 'clock', 'radio', 'services', 'matchmylove', 'cityride'],
     menu: ['appstore']
   };
 };
@@ -2883,6 +2883,10 @@ export async function handleBrowserNui<T = unknown>(eventName: string, data?: un
     } as T;
   }
 
+  if (eventName === 'musicCanSearchCatalog') {
+    return { enabled: true } as T;
+  }
+
   if (eventName === 'musicSearchCatalog' || eventName === 'musicSearchITunes') {
     const term = String(payload.query || 'Track').trim() || 'Track';
     return {
@@ -2893,6 +2897,8 @@ export async function handleBrowserNui<T = unknown>(eventName: string, data?: un
           title: `${term} - Live Session`,
           channel: 'Mock Channel',
           thumbnail: 'https://i.ytimg.com/vi/dQw4w9WgXcQ/mqdefault.jpg',
+          duration: '3:32',
+          views: 1200000,
           url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
         },
         {
@@ -2900,6 +2906,8 @@ export async function handleBrowserNui<T = unknown>(eventName: string, data?: un
           title: `${term} - Remix`,
           channel: 'Mock Studio',
           thumbnail: 'https://i.ytimg.com/vi/9bZkp7q19f0/mqdefault.jpg',
+          duration: '4:12',
+          views: 850000,
           url: 'https://www.youtube.com/watch?v=9bZkp7q19f0',
         },
       ],
@@ -2923,6 +2931,385 @@ export async function handleBrowserNui<T = unknown>(eventName: string, data?: un
       success: true,
     });
 
+    return { success: true } as T;
+  }
+
+  // ── Services ──
+
+  if (eventName === 'servicesGetCategories') {
+    return [
+      { id: 'all', name: 'Todos', icon: 'svc-all' },
+      { id: 'mechanic', name: 'Mecanico', icon: 'svc-mechanic' },
+      { id: 'lawyer', name: 'Abogado', icon: 'svc-lawyer' },
+      { id: 'doctor', name: 'Doctor', icon: 'svc-doctor' },
+      { id: 'taxi', name: 'Taxi', icon: 'svc-taxi' },
+      { id: 'delivery', name: 'Delivery', icon: 'svc-delivery' },
+      { id: 'security', name: 'Seguridad', icon: 'svc-security' },
+      { id: 'realtor', name: 'Inmobiliaria', icon: 'svc-realtor' },
+      { id: 'other', name: 'Otro', icon: 'svc-other' },
+    ] as T;
+  }
+
+  if (eventName === 'servicesGetListings') {
+    const category = String(payload.category || '').trim();
+    const mockWorkers = [
+      { id: 1, display_name: 'Carlos Lopez', category: 'mechanic', description: 'Mecanico certificado, 5 anios de experiencia.', phone_number: '555-7001', availability: 'online', rating: 4.5, rating_sum: 54, rating_count: 12 },
+      { id: 2, display_name: 'Sofia Martinez', category: 'lawyer', description: 'Abogada penalista, consultas 24h.', phone_number: '555-7002', availability: 'online', rating: 4.8, rating_sum: 38, rating_count: 8 },
+      { id: 3, display_name: 'Diego Torres', category: 'taxi', description: 'Taxi confiable, conozco toda la ciudad.', phone_number: '555-7003', availability: 'offline', rating: 4.2, rating_sum: 84, rating_count: 20 },
+      { id: 4, display_name: 'Elena Rios', category: 'doctor', description: 'Doctora general, atencion rapida.', phone_number: '555-7004', availability: 'busy', rating: 4.9, rating_sum: 73, rating_count: 15 },
+      { id: 5, display_name: 'Roberto Sanz', category: 'security', description: 'Seguridad privada y escolta VIP.', phone_number: '555-7005', availability: 'online', rating: 4.0, rating_sum: 20, rating_count: 5 },
+      { id: 6, display_name: 'Maria Gomez', category: 'realtor', description: 'Vendo y alquilo propiedades en LS.', phone_number: '555-7006', availability: 'online', rating: 4.6, rating_sum: 46, rating_count: 10 },
+    ];
+    const filtered = category && category !== 'all' ? mockWorkers.filter((w) => w.category === category) : mockWorkers;
+    return filtered as T;
+  }
+
+  if (eventName === 'servicesGetMyService') {
+    return null as T;
+  }
+
+  if (eventName === 'servicesRegister') {
+    return {
+      success: true,
+      service: {
+        id: 99,
+        display_name: String(payload.display_name || 'Mock User'),
+        category: String(payload.category || 'other'),
+        description: String(payload.description || ''),
+        phone_number: state.phoneNumber,
+        availability: 'online',
+        rating: 0,
+        rating_sum: 0,
+        rating_count: 0,
+      },
+    } as T;
+  }
+
+  if (eventName === 'servicesUpdateService') {
+    return { success: true } as T;
+  }
+
+  if (eventName === 'servicesSetAvailability') {
+    return { success: true } as T;
+  }
+
+  if (eventName === 'servicesDeleteService') {
+    return { success: true } as T;
+  }
+
+  if (eventName === 'servicesGetWorkerInfo') {
+    return {
+      id: Number(payload || 1),
+      display_name: 'Carlos Lopez',
+      category: 'mechanic',
+      description: 'Mecanico certificado, 5 anios de experiencia. Especialista en motores y transmisiones.',
+      phone_number: '555-7001',
+      availability: 'online',
+      rating: 4.5,
+      rating_sum: 54,
+      rating_count: 12,
+    } as T;
+  }
+
+  if (eventName === 'servicesRateWorker') {
+    return { success: true } as T;
+  }
+
+  if (eventName === 'servicesGetWorkerRatings') {
+    return [
+      { id: 1, rating: 5, comment: 'Excelente trabajo!', created_at: nowIso() },
+      { id: 2, rating: 4, comment: 'Buen servicio.', created_at: nowIso() },
+    ] as T;
+  }
+
+  // ── Radio ──
+
+  if (eventName === 'radioGetStations') {
+    return [
+      { id: 1, hostName: 'DJ Mock', stationName: 'Los Santos FM', description: 'La mejor musica de la ciudad', category: 'music', livekitRoom: 'radio-1', listenerCount: 5, createdAt: Math.floor(Date.now() / 1000) },
+      { id: 2, hostName: 'Periodista', stationName: 'Noticias LS', description: 'Noticias en vivo las 24h', category: 'news', livekitRoom: 'radio-2', listenerCount: 12, createdAt: Math.floor(Date.now() / 1000) },
+    ] as T;
+  }
+
+  if (eventName === 'radioCreateStation') {
+    return {
+      success: true,
+      station: {
+        id: 99,
+        hostName: 'Mock User',
+        stationName: String(payload.stationName || 'Mi estacion'),
+        description: String(payload.description || ''),
+        category: String(payload.category || 'other'),
+        livekitRoom: 'radio-99',
+        listenerCount: 0,
+        createdAt: Math.floor(Date.now() / 1000),
+      },
+    } as T;
+  }
+
+  if (eventName === 'radioJoinStation') {
+    const stationId = Number(payload.stationId || 1);
+    return {
+      success: true,
+      station: {
+        id: stationId,
+        hostName: 'DJ Mock',
+        stationName: 'Los Santos FM',
+        description: 'La mejor musica',
+        category: 'music',
+        livekitRoom: `radio-${stationId}`,
+        listenerCount: 6,
+        createdAt: Math.floor(Date.now() / 1000),
+      },
+    } as T;
+  }
+
+  if (eventName === 'radioLeaveStation' || eventName === 'radioEndStation') {
+    return { success: true } as T;
+  }
+
+  if (eventName === 'radioGetStationInfo') {
+    const stationId = Number(payload.stationId || 1);
+    return {
+      id: stationId,
+      hostName: 'DJ Mock',
+      stationName: 'Los Santos FM',
+      description: 'La mejor musica',
+      category: 'music',
+      livekitRoom: `radio-${stationId}`,
+      listenerCount: 5,
+      createdAt: Math.floor(Date.now() / 1000),
+    } as T;
+  }
+
+  if (eventName === 'radioSearchMusic') {
+    const term = String(payload.query || 'Track').trim() || 'Track';
+    return {
+      success: true,
+      results: [
+        { videoId: 'dQw4w9WgXcQ', title: `${term} - Live Session`, channel: 'Mock Channel', thumbnail: 'https://i.ytimg.com/vi/dQw4w9WgXcQ/mqdefault.jpg' },
+        { videoId: '9bZkp7q19f0', title: `${term} - Remix`, channel: 'Mock Studio', thumbnail: 'https://i.ytimg.com/vi/9bZkp7q19f0/mqdefault.jpg' },
+        { videoId: 'kJQP7kiw5Fk', title: `${term} - Chill Mix`, channel: 'LoFi Radio', thumbnail: 'https://i.ytimg.com/vi/kJQP7kiw5Fk/mqdefault.jpg' },
+      ],
+    } as T;
+  }
+
+  if (eventName === 'radioPlayMusic') {
+    return { success: true, title: String(payload.title || 'Mock Track'), isPlaying: true } as T;
+  }
+
+  if (eventName === 'radioStopMusic') {
+    return { success: true } as T;
+  }
+
+  if (eventName === 'radioSetMusicVolume') {
+    return { success: true, volume: Number(payload.volume || 0.5), distance: Number(payload.distance || 25) } as T;
+  }
+
+  // ── MatchMyLove ──
+
+  if (eventName === 'matchmyloveGetProfile') {
+    return {
+      id: 1,
+      identifier: 'mock:self',
+      display_name: 'Mock User',
+      age: 25,
+      bio: 'Soy un perfil de prueba en Los Santos.',
+      avatar: './img/background/playa.jpg',
+      photos: ['./img/background/tokio.jpg', './img/background/neon.jpg'],
+      interests: ['musica', 'autos', 'viajes'],
+      gender: 'male',
+      looking_for: 'everyone',
+      is_active: 1,
+      created_at: nowIso(),
+    } as T;
+  }
+
+  if (eventName === 'matchmyloveCreateProfile') {
+    return { success: true } as T;
+  }
+
+  if (eventName === 'matchmyloveUpdateProfile') {
+    return { success: true } as T;
+  }
+
+  if (eventName === 'matchmyloveDeleteProfile') {
+    return { success: true } as T;
+  }
+
+  if (eventName === 'matchmyloveGetCards') {
+    return [
+      { id: 101, identifier: 'mock:101', display_name: 'Valentina', age: 24, bio: 'Amante de los autos y la buena musica. Me gusta explorar la ciudad de noche y descubrir lugares nuevos.', avatar: './img/background/playa.jpg', photos: ['./img/background/playa.jpg'], interests: ['musica', 'autos', 'viajes'], gender: 'female', looking_for: 'everyone', is_active: 1 },
+      { id: 102, identifier: 'mock:102', display_name: 'Marco', age: 28, bio: 'Piloto de carreras en LS. Busco alguien que comparta la adrenalina.', avatar: './img/background/tokio.jpg', photos: ['./img/background/tokio.jpg'], interests: ['carreras', 'gym', 'cine'], gender: 'male', looking_for: 'everyone', is_active: 1 },
+      { id: 103, identifier: 'mock:103', display_name: 'Luna', age: 22, bio: 'Fotografa freelance. La vida es mejor a traves del lente.', avatar: './img/background/neon.jpg', photos: ['./img/background/neon.jpg'], interests: ['foto', 'arte', 'cafe'], gender: 'female', looking_for: 'everyone', is_active: 1 },
+      { id: 104, identifier: 'mock:104', display_name: 'Isabella', age: 26, bio: 'Barista y viajera. El mejor cafe de LS lo hago yo.', avatar: './img/background/back003.jpg', photos: ['./img/background/back003.jpg'], interests: ['cafe', 'yoga', 'cocina'], gender: 'female', looking_for: 'everyone', is_active: 1 },
+      { id: 105, identifier: 'mock:105', display_name: 'Diego', age: 30, bio: 'Mecanico de dia, DJ de noche. Los motores y el beat me mueven.', photos: [], interests: ['mecanica', 'musica electronica', 'surf'], gender: 'male', looking_for: 'everyone', is_active: 1 },
+    ] as T;
+  }
+
+  if (eventName === 'matchmyloveSwipe') {
+    const direction = String(payload.direction || 'left');
+    const isMatch = direction === 'right' && Math.random() > 0.4;
+    return {
+      success: true,
+      matched: isMatch,
+      matchId: isMatch ? 200 + Date.now() % 1000 : undefined,
+    } as T;
+  }
+
+  if (eventName === 'matchmyloveGetMatches') {
+    return [
+      { match_id: 201, matched_at: nowIso(), other_identifier: 'mock:101', display_name: 'Valentina', age: 24, avatar: './img/background/playa.jpg', bio: 'Amante de los autos.', last_message: 'Hola! Como estas?', last_message_at: nowIso(), last_message_sender: 'mock:101' },
+      { match_id: 202, matched_at: nowIso(), other_identifier: 'mock:104', display_name: 'Isabella', age: 26, avatar: './img/background/back003.jpg', bio: 'Barista y viajera.', last_message: undefined, last_message_at: undefined, last_message_sender: undefined },
+    ] as T;
+  }
+
+  if (eventName === 'matchmyloveGetMessages') {
+    const matchId = Number(payload.matchId || 201);
+    return [
+      { id: 1, match_id: matchId, sender_id: 'mock:101', content: 'Hola! Vi que te gustan los autos.', created_at: nowIso() },
+      { id: 2, match_id: matchId, sender_id: 'mock:self', content: 'Si! Tengo un Sultan RS.', created_at: nowIso() },
+      { id: 3, match_id: matchId, sender_id: 'mock:101', content: 'Que genial, yo tambien! Deberias ver mi garage.', created_at: nowIso() },
+    ] as T;
+  }
+
+  if (eventName === 'matchmyloveSendMessage') {
+    return {
+      success: true,
+      message: {
+        id: Date.now(),
+        match_id: Number(payload.matchId || 201),
+        sender_id: 'mock:self',
+        content: String(payload.content || ''),
+        created_at: nowIso(),
+      },
+    } as T;
+  }
+
+  if (eventName === 'matchmyloveUnmatch') {
+    return { success: true } as T;
+  }
+
+  // ── CityRide ──
+
+  if (eventName === 'cityrideRegisterDriver') {
+    return { success: true } as T;
+  }
+
+  if (eventName === 'cityrideGetDriverProfile') {
+    return null as T;
+  }
+
+  if (eventName === 'cityrideUpdateDriver') {
+    return { success: true } as T;
+  }
+
+  if (eventName === 'cityrideSetDriverAvailability') {
+    return { success: true, is_available: Boolean(payload.available) } as T;
+  }
+
+  if (eventName === 'cityrideRequestRide') {
+    const pickup = payload.pickup || { x: -268, y: -956, z: 31 };
+    const dest = payload.dest || { x: 200, y: -800, z: 31 };
+    const dx = dest.x - pickup.x;
+    const dy = dest.y - pickup.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const price = Math.max(50, Math.min(50000, Math.round(dist * 12)));
+    return {
+      success: true,
+      ride: {
+        id: 501,
+        passengerPhone: '555-0100',
+        driverPhone: undefined,
+        driverName: undefined,
+        driverVehicle: undefined,
+        driverPlate: undefined,
+        driverRating: 0,
+        pickup,
+        dest,
+        distance: Math.round(dist * 100) / 100,
+        price,
+        status: 'requested',
+        createdAt: Math.floor(Date.now() / 1000),
+      },
+    } as T;
+  }
+
+  if (eventName === 'cityrideGetAvailableRides') {
+    return [
+      { id: 502, passengerPhone: '555-0200', pickup: { x: 215, y: -810, z: 30 }, dest: { x: -1040, y: -2750, z: 14 }, distance: 2250.5, price: 680, status: 'requested', createdAt: Math.floor(Date.now() / 1000) },
+      { id: 503, passengerPhone: '555-0300', pickup: { x: -1180, y: -1510, z: 4 }, dest: { x: -75, y: 900, z: 235 }, distance: 2650.0, price: 320, status: 'requested', createdAt: Math.floor(Date.now() / 1000) },
+    ] as T;
+  }
+
+  if (eventName === 'cityrideAcceptRide') {
+    return {
+      success: true,
+      ride: {
+        id: Number(payload.rideId || 502),
+        passengerPhone: '555-0200',
+        driverPhone: '555-0100',
+        driverName: 'Mock Driver',
+        driverVehicle: 'Sultan RS',
+        driverPlate: 'MOCK-01',
+        driverRating: 4.5,
+        pickup: { x: 215, y: -810, z: 30 },
+        dest: { x: -1040, y: -2750, z: 14 },
+        distance: 2250.5,
+        price: 680,
+        status: 'accepted',
+        createdAt: Math.floor(Date.now() / 1000),
+        acceptedAt: Math.floor(Date.now() / 1000),
+      },
+    } as T;
+  }
+
+  if (eventName === 'cityrideConfirmPickup') {
+    return { success: true, ride: { id: Number(payload.rideId || 502), status: payload.status || 'pickup', distance: 2250.5, price: 680 } } as T;
+  }
+
+  if (eventName === 'cityrideCompleteRide') {
+    return { success: true, ride: { id: Number(payload.rideId || 502), status: 'completed', distance: 2250.5, price: 680 } } as T;
+  }
+
+  if (eventName === 'cityrideCancelRide') {
+    return { success: true } as T;
+  }
+
+  if (eventName === 'cityrideGetAvailableDriverCount') {
+    return { count: 3 } as T;
+  }
+
+  if (eventName === 'cityrideGetActiveRide') {
+    return null as T;
+  }
+
+  if (eventName === 'cityrideGetRideHistory') {
+    return [
+      { id: 401, passenger_phone: '555-0200', driver_phone: '555-0100', distance: 2250.5, price: 1200, status: 'completed', created_at: nowIso(), completed_at: nowIso(), role: 'passenger' },
+      { id: 402, passenger_phone: '555-0300', driver_phone: '555-0100', distance: 1800.0, price: 450, status: 'completed', created_at: nowIso(), completed_at: nowIso(), role: 'driver' },
+    ] as T;
+  }
+
+  if (eventName === 'cityrideRateDriver') {
+    return { success: true } as T;
+  }
+
+  if (eventName === 'cityrideEstimatePrice') {
+    const p = payload.pickup || { x: 0, y: 0 };
+    const d = payload.dest || { x: 0, y: 0 };
+    const dx = d.x - p.x;
+    const dy = d.y - p.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const price = Math.max(50, Math.min(50000, Math.round(dist * 12)));
+    return { price: price || 350, distance: Math.round(dist * 100) / 100 } as T;
+  }
+
+  if (eventName === 'cityrideGetPlayerCoords') {
+    return { x: -268.42, y: -956.31, z: 31.22 } as T;
+  }
+
+  if (eventName === 'cityrideSetWaypoint') {
     return { success: true } as T;
   }
 

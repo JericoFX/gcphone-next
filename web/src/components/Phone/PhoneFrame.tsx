@@ -153,6 +153,24 @@ const lazyApps = {
   camera: lazy(() =>
     import('../apps/camera/CameraApp').then((m) => ({ default: m.CameraApp })),
   ),
+  services: lazy(() =>
+    import('../apps/services/ServicesApp').then((m) => ({
+      default: m.ServicesApp,
+    })),
+  ),
+  radio: lazy(() =>
+    import('../apps/radio/RadioApp').then((m) => ({ default: m.RadioApp })),
+  ),
+  matchmylove: lazy(() =>
+    import('../apps/matchmylove/MatchMyLoveApp').then((m) => ({
+      default: m.MatchMyLoveApp,
+    })),
+  ),
+  cityride: lazy(() =>
+    import('../apps/cityride/CityRideApp').then((m) => ({
+      default: m.CityRideApp,
+    })),
+  ),
 };
 
 export const PhoneFrame: ParentComponent & { Router: () => JSX.Element } = (
