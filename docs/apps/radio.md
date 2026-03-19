@@ -20,7 +20,7 @@ None (radio state is held in-memory only).
 | `gcphone:radio:leaveStation` | Leaves a station |
 | `gcphone:radio:endStation` | Host ends and destroys the station |
 | `gcphone:radio:getStationInfo` | Gets station details and listener count |
-| `gcphone:radio:searchMusic` | YouTube search via Piped API |
+| `gcphone:radio:searchMusic` | YouTube search via youtube-sr |
 | `gcphone:radio:playMusic` | Host plays a track on the station (olisound) |
 | `gcphone:radio:stopMusic` | Host stops current track |
 | `gcphone:radio:setMusicVolume` | Adjusts volume and distance |
@@ -48,5 +48,4 @@ Config.Radio = {
 ## Dependencies
 
 - **olisound** -- required for spatial audio playback
-- YouTube Data API key (convar `gcphone_youtube_api_key`) -- for search
-- Piped API -- for resolving audio streams
+- **youtube-sr** -- YouTube search (included in `server/js/node_modules`, no install needed)

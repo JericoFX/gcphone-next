@@ -35,6 +35,8 @@ This guide covers installing gcphone-next, configuring your server, and verifyin
 
    This produces the `web/dist/` directory that FiveM serves as the NUI page.
 
+   > **Note:** Server-side JS dependencies (`server/js/node_modules`) are already included in the repository — no extra install step is needed for YouTube search, LiveKit tokens, or Socket.IO auth.
+
 3. Add the resource to your `server.cfg`:
 
    ```cfg
@@ -68,11 +70,37 @@ dependencies {
 }
 ```
 
+## Automated Setup (recommended)
+
+The repository includes an interactive setup wizard that configures LiveKit + Redis, generates all convars for `server.cfg`, and optionally opens the required firewall ports:
+
+```
+tools\livekit\setup-livekit.bat
+```
+
+Or directly via PowerShell:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\livekit\setup-livekit.ps1
+```
+
+The wizard will:
+
+1. **Check/install Docker Desktop** automatically if not present
+2. **Ask for your settings** (IP, ports, API key/secret, room prefix, call duration, TURN/TLS)
+3. **Generate config files** (`livekit.yaml`, `.env`, start/stop scripts)
+4. **Open firewall ports** (LiveKit signal, RTC TCP/UDP, Socket.IO) -- asks for admin elevation if needed
+5. **Print the exact `server.cfg` convars** ready to copy-paste
+
+After the wizard finishes, start the stack with `tools\livekit\start-livekit.bat`.
+
+See the [LiveKit Setup Guide](/guides/livekit-setup) for manual setup and advanced options.
+
 ## server.cfg Convars
 
 ### LiveKit (video calls)
 
-If you are self-hosting LiveKit for WebRTC video calls, add these convars:
+If you ran the setup wizard, it already printed these values for you. Otherwise, add them manually:
 
 ```cfg
 setr livekit_host "ws://YOUR_SERVER_IP:7880"
@@ -84,7 +112,6 @@ setr livekit_max_call_duration "300"
 
 - `livekit_host` must start with `ws://` or `wss://`.
 - `livekit_api_key` and `livekit_api_secret` are **server-side only** -- never expose them in client or web code.
-- See the [LiveKit Setup Guide](/guides/livekit-setup) for full instructions.
 
 ### Socket.IO (optional real-time chat)
 
@@ -127,7 +154,7 @@ The main configuration file is `shared/config.lua`. Key sections:
 | `Config.Mail` | Domain, alias length, body length, attachment limits |
 | `Config.Security` | Rate limits per action type |
 | `Config.Proximity` | Distance thresholds for sharing contacts, locations, documents, photos |
-| `Config.APIs` | API keys for Unsplash, Picsum, Tenor, Piped (YouTube proxy) |
+| `Config.APIs` | API keys for Unsplash, Picsum, Tenor |
 
 ### Phone Item Requirement
 
@@ -195,6 +222,22 @@ bun run build
 cd resources/[phone]/gcphone-next/web
 bun run typecheck
 ```
+
+## Native Audio (gcphone_sounds)
+
+The `gcphone_sounds` resource provides the native GTA audio bank used for ringtones, notification sounds, and other phone audio. It must be started **before** `gcphone-next`.
+
+The audio configuration is in `shared/config.lua` under `Config.NativeAudio`. You can customize:
+
+- Sound bank name
+- Ringtone catalog (which tones are available)
+- Default tones per category (calls, messages, notifications)
+
+All audio plays through GTA's native sound system, so players hear ringtones and notifications spatially in-game. Respect the audio -- if a player's phone rings, nearby players will hear it.
+
+## Open Source
+
+gcphone-next is fully open source. You can modify, extend, and redistribute the code freely. All Lua, JavaScript, and SolidJS source is included in the repository -- nothing is obfuscated or locked behind escrow.
 
 ## Verification After Start
 

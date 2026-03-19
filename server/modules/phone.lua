@@ -3,6 +3,8 @@
 local PhoneExists
 local RESOURCE_NAME = GetCurrentResourceName()
 
+GCPhone.StreamerModePlayers = {}
+
 ---@class GCPhoneLookupOwner
 ---@field identifier string
 ---@field name string
@@ -677,6 +679,11 @@ local function BuildPhonePayload(phone, source)
     local setup = ResolveSetupState(phone.identifier)
     local ownerName = isForeignReadOnly and context.ownerName or ResolvePhoneOwnerName(source, phone.identifier)
 
+    local isStreamer = tonumber(phone.streamer_mode) == 1
+    if source then
+        GCPhone.StreamerModePlayers[source] = isStreamer or nil
+    end
+
     return {
         phoneNumber = phone.phone_number,
         framework = framework,
@@ -695,6 +702,7 @@ local function BuildPhonePayload(phone, source)
         theme = phone.theme or 'light',
         language = phone.language or 'es',
         audioProfile = phone.audio_profile or 'normal',
+        streamerMode = isStreamer,
         appLayout = appLayout,
         enabledApps = EnabledList(enabledApps),
         featureFlags = featureFlags,
@@ -1219,6 +1227,22 @@ lib.callback.register('gcphone:setAudioProfile', function(source, data)
     return true
 end)
 
+lib.callback.register('gcphone:setStreamerMode', function(source, data)
+    if IsPhoneReadOnly(source) then return false end
+    local identifier = GetIdentifier(source)
+    if not identifier then return false end
+    local enabled = type(data) == 'table' and data.enabled == true
+    local dbVal = enabled and 1 or 0
+
+    MySQL.update.await(
+        'UPDATE phone_numbers SET streamer_mode = ? WHERE identifier = ?',
+        { dbVal, identifier }
+    )
+
+    GCPhone.StreamerModePlayers[source] = enabled or nil
+    return true
+end)
+
 lib.callback.register('gcphone:getAppLayout', function(source)
     local identifier = GetIdentifier(source)
     local enabledApps = BuildEnabledApps(GetFeatureFlags())
@@ -1306,6 +1330,7 @@ end)
 
 AddEventHandler('playerDropped', function()
     ClearPhoneAccessContext(source)
+    GCPhone.StreamerModePlayers[source] = nil
 end)
 
 ---Get a phone number by owner identifier.

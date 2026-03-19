@@ -231,6 +231,12 @@ RegisterNUICallback('setAudioProfile', function(data, cb)
     end, data)
 end)
 
+RegisterNUICallback('setStreamerMode', function(data, cb)
+    lib.callback('gcphone:setStreamerMode', false, function(success)
+        cb(success)
+    end, data)
+end)
+
 RegisterNUICallback('setLockCode', function(data, cb)
     lib.callback('gcphone:setLockCode', false, function(success)
         cb(success)

@@ -53,6 +53,7 @@ export interface PhoneSettings {
   theme: 'auto' | 'light' | 'dark';
   language?: 'es' | 'en' | 'pt' | 'fr';
   audioProfile?: 'normal' | 'street' | 'vehicle' | 'silent';
+  streamerMode?: boolean;
 }
 
 export type PhoneFramework = 'esx' | 'qbcore' | 'qbox' | 'unknown';
