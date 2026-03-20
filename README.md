@@ -1,5 +1,13 @@
 # gcphone-next
 
+# ⚠️ WORK IN PROGRESS ⚠️
+
+**This resource has NOT been tested in a live FiveM environment.** Expect bugs, missing features, and breaking changes. Use at your own risk.
+
+You are free to do whatever you want with this resource — fork it, modify it, sell it, burn it, print it and frame it on your wall. No restrictions beyond the GPL-3.0 license.
+
+---
+
 A modernized FiveM phone resource built with **SolidJS**, **ox_lib**, and **oxmysql**.
 
 Fork of [gcphone](https://github.com/manueljlz/gcphone) by manueljlz — fully rewritten architecture.
