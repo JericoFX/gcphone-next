@@ -390,6 +390,7 @@
     "mail.send": "Wyślij",
     "mail.setup_title": "Skonfiguruj pocztę",
     "mail.setup_hint": "Utwórz alias, a zostanie automatycznie przypisany:",
+    "mail.no_account_hint": "Twoje konto e-mail jest konfigurowane przy pierwszym uruchomieniu telefonu. Jesli nie masz konta, skontaktuj sie z administratorem.",
     "mail.create_account": "Utwórz konto",
     "mail.prompt.attach_link_title": "Załącz link",
     "mail.prompt.attach_link_message": "Wklej URL, aby dołączyć go do wiadomości",

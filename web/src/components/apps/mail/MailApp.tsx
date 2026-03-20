@@ -81,9 +81,6 @@ export function MailApp() {
   const [selectedId, setSelectedId] = createSignal<number | null>(null);
   const [view, setView] = createSignal<'list' | 'detail' | 'compose'>('list');
 
-  const [aliasInput, setAliasInput] = createSignal('');
-  const [passwordInput, setPasswordInput] = createSignal('');
-
   const [toInput, setToInput] = createSignal('');
   const [subjectInput, setSubjectInput] = createSignal('');
   const [bodyInput, setBodyInput] = createSignal('');
@@ -184,38 +181,6 @@ export function MailApp() {
 
     const first = (payload.inbox && payload.inbox[0]) || null;
     setSelectedId(first ? Number(first.id) : null);
-  };
-
-  const createAccount = async () => {
-    const alias = aliasInput().trim();
-    const password = passwordInput().trim();
-
-    if (!alias || !password) {
-      setError(t('mail.error.account_required', language()));
-      return;
-    }
-
-    setLoading(true);
-    setError('');
-
-    const payload = await fetchNui<MailActionResponse>(
-      'mailCreateAccount',
-      {
-        alias,
-        password,
-      },
-      { success: false },
-    );
-
-    setLoading(false);
-    if (!payload?.success) {
-      setError(payload?.error || t('mail.error.account_create', language()));
-      return;
-    }
-
-    setAliasInput('');
-    setPasswordInput('');
-    await loadState();
   };
 
   const sendMail = async () => {
@@ -805,29 +770,8 @@ export function MailApp() {
           <div class={styles.setupCard}>
             <h3>{t('mail.setup_title', language())}</h3>
             <p class={styles.setupHint}>
-              {t('mail.setup_hint', language())}{' '}
-              <strong>@{domain()}</strong>
+              {t('mail.no_account_hint', language())}
             </p>
-            <input
-              class={styles.input}
-              value={aliasInput()}
-              onInput={(e) => setAliasInput(e.currentTarget.value)}
-              placeholder='alias'
-            />
-            <input
-              class={styles.input}
-              type='password'
-              value={passwordInput()}
-              onInput={(e) => setPasswordInput(e.currentTarget.value)}
-              placeholder='password'
-            />
-            <button
-              class={styles.button}
-              onClick={() => void createAccount()}
-              disabled={loading()}
-            >
-              {t('mail.create_account', language())}
-            </button>
           </div>
         </Show>
       </div>

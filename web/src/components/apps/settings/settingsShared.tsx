@@ -48,6 +48,10 @@ export const languages = [
   { code: 'en', name: 'English', label: 'EN' },
   { code: 'pt', name: 'Português', label: 'PT' },
   { code: 'fr', name: 'Français', label: 'FR' },
+  { code: 'de', name: 'Deutsch', label: 'DE' },
+  { code: 'it', name: 'Italiano', label: 'IT' },
+  { code: 'pl', name: 'Polski', label: 'PL' },
+  { code: 'ru', name: 'Русский', label: 'RU' },
 ];
 
 export const audioProfiles = [
