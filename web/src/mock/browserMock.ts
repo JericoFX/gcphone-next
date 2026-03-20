@@ -1,4 +1,5 @@
 import type { Call, Contact, Message } from '../types';
+import type { AppLanguage } from '../i18n';
 import { isEnvBrowser, normalizeAppLanguage } from '../utils/misc';
 
 type AnyRecord = Record<string, unknown>;
@@ -43,7 +44,7 @@ interface BrowserMockState {
   volume: number;
   lockCode: string;
   theme: 'auto' | 'light' | 'dark';
-  language: 'es' | 'en' | 'pt' | 'fr';
+  language: AppLanguage;
   audioProfile: 'normal' | 'street' | 'vehicle' | 'silent';
   requiresSetup: boolean;
   contacts: Contact[];
@@ -3209,8 +3210,8 @@ export async function handleBrowserNui<T = unknown>(eventName: string, data?: un
   }
 
   if (eventName === 'cityrideRequestRide') {
-    const pickup = payload.pickup || { x: -268, y: -956, z: 31 };
-    const dest = payload.dest || { x: 200, y: -800, z: 31 };
+    const pickup = (payload as any).pickup || { x: -268, y: -956, z: 31 };
+    const dest = (payload as any).dest || { x: 200, y: -800, z: 31 };
     const dx = dest.x - pickup.x;
     const dy = dest.y - pickup.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
@@ -3296,8 +3297,8 @@ export async function handleBrowserNui<T = unknown>(eventName: string, data?: un
   }
 
   if (eventName === 'cityrideEstimatePrice') {
-    const p = payload.pickup || { x: 0, y: 0 };
-    const d = payload.dest || { x: 0, y: 0 };
+    const p = (payload as any).pickup || { x: 0, y: 0 };
+    const d = (payload as any).dest || { x: 0, y: 0 };
     const dx = d.x - p.x;
     const dy = d.y - p.y;
     const dist = Math.sqrt(dx * dx + dy * dy);

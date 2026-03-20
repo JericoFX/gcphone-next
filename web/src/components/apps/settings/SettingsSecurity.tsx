@@ -37,15 +37,15 @@ export function SettingsSecurity(props: SettingsSecurityProps) {
   const processSecurityEntry = async (value: string) => {
     if (securityFlow() === 'disable-lock') {
       const valid = await props.phoneActions.verifyPin(value);
-      if (!valid) { setStatus({ type: 'error', text: 'PIN actual incorrecto' }); setPinCode(''); return; }
+      if (!valid) { setStatus({ type: 'error', text: t('settings.pin.wrong', props.language()) }); setPinCode(''); return; }
       props.phoneActions.setScreenLockEnabled(false);
-      setStatus({ type: 'ok', text: 'Bloqueo de pantalla desactivado' });
+      setStatus({ type: 'ok', text: t('settings.pin.lock_disabled', props.language()) });
       setTimeout(() => { resetSecurityFlow(); setStatus(null); }, 1600);
       return;
     }
     if (securityFlow() === 'change-verify') {
       const valid = await props.phoneActions.verifyPin(value);
-      if (!valid) { setStatus({ type: 'error', text: 'PIN actual incorrecto' }); setPinCode(''); return; }
+      if (!valid) { setStatus({ type: 'error', text: t('settings.pin.wrong', props.language()) }); setPinCode(''); return; }
       setStatus(null); setSecurityFlow('change-new'); setPinCode('');
       return;
     }
@@ -69,10 +69,10 @@ export function SettingsSecurity(props: SettingsSecurityProps) {
 
   const securityTitle = () => {
     switch (securityFlow()) {
-      case 'disable-lock': return 'Confirma tu PIN actual';
-      case 'change-verify': return 'Introduce tu PIN actual';
-      case 'change-new': return 'Introduce el nuevo PIN';
-      case 'change-confirm': return 'Confirma el nuevo PIN';
+      case 'disable-lock': return t('settings.pin.confirm_current', props.language());
+      case 'change-verify': return t('settings.pin.enter_current', props.language());
+      case 'change-new': return t('settings.pin.enter_new', props.language());
+      case 'change-confirm': return t('settings.pin.confirm_new', props.language());
       default: return t('settings.tab.security', props.language());
     }
   };

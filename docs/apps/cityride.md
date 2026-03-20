@@ -4,6 +4,8 @@ title: CityRide
 
 # CityRide
 
+![CityRide](/img/apps/cityride.png)
+
 Uber-style ride-hailing app. Players register as drivers, riders request pickups with destination, drivers accept and complete rides with fare calculated by distance.
 
 ## Database Tables

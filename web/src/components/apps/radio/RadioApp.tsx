@@ -7,6 +7,8 @@ import { fetchLiveKitToken } from '../../../utils/realtimeAuth';
 import { connectLiveKit, disconnectLiveKit, setLiveKitMicrophoneEnabled } from '../../../utils/livekit';
 import { AppScaffold } from '../../shared/layout';
 import { ScreenState } from '../../shared/ui/ScreenState';
+import { t } from '../../../i18n';
+import { usePhone } from '../../../store/phone';
 import styles from './RadioApp.module.scss';
 
 interface RadioStation {
@@ -49,19 +51,13 @@ type RadioView = 'list' | 'create' | 'broadcasting' | 'listening';
 
 const CATEGORIES = ['music', 'news', 'talk', 'emergency', 'community', 'other'] as const;
 
-const CATEGORY_LABELS: Record<string, string> = {
-  music: 'Musica',
-  news: 'Noticias',
-  talk: 'Charla',
-  emergency: 'Emergencia',
-  community: 'Comunidad',
-  other: 'Otro',
-};
-
 const POLL_INTERVAL_MS = 5000;
 
 export function RadioApp() {
   const router = useRouter();
+  const [phoneState] = usePhone();
+  const language = () => phoneState.settings.language || 'es';
+  const getCategoryLabel = (cat: string) => t('radio.category.' + cat, language()) || cat;
 
   const [view, setView] = createSignal<RadioView>('list');
   const [stations, setStations] = createSignal<RadioStation[]>([]);
@@ -104,7 +100,7 @@ export function RadioApp() {
       setStations(list || []);
       setError(null);
     } catch {
-      setError('Error al cargar estaciones');
+      setError(t('radio.error_loading', language()));
     } finally {
       setLoading(false);
     }
@@ -417,7 +413,7 @@ export function RadioApp() {
 
   return (
     <AppScaffold
-      title="Radio"
+      title={t('radio.title', language())}
       onBack={handleBack}
       action={view() === 'list' ? { icon: '+', onClick: () => setView('create') } : undefined}
     >
@@ -427,8 +423,8 @@ export function RadioApp() {
           loading={loading()}
           error={error()}
           empty={stations().length === 0}
-          emptyTitle="Sin estaciones"
-          emptyDescription="No hay estaciones en vivo. Crea la tuya con el boton +."
+          emptyTitle={t('radio.empty_title', language())}
+          emptyDescription={t('radio.empty_desc', language())}
         >
           <div class={styles.stationList}>
             <For each={stations()}>
@@ -436,7 +432,7 @@ export function RadioApp() {
                 <button class={styles.stationCard} onClick={() => void handleJoin(station)}>
                   <div class={styles.cardTop}>
                     <span class={styles.liveBadge}>LIVE</span>
-                    <span class={styles.categoryBadge}>{CATEGORY_LABELS[station.category] || station.category}</span>
+                    <span class={styles.categoryBadge}>{getCategoryLabel(station.category)}</span>
                   </div>
                   <div class={styles.cardBody}>
                     <strong class={styles.stationName}>{station.stationName}</strong>
@@ -466,16 +462,16 @@ export function RadioApp() {
         <div class={styles.createForm}>
           <div class={`ios-card ${styles.formCard}`}>
             <div class={styles.formHeader}>
-              <span class={styles.eyebrow}>NUEVA ESTACION</span>
-              <h3>Crea tu estacion en vivo</h3>
+              <span class={styles.eyebrow}>{t('radio.new_station_eyebrow', language())}</span>
+              <h3>{t('radio.new_station_title', language())}</h3>
             </div>
 
             <div class={styles.formField}>
-              <label class={styles.fieldLabel}>Nombre</label>
+              <label class={styles.fieldLabel}>{t('radio.form.name', language())}</label>
               <input
                 class="ios-input"
                 type="text"
-                placeholder="Mi estacion de radio"
+                placeholder={t('radio.form.name_placeholder', language())}
                 value={formName()}
                 onInput={(e) => setFormName(e.currentTarget.value)}
                 maxLength={60}
@@ -483,10 +479,10 @@ export function RadioApp() {
             </div>
 
             <div class={styles.formField}>
-              <label class={styles.fieldLabel}>Descripcion</label>
+              <label class={styles.fieldLabel}>{t('radio.form.description', language())}</label>
               <textarea
                 class="ios-textarea"
-                placeholder="De que trata tu estacion..."
+                placeholder={t('radio.form.description_placeholder', language())}
                 value={formDescription()}
                 onInput={(e) => setFormDescription(e.currentTarget.value)}
                 maxLength={200}
@@ -495,7 +491,7 @@ export function RadioApp() {
             </div>
 
             <div class={styles.formField}>
-              <label class={styles.fieldLabel}>Categoria</label>
+              <label class={styles.fieldLabel}>{t('radio.form.category', language())}</label>
               <div class={styles.categoryGrid}>
                 <For each={[...CATEGORIES]}>
                   {(cat) => (
@@ -507,7 +503,7 @@ export function RadioApp() {
                       }}
                       onClick={() => setFormCategory(cat)}
                     >
-                      {CATEGORY_LABELS[cat]}
+                      {getCategoryLabel(cat)}
                     </button>
                   )}
                 </For>
@@ -515,13 +511,13 @@ export function RadioApp() {
             </div>
 
             <div class={styles.formActions}>
-              <button class="ios-btn" onClick={() => setView('list')}>Cancelar</button>
+              <button class="ios-btn" onClick={() => setView('list')}>{t('common.cancel', language())}</button>
               <button
                 class="ios-btn ios-btn-primary"
                 onClick={() => void handleCreate()}
                 disabled={creating() || !formName().trim()}
               >
-                {creating() ? 'Creando...' : 'Transmitir'}
+                {creating() ? t('radio.creating', language()) : t('radio.broadcast', language())}
               </button>
             </div>
           </div>
@@ -540,7 +536,7 @@ export function RadioApp() {
 
           <strong class={styles.activeStationName}>{activeStation()?.stationName}</strong>
           <span class={styles.activeCategory}>
-            {CATEGORY_LABELS[activeStation()?.category || ''] || activeStation()?.category}
+            {getCategoryLabel(activeStation()?.category || '')}
           </span>
 
           <Show when={activeStation()?.description}>
@@ -553,7 +549,7 @@ export function RadioApp() {
                 <path d="M3 18v-6a9 9 0 0 1 18 0v6" />
                 <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z" />
               </svg>
-              {activeStation()?.listenerCount ?? 0} oyentes
+              {activeStation()?.listenerCount ?? 0} {t('radio.listeners', language())}
             </span>
           </div>
 
@@ -568,25 +564,25 @@ export function RadioApp() {
               {muted() ? 'Mic OFF' : 'Mic ON'}
             </button>
             <button class={`${styles.controlBtn} ${styles.controlBtnDanger}`} onClick={() => void handleEndBroadcast()}>
-              Finalizar
+              {t('radio.end_broadcast', language())}
             </button>
           </div>
 
           {/* Music Section */}
           <div class={styles.musicSection}>
-            <span class={styles.eyebrow}>MUSICA</span>
+            <span class={styles.eyebrow}>{t('radio.music_eyebrow', language())}</span>
 
             <Show when={!disclaimerDismissed()}>
               <div class={styles.disclaimer}>
                 <span class={styles.disclaimerText}>
-                  Este recurso no se hace responsable del contenido musical reproducido. El uso es responsabilidad exclusiva del usuario.
+                  {t('radio.music_disclaimer', language())}
                 </span>
                 <button class={styles.disclaimerClose} onClick={dismissDisclaimer}>&#10005;</button>
               </div>
             </Show>
 
             <div class={styles.toggleRow}>
-              <span class={styles.toggleLabel}>Solo yo</span>
+              <span class={styles.toggleLabel}>{t('radio.music_private', language())}</span>
               <button
                 classList={{ [styles.toggle]: true, [styles.toggleActive]: musicPrivate() }}
                 onClick={() => setMusicPrivate(!musicPrivate())}
@@ -622,7 +618,7 @@ export function RadioApp() {
                 <input
                   class="ios-input"
                   type="text"
-                  placeholder="Buscar musica..."
+                  placeholder={t('radio.music_search_placeholder', language())}
                   value={musicQuery()}
                   onInput={(e) => setMusicQuery(e.currentTarget.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter') void handleMusicSearch(); }}
@@ -632,7 +628,7 @@ export function RadioApp() {
                   onClick={() => void handleMusicSearch()}
                   disabled={musicSearching() || !musicQuery().trim()}
                 >
-                  {musicSearching() ? '...' : 'Buscar'}
+                  {musicSearching() ? '...' : t('common.search', language())}
                 </button>
               </div>
 
@@ -660,7 +656,7 @@ export function RadioApp() {
           </div>
 
           <Show when={!livekitConnected()}>
-            <span class={styles.connectionStatus}>Conectando audio...</span>
+            <span class={styles.connectionStatus}>{t('radio.connecting', language())}</span>
           </Show>
         </div>
       </Show>
@@ -676,7 +672,7 @@ export function RadioApp() {
 
           <strong class={styles.activeStationName}>{activeStation()?.stationName}</strong>
           <span class={styles.activeCategory}>
-            {CATEGORY_LABELS[activeStation()?.category || ''] || activeStation()?.category}
+            {getCategoryLabel(activeStation()?.category || '')}
           </span>
           <span class={styles.hostInfo}>Host: {activeStation()?.hostName}</span>
 
@@ -693,12 +689,12 @@ export function RadioApp() {
 
           <div class={styles.listeningControls}>
             <button class={`${styles.controlBtn} ${styles.controlBtnDanger}`} onClick={() => void handleLeave()}>
-              Salir
+              {t('radio.leave', language())}
             </button>
           </div>
 
           <Show when={!livekitConnected()}>
-            <span class={styles.connectionStatus}>Conectando audio...</span>
+            <span class={styles.connectionStatus}>{t('radio.connecting', language())}</span>
           </Show>
         </div>
       </Show>

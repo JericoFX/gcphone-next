@@ -1,5 +1,5 @@
 .phone-wrapper {
-  --phone-scale: min(1, calc(100vh / 980));
+  --phone-scale: min(1, calc(100vh / 980), calc(100vw / 520));
   position: absolute;
   bottom: 0;
   right: 8px;

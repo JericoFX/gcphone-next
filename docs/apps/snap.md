@@ -4,6 +4,8 @@ title: Snap
 
 # Snap (Instagram-like)
 
+![Snap (Instagram-like)](/img/apps/snap.png)
+
 Photo/video social media with posts, stories, likes, following/followers, private accounts, follow requests, live streaming with chat/reactions/moderation, proximity audio for lives, and discover feed.
 
 ## Database Tables

@@ -9,6 +9,8 @@ import { AppScaffold } from '../../shared/layout';
 import { EmptyState } from '../../shared/ui/EmptyState';
 import { SegmentedTabs } from '../../shared/ui/SegmentedTabs';
 import { LeafletMap, type LeafletPin } from '../maps/LeafletMap';
+import { t } from '../../../i18n';
+import { usePhone } from '../../../store/phone';
 import styles from './CityRideApp.module.scss';
 
 interface Coords {
@@ -61,20 +63,6 @@ interface HistoryItem {
 
 type TabId = 'passenger' | 'driver';
 
-const tabs = [
-  { id: 'passenger', label: 'Pasajero' },
-  { id: 'driver', label: 'Conductor' },
-];
-
-const STATUS_LABELS: Record<string, string> = {
-  requested: 'Solicitado',
-  accepted: 'Aceptado',
-  pickup: 'Recogida',
-  in_progress: 'En viaje',
-  completed: 'Completado',
-  cancelled: 'Cancelado',
-};
-
 const STATUS_ORDER = ['accepted', 'pickup', 'in_progress', 'completed'];
 
 function formatMoney(amount: number) {
@@ -83,6 +71,15 @@ function formatMoney(amount: number) {
 
 export function CityRideApp() {
   const router = useRouter();
+  const [phoneState] = usePhone();
+  const language = () => phoneState.settings.language || 'es';
+
+  const tabs = () => [
+    { id: 'passenger', label: t('cityride.tab.passenger', language()) },
+    { id: 'driver', label: t('cityride.tab.driver', language()) },
+  ];
+
+  const getStatusLabel = (status: string) => t('cityride.status.' + status, language()) || status;
 
   const [activeTab, setActiveTab] = createSignal<TabId>('passenger');
   const [loading, setLoading] = createSignal(false);
@@ -181,7 +178,7 @@ export function CityRideApp() {
         if (data) {
           setActiveRide((prev) => (prev && prev.id === data.rideId ? null : prev));
           setDriverActiveRide((prev) => (prev && prev.id === data.rideId ? null : prev));
-          uiAlert('El viaje fue cancelado', 'CityRide');
+          uiAlert(t('cityride.cancelled', language()), 'CityRide');
         }
       } else if (action === 'cityRideCompleted') {
         if (data) {
@@ -246,8 +243,8 @@ export function CityRideApp() {
     const pins: LeafletPin[] = [];
     const pickup = pickupCoords();
     const dest = destCoords();
-    if (pickup) pins.push({ id: 'pickup', label: 'Recogida', x: pickup.x, y: pickup.y, kind: 'manual' });
-    if (dest) pins.push({ id: 'dest', label: 'Destino', x: dest.x, y: dest.y, kind: 'manual' });
+    if (pickup) pins.push({ id: 'pickup', label: t('cityride.pickup_label', language()), x: pickup.x, y: pickup.y, kind: 'manual' });
+    if (dest) pins.push({ id: 'dest', label: t('cityride.dest_label', language()), x: dest.x, y: dest.y, kind: 'manual' });
     return pins;
   });
 
@@ -265,7 +262,7 @@ export function CityRideApp() {
     const pickup = pickupCoords();
     const dest = destCoords();
     if (!pickup || !dest) {
-      uiAlert('Selecciona ubicacion de recogida y destino', 'CityRide');
+      uiAlert(t('cityride.select_locations', language()), 'CityRide');
       return;
     }
 
@@ -273,12 +270,12 @@ export function CityRideApp() {
     if (result.success && result.ride) {
       setActiveRide(result.ride);
     } else {
-      uiAlert(result.error || 'No se pudo solicitar el viaje', 'CityRide');
+      uiAlert(result.error || t('cityride.request_failed', language()), 'CityRide');
     }
   };
 
   const cancelRide = async (rideId: number) => {
-    const ok = await uiConfirm('Cancelar este viaje?', { title: 'CityRide' });
+    const ok = await uiConfirm(t('cityride.cancel_confirm', language()), { title: 'CityRide' });
     if (!ok) return;
 
     const result = await fetchNui<{ success?: boolean; error?: string }>('cityrideCancelRide', { rideId }, { success: false });
@@ -286,7 +283,7 @@ export function CityRideApp() {
       setActiveRide(null);
       setDriverActiveRide(null);
     } else {
-      uiAlert(result.error || 'No se pudo cancelar', 'CityRide');
+      uiAlert(result.error || t('cityride.cancel_failed', language()), 'CityRide');
     }
   };
 
@@ -303,7 +300,7 @@ export function CityRideApp() {
     if (result.success) {
       setRatingSubmitted(true);
     } else {
-      uiAlert(result.error || 'No se pudo calificar', 'CityRide');
+      uiAlert(result.error || t('cityride.rate_failed', language()), 'CityRide');
     }
   };
 
@@ -313,7 +310,7 @@ export function CityRideApp() {
     const vName = sanitizeText(vehicleNameInput(), 50);
     const vPlate = sanitizeText(vehiclePlateInput(), 10);
     if (!vName || !vPlate) {
-      uiAlert('Completa los datos del vehiculo', 'CityRide');
+      uiAlert(t('cityride.vehicle_data_required', language()), 'CityRide');
       return;
     }
 
@@ -321,7 +318,7 @@ export function CityRideApp() {
     if (result.success) {
       void loadState();
     } else {
-      uiAlert(result.error || 'No se pudo registrar', 'CityRide');
+      uiAlert(result.error || t('cityride.register_failed', language()), 'CityRide');
     }
   };
 
@@ -334,7 +331,7 @@ export function CityRideApp() {
     if (result.success) {
       void loadState();
     } else {
-      uiAlert(result.error || 'No se pudo actualizar', 'CityRide');
+      uiAlert(result.error || t('cityride.update_failed', language()), 'CityRide');
     }
   };
 
@@ -362,7 +359,7 @@ export function CityRideApp() {
       setDriverActiveRide(result.ride);
       setAvailableRides([]);
     } else {
-      uiAlert(result.error || 'No se pudo aceptar', 'CityRide');
+      uiAlert(result.error || t('cityride.accept_failed', language()), 'CityRide');
       setAvailableRides((prev) => prev.filter((r) => r.id !== rideId));
     }
   };
@@ -372,12 +369,12 @@ export function CityRideApp() {
     if (result.success && result.ride) {
       setDriverActiveRide(result.ride);
     } else {
-      uiAlert(result.error || 'Error', 'CityRide');
+      uiAlert(result.error || t('cityride.error_generic', language()), 'CityRide');
     }
   };
 
   const completeRide = async (rideId: number) => {
-    const ok = await uiConfirm('Completar y cobrar el viaje?', { title: 'CityRide' });
+    const ok = await uiConfirm(t('cityride.complete_confirm', language()), { title: 'CityRide' });
     if (!ok) return;
 
     const result = await fetchNui<{ success?: boolean; ride?: RideData; error?: string }>('cityrideCompleteRide', { rideId }, { success: false });
@@ -385,7 +382,7 @@ export function CityRideApp() {
       setDriverActiveRide(null);
       void loadState();
     } else {
-      uiAlert(result.error || 'No se pudo completar', 'CityRide');
+      uiAlert(result.error || t('cityride.complete_failed', language()), 'CityRide');
     }
   };
 
@@ -409,7 +406,7 @@ export function CityRideApp() {
 
         <Show when={!ratingSubmitted()}>
           <div class={styles.ratingSection}>
-            <span class={styles.ratingLabel}>Califica al conductor</span>
+            <span class={styles.ratingLabel}>{t('cityride.rate_driver', language())}</span>
             <div class={styles.stars}>
               <For each={[1, 2, 3, 4, 5]}>
                 {(star) => (
@@ -425,17 +422,17 @@ export function CityRideApp() {
               </For>
             </div>
             <button class={styles.requestBtn} onClick={submitRating} disabled={rating() < 1} type="button">
-              Calificar
+              {t('cityride.rate_btn', language())}
             </button>
           </div>
         </Show>
 
         <Show when={ratingSubmitted()}>
-          <p class={styles.formLabel} style={{ 'text-align': 'center' }}>Gracias por tu calificacion</p>
+          <p class={styles.formLabel} style={{ 'text-align': 'center' }}>{t('cityride.rate_thanks', language())}</p>
         </Show>
 
         <button class={styles.cancelBtn} onClick={() => { setCompletedRide(null); setRating(0); setRatingSubmitted(false); }} type="button">
-          Cerrar
+          {t('common.close', language())}
         </button>
       </div>
     </div>
@@ -445,10 +442,10 @@ export function CityRideApp() {
     <div class={styles.section}>
       <div class={styles.waitingView}>
         <div class={styles.spinner} />
-        <span class={styles.waitingText}>Buscando conductor...</span>
+        <span class={styles.waitingText}>{t('cityride.searching', language())}</span>
         <span class={styles.waitingPrice}>{formatMoney(props.ride.price)}</span>
         <button class={styles.cancelBtn} onClick={() => cancelRide(props.ride.id)} type="button">
-          Cancelar
+          {t('cityride.cancel', language())}
         </button>
       </div>
     </div>
@@ -462,7 +459,7 @@ export function CityRideApp() {
             {(props.ride.driverName || 'C')[0].toUpperCase()}
           </div>
           <div class={styles.driverInfo}>
-            <p class={styles.driverName}>{props.ride.driverName || 'Conductor'}</p>
+            <p class={styles.driverName}>{props.ride.driverName || t('cityride.driver_label', language())}</p>
             <span class={styles.driverVehicle}>
               {props.ride.driverVehicle || ''} - {props.ride.driverPlate || ''}
             </span>
@@ -488,7 +485,7 @@ export function CityRideApp() {
                   }}
                 >
                   <div class={styles.stepDot} />
-                  <span class={styles.stepLabel}>{STATUS_LABELS[step] || step}</span>
+                  <span class={styles.stepLabel}>{getStatusLabel(step)}</span>
                   <Show when={idx < STATUS_ORDER.length - 1}>
                     <div class={styles.stepLine} />
                   </Show>
@@ -499,22 +496,22 @@ export function CityRideApp() {
         </div>
 
         <div class={styles.priceEstimate}>
-          <span class={styles.priceLabel}>Precio</span>
+          <span class={styles.priceLabel}>{t('cityride.price', language())}</span>
           <span class={styles.priceValue}>{formatMoney(props.ride.price)}</span>
         </div>
 
         <div class={styles.actionRow}>
           <button class={styles.actionBtn} onClick={() => setWaypoint(props.ride.pickup)} type="button">
-            GPS Recogida
+            {t('cityride.gps_pickup', language())}
           </button>
           <button class={styles.actionBtn} onClick={() => setWaypoint(props.ride.dest)} type="button">
-            GPS Destino
+            {t('cityride.gps_dest', language())}
           </button>
         </div>
 
         <Show when={props.ride.status !== 'in_progress'}>
           <button class={styles.cancelBtn} onClick={() => cancelRide(props.ride.id)} type="button">
-            Cancelar viaje
+            {t('cityride.cancel_ride', language())}
           </button>
         </Show>
       </div>
@@ -526,47 +523,47 @@ export function CityRideApp() {
       <Show when={availableDriverCount() !== null}>
         <div class={styles.driverCountBadge} classList={{ [styles.driverCountZero]: availableDriverCount() === 0 }}>
           <Show when={availableDriverCount()! > 0} fallback={
-            <span>Sin conductores disponibles</span>
+            <span>{t('cityride.no_drivers', language())}</span>
           }>
-            <span>{availableDriverCount()} conductor{availableDriverCount()! !== 1 ? 'es' : ''} disponible{availableDriverCount()! !== 1 ? 's' : ''}</span>
+            <span>{t('cityride.drivers_count', language(), { count: availableDriverCount()!, plural: availableDriverCount()! !== 1 ? 'es' : '', plurals: availableDriverCount()! !== 1 ? 's' : '' })}</span>
           </Show>
         </div>
       </Show>
 
       <div class={styles.requestForm}>
-        <p class={styles.formLabel}>Recogida</p>
+        <p class={styles.formLabel}>{t('cityride.pickup_label', language())}</p>
         <div class={styles.coordsRow}>
-          <Show when={pickupCoords()} fallback={<span class={styles.distanceValue}>Sin ubicacion</span>}>
+          <Show when={pickupCoords()} fallback={<span class={styles.distanceValue}>{t('cityride.no_location', language())}</span>}>
             <span class={styles.distanceValue}>
               {pickupCoords()!.x.toFixed(0)}, {pickupCoords()!.y.toFixed(0)}
             </span>
           </Show>
           <button class={styles.gpsBtn} onClick={useCurrentLocation} type="button">
-            Mi GPS
+            {t('cityride.my_gps', language())}
           </button>
           <button class={styles.gpsBtn} onClick={() => openMapPicker('pickup')} type="button">
-            Mapa
+            {t('cityride.map', language())}
           </button>
         </div>
 
-        <p class={styles.formLabel}>Destino</p>
+        <p class={styles.formLabel}>{t('cityride.dest_label', language())}</p>
         <div class={styles.coordsRow}>
           <input
             class={styles.formInput}
             type="text"
-            placeholder="Descripcion del destino"
+            placeholder={t('cityride.dest_placeholder', language())}
             value={destInput()}
             onInput={(e) => setDestInput(e.currentTarget.value)}
           />
           <button class={styles.gpsBtn} onClick={() => openMapPicker('dest')} type="button">
-            Mapa
+            {t('cityride.map', language())}
           </button>
         </div>
 
         <Show when={estimatedPrice() > 0}>
           <div class={styles.priceEstimate}>
             <div>
-              <span class={styles.priceLabel}>Estimado</span>
+              <span class={styles.priceLabel}>{t('cityride.estimated', language())}</span>
               <div class={styles.distanceValue}>{estimatedDistance().toFixed(0)} m</div>
             </div>
             <span class={styles.priceValue}>{formatMoney(estimatedPrice())}</span>
@@ -579,13 +576,13 @@ export function CityRideApp() {
           disabled={!pickupCoords() || !destCoords()}
           type="button"
         >
-          Solicitar viaje
+          {t('cityride.request_ride', language())}
         </button>
       </div>
 
       <Show when={history().length > 0}>
         <button class={styles.actionBtn} onClick={() => setShowHistory(true)} type="button" style={{ width: '100%' }}>
-          Ver historial
+          {t('cityride.view_history', language())}
         </button>
       </Show>
     </div>
@@ -615,7 +612,7 @@ export function CityRideApp() {
         <div class={styles.driverCard}>
           <div class={styles.driverAvatar}>P</div>
           <div class={styles.driverInfo}>
-            <p class={styles.driverName}>Pasajero</p>
+            <p class={styles.driverName}>{t('cityride.passenger_label', language())}</p>
             <span class={styles.driverVehicle}>{props.ride.passengerPhone || ''}</span>
           </div>
           <span class={styles.driverRatingBadge}>{formatMoney(props.ride.price)}</span>
@@ -635,7 +632,7 @@ export function CityRideApp() {
                   }}
                 >
                   <div class={styles.stepDot} />
-                  <span class={styles.stepLabel}>{STATUS_LABELS[step] || step}</span>
+                  <span class={styles.stepLabel}>{getStatusLabel(step)}</span>
                   <Show when={idx < STATUS_ORDER.length - 1}>
                     <div class={styles.stepLine} />
                   </Show>
@@ -647,32 +644,32 @@ export function CityRideApp() {
 
         <div class={styles.actionRow}>
           <button class={styles.actionBtn} onClick={() => setWaypoint(props.ride.pickup)} type="button">
-            GPS Recogida
+            {t('cityride.gps_pickup', language())}
           </button>
           <button class={styles.actionBtn} onClick={() => setWaypoint(props.ride.dest)} type="button">
-            GPS Destino
+            {t('cityride.gps_dest', language())}
           </button>
         </div>
 
         <Show when={props.ride.status === 'accepted'}>
           <button class={styles.progressBtn} onClick={() => confirmPickup(props.ride.id, 'pickup')} type="button">
-            Confirmar recogida
+            {t('cityride.confirm_pickup', language())}
           </button>
         </Show>
         <Show when={props.ride.status === 'pickup'}>
           <button class={styles.progressBtn} onClick={() => confirmPickup(props.ride.id, 'in_progress')} type="button">
-            Iniciar viaje
+            {t('cityride.start_ride', language())}
           </button>
         </Show>
         <Show when={props.ride.status === 'in_progress'}>
           <button class={styles.progressBtn} onClick={() => completeRide(props.ride.id)} type="button">
-            Completar viaje
+            {t('cityride.complete_ride', language())}
           </button>
         </Show>
 
         <Show when={props.ride.status !== 'in_progress'}>
           <button class={styles.cancelBtn} onClick={() => cancelRide(props.ride.id)} type="button">
-            Cancelar
+            {t('cityride.cancel', language())}
           </button>
         </Show>
       </div>
@@ -682,10 +679,10 @@ export function CityRideApp() {
   const DriverRegistrationForm = () => (
     <div class={styles.section}>
       <div class={styles.registrationForm}>
-        <h3 class={styles.registrationTitle}>Registrate como conductor</h3>
-        <p class={styles.registrationHint}>Ingresa los datos de tu vehiculo para comenzar a recibir viajes</p>
+        <h3 class={styles.registrationTitle}>{t('cityride.register_title', language())}</h3>
+        <p class={styles.registrationHint}>{t('cityride.register_hint', language())}</p>
 
-        <p class={styles.formLabel}>Nombre del vehiculo</p>
+        <p class={styles.formLabel}>{t('cityride.vehicle_name', language())}</p>
         <input
           class={styles.formInput}
           type="text"
@@ -695,7 +692,7 @@ export function CityRideApp() {
           maxLength={50}
         />
 
-        <p class={styles.formLabel}>Placa</p>
+        <p class={styles.formLabel}>{t('cityride.vehicle_plate', language())}</p>
         <input
           class={styles.formInput}
           type="text"
@@ -706,7 +703,7 @@ export function CityRideApp() {
         />
 
         <button class={styles.requestBtn} onClick={registerDriver} type="button">
-          Registrarse
+          {t('cityride.register_btn', language())}
         </button>
       </div>
     </div>
@@ -722,7 +719,7 @@ export function CityRideApp() {
           <div class={styles.profileInfo}>
             <p class={styles.profileName}>{props.profile.display_name}</p>
             <span class={styles.profileStats}>
-              {props.profile.total_rides} viajes
+              {t('cityride.rides_count', language(), { count: props.profile.total_rides })}
               <Show when={props.profile.rating > 0}>
                 {' '} &middot; &#9733; {props.profile.rating.toFixed(1)} ({props.profile.rating_count})
               </Show>
@@ -734,7 +731,7 @@ export function CityRideApp() {
         </div>
 
         <div class={styles.toggleRow}>
-          <span class={styles.toggleLabel}>Disponible</span>
+          <span class={styles.toggleLabel}>{t('cityride.available_toggle', language())}</span>
           <button
             class={styles.toggleSwitch}
             classList={{ [styles.toggleOn]: props.profile.is_available }}
@@ -744,12 +741,12 @@ export function CityRideApp() {
         </div>
 
         <div class={styles.editForm}>
-          <h4 class={styles.editFormTitle}>Vehiculo</h4>
+          <h4 class={styles.editFormTitle}>{t('cityride.vehicle_section', language())}</h4>
           <div class={styles.editRow}>
             <input
               class={styles.formInput}
               type="text"
-              placeholder="Vehiculo"
+              placeholder={t('cityride.vehicle_section', language())}
               value={vehicleNameInput()}
               onInput={(e) => setVehicleNameInput(e.currentTarget.value)}
               maxLength={50}
@@ -757,21 +754,21 @@ export function CityRideApp() {
             <input
               class={styles.formInput}
               type="text"
-              placeholder="Placa"
+              placeholder={t('cityride.vehicle_plate', language())}
               value={vehiclePlateInput()}
               onInput={(e) => setVehiclePlateInput(e.currentTarget.value)}
               maxLength={10}
             />
           </div>
           <button class={styles.saveBtn} onClick={updateVehicle} type="button">
-            Guardar
+            {t('common.save', language())}
           </button>
         </div>
 
         <Show when={props.profile.is_available}>
-          <p class={styles.sectionHeader}>Viajes disponibles</p>
+          <p class={styles.sectionHeader}>{t('cityride.available_rides', language())}</p>
           <Show when={availableRides().length === 0}>
-            <EmptyState title="Sin solicitudes" description="Espera a que un pasajero solicite un viaje" />
+            <EmptyState title={t('cityride.no_requests', language())} description={t('cityride.no_requests_desc', language())} />
           </Show>
           <For each={availableRides()}>
             {(ride) => (
@@ -784,19 +781,19 @@ export function CityRideApp() {
                   <span class={styles.requestCardPhone}>{ride.passengerPhone}</span>
                 </Show>
                 <button class={styles.acceptBtn} onClick={() => acceptRide(ride.id)} type="button">
-                  Aceptar viaje
+                  {t('cityride.accept_ride', language())}
                 </button>
               </div>
             )}
           </For>
           <button class={styles.actionBtn} onClick={loadAvailableRides} type="button" style={{ width: '100%' }}>
-            Actualizar
+            {t('common.update', language())}
           </button>
         </Show>
 
         <Show when={history().length > 0}>
           <button class={styles.actionBtn} onClick={() => setShowHistory(true)} type="button" style={{ width: '100%', 'margin-top': 'var(--s-2)' }}>
-            Ver historial
+            {t('cityride.view_history', language())}
           </button>
         </Show>
       </div>
@@ -819,9 +816,9 @@ export function CityRideApp() {
 
   const HistoryView = () => (
     <div class={styles.section}>
-      <p class={styles.sectionHeader}>Historial de viajes</p>
+      <p class={styles.sectionHeader}>{t('cityride.history_title', language())}</p>
       <Show when={history().length === 0}>
-        <EmptyState title="Sin historial" description="Aun no has completado viajes" />
+        <EmptyState title={t('cityride.no_history', language())} description={t('cityride.no_history_desc', language())} />
       </Show>
       <div class={styles.historyList}>
         <For each={history()}>
@@ -882,7 +879,7 @@ export function CityRideApp() {
       <div class={styles.rideApp}>
         <Show when={!showHistory()}>
           <div class={styles.tabs}>
-            <SegmentedTabs items={tabs} active={activeTab()} onChange={(id) => setActiveTab(id as TabId)} />
+            <SegmentedTabs items={tabs()} active={activeTab()} onChange={(id) => setActiveTab(id as TabId)} />
           </div>
         </Show>
 

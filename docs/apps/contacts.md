@@ -4,6 +4,8 @@ title: Contacts
 
 # Contacts
 
+![Contacts](/img/apps/contacts.png)
+
 Manage the player's contact list. Supports add, edit, delete, favorite toggle, proximity sharing, and accepting shared contacts.
 
 ## Database Tables

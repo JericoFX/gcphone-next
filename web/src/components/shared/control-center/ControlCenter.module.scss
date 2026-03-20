@@ -36,7 +36,7 @@
   inset: 0;
   z-index: 90;
   background:
-    linear-gradient(180deg, rgba(0, 0, 0, 0.65) 0%, rgba(0, 0, 0, 0.75) 100%);
+    linear-gradient(180deg, rgba(0, 0, 0, 0.82) 0%, rgba(0, 0, 0, 0.90) 100%);
 }
 
 .sheet {
@@ -347,7 +347,41 @@
   }
 }
 
+.swipe-track {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--r-lg);
+}
+
+.swipe-bg {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  font-size: var(--fs-caption1);
+  font-weight: 700;
+  color: #fff;
+  background: rgba(255, 59, 48, 0.72);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.swipe-bg-visible {
+  opacity: 1;
+}
+
+.swipe-bg-left {
+  justify-content: flex-end;
+}
+
+.swipe-bg-right {
+  justify-content: flex-start;
+}
+
 .notification-item {
+  position: relative;
   border: none;
   border-radius: var(--r-lg);
   background: var(--cc-glass);
@@ -358,7 +392,9 @@
   gap: 2px;
   border: 1px solid var(--cc-glass-border);
   cursor: pointer;
-  transition: transform var(--dur-1) var(--ease-standard);
+  transition: transform 180ms var(--ease-standard);
+  touch-action: pan-y;
+  will-change: transform;
 
   &:active {
     transform: scale(0.985);
@@ -560,5 +596,29 @@
 
   &::-moz-range-progress {
     background: var(--tint-2);
+  }
+}
+
+/* ── Swipe dismiss animations ── */
+
+.swipe-dismiss-left {
+  animation: swipe-out-left 220ms var(--ease-standard) forwards;
+}
+
+.swipe-dismiss-right {
+  animation: swipe-out-right 220ms var(--ease-standard) forwards;
+}
+
+@keyframes swipe-out-left {
+  to {
+    opacity: 0;
+    transform: translate3d(-120%, 0, 0);
+  }
+}
+
+@keyframes swipe-out-right {
+  to {
+    opacity: 0;
+    transform: translate3d(120%, 0, 0);
   }
 }

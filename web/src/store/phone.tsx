@@ -9,6 +9,7 @@ import {
 import { createStore } from 'solid-js/store';
 import { fetchNui } from '../utils/fetchNui';
 import { normalizeAppLanguage } from '../utils/misc';
+import type { AppLanguage } from '../i18n';
 import { useNuiCustomEvent } from '../utils/useNui';
 import type { AppLayout, PhoneFeatureFlags, PhoneFramework, PhoneSettings, PhoneSetupPayload, PhoneState, PhoneSetupState } from '../types';
 import { APP_IDS, DEFAULT_HOME_APPS, DEFAULT_MENU_APPS } from '../config/apps';
@@ -198,7 +199,7 @@ function normalizeFeatureFlags(input?: Partial<PhoneFeatureFlags> | null): Phone
   };
 }
 
-function normalizeLanguage(value?: string | null): 'es' | 'en' | 'pt' | 'fr' {
+function normalizeLanguage(value?: string | null): AppLanguage {
   return normalizeAppLanguage(value);
 }
 

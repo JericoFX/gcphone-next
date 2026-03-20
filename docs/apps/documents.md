@@ -4,6 +4,8 @@ title: Documents
 
 # Documents
 
+![Documents](/img/apps/documents.png)
+
 Digital document wallet supporting ID cards, licenses, passports, permits, insurance, and registration certificates. Documents have verification codes, NFC sharing, and proximity-based sharing.
 
 ## Database Tables

@@ -4,6 +4,8 @@ title: Bank
 
 # Bank
 
+![Bank](/img/apps/bank.png)
+
 Transfer money between players using their phone numbers. Records transaction history and integrates with the framework's bank account system (`GetMoney` / `RemoveMoney` / `AddMoney`).
 
 ## Database Tables

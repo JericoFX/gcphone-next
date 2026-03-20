@@ -1,0 +1,5 @@
+{
+  "notification_default": "Уведомление",
+  "server_initialized": "Сервер инициализирован",
+  "database_version": "Версия базы данных: %s"
+}

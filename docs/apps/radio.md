@@ -4,6 +4,8 @@ title: Radio
 
 # Radio
 
+![Radio](/img/apps/radio.png)
+
 Live radio stations hosted by players. Hosts create a station, pick a category, play YouTube music via olisound spatial audio, and listeners tune in. Supports private (headphone) and public (spatial) modes.
 
 ## Database Tables

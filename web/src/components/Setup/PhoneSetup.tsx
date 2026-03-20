@@ -1,6 +1,7 @@
 import { For, Show, createMemo, createSignal } from 'solid-js';
 import { usePhone } from '../../store/phone';
 import { t } from '../../i18n';
+import type { AppLanguage } from '../../i18n';
 import { fetchNui } from '../../utils/fetchNui';
 import type { PhoneSetupPayload } from '../../types';
 import styles from './PhoneSetup.module.scss';
@@ -46,7 +47,7 @@ function isValidMailAlias(value: string) {
   );
 }
 
-function humanizeError(code: string | undefined, language: 'es' | 'en' | 'pt' | 'fr') {
+function humanizeError(code: string | undefined, language: AppLanguage) {
   switch (code) {
     case 'SNAP_USERNAME_TAKEN':
       return t('setup.error.snap_taken', language);
@@ -65,7 +66,7 @@ function humanizeError(code: string | undefined, language: 'es' | 'en' | 'pt' | 
   }
 }
 
-function summaryText(language: 'es' | 'en' | 'pt' | 'fr') {
+function summaryText(language: AppLanguage) {
   if (language === 'en') {
     return {
       summaryTitle: 'Review your setup',
@@ -169,7 +170,7 @@ export function PhoneSetup() {
   const [snapUsername, setSnapUsername] = createSignal('');
   const [chirpUsername, setChirpUsername] = createSignal('');
   const [clipsUsername, setClipsUsername] = createSignal('');
-  const [language, setLanguage] = createSignal<'es' | 'en' | 'pt' | 'fr'>(phoneState.settings.language || 'es');
+  const [language, setLanguage] = createSignal<AppLanguage>(phoneState.settings.language || 'es');
   const [error, setError] = createSignal('');
   const [loading, setLoading] = createSignal(false);
   const [dialValue, setDialValue] = createSignal('');

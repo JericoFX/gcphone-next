@@ -1,7 +1,7 @@
 export const isEnvBrowser = (): boolean =>
   typeof window !== 'undefined' && !(window as any).invokeNative;
 
-export const normalizeAppLanguage = (value?: string | null): 'es' | 'en' | 'pt' | 'fr' => {
+export const normalizeAppLanguage = (value?: string | null): 'es' | 'en' | 'pt' | 'fr' | 'de' | 'it' | 'pl' | 'ru' => {
   if (!value) return 'es';
 
   const normalized = String(value).trim().toLowerCase().replace('-', '_');
@@ -9,6 +9,10 @@ export const normalizeAppLanguage = (value?: string | null): 'es' | 'en' | 'pt' 
   if (normalized === 'en' || normalized === 'en_us') return 'en';
   if (normalized === 'pt' || normalized === 'pt_br') return 'pt';
   if (normalized === 'fr' || normalized === 'fr_fr') return 'fr';
+  if (normalized === 'de' || normalized === 'de_de') return 'de';
+  if (normalized === 'it' || normalized === 'it_it') return 'it';
+  if (normalized === 'pl' || normalized === 'pl_pl') return 'pl';
+  if (normalized === 'ru' || normalized === 'ru_ru') return 'ru';
   if (normalized === 'es' || normalized === 'es_es') return 'es';
 
   return 'es';
@@ -70,6 +74,10 @@ const TIME_LABELS: Record<string, { ago: string; now: string; units: Array<[stri
   en: { ago: 'ago', now: 'now', units: [['year', 31536000, 'years'], ['month', 2592000, 'months'], ['week', 604800, 'weeks'], ['day', 86400, 'days'], ['hour', 3600, 'hours'], ['minute', 60, 'minutes']] },
   pt: { ago: 'ha', now: 'agora', units: [['ano', 31536000, 'anos'], ['mes', 2592000, 'meses'], ['semana', 604800, 'semanas'], ['dia', 86400, 'dias'], ['hora', 3600, 'horas'], ['minuto', 60, 'minutos']] },
   fr: { ago: 'il y a', now: 'maintenant', units: [['an', 31536000, 'ans'], ['mois', 2592000, 'mois'], ['semaine', 604800, 'semaines'], ['jour', 86400, 'jours'], ['heure', 3600, 'heures'], ['minute', 60, 'minutes']] },
+  de: { ago: 'vor', now: 'jetzt', units: [['Jahr', 31536000, 'Jahren'], ['Monat', 2592000, 'Monaten'], ['Woche', 604800, 'Wochen'], ['Tag', 86400, 'Tagen'], ['Stunde', 3600, 'Stunden'], ['Minute', 60, 'Minuten']] },
+  it: { ago: 'fa', now: 'adesso', units: [['anno', 31536000, 'anni'], ['mese', 2592000, 'mesi'], ['settimana', 604800, 'settimane'], ['giorno', 86400, 'giorni'], ['ora', 3600, 'ore'], ['minuto', 60, 'minuti']] },
+  pl: { ago: 'temu', now: 'teraz', units: [['rok', 31536000, 'lat'], ['miesiac', 2592000, 'miesiecy'], ['tydzien', 604800, 'tygodni'], ['dzien', 86400, 'dni'], ['godzina', 3600, 'godzin'], ['minuta', 60, 'minut']] },
+  ru: { ago: 'назад', now: 'сейчас', units: [['год', 31536000, 'лет'], ['месяц', 2592000, 'месяцев'], ['неделя', 604800, 'недель'], ['день', 86400, 'дней'], ['час', 3600, 'часов'], ['минута', 60, 'минут']] },
 };
 
 export const timeAgo = (date: Date | string, language?: string | null): string => {

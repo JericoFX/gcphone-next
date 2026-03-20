@@ -4,6 +4,8 @@ title: DarkRooms
 
 # DarkRooms (Anonymous Forum)
 
+![DarkRooms (Anonymous Forum)](/img/apps/darkrooms.png)
+
 Reddit-style anonymous forum with rooms, posts, voting, and comments. Rooms can be password-protected. Posts support anonymous authorship and upvote/downvote scoring.
 
 ## Database Tables

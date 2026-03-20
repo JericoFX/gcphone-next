@@ -4,6 +4,8 @@ title: Chirp
 
 # Chirp (Twitter/X Clone)
 
+![Chirp (Twitter/X Clone)](/img/apps/chirp.png)
+
 Social media app with tweets, likes, rechirps, comments, following/followers, private accounts, and follow request management.
 
 ## Database Tables

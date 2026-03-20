@@ -1,7 +1,7 @@
 import { For, Show } from 'solid-js';
 import { fetchNui } from '../../../utils/fetchNui';
 import { SectionHeader } from '../../shared/ui/SectionBlock';
-import { t } from '../../../i18n';
+import { t, type AppLanguage } from '../../../i18n';
 import { CheckIcon, Group, IconImage, ICONS, languages, wallpapers } from './settingsShared';
 import styles from './SettingsApp.module.scss';
 
@@ -75,7 +75,7 @@ export function SettingsAppearance(props: SettingsAppearanceProps) {
         <div class={styles.langList}>
           <For each={languages}>
             {(lang) => (
-              <button class={styles.langOption} classList={{ [styles.selected]: props.language() === lang.code }} onClick={() => props.phoneActions.setLanguage(lang.code as 'es' | 'en' | 'pt' | 'fr')}>
+              <button class={styles.langOption} classList={{ [styles.selected]: props.language() === lang.code }} onClick={() => props.phoneActions.setLanguage(lang.code as AppLanguage)}>
                 <span class={styles.langFlag}>{lang.label}</span>
                 <span class={styles.langName}>{lang.name}</span>
                 {props.language() === lang.code && <CheckIcon />}

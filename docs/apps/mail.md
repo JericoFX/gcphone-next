@@ -4,6 +4,8 @@ title: Mail
 
 # Mail
 
+![Mail](/img/apps/mail.png)
+
 In-game email system with account creation, inbox/sent folders, attachments, read tracking, and soft-delete. Each player creates an email alias on a configurable domain.
 
 ## Database Tables

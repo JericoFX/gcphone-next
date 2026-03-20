@@ -4,6 +4,8 @@ title: Notifications
 
 # Notifications
 
+![Notifications](/img/apps/notifications.png)
+
 Persistent notification inbox that stores notifications in the database. Used by all other apps (mail, wallet, wavechat, etc.) to push notifications that survive reconnects.
 
 ## Database Tables

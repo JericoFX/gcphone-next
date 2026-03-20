@@ -1,3 +1,5 @@
+import type { AppLanguage } from '../i18n';
+
 export interface Contact {
   id: number;
   number: string;
@@ -51,7 +53,7 @@ export interface PhoneSettings {
   swipeUnlock?: boolean;
   screenLockEnabled?: boolean;
   theme: 'auto' | 'light' | 'dark';
-  language?: 'es' | 'en' | 'pt' | 'fr';
+  language?: AppLanguage;
   audioProfile?: 'normal' | 'street' | 'vehicle' | 'silent';
   streamerMode?: boolean;
 }
@@ -89,7 +91,7 @@ export interface PhoneSetupPayload {
   chirpUsername: string;
   clipsUsername: string;
   mailAlias?: string;
-  language?: 'es' | 'en' | 'pt' | 'fr';
+  language?: AppLanguage;
   theme?: 'auto' | 'light' | 'dark';
   audioProfile?: 'normal' | 'street' | 'vehicle' | 'silent';
 }

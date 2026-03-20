@@ -4,6 +4,8 @@ title: MatchMyLove
 
 # MatchMyLove
 
+![MatchMyLove](/img/apps/matchmylove.png)
+
 Tinder-style dating app with swipeable profile cards, mutual matching, and in-app messaging between matches.
 
 ## Database Tables

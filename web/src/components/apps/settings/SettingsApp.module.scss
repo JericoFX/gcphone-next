@@ -461,8 +461,9 @@
 
 /* Language Options */
 .lang-list {
-  max-height: min(42vh, 320px);
+  max-height: min(52vh, 420px);
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .lang-option {

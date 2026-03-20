@@ -4,6 +4,8 @@ title: Wallet
 
 # Wallet
 
+![Wallet](/img/apps/wallet.png)
+
 Digital wallet with in-app balance, card management, transfers, proximity payments (QR/NFC), payment requests, and invoice system (NFC and remote). Integrates with the framework's money system for invoice payments.
 
 ## Database Tables

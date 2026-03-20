@@ -4,6 +4,8 @@ title: Calls
 
 # Calls
 
+![Calls](/img/apps/calls.png)
+
 Voice call system supporting WebRTC and pma-voice call channels. Handles call initiation, acceptance, rejection, ending, ICE candidate relay, airplane mode, hidden numbers, emergency SOS, and call history persistence.
 
 ## Database Tables

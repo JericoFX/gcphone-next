@@ -4,6 +4,8 @@ title: Music
 
 # Music
 
+![Music](/img/apps/music.png)
+
 Spatial music player using olisound. Uses youtube-sr for search and olisound for direct YouTube playback as 3D positional audio that nearby players can hear.
 
 ## Database Tables

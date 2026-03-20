@@ -397,7 +397,7 @@ export function WalletApp() {
         {/* ── Pending Requests ── */}
         <Show when={!loading() && (pendingIncoming().length > 0 || pendingOutgoing().length > 0)}>
           <div class={styles.section}>
-            <div class={styles.sectionTitle}>{t('wallet.pending_requests', language()) || 'Solicitudes pendientes'}</div>
+            <div class={styles.sectionTitle}>{t('wallet.pending_requests', language())}</div>
             <div class={styles.transactionsList}>
               <For each={pendingIncoming()}>
                 {(req) => (
@@ -412,10 +412,10 @@ export function WalletApp() {
                     </div>
                     <div class={styles.requestActions}>
                       <button class={styles.requestAccept} onClick={() => void respondWalletRequest(req.id, true)}>
-                        {t('wallet.pay_bank', language()) || 'Pagar'}
+                        {t('wallet.pay_bank', language())}
                       </button>
                       <button class={styles.requestReject} onClick={() => void respondWalletRequest(req.id, false)}>
-                        {t('wallet.reject', language()) || 'Rechazar'}
+                        {t('wallet.reject', language())}
                       </button>
                     </div>
                   </div>
@@ -427,7 +427,7 @@ export function WalletApp() {
                     <div class={styles.txIcon} classList={{ [styles.txOut]: true }}>↑</div>
                     <div class={styles.transactionInfo}>
                       <div class={styles.transactionTitle}>{req.title || t('wallet.invoice', language())}</div>
-                      <div class={styles.transactionDate}>{req.target_name || req.target_phone} &mdash; {t('wallet.awaiting', language()) || 'Esperando'}</div>
+                      <div class={styles.transactionDate}>{req.target_name || req.target_phone} &mdash; {t('wallet.awaiting', language())}</div>
                     </div>
                     <div class={styles.transactionAmount} classList={{ [styles.in]: true }}>
                       {formatMoney(req.amount)}
@@ -545,11 +545,11 @@ export function WalletApp() {
                   {(nearbyPlayers().find(p => p.serverId === targetServerId())?.name || '?').charAt(0).toUpperCase()}
                 </div>
                 <div>
-                  <strong>{nearbyPlayers().find(p => p.serverId === targetServerId())?.name || 'Jugador'}</strong>
+                  <strong>{nearbyPlayers().find(p => p.serverId === targetServerId())?.name || t('wallet.player', language())}</strong>
                   <span>{nearbyPlayers().find(p => p.serverId === targetServerId())?.distance.toFixed(1) || '?'}m</span>
                 </div>
                 <button class={styles.changeTarget} onClick={() => { setShowCreateInvoice(false); setShowNfcRadar(true); }}>
-                  {t('action.change', language()) || 'Cambiar'}
+                  {t('action.change', language())}
                 </button>
               </div>
             </Show>
@@ -592,13 +592,13 @@ export function WalletApp() {
           <Show when={incomingInvoice()?.channel === 'nfc'} fallback={
             <ModalActions>
               <ModalButton label={t('wallet.reject', language())} onClick={() => void respondInvoice(false)} />
-              <ModalButton label="Pagar banco" tone="primary" onClick={() => void respondInvoice(true, 'bank')} />
+              <ModalButton label={t('wallet.pay_bank_btn', language())} tone="primary" onClick={() => void respondInvoice(true, 'bank')} />
             </ModalActions>
           }>
             <div class={styles.invoiceActionsRow3}>
               <button class={styles.invoiceAction} onClick={() => void respondInvoice(false)}>{t('wallet.reject', language())}</button>
-              <button class={styles.invoiceAction} onClick={() => void respondInvoice(true, 'cash')}>Pagar cash</button>
-              <button class={`${styles.invoiceAction} ${styles.invoiceActionPrimary}`} onClick={() => void respondInvoice(true, 'bank')}>Pagar banco</button>
+              <button class={styles.invoiceAction} onClick={() => void respondInvoice(true, 'cash')}>{t('wallet.pay_cash_btn', language())}</button>
+              <button class={`${styles.invoiceAction} ${styles.invoiceActionPrimary}`} onClick={() => void respondInvoice(true, 'bank')}>{t('wallet.pay_bank_btn', language())}</button>
             </div>
           </Show>
         </Modal>
@@ -608,7 +608,7 @@ export function WalletApp() {
         open={showNfcRadar()}
         onClose={() => setShowNfcRadar(false)}
         onSelect={onNfcPlayerSelected}
-        title={t('wallet.select_recipient', language()) || 'Seleccionar destinatario'}
+        title={t('wallet.select_recipient', language())}
         maxDistance={3.0}
       />
     </AppScaffold>

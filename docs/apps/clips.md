@@ -4,6 +4,8 @@ title: Clips
 
 # Clips (TikTok-like)
 
+![Clips (TikTok-like)](/img/apps/clips.png)
+
 Short video sharing app. Uses the Snap account system for identity but supports a separate `clips_username` stored in `phone_numbers`.
 
 ## Database Tables

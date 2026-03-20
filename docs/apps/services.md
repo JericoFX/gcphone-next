@@ -4,6 +4,8 @@ title: Services
 
 # Services
 
+![Services](/img/apps/services.png)
+
 Professional services directory where players register as service providers (mechanic, lawyer, doctor, taxi, etc.), set availability, and get rated by clients.
 
 ## Database Tables

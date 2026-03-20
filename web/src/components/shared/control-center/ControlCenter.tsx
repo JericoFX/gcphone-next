@@ -1,4 +1,4 @@
-import { For, Show, createMemo, createSignal, onMount } from 'solid-js';
+import { For, Show, createMemo, createSignal, onMount, onCleanup } from 'solid-js';
 import { fetchNui } from '../../../utils/fetchNui';
 import { useNotifications } from '../../../store/notifications';
 import { usePhone } from '../../../store/phone';
@@ -132,6 +132,65 @@ export function ControlCenter() {
 
   const visibleItemsForGroup = (items: Array<{ id: string; title: string; message: string; route?: string; data?: Record<string, unknown>; createdAt?: number }>) => {
     return items.slice(0, 2);
+  };
+
+  const SWIPE_THRESHOLD = 80;
+
+  const createSwipeHandlers = (itemId: string) => {
+    let startX = 0;
+    let currentX = 0;
+    let swiping = false;
+    let itemEl: HTMLElement | null = null;
+    let trackEl: HTMLElement | null = null;
+
+    const onPointerDown = (e: PointerEvent) => {
+      itemEl = e.currentTarget as HTMLElement;
+      trackEl = itemEl.parentElement;
+      startX = e.clientX;
+      currentX = startX;
+      swiping = true;
+      itemEl.setPointerCapture(e.pointerId);
+      itemEl.style.transition = 'none';
+    };
+
+    const onPointerMove = (e: PointerEvent) => {
+      if (!swiping || !itemEl) return;
+      currentX = e.clientX;
+      const deltaX = currentX - startX;
+      itemEl.style.transform = `translate3d(${deltaX}px, 0, 0)`;
+
+      if (trackEl) {
+        const bgLeft = trackEl.querySelector('[data-swipe-bg-left]') as HTMLElement;
+        const bgRight = trackEl.querySelector('[data-swipe-bg-right]') as HTMLElement;
+        if (bgLeft) bgLeft.classList.toggle(styles.swipeBgVisible, deltaX < -30);
+        if (bgRight) bgRight.classList.toggle(styles.swipeBgVisible, deltaX > 30);
+      }
+    };
+
+    const onPointerUp = (e: PointerEvent) => {
+      if (!swiping || !itemEl) return;
+      swiping = false;
+      const deltaX = currentX - startX;
+      const absX = Math.abs(deltaX);
+
+      if (absX >= SWIPE_THRESHOLD) {
+        itemEl.style.transition = '';
+        const cls = deltaX < 0 ? styles.swipeDismissLeft : styles.swipeDismissRight;
+        if (trackEl) trackEl.classList.add(cls);
+        setTimeout(() => notificationsActions.remove(itemId), 220);
+      } else {
+        itemEl.style.transition = '';
+        itemEl.style.transform = '';
+        if (trackEl) {
+          const bgLeft = trackEl.querySelector('[data-swipe-bg-left]') as HTMLElement;
+          const bgRight = trackEl.querySelector('[data-swipe-bg-right]') as HTMLElement;
+          if (bgLeft) bgLeft.classList.remove(styles.swipeBgVisible);
+          if (bgRight) bgRight.classList.remove(styles.swipeBgVisible);
+        }
+      }
+    };
+
+    return { onPointerDown, onPointerMove, onPointerUp, onPointerCancel: onPointerUp };
   };
 
   const formatTime = (unix?: number) => {
@@ -285,22 +344,33 @@ export function ControlCenter() {
                         </button>
                       </div>
                       <For each={visibleItemsForGroup(group.items)}>
-                        {(item) => (
-                          <button
-                            class={styles.notificationItem}
-                            onClick={() => {
-                              notificationsActions.markAppAsRead(group.appId);
-                              notificationsActions.setNotificationCenterOpen(false);
-                              openRoute(item.route, item.data);
-                            }}
-                          >
-                            <strong>
-                              <span>{item.title}</span>
-                              <small>{formatTime(item.createdAt)}</small>
-                            </strong>
-                            <span>{item.message}</span>
-                          </button>
-                        )}
+                        {(item) => {
+                          const swipe = createSwipeHandlers(item.id);
+                          return (
+                            <div class={styles.swipeTrack}>
+                              <div class={`${styles.swipeBg} ${styles.swipeBgRight}`} data-swipe-bg-right>Eliminar</div>
+                              <div class={`${styles.swipeBg} ${styles.swipeBgLeft}`} data-swipe-bg-left>Eliminar</div>
+                              <button
+                                class={styles.notificationItem}
+                                onPointerDown={swipe.onPointerDown}
+                                onPointerMove={swipe.onPointerMove}
+                                onPointerUp={swipe.onPointerUp}
+                                onPointerCancel={swipe.onPointerCancel}
+                                onClick={() => {
+                                  notificationsActions.markAppAsRead(group.appId);
+                                  notificationsActions.setNotificationCenterOpen(false);
+                                  openRoute(item.route, item.data);
+                                }}
+                              >
+                                <strong>
+                                  <span>{item.title}</span>
+                                  <small>{formatTime(item.createdAt)}</small>
+                                </strong>
+                                <span>{item.message}</span>
+                              </button>
+                            </div>
+                          );
+                        }}
                       </For>
                       <Show when={group.items.length > 2}>
                         <div class={styles.moreCount}>+{group.items.length - 2} mas</div>

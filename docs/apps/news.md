@@ -4,6 +4,8 @@ title: News
 
 # News
 
+![News](/img/apps/news.png)
+
 News publishing platform with articles, categories, live broadcasts with real-time chat, reactions, viewer tracking, scaleform overlays, and moderation (mute/remove messages).
 
 ## Database Tables

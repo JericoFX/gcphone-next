@@ -296,7 +296,7 @@ export function ClipsApp() {
   };
 
   const attachByUrl = async () => {
-    const input = await uiPrompt('URL del video (mp4, webm, mov):', { title: 'Agregar video' });
+    const input = await uiPrompt(t('clips.video_url_prompt', language()), { title: t('clips.video_url_title', language()) });
     if (typeof input !== 'string') return;
     const url = sanitizeMediaUrl(input);
     if (url) setUploadMedia(url);
@@ -318,7 +318,7 @@ export function ClipsApp() {
   };
 
   const attachAvatarByUrl = async () => {
-    const input = await uiPrompt('URL del avatar:', { title: 'Avatar' });
+    const input = await uiPrompt(t('clips.avatar_url_prompt', language()), { title: t('clips.avatar_url_title', language()) });
     if (typeof input !== 'string') return;
     const url = sanitizeMediaUrl(input);
     if (url) setProfileAvatar(url);
@@ -342,7 +342,7 @@ export function ClipsApp() {
       username: payload.username, displayName: payload.displayName, avatar,
     }, { success: false });
 
-    if (!response?.success) return { ok: false, error: response?.error || 'No se pudo crear la cuenta.' };
+    if (!response?.success) return { ok: false, error: response?.error || t('clips.account_error', language()) };
 
     await fetchNui<{ success?: boolean }>('clipsUpdateAccount', {
       displayName: payload.displayName, avatar, bio, isPrivate: payload.isPrivate,
@@ -399,7 +399,7 @@ export function ClipsApp() {
             {t('clips.for_you', language())}
           </button>
           <button class={styles.tabPill} classList={{ [styles.tabActive]: currentTab() === 'following' }} onClick={() => setCurrentTab('following')}>
-            {t('clips.following', language()) || 'Siguiendo'}
+            {t('clips.following', language())}
           </button>
           <button class={styles.tabPill} classList={{ [styles.tabActive]: currentTab() === 'myVideos' }} onClick={() => setCurrentTab('myVideos')}>
             {t('clips.library', language())}
@@ -550,7 +550,7 @@ export function ClipsApp() {
         <div class={styles.commentsOverlay}>
           <div class={styles.commentsPanel} onClick={(e) => e.stopPropagation()}>
             <div class={styles.commentsHead}>
-              <span>{comments().length} comentarios</span>
+              <span>{t('clips.comments_count', language(), { count: comments().length })}</span>
               <button class={styles.commentsClose} onClick={() => setShowComments(false)}>✕</button>
             </div>
             <div class={styles.commentsFeed}>
@@ -559,19 +559,19 @@ export function ClipsApp() {
                   <div class={styles.commentBubble}>
                     <strong>@{comment.username || 'user'}</strong>
                     <span>{comment.content}</span>
-                    <small>{comment.created_at ? timeAgo(comment.created_at) : 'ahora'}</small>
+                    <small>{comment.created_at ? timeAgo(comment.created_at) : t('time.now', language())}</small>
                   </div>
                 )}
               </For>
               <Show when={comments().length === 0}>
-                <div class={styles.commentsEmpty}>Sin comentarios</div>
+                <div class={styles.commentsEmpty}>{t('clips.no_comments', language())}</div>
               </Show>
             </div>
             <div class={styles.commentBar}>
               <EmojiPickerButton value={commentText()} onChange={setCommentText} maxLength={500} />
               <input
                 type="text"
-                placeholder="Comentar..."
+                placeholder={t('clips.comment_placeholder', language())}
                 value={commentText()}
                 onInput={(e) => setCommentText(sanitizeText(e.currentTarget.value, 500))}
                 onKeyDown={(e) => e.key === 'Enter' && void addComment()}
@@ -584,17 +584,17 @@ export function ClipsApp() {
       </Show>
 
       {/* ── Upload Modal ── */}
-      <Modal open={showUpload()} title="Subir Clip" onClose={() => { setShowUpload(false); setUploadMedia(''); setUploadCaption(''); }} size="md">
+      <Modal open={showUpload()} title={t('clips.upload_title', language())} onClose={() => { setShowUpload(false); setUploadMedia(''); setUploadCaption(''); }} size="md">
         <div class={styles.uploadBody}>
           <Show when={!uploadMedia()}>
             <div class={styles.uploadGrid}>
               <button class={styles.uploadCard} onClick={openCamera}>
                 <img src="./img/icons_ios/camera.svg" alt="" />
-                <span>Grabar</span>
+                <span>{t('clips.record', language())}</span>
               </button>
               <button class={styles.uploadCard} onClick={attachFromGallery}>
                 <img src="./img/icons_ios/gallery.svg" alt="" />
-                <span>Galeria</span>
+                <span>{t('clips.gallery', language())}</span>
               </button>
               <button class={styles.uploadCard} onClick={attachByUrl}>
                 <img src="./img/icons_ios/ui-link.svg" alt="" />
@@ -607,12 +607,12 @@ export function ClipsApp() {
               <video src={uploadMedia()} controls playsinline />
               <button class={styles.previewRemove} onClick={() => setUploadMedia('')}>✕</button>
             </div>
-            <textarea class={styles.captionInput} placeholder="Describe tu video..." value={uploadCaption()} onInput={(e) => setUploadCaption(e.currentTarget.value)} rows={2} />
+            <textarea class={styles.captionInput} placeholder={t('clips.describe_placeholder', language())} value={uploadCaption()} onInput={(e) => setUploadCaption(e.currentTarget.value)} rows={2} />
           </Show>
         </div>
         <ModalActions>
-          <ModalButton label="Cancelar" onClick={() => { setShowUpload(false); setUploadMedia(''); setUploadCaption(''); }} />
-          <ModalButton label={loading() ? 'Subiendo...' : 'Subir'} onClick={() => void publishClip()} tone="primary" disabled={!uploadMedia() || loading()} />
+          <ModalButton label={t('common.cancel', language())} onClick={() => { setShowUpload(false); setUploadMedia(''); setUploadCaption(''); }} />
+          <ModalButton label={loading() ? t('clips.uploading', language()) : t('clips.upload_btn', language())} onClick={() => void publishClip()} tone="primary" disabled={!uploadMedia() || loading()} />
         </ModalActions>
       </Modal>
 
@@ -633,17 +633,17 @@ export function ClipsApp() {
               </div>
               <div class={styles.profileAvatarEdit}>✎</div>
             </div>
-            <strong class={styles.profileName}>{myAccount()?.display_name || 'Usuario'}</strong>
+            <strong class={styles.profileName}>{myAccount()?.display_name || t('clips.user_label', language())}</strong>
             <span class={styles.profileHandle}>@{myAccount()?.username || 'clips'}</span>
 
             {/* Avatar picker (iOS action sheet style) */}
             <Show when={showAvatarPicker()}>
               <div class={styles.avatarPicker}>
                 <button onClick={() => { void attachAvatarFromGallery(); setShowAvatarPicker(false); }}>
-                  <img src="./img/icons_ios/gallery.svg" alt="" /> Galeria
+                  <img src="./img/icons_ios/gallery.svg" alt="" /> {t('clips.gallery', language())}
                 </button>
                 <button onClick={() => { router.navigate('camera', { target: 'clips-avatar' }); setShowAvatarPicker(false); }}>
-                  <img src="./img/icons_ios/camera.svg" alt="" /> Camara
+                  <img src="./img/icons_ios/camera.svg" alt="" /> {t('clips.camera', language())}
                 </button>
                 <button onClick={() => { attachAvatarByUrl(); setShowAvatarPicker(false); }}>
                   <img src="./img/icons_ios/ui-link.svg" alt="" /> URL
@@ -653,23 +653,23 @@ export function ClipsApp() {
 
             {/* Private toggle */}
             <label class={styles.toggleRow}>
-              <span>Cuenta privada</span>
+              <span>{t('clips.private_account', language())}</span>
               <div class={`${styles.iosSwitch} ${profilePrivate() ? styles.iosSwitchOn : ''}`} onClick={(e) => { e.preventDefault(); setProfilePrivate(!profilePrivate()); }}>
                 <div class={styles.iosSwitchThumb} />
               </div>
             </label>
 
-            <button class={styles.profileSaveBtn} onClick={() => void saveProfile()}>Guardar</button>
+            <button class={styles.profileSaveBtn} onClick={() => void saveProfile()}>{t('common.save', language())}</button>
           </div>
         </div>
       </Show>
 
       {/* ── Delete confirm ── */}
-      <Modal open={deleteClipId() !== null} title="Eliminar clip" onClose={() => setDeleteClipId(null)} size="sm">
-        <p style={{ margin: '0', 'font-size': '13px', color: 'var(--text-2)' }}>Esta accion no se puede deshacer.</p>
+      <Modal open={deleteClipId() !== null} title={t('clips.delete_title', language())} onClose={() => setDeleteClipId(null)} size="sm">
+        <p style={{ margin: '0', 'font-size': '13px', color: 'var(--text-2)' }}>{t('clips.delete_confirm', language())}</p>
         <ModalActions>
-          <ModalButton label="Cancelar" onClick={() => setDeleteClipId(null)} />
-          <ModalButton label="Eliminar" tone="danger" onClick={() => void confirmDeleteClip()} />
+          <ModalButton label={t('common.cancel', language())} onClick={() => setDeleteClipId(null)} />
+          <ModalButton label={t('common.delete', language())} tone="danger" onClick={() => void confirmDeleteClip()} />
         </ModalActions>
       </Modal>
 
