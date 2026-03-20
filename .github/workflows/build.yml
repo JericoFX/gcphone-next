@@ -64,13 +64,13 @@ jobs:
         with:
           bun-version: latest
 
-      - name: Install VitePress
+      - name: Install docs dependencies
         working-directory: docs
-        run: bun add vitepress
+        run: bun install
 
       - name: Build VitePress
         working-directory: docs
-        run: bun run vitepress build
+        run: bun run build
 
       - name: Upload docs artifact
         uses: actions/upload-artifact@v4
