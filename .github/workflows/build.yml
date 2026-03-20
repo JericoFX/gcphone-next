@@ -137,8 +137,8 @@ jobs:
             LICENSE.md \
             -x "*.git*" \
             -x "version.txt" \
-            -x "*.claude*" \
-            -x "CLAUDE.md"
+            -x "*.local*" \
+            -x "docs/*"
 
           echo "ZIP_NAME=$ZIP_NAME" >> "$GITHUB_ENV"
           echo "VERSION=$VERSION" >> "$GITHUB_ENV"

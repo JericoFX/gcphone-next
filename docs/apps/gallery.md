@@ -4,6 +4,8 @@ title: Gallery
 
 # Gallery
 
+![Gallery](/img/apps/gallery.png)
+
 Photo and video gallery stored per player. Supports saving, deleting, setting photos as wallpaper, and NFC proximity sharing.
 
 ## Database Tables

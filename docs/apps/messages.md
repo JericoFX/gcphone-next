@@ -4,6 +4,8 @@ title: Messages
 
 # Messages
 
+![Messages](/img/apps/messages.png)
+
 SMS messaging with 1-on-1 conversations, WaveChat group messaging, group invites, WaveChat statuses (stories), GPS sharing via `%pos%`, auto-reply, media attachments, and blocked contact enforcement.
 
 ## Database Tables

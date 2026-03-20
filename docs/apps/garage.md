@@ -4,6 +4,8 @@ title: Garage
 
 # Garage
 
+![Garage](/img/apps/garage.png)
+
 Vehicle management app with location tracking, impound GPS, spawn point resolution, and external resource integration via exports. Supports dynamic spawn/impound points from config, batch registration, and provider callbacks.
 
 ## Database Tables

@@ -4,6 +4,8 @@ title: Notes
 
 # Notes
 
+![Notes](/img/apps/notes.png)
+
 Simple note-taking app with color-coded notes.
 
 ## Database Tables

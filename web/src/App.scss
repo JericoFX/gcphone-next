@@ -37,8 +37,14 @@
   border-radius: var(--phone-screen-radius);
   overflow: hidden;
   background:
-    radial-gradient(120% 80% at 50% -10%, rgba(92, 172, 255, 0.22), rgba(92, 172, 255, 0) 48%),
-    linear-gradient(180deg, #0f1724 0%, #0a111b 100%);
+    radial-gradient(120% 80% at 50% -10%, rgba(92, 172, 255, 0.15), rgba(92, 172, 255, 0) 48%),
+    linear-gradient(180deg, #eef2f9 0%, #dfe6f0 100%);
+}
+
+.theme-dark .notification-preview-screen {
+  background:
+    radial-gradient(120% 80% at 50% -10%, rgba(92, 172, 255, 0.18), rgba(92, 172, 255, 0) 48%),
+    linear-gradient(180deg, #1c1c1e 0%, #121214 100%);
 }
 
 .notification-preview-banner-wrap {

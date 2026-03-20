@@ -4,6 +4,8 @@ title: Yellow Pages
 
 # Yellow Pages
 
+![Yellow Pages](/img/apps/yellowpages.png)
+
 Marketplace / classified ads app where players can list items for sale, browse by category, search, share location, and contact sellers.
 
 ## Database Tables
