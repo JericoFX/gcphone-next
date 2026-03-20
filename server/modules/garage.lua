@@ -103,40 +103,6 @@ lib.callback.register('gcphone:garage:getLocationHistory', function(source, plat
     ]], { identifier, plate }) or {}
 end)
 
--- ══════════════════════════════════════════════════════════════════
--- Runtime location registry (SERVER SIDE)
---
--- Seeded from Config.Garage at startup.
--- External resources extend it via exports — single or batch.
---
--- SINGLE:
---   exports['gcphone-next']:RegisterGarageSpawnPoint(id, point)
---   exports['gcphone-next']:RegisterImpoundLocation(id, point)
---
--- BATCH (array of { id, ... } tables):
---   exports['gcphone-next']:RegisterGarageSpawnPoints(array)
---   exports['gcphone-next']:RegisterImpoundLocations(array)
---
--- REMOVE:
---   exports['gcphone-next']:RemoveGarageSpawnPoint(id)
---   exports['gcphone-next']:RemoveImpoundLocation(id)
---   exports['gcphone-next']:ClearGarageSpawnPoints(prefix?)
---   exports['gcphone-next']:ClearImpoundLocations(prefix?)
---
--- QUERY:
---   exports['gcphone-next']:GetGarageSpawnPoints()        → { [id] = point }
---   exports['gcphone-next']:GetImpoundLocations()         → { [id] = point }
---   exports['gcphone-next']:GetNearestSpawnPoint(source)   → point|nil
---   exports['gcphone-next']:GetNearestImpound(source)      → point|nil
---
--- PROVIDER CALLBACK (lazy/dynamic locations, e.g. from your DB):
---   exports['gcphone-next']:SetSpawnPointProvider(function(source) return { {id,label,x,y,z,h}, ... } end)
---   exports['gcphone-next']:SetImpoundProvider(function(source) return { {id,label,x,y,z}, ... } end)
---
--- When a provider is set, its results are merged with the static
--- registry at query time. The provider receives the player source
--- so it can return context-aware locations (e.g. per-job impounds).
--- ══════════════════════════════════════════════════════════════════
 
 ---@class GaragePoint
 ---@field id? string

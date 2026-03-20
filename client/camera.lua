@@ -61,7 +61,6 @@ end
 local function ApplyCameraVisuals()
     local effectName = CameraEffects[cameraSession.effect] or CameraEffects.normal
     if effectName ~= '' then
-        -- Verified: Cfx Native Reference SetTimecycleModifier is client-side and applies post-process look filters.
         SetTimecycleModifier(effectName)
     else
         ClearTimecycleModifier()

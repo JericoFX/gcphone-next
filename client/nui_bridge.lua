@@ -712,8 +712,6 @@ RegisterNUICallback('socialDeleteNotification', function(data, cb)
     end, data or {})
 end)
 
--- Market NUI callbacks removed: feature replaced by YellowPages
-
 RegisterNUICallback('newsGetArticles', function(data, cb)
     lib.callback('gcphone:news:getArticles', false, function(articles)
         cb(articles or {})
@@ -1547,7 +1545,6 @@ RegisterNUICallback('emergencySOS', function(_, cb)
     end)
 end)
 
--- Notes
 RegisterNUICallback('notesGetAll', function(_, cb)
     lib.callback('gcphone:notes:getAll', false, function(notes)
         cb(notes or {})
@@ -1566,7 +1563,6 @@ RegisterNUICallback('notesDelete', function(data, cb)
     end, data or {})
 end)
 
--- Weather: read GTA V weather from natives (CLIENT-ONLY)
 RegisterNUICallback('getWeatherData', function(_, cb)
     local weatherHash1, weatherHash2, pct = GetWeatherTypeTransition()
     local hour = GetClockHours()

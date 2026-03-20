@@ -53,7 +53,7 @@ local function EnsureRetentionIndexes()
     EnsureIndex('phone_clips_posts', 'idx_clips_posts_created', 'ALTER TABLE phone_clips_posts ADD INDEX idx_clips_posts_created (`created_at`)')
     EnsureIndex('phone_news', 'idx_phone_news_created', 'ALTER TABLE phone_news ADD INDEX idx_phone_news_created (`created_at`)')
     EnsureIndex('phone_news', 'idx_news_live_created', 'ALTER TABLE phone_news ADD INDEX idx_news_live_created (`is_live`, `created_at`)')
-    -- phone_market removed
+
     EnsureIndex('phone_darkrooms_posts', 'idx_darkrooms_posts_created', 'ALTER TABLE phone_darkrooms_posts ADD INDEX idx_darkrooms_posts_created (`created_at`)')
     EnsureIndex('phone_darkrooms_comments', 'idx_darkrooms_comments_created', 'ALTER TABLE phone_darkrooms_comments ADD INDEX idx_darkrooms_comments_created (`created_at`)')
     EnsureIndex('phone_social_notifications', 'idx_social_notifications_created', 'ALTER TABLE phone_social_notifications ADD INDEX idx_social_notifications_created (`created_at`)')
@@ -72,7 +72,7 @@ local function PurgeOldRows()
     MySQL.query_async('DELETE FROM phone_snap_stories WHERE expires_at < NOW() OR created_at < (NOW() - INTERVAL ? DAY)', { days })
     MySQL.query_async('DELETE FROM phone_clips_posts WHERE created_at < (NOW() - INTERVAL ? DAY)', { days })
     MySQL.query_async('DELETE FROM phone_news WHERE is_live = 0 AND created_at < (NOW() - INTERVAL 10 DAY)', {})
-    -- phone_market removed
+
     MySQL.query_async('DELETE FROM phone_darkrooms_posts WHERE created_at < (NOW() - INTERVAL ? DAY)', { days })
     MySQL.query_async('DELETE FROM phone_darkrooms_comments WHERE created_at < (NOW() - INTERVAL ? DAY)', { days })
     MySQL.query_async('DELETE FROM phone_social_notifications WHERE created_at < (NOW() - INTERVAL ? DAY)', { days })

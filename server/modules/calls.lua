@@ -35,8 +35,6 @@ local function CanAccessIdentifierExport(identifier, requestSource)
 end
 
 local function SyncActiveCallsToGlobalState()
-    -- No-op: active calls are only accessed server-side via GetActiveCalls() export.
-    -- GlobalState was removed to avoid broadcasting call data to all clients.
 end
 
 local function IsValidCallId(value)

@@ -73,7 +73,6 @@ server_scripts {
     'server/modules/snap.lua',
     'server/modules/social.lua',
     'server/modules/garage.lua',
-    -- 'server/modules/market.lua', -- Removed: unused, replaced by yellowpages
     'server/modules/yellowpages.lua',
     'server/modules/matchmylove.lua',
     'server/modules/services.lua',

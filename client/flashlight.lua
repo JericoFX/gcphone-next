@@ -143,7 +143,6 @@ local function DrawPhoneFlashlightForPed(ped, intensityScale)
         * (type(intensityScale) == 'table' and intensityScale.scale or intensityScale or 1.0)
     local color = KelvinToRgb(type(intensityScale) == 'table' and intensityScale.kelvin or flashlightState.kelvin)
 
-    -- Verified: Cfx Native Reference DrawSpotLightWithShadow draws projected flashlight beam in client context.
     DrawSpotLightWithShadow(
         hand.x,
         hand.y,

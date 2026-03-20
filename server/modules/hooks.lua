@@ -113,7 +113,6 @@ GCPhone.RegisterHook = registerHook
 GCPhone.TriggerHook = triggerHook
 GCPhone.RemoveHooks = removeResourceHooks
 
--- Backward-compat globals (will be removed in a future major version)
 RegisterPhoneHook = registerHook
 TriggerPhoneHook = triggerHook
 RemovePhoneHooks = removeResourceHooks

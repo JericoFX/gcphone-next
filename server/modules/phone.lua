@@ -795,7 +795,7 @@ local function ResetPhone(identifier)
         { query = 'DELETE FROM phone_chat_group_invites WHERE inviter_identifier = ? OR target_identifier = ?', values = { identifier, identifier } },
         { query = 'DELETE FROM phone_chat_groups WHERE owner_identifier = ?', values = { identifier } },
         { query = 'DELETE FROM phone_wavechat_statuses WHERE identifier = ? OR phone_number = ?', values = { identifier, phone.phone_number } },
-        -- phone_market removed
+
         { query = 'DELETE FROM phone_news WHERE identifier = ?', values = { identifier } },
         { query = 'DELETE FROM phone_friend_requests WHERE from_identifier = ? OR to_identifier = ?', values = { identifier, identifier } },
         { query = 'DELETE FROM phone_shared_locations WHERE from_identifier = ? OR to_identifier = ?', values = { identifier, identifier } },

@@ -27,7 +27,6 @@ Config.NativeAudio = {
         ['tap.ogg'] = 'msg_1',
     },
     Catalog = {
-        -- RINGTONES
         call_1 = {
             label = 'Tono 1',
             category = 'ringtone',
@@ -106,16 +105,12 @@ Config.NativeAudio = {
             soundName = 'call_13',
             vibrando = 'call_vibrando',
         },
-
-        -- VIBRACIÓN
         buzz_short_01 = {
             label = 'Vibración',
             category = 'vibrate',
             soundName = 'call_vibrando',
             vibrando = false,
         },
-
-        -- NOTIFICACIONES
         notif_1 = {
             label = 'Notificación 1',
             category = 'notification',
@@ -146,8 +141,6 @@ Config.NativeAudio = {
             soundName = 'pop2',
             vibrando = false,
         },
-
-        -- MENSAJES
         msg_1 = {
             label = 'Mensaje 1',
             category = 'message',
@@ -166,8 +159,6 @@ Config.NativeAudio = {
             soundName = 'nueva_notificacion3',
             vibrando = 'nueva_notificacion_vibrando',
         },
-
-        -- LLAMADA SALIENTE
         sonando = {
             label = 'Sonando',
             category = 'calling',
@@ -186,9 +177,8 @@ Config.NativeAudio = {
 Config.Phone = {
     KeyOpen = 288,
     KeyTakeCall = 38,
+    PropModel = 'prop_npc_phone_02',
 
-    -- ox_inventory item check: when true, player must have the item to open the phone.
-    -- Set to false (default) to allow everyone to use the phone without an inventory item.
     RequireItem = false,
     ItemName = 'phone',
 
@@ -240,15 +230,8 @@ Config.Messages = {
 }
 
 Config.Calls = {
-    UseWebRTC = true,
     MaxCallDuration = 3600,
     HiddenNumberPrefix = '#',
-
-    RTCConfig = {
-        iceServers = {
-            { urls = 'stun:stun.l.google.com:19302' },
-        }
-    },
 }
 
 Config.LiveKit = {
@@ -257,7 +240,7 @@ Config.LiveKit = {
 }
 
 Config.Socket = {
-    Enabled = false,
+    Enabled = true,
 }
 
 Config.LiveLocation = {
@@ -501,28 +484,6 @@ Config.Snap = {
 
 Config.Garage = {
     MaxVehicles = 20,
-
-    -- Seed locations loaded at startup. External resources extend via SERVER-SIDE exports:
-    --
-    -- SINGLE:
-    --   exports['gcphone-next']:RegisterGarageSpawnPoint(id, { label, x, y, z, h })
-    --   exports['gcphone-next']:RegisterImpoundLocation(id, { label, x, y, z })
-    --
-    -- BATCH (one call, array of points):
-    --   exports['gcphone-next']:RegisterGarageSpawnPoints({ {id='g1', label='...', x=0, y=0, z=0, h=0}, ... }, 'prefix')
-    --   exports['gcphone-next']:RegisterImpoundLocations({ {id='i1', label='...', x=0, y=0, z=0}, ... }, 'prefix')
-    --
-    -- PROVIDER (dynamic, e.g. from DB — called per-request with player source):
-    --   exports['gcphone-next']:SetSpawnPointProvider(function(source) return { {label='...', x=0, y=0, z=0, h=0}, ... } end)
-    --   exports['gcphone-next']:SetImpoundProvider(function(source) return { {label='...', x=0, y=0, z=0}, ... } end)
-    --
-    -- REMOVE / CLEAR:
-    --   exports['gcphone-next']:RemoveGarageSpawnPoint(id)
-    --   exports['gcphone-next']:ClearGarageSpawnPoints('prefix')  -- nil = clear all
-    --
-    -- QUERY:
-    --   exports['gcphone-next']:GetNearestSpawnPoint(source) → point|nil
-    --   exports['gcphone-next']:GetNearestImpound(source)    → point|nil
 
     Impounds = {
         { label = 'Deposito LSPD', x = 409.09, y = -1622.65, z = 29.29 },

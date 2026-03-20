@@ -97,7 +97,6 @@ local function EnsureScriptCamera()
         return scriptedCamera.handle
     end
 
-    -- Verified: Cfx Native Reference CreateCam and RenderScriptCams are client-only scripted camera natives.
     scriptedCamera.handle = CreateCam('DEFAULT_SCRIPTED_CAMERA', true)
     SetCamActive(scriptedCamera.handle, true)
     RenderScriptCams(true, false, 0, true, true)

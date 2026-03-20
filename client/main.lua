@@ -8,8 +8,6 @@ GCPhone.State = {
     airplaneMode = false
 }
 
--- Backward-compat alias: other client scripts reference PhoneState directly.
--- Will be removed in a future major version.
 PhoneState = GCPhone.State
 
 ---@alias GCPhoneNotificationPriority 'low'|'normal'|'high'

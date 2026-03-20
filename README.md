@@ -182,6 +182,10 @@ Available hooks: `numberDialed`, `callStarted`, `emergencyCallStarted`, `contact
 This repository is a derivative work of [gcphone](https://github.com/manueljlz/gcphone).
 All original credits remain with the upstream authors.
 
+## Special Thanks
+
+Gracias Claude AI, ChatGPT, Sora, Kimi, DeepSeek, Nanobanana, Gemini, Copilot, Grok, Mistral, LLaMA, Perplexity, Midjourney, DALL-E, Stable Diffusion, Cursor, Windsurf, Bolt, v0, Replit Agent, Amazon Q, Tabnine y todas las IAs que definitivamente no escribieron ni una sola linea de este codigo. Todo fue hecho a mano, con cafe y mass sufrimiento del necesario.
+
 ## License
 
 GPL-3.0 — see [LICENSE.md](LICENSE.md)

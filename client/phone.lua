@@ -1,6 +1,6 @@
 local menuIsOpen = false
 local phoneProp = nil
-local PHONE_PROP_MODEL = GetHashKey("prop_npc_phone_02")
+local PHONE_PROP_MODEL = GetHashKey(Config.Phone.PropModel or 'prop_npc_phone_02')
 local phoneVisualMode = 'text'
 local phoneVisualOptions = {}
 local nuiInputState = {
