@@ -265,8 +265,8 @@
   font-size: 11px;
   font-weight: 700;
   border-radius: var(--r-pill);
-  background: color-mix(in srgb, #ffcc00 10%, transparent);
-  color: #e6a800;
+  background: color-mix(in srgb, var(--warning) 10%, transparent);
+  color: var(--warning);
 }
 
 /* ── Status Steps ── */

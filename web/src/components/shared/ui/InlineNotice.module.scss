@@ -5,14 +5,14 @@
   margin: 8px 12px 12px;
   padding: 12px 14px;
   border-radius: 16px;
-  background: rgba(10, 132, 255, 0.08);
-  border: 1px solid rgba(10, 132, 255, 0.14);
-  color: #1f2937;
+  background: color-mix(in srgb, var(--tint) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--tint) 14%, transparent);
+  color: var(--text);
 }
 
 .warning {
-  background: rgba(255, 159, 10, 0.12);
-  border-color: rgba(255, 159, 10, 0.18);
+  background: color-mix(in srgb, var(--warning) 12%, transparent);
+  border-color: color-mix(in srgb, var(--warning) 18%, transparent);
 }
 
 .icon {
@@ -23,14 +23,14 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  background: #0a84ff;
+  background: var(--tint);
   color: #ffffff;
   font-size: 13px;
   font-weight: 700;
 }
 
 .warning .icon {
-  background: #ff9f0a;
+  background: var(--warning);
 }
 
 .content {
@@ -41,11 +41,11 @@
 .content strong {
   font-size: 13px;
   font-weight: 700;
-  color: #111827;
+  color: var(--text);
 }
 
 .content span {
   font-size: 12px;
   line-height: 1.45;
-  color: #4b5563;
+  color: var(--text-2);
 }

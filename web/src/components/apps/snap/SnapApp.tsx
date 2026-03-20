@@ -1474,7 +1474,15 @@ export function SnapApp() {
               <div class={styles.postsGrid}>
                 <For each={posts()}>
                   {(post) => (
-                    <div class={styles.postCard} onClick={() => post.media_url && setViewerUrl(post.media_url)}>
+                    <div
+                      class={styles.postCard}
+                      onClick={() => post.media_url && setViewerUrl(post.media_url)}
+                      onContextMenu={(e: MouseEvent) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setShowActionSheet(true);
+                      }}
+                    >
                       <div class={styles.postMedia}>
                         {resolveMediaType(post.media_url) === 'video' ? (
                           <video src={post.media_url} preload="metadata" />

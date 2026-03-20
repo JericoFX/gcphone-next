@@ -44,7 +44,7 @@
   transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, opacity 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
 
   &:hover {
-    background: rgba(0, 122, 255, 0.2);
+    background: color-mix(in srgb, var(--tint) 20%, transparent);
   }
 }
 
@@ -75,7 +75,7 @@
   border: none;
   border-radius: var(--r-sm);
   background: transparent;
-  color: rgba(60, 60, 67, 0.6);
+  color: var(--text-2);
   height: 32px;
   font-size: var(--fs-footnote);
   font-weight: 600;
@@ -101,7 +101,7 @@
   margin: 12px;
   border-radius: var(--r-xl);
   background: var(--color-surface-translucent);
-  border: 1px solid rgba(15, 23, 42, 0.06);
+  border: 1px solid var(--border-subtle);
 }
 
 .conversation-item {
@@ -109,7 +109,7 @@
   align-items: center;
   gap: var(--s-3);
   padding: 12px 16px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  border-bottom: 1px solid var(--separator);
   background: var(--surface);
   cursor: pointer;
   transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, opacity 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
@@ -119,7 +119,7 @@
   }
 
   &.selected {
-    background: rgba(0, 122, 255, 0.1);
+    background: color-mix(in srgb, var(--tint) 10%, transparent);
   }
 }
 
@@ -174,7 +174,7 @@
 .preview-text {
   flex: 1;
   font-size: var(--fs-footnote);
-  color: rgba(60, 60, 67, 0.6);
+  color: var(--text-2);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -186,12 +186,12 @@
   align-items: center;
   gap: var(--s-3);
   padding: 12px 16px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  border-bottom: 1px solid var(--separator);
   background: var(--surface);
   cursor: pointer;
   border-radius: var(--r-xl);
-  border: 1px solid rgba(15, 23, 42, 0.06);
-  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.04);
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow-1);
 }
 
 .status-panel {
@@ -207,7 +207,7 @@
   border-radius: var(--r-2xl);
   background: linear-gradient(135deg, rgba(10, 132, 255, 0.98), rgba(52, 199, 89, 0.88));
   color: var(--surface);
-  box-shadow: 0 22px 50px rgba(10, 132, 255, 0.2);
+  box-shadow: 0 22px 50px color-mix(in srgb, var(--tint) 20%, transparent);
 }
 
 .status-hero-header {
@@ -305,7 +305,7 @@
   transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, opacity 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
 
   &:hover {
-    background: #0071EB;
+    background: color-mix(in srgb, var(--tint), black 10%);
   }
 
   &:disabled {
@@ -323,7 +323,7 @@
 .status-badge {
   padding: 4px 8px;
   border-radius: 999px;
-  background: rgba(10, 132, 255, 0.1);
+  background: color-mix(in srgb, var(--tint) 10%, transparent);
   color: var(--tint);
   font-size: var(--fs-caption1);
   font-weight: 700;
@@ -336,7 +336,7 @@
   border-radius: var(--r-sm);
   height: 28px;
   padding: 0 12px;
-  background: rgba(255, 59, 48, 0.1);
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
   color: var(--danger);
   font-size: var(--fs-footnote);
   font-weight: 600;
@@ -344,7 +344,7 @@
   transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, opacity 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
 
   &:hover {
-    background: rgba(255, 59, 48, 0.2);
+    background: color-mix(in srgb, var(--danger) 20%, transparent);
   }
 }
 
@@ -417,13 +417,13 @@
   padding: 0 10px;
   font-size: 12px;
   font-weight: 600;
-  background: rgba(0, 122, 255, 0.2);
+  background: color-mix(in srgb, var(--tint) 20%, transparent);
   color: var(--surface);
   cursor: pointer;
   transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, opacity 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
 
   &:hover {
-    background: rgba(0, 122, 255, 0.3);
+    background: color-mix(in srgb, var(--tint) 30%, transparent);
   }
 }
 
@@ -439,8 +439,8 @@
   min-width: 180px;
   border-radius: 10px;
   padding: 8px;
-  background: rgba(255, 255, 255, 0.92);
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: var(--surface-card);
+  border: 1px solid var(--border);
   display: grid;
   gap: 4px;
 }
@@ -450,7 +450,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.02em;
-  color: #3f3f46;
+  color: var(--text-2);
 }
 
 .contact-card-name {
@@ -461,15 +461,15 @@
 
 .contact-card-number {
   font-size: 12px;
-  color: #4b5563;
+  color: var(--text-3);
 }
 
 .contact-card-btn {
   min-height: 28px;
   border: none;
   border-radius: 8px;
-  background: rgba(0, 122, 255, 0.12);
-  color: #0062cc;
+  background: color-mix(in srgb, var(--tint) 12%, transparent);
+  color: var(--tint);
   font-size: 12px;
   font-weight: 700;
 
@@ -499,7 +499,7 @@
   margin: 8px 16px;
   border-radius: 12px;
   background: var(--bg);
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  border: 1px solid var(--border);
   padding: 10px;
   display: flex;
   align-items: center;
@@ -526,7 +526,7 @@
     border: none;
     border-radius: 8px;
     padding: 0 14px;
-    background: rgba(255, 59, 48, 0.1);
+    background: color-mix(in srgb, var(--danger) 10%, transparent);
     color: var(--danger);
     font-size: 13px;
     font-weight: 600;
@@ -534,7 +534,7 @@
     transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, opacity 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
 
     &:hover {
-      background: rgba(255, 59, 48, 0.2);
+      background: color-mix(in srgb, var(--danger) 20%, transparent);
     }
   }
 }
@@ -543,7 +543,7 @@
   margin: 8px 16px 8px;
   border-radius: 24px;
   background: var(--bg);
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  border: 1px solid var(--border);
   display: flex;
   align-items: center;
   padding: 6px 8px;
@@ -574,7 +574,7 @@
   height: 36px;
   border: none;
   border-radius: 999px;
-  background: rgba(0, 122, 255, 0.1);
+  background: color-mix(in srgb, var(--tint) 10%, transparent);
   color: var(--tint);
   display: flex;
   align-items: center;
@@ -585,7 +585,7 @@
   flex-shrink: 0;
 
   &:hover {
-    background: rgba(0, 122, 255, 0.2);
+    background: color-mix(in srgb, var(--tint) 20%, transparent);
   }
 }
 
@@ -594,7 +594,7 @@
   color: var(--surface);
 
   &:hover {
-    background: #0071EB;
+    background: color-mix(in srgb, var(--tint), black 10%);
   }
 }
 
@@ -619,20 +619,20 @@
 }
 
 .voice-btn {
-  background: rgba(0, 122, 255, 0.1);
+  background: color-mix(in srgb, var(--tint) 10%, transparent);
   color: var(--tint);
 
   &:hover {
-    background: rgba(0, 122, 255, 0.2);
+    background: color-mix(in srgb, var(--tint) 20%, transparent);
   }
 }
 
 .voice-btn-stop {
-  background: rgba(255, 59, 48, 0.1);
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
   color: var(--danger);
 
   &:hover {
-    background: rgba(255, 59, 48, 0.2);
+    background: color-mix(in srgb, var(--danger) 20%, transparent);
   }
 }
 
@@ -668,7 +668,7 @@
     transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, opacity 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
 
     &:hover {
-      background: #0071EB;
+      background: color-mix(in srgb, var(--tint), black 10%);
     }
   }
 }
@@ -718,7 +718,7 @@
 
 .group-thread {
   margin: 10px 0 16px;
-  border: 1px solid rgba(15, 23, 42, 0.07);
+  border: 1px solid var(--border-subtle);
   border-radius: 24px;
   background: var(--surface);
   padding: 14px;
@@ -727,7 +727,7 @@
   gap: 10px;
   max-height: 420px;
   overflow-y: auto;
-  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.06);
+  box-shadow: var(--shadow-1);
 }
 
 .group-thread-header {
@@ -736,7 +736,7 @@
   justify-content: space-between;
   gap: 16px;
   padding-bottom: 10px;
-  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+  border-bottom: 1px solid var(--border-subtle);
 
   h4 {
     margin: 0;
@@ -755,7 +755,7 @@
     flex-shrink: 0;
     padding: 6px 10px;
     border-radius: 999px;
-    background: rgba(10, 132, 255, 0.08);
+    background: color-mix(in srgb, var(--tint) 8%, transparent);
     color: var(--tint);
     font-size: 12px;
     font-weight: 700;
@@ -771,8 +771,8 @@
 .groupSearchInput {
   min-height: 36px;
   border-radius: 10px;
-  background: rgba(118, 118, 128, 0.12);
-  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.06);
+  background: var(--fill-secondary);
+  box-shadow: inset 0 0 0 1px var(--border-subtle);
 }
 
 .group-msg-row {
@@ -781,8 +781,8 @@
   gap: 4px;
   padding: 10px 12px;
   border-radius: 18px;
-  background: linear-gradient(180deg, var(--surface-2), #f2f5fb);
-  border: 1px solid rgba(15, 23, 42, 0.05);
+  background: linear-gradient(180deg, var(--surface-2), var(--surface-3));
+  border: 1px solid var(--border-subtle);
 
   strong {
     font-size: 13px;
@@ -831,8 +831,8 @@
   padding: 14px 16px;
   border-radius: 20px;
   background: var(--surface);
-  border: 1px solid rgba(15, 23, 42, 0.06);
-  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.04);
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow-1);
 }
 
 .group-invite-actions {
@@ -862,7 +862,7 @@
     width: 100%;
     min-height: 44px;
     border-radius: 16px;
-    border: 1px solid rgba(15, 23, 42, 0.08);
+    border: 1px solid var(--border);
     background: var(--surface-2);
     padding: 0 14px;
     font-size: 14px;
@@ -870,8 +870,8 @@
 
     &:focus {
       outline: none;
-      border-color: rgba(10, 132, 255, 0.48);
-      box-shadow: 0 0 0 4px rgba(10, 132, 255, 0.1);
+      border-color: color-mix(in srgb, var(--tint) 48%, transparent);
+      box-shadow: 0 0 0 4px color-mix(in srgb, var(--tint) 10%, transparent);
     }
   }
 }
@@ -882,7 +882,7 @@
   gap: 8px;
   padding: 10px 12px;
   border-radius: 16px;
-  background: rgba(10, 132, 255, 0.08);
+  background: color-mix(in srgb, var(--tint) 8%, transparent);
   color: var(--tint);
 
   strong {
@@ -907,7 +907,7 @@
   gap: 12px;
   padding: 12px 14px;
   border-radius: 18px;
-  border: 1px solid rgba(15, 23, 42, 0.06);
+  border: 1px solid var(--border-subtle);
   background: linear-gradient(180deg, var(--surface), var(--surface-2));
   cursor: pointer;
 

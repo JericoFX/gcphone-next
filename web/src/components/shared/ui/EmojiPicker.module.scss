@@ -3,8 +3,8 @@
   height: 36px;
   border: none;
   border-radius: 999px;
-  background: rgba(0, 122, 255, 0.1);
-  color: #007aff;
+  background: color-mix(in srgb, var(--tint) 10%, transparent);
+  color: var(--tint);
   font-size: 20px;
   display: flex;
   align-items: center;
@@ -14,7 +14,7 @@
   flex-shrink: 0;
 
   &:hover {
-    background: rgba(0, 122, 255, 0.2);
+    background: color-mix(in srgb, var(--tint) 20%, transparent);
   }
 
   &:active {
@@ -29,10 +29,10 @@
   transform: translateX(-50%);
   width: 280px;
   max-height: 300px;
-  background: #ffffff;
+  background: var(--surface);
   border-radius: 16px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 8px 32px color-mix(in srgb, var(--text) 15%, transparent);
+  border: 1px solid var(--border-subtle);
   overflow: hidden;
   z-index: 1000;
   display: flex;
@@ -41,7 +41,7 @@
 
 .category {
   padding: 12px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  border-bottom: 1px solid var(--separator);
   max-height: 212px;
   overflow-y: auto;
   overflow-x: hidden;
@@ -59,7 +59,7 @@
   }
 
   &::-webkit-scrollbar-thumb {
-    background: rgba(0, 0, 0, 0.2);
+    background: color-mix(in srgb, var(--text) 20%, transparent);
     border-radius: 3px;
   }
 }
@@ -67,7 +67,7 @@
 .categoryTitle {
   font-size: 12px;
   font-weight: 600;
-  color: #8e8e93;
+  color: var(--text-3);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   margin-bottom: 8px;
@@ -94,11 +94,11 @@
   justify-content: center;
 
   &:hover {
-    background: rgba(0, 122, 255, 0.1);
+    background: color-mix(in srgb, var(--tint) 10%, transparent);
   }
 
   &:active {
-    background: rgba(0, 122, 255, 0.2);
+    background: color-mix(in srgb, var(--tint) 20%, transparent);
     transform: scale(0.9);
   }
 }

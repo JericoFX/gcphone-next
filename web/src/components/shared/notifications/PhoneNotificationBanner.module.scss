@@ -2,8 +2,8 @@
   width: 100%;
   display: grid;
   justify-items: center;
-  gap: 6px;
-  padding-top: 6px;
+  gap: var(--s-1);
+  padding-top: var(--s-1);
   pointer-events: auto;
 }
 
@@ -11,7 +11,7 @@
   width: 112px;
   height: 5px;
   border: none;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: linear-gradient(90deg, rgba(255, 255, 255, 0.92), rgba(222, 236, 255, 0.94));
   box-shadow: 0 4px 10px rgba(8, 18, 33, 0.24), 0 0 0 1px rgba(255, 255, 255, 0.45) inset;
   animation: pulse-line 1200ms ease-in-out infinite;
@@ -20,22 +20,22 @@
 .peek-card {
   width: calc(100% - 18px);
   min-height: 46px;
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.96);
-  color: #101a2a;
+  border-radius: var(--r-lg);
+  background: color-mix(in srgb, var(--surface) 96%, transparent);
+  color: var(--text);
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 10px;
+  gap: var(--s-3);
+  padding: var(--s-2) var(--s-3);
   text-align: left;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12), inset 0 0 0 1px rgba(255, 255, 255, 0.68);
-  animation: peek-in 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  box-shadow: var(--shadow-2), inset 0 0 0 1px rgba(255, 255, 255, 0.68);
+  animation: peek-in 220ms var(--ease-standard);
 }
 
 :global(.theme-dark) .peek-card {
   background: rgba(44, 44, 46, 0.88);
   color: rgba(255, 255, 255, 0.95);
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.32), inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+  box-shadow: var(--shadow-2), inset 0 0 0 1px rgba(255, 255, 255, 0.12);
 }
 
 .content-button {
@@ -59,14 +59,14 @@
 .icon {
   width: 24px;
   height: 24px;
-  border-radius: 8px;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--tint, #007aff) 88%, white), var(--tint, #007aff));
+  border-radius: var(--r-xs);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--tint) 88%, var(--surface)), var(--tint));
   color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
   flex: 0 0 auto;
-  font-size: 12px;
+  font-size: var(--fs-caption1);
   font-weight: 700;
 }
 
@@ -82,14 +82,14 @@
 }
 
 .title {
-  font-size: 11px;
+  font-size: var(--fs-caption2);
   font-weight: 760;
 }
 
 .message {
   margin-top: 1px;
-  font-size: 11px;
-  color: var(--text-2, #4a5770);
+  font-size: var(--fs-caption2);
+  color: var(--text-2);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -103,12 +103,12 @@
   width: 18px;
   height: 18px;
   border: none;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: rgba(36, 58, 86, 0.12);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 10px;
+  font-size: var(--fs-caption2);
 }
 
 :global(.theme-dark) .close {

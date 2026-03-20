@@ -63,8 +63,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--s-2, 8px);
-  padding: 9px 12px;
+  gap: var(--s-2);
+  padding: var(--s-2) var(--s-3);
   min-height: 38px;
   background: transparent;
   border: none;
@@ -101,7 +101,7 @@
 .cell-icon {
   width: 24px;
   height: 24px;
-  border-radius: 6px;
+  border-radius: var(--r-xs);
   display: grid;
   place-items: center;
   flex: 0 0 auto;
@@ -447,16 +447,16 @@
 }
 
 .customUrlTitle {
-  margin-bottom: 4px;
-  font-size: 13px;
+  margin-bottom: var(--s-1);
+  font-size: var(--fs-footnote);
   font-weight: 700;
-  color: #111827;
+  color: var(--text);
 }
 
 .customUrlText {
-  font-size: 12px;
+  font-size: var(--fs-caption1);
   line-height: 1.45;
-  color: #6b7280;
+  color: var(--text-3);
 }
 
 /* Language Options */

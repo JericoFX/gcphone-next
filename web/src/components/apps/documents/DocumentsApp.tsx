@@ -9,12 +9,14 @@ import { AppScaffold } from '../../shared/layout';
 import { useAppCache } from '../../../hooks';
 import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { useNfcShare } from '../../../hooks/useNfcShare';
+import { useContextMenu } from '../../../hooks/useContextMenu';
 import { usePhoneState } from '../../../store/phone';
 import { t } from '../../../i18n';
 import { FormCheckbox, FormSection, Modal, ModalActions, ModalButton } from '../../shared/ui/Modal';
 import { EmptyState } from '../../shared/ui/EmptyState';
 import { InlineNotice } from '../../shared/ui/InlineNotice';
 import { NfcShareSheet } from '../../shared/ui/NfcShareSheet';
+import { ActionSheet } from '../../shared/ui/ActionSheet';
 import { SegmentedTabs } from '../../shared/ui/SegmentedTabs';
 import { SheetIntro } from '../../shared/ui/SheetIntro';
 import styles from './DocumentsApp.module.scss';
@@ -108,6 +110,7 @@ export function DocumentsApp() {
   const [composerHolderNumber, setComposerHolderNumber] = createSignal('');
   const [composerExpires, setComposerExpires] = createSignal('');
   const [composerNFC, setComposerNFC] = createSignal(true);
+  const ctxMenu = useContextMenu<Document>();
   const isReadOnly = createMemo(() => phoneState.accessMode === 'foreign-readonly');
   const tabs = [
     { id: 'my', label: 'Mis Docs' },
@@ -308,7 +311,7 @@ export function DocumentsApp() {
                 const expired = isExpired(doc.expires_at);
                 
                 return (
-                  <div class={styles.documentCard} onClick={() => setSelectedDoc(doc)}>
+                  <div class={styles.documentCard} onClick={() => setSelectedDoc(doc)} onContextMenu={ctxMenu.onContextMenu(doc)}>
                     <DocumentTypeAccent class={styles.docIcon} color={typeInfo.color} icon={typeInfo.icon} label={typeInfo.name} />
                     
                     <div class={styles.docInfo}>
@@ -675,6 +678,47 @@ export function DocumentsApp() {
         title="Mostrar documento"
         maxDistance={2.0}
         disabled={nfcShare.sharing()}
+      />
+
+      <ActionSheet
+        open={ctxMenu.isOpen()}
+        title={ctxMenu.item()?.title || t('documents.title', language())}
+        onClose={ctxMenu.close}
+        actions={[
+          {
+            label: t('documents.view_detail', language()) || 'Ver detalle',
+            onClick: () => {
+              const doc = ctxMenu.item();
+              if (doc) setSelectedDoc(doc);
+              ctxMenu.close();
+            },
+          },
+          ...(ctxMenu.item()?.nfc_enabled ? [{
+            label: 'NFC',
+            onClick: () => {
+              const doc = ctxMenu.item();
+              if (doc) { setNfcDocId(doc.id); nfcShare.open(); }
+              ctxMenu.close();
+            },
+          }] : []),
+          {
+            label: t('documents.share_by_mail', language()),
+            onClick: () => {
+              const doc = ctxMenu.item();
+              if (doc) shareDocumentByMail(doc);
+              ctxMenu.close();
+            },
+          },
+          ...(!isReadOnly() ? [{
+            label: t('documents.delete_document', language()),
+            tone: 'danger' as const,
+            onClick: () => {
+              const doc = ctxMenu.item();
+              if (doc) void deleteDocument(doc.id);
+              ctxMenu.close();
+            },
+          }] : []),
+        ]}
       />
     </AppScaffold>
   );

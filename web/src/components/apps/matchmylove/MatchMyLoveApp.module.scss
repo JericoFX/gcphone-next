@@ -193,7 +193,7 @@
   position: absolute;
   inset: 0;
   z-index: 50;
-  background: rgba(0, 0, 0, 0.65);
+  background: var(--surface-overlay);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -677,7 +677,7 @@
   width: 18px;
   height: 18px;
   border: none;
-  background: rgba(0, 0, 0, 0.6);
+  background: var(--surface-overlay);
   color: #fff;
   font-size: 12px;
   line-height: 1;

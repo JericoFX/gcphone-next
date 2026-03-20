@@ -15,10 +15,16 @@ interface SettingsAppearanceProps {
 }
 
 export function SettingsAppearance(props: SettingsAppearanceProps) {
+  const themeNames: Record<string, Record<string, string>> = {
+    light: { es_ES: 'Claro', en_US: 'Light', fr_FR: 'Clair', de_DE: 'Hell', pt_BR: 'Claro', ru_RU: 'Светлая', pl_PL: 'Jasny', it_IT: 'Chiaro' },
+    dark:  { es_ES: 'Oscuro', en_US: 'Dark', fr_FR: 'Sombre', de_DE: 'Dunkel', pt_BR: 'Escuro', ru_RU: 'Тёмная', pl_PL: 'Ciemny', it_IT: 'Scuro' },
+    auto:  { es_ES: 'Automático', en_US: 'Automatic', fr_FR: 'Automatique', de_DE: 'Automatisch', pt_BR: 'Automático', ru_RU: 'Авто', pl_PL: 'Automatyczny', it_IT: 'Automatico' },
+  };
+
   const themes = [
-    { id: 'light', name: 'Claro', icon: ICONS.brightness },
-    { id: 'dark', name: 'Oscuro', icon: ICONS.moon },
-    { id: 'auto', name: 'Automatico', icon: ICONS.shuffle },
+    { id: 'light' as const, icon: ICONS.brightness },
+    { id: 'dark' as const, icon: ICONS.moon },
+    { id: 'auto' as const, icon: ICONS.shuffle },
   ];
 
   const setWallpaperWithFeedback = (url: string) => {
@@ -69,6 +75,27 @@ export function SettingsAppearance(props: SettingsAppearanceProps) {
         <input type="url" placeholder="https://example.com/wallpaper.jpg" value={props.urlInput()} onInput={(e) => props.setUrlInput(e.currentTarget.value)} />
         <button onClick={applyUrlWallpaper}>{t('settings.apply', props.language())}</button>
       </div>
+
+      <SectionHeader title={t('settings.theme', props.language()).toUpperCase()} />
+      <Group>
+        <div class={styles.themeList}>
+          <For each={themes}>
+            {(theme) => (
+              <button
+                class={styles.themeOption}
+                classList={{ [styles.selected]: props.phoneState.settings.theme === theme.id }}
+                onClick={() => props.phoneActions.setTheme(theme.id)}
+              >
+                <span class={styles.themeIcon}>
+                  <IconImage src={theme.icon} class={styles.themeIconImage} />
+                </span>
+                <span class={styles.themeName}>{themeNames[theme.id][props.language()] || themeNames[theme.id].en_US}</span>
+                {props.phoneState.settings.theme === theme.id && <CheckIcon />}
+              </button>
+            )}
+          </For>
+        </div>
+      </Group>
 
       <SectionHeader title={t('settings.language', props.language()).toUpperCase()} />
       <Group>

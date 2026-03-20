@@ -41,7 +41,7 @@
 .headerChildren {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--s-2);
 }
 
 .body {
@@ -56,21 +56,21 @@
   }
   
   &.paddingSm {
-    padding: 6px;
+    padding: var(--s-1);
   }
 }
 
 .footer {
   flex-shrink: 0;
-  padding: 8px 12px;
+  padding: 0;
   background: linear-gradient(180deg, color-mix(in srgb, var(--surface) 92%, transparent), color-mix(in srgb, var(--surface-2) 90%, transparent));
-  border-top: 1px solid var(--separator, rgba(0, 0, 0, 0.1));
-  
+  border-top: 1px solid var(--separator);
+
   &.transparent {
     background: transparent;
     border-top: none;
   }
-  
+
   &.fixed {
     position: sticky;
     bottom: 0;
@@ -80,15 +80,15 @@
 
 .fab {
   position: absolute;
-  bottom: 16px;
-  right: 16px;
+  bottom: var(--s-4);
+  right: var(--s-4);
   width: 50px;
   height: 50px;
   border-radius: 50%;
-  border: 1px solid var(--border, rgba(0, 0, 0, 0.12));
-  background: var(--tint, #007aff);
+  border: 1px solid var(--border);
+  background: var(--tint);
   color: #fff;
-  font-size: 24px;
+  font-size: var(--fs-title2);
   font-weight: 700;
   display: flex;
   align-items: center;
@@ -114,7 +114,7 @@
   
   &.fabLeft {
     right: auto;
-    left: 16px;
+    left: var(--s-4);
   }
   
   &.fabCenter {
@@ -130,21 +130,21 @@
 
 .fabDock {
   position: fixed;
-  bottom: calc(24px + var(--phone-bottom-ui-gap, 0px));
-  right: 24px;
+  bottom: calc(var(--s-6) + var(--phone-bottom-ui-gap, 0px));
+  right: var(--s-6);
   z-index: 100;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 8px;
+  gap: var(--s-2);
 }
 
 .fabTooltip {
   background: rgba(0, 0, 0, 0.8);
-  color: #ffffff;
-  padding: 8px 14px;
-  border-radius: 8px;
-  font-size: 14px;
+  color: #fff;
+  padding: var(--s-2) var(--s-3);
+  border-radius: var(--r-xs);
+  font-size: var(--fs-footnote);
   font-weight: 500;
   white-space: nowrap;
   animation: fadeIn 150ms ease;
@@ -167,7 +167,7 @@
   gap: 0;
   padding: 0;
   background: linear-gradient(180deg, color-mix(in srgb, var(--surface-2) 96%, transparent), color-mix(in srgb, var(--surface-3) 92%, transparent));
-  border-top: 1px solid var(--separator, rgba(0, 0, 0, 0.1));
+  border-top: 1px solid var(--separator);
   flex-shrink: 0;
 }
 
@@ -178,15 +178,15 @@
   align-items: center;
   justify-content: center;
   gap: 2px;
-  padding: 8px 4px;
+  padding: var(--s-2) var(--s-1);
   min-height: 50px;
   border: none;
   background: transparent;
-  color: var(--text-3, rgba(17, 17, 17, 0.52));
-  font-size: var(--fs-caption1, 0.75rem);
+  color: var(--text-3);
+  font-size: var(--fs-caption1);
   font-weight: 600;
   cursor: pointer;
-  transition: color var(--dur-2, 180ms) var(--ease-standard, cubic-bezier(0.2, 0.8, 0.2, 1));
+  transition: color var(--dur-2) var(--ease-standard);
   position: relative;
 
   &::after {
@@ -196,21 +196,22 @@
     right: 18px;
     bottom: 2px;
     height: 3px;
-    border-radius: 999px;
+    border-radius: var(--r-pill);
     background: transparent;
-    transition: background var(--dur-2, 180ms) var(--ease-standard, cubic-bezier(0.2, 0.8, 0.2, 1));
+    transition: background var(--dur-2) var(--ease-standard);
   }
-  
+
   &.tabActive {
-    color: var(--tint, #007aff);
+    color: var(--tint);
 
     &::after {
-      background: color-mix(in srgb, var(--tint, #007aff) 82%, white);
+      background: color-mix(in srgb, var(--tint) 82%, var(--surface));
     }
   }
-  
+
   &:active {
-    opacity: 0.7;
+    color: var(--tint);
+    opacity: 0.85;
   }
 }
 
@@ -238,19 +239,19 @@
 
 .tabBadge {
   position: absolute;
-  top: 4px;
+  top: var(--s-1);
   right: 50%;
   transform: translateX(14px);
   min-width: 16px;
   height: 16px;
-  padding: 0 4px;
-  border-radius: 8px;
-  background: var(--danger, #ff3b30);
+  padding: 0 var(--s-1);
+  border-radius: var(--r-xs);
+  background: var(--danger);
   color: #fff;
-  font-size: 10px;
+  font-size: var(--fs-caption2);
   font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 12px rgba(255, 59, 48, 0.22);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--danger) 22%, transparent);
 }

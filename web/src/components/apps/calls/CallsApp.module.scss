@@ -13,8 +13,8 @@
   padding: 0 16px;
   background: linear-gradient(
     180deg,
-    rgba(255, 255, 255, 0.94),
-    rgba(246, 249, 255, 0.9)
+    var(--surface-overlay),
+    color-mix(in srgb, var(--surface-overlay) 96%, transparent)
   );
   border-bottom: 1px solid var(--separator);
 }
@@ -159,7 +159,7 @@
   padding: 12px 14px;
   margin: 0 8px 6px;
   border-radius: 12px;
-  background: #fff;
+  background: var(--surface);
   border: 1px solid var(--border);
   animation: ios18-rise-in var(--dur-2) var(--ease-standard);
 
@@ -245,7 +245,7 @@
   display: flex;
   height: 60px;
   border-top: 1px solid var(--separator);
-  background: rgba(247, 249, 255, 0.95);
+  background: var(--surface-overlay);
 }
 
 .fab {
@@ -416,7 +416,7 @@
       rgba(90, 141, 255, 0) 56%
     ),
     linear-gradient(180deg, var(--bg), var(--surface-2) 62%, var(--surface-3));
-  color: #12213a;
+  color: var(--text);
   position: relative;
   overflow: hidden;
 }
@@ -436,8 +436,8 @@
   margin-bottom: 10px;
   font-size: 13px;
   font-weight: 600;
-  color: #4e607b;
-  background: rgba(255, 255, 255, 0.8);
+  color: var(--text-2);
+  background: var(--surface-card);
   padding: 6px 14px;
   border-radius: 999px;
 }
@@ -507,12 +507,12 @@
   bottom: 10px;
   font-size: 11px;
   font-weight: 700;
-  color: #233755;
+  color: var(--text);
   max-width: calc(100% - 20px);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  background: rgba(255, 255, 255, 0.7);
+  background: var(--surface-glass);
   padding: 3px 8px;
   border-radius: 6px;
 }
@@ -625,11 +625,11 @@
     border: none;
     border-radius: 18px;
     padding: 14px 10px;
-    background: rgba(255, 255, 255, 0.85);
-    color: #12213a;
+    background: var(--surface-card);
+    color: var(--text);
     box-shadow:
       0 8px 20px rgba(22, 40, 72, 0.1),
-      inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+      inset 0 0 0 1px color-mix(in srgb, var(--surface) 50%, transparent);
     cursor: pointer;
     transition:
       transform 120ms ease,
@@ -638,7 +638,7 @@
 
     &:active {
       transform: scale(0.96);
-      background: rgba(255, 255, 255, 0.95);
+      background: var(--surface-overlay);
     }
 
     .icon {
@@ -657,7 +657,7 @@
     .label {
       font-size: 11px;
       font-weight: 700;
-      color: #4e607b;
+      color: var(--text-2);
     }
 
     &.active {
@@ -707,7 +707,7 @@
   min-height: 36px;
   padding: 0 16px;
   background: rgba(255, 149, 0, 0.14);
-  color: #b66a00;
+  color: var(--warning);
   font-size: 12px;
   font-weight: 760;
 }

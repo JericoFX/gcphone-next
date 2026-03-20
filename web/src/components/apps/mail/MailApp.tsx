@@ -3,7 +3,9 @@ import { AppFAB } from '../../shared/layout/AppLayout';
 import { AppScaffold } from '../../shared/layout/AppScaffold';
 import { MediaActionButtons } from '../../shared/ui/MediaActionButtons';
 import { MediaAttachmentPreview } from '../../shared/ui/MediaAttachmentPreview';
+import { ActionSheet } from '../../shared/ui/ActionSheet';
 import { useRouter } from '../../Phone/PhoneFrame';
+import { useContextMenu } from '../../../hooks/useContextMenu';
 import { fetchNui } from '../../../utils/fetchNui';
 import { t } from '../../../i18n';
 import { usePhoneState } from '../../../store/phone';
@@ -91,6 +93,7 @@ export function MailApp() {
   const [attachmentName, setAttachmentName] = createSignal('');
   const [lastComposeRouteKey, setLastComposeRouteKey] = createSignal('');
   const [showAttachmentComposer, setShowAttachmentComposer] = createSignal(false);
+  const ctxMenu = useContextMenu<MailMessage>();
 
   let toFieldRef: HTMLInputElement | undefined;
   let bodyFieldRef: HTMLTextAreaElement | undefined;
@@ -436,6 +439,7 @@ export function MailApp() {
                               folder() === 'inbox' && Number(entry.is_read) === 0,
                           }}
                           onClick={() => void openMessage(entry)}
+                          onContextMenu={ctxMenu.onContextMenu(entry)}
                         >
                           <div class={styles.itemTop}>
                             <strong>
@@ -775,6 +779,49 @@ export function MailApp() {
           </div>
         </Show>
       </div>
+
+      <ActionSheet
+        open={ctxMenu.isOpen()}
+        title={ctxMenu.item()?.subject || t('mail.no_subject', language())}
+        onClose={ctxMenu.close}
+        actions={[
+          {
+            label: t('mail.open', language()) || 'Abrir',
+            onClick: () => {
+              const msg = ctxMenu.item();
+              if (msg) void openMessage(msg);
+              ctxMenu.close();
+            },
+          },
+          {
+            label: t('mail.reply', language()) || 'Responder',
+            tone: 'primary',
+            onClick: () => {
+              const msg = ctxMenu.item();
+              if (msg) {
+                setToInput(msg.sender_email || '');
+                setSubjectInput(`Re: ${msg.subject || ''}`);
+                setBodyInput('');
+                setView('compose');
+              }
+              ctxMenu.close();
+            },
+          },
+          {
+            label: t('action.delete', language()),
+            tone: 'danger',
+            onClick: async () => {
+              const msg = ctxMenu.item();
+              if (msg) {
+                setSelectedId(Number(msg.id));
+                setFolder(folder());
+                await deleteMessage();
+              }
+              ctxMenu.close();
+            },
+          },
+        ]}
+      />
     </AppScaffold>
   );
 }

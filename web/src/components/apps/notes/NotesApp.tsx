@@ -1,10 +1,13 @@
-import { For, Show, createSignal, onMount } from 'solid-js';
+import { For, Show, createSignal } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { fetchNui } from '../../../utils/fetchNui';
 import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
+import { useAsyncData } from '../../../hooks/useAsyncData';
+import { useContextMenu } from '../../../hooks/useContextMenu';
 import { AppScaffold } from '../../shared/layout';
 import { ScreenState } from '../../shared/ui/ScreenState';
 import { getStoredLanguage, t } from '../../../i18n';
+import { ActionSheet } from '../../shared/ui/ActionSheet';
 import styles from './NotesApp.module.scss';
 
 interface NoteItem {
@@ -19,13 +22,16 @@ const NOTE_COLORS = ['#FFF6C7', '#FFE2B8', '#FDE2E4', '#DFF4EA', '#DCEEFF', '#EC
 export function NotesApp() {
   const router = useRouter();
   const language = () => getStoredLanguage();
-  const [notes, setNotes] = createSignal<NoteItem[]>([]);
+  const { data: notes, loading, setData: setNotes, execute: loadNotes } = useAsyncData(
+    () => fetchNui<NoteItem[]>('notesGetAll', {}, []),
+    { initialData: [] as NoteItem[] }
+  );
   const [active, setActive] = createSignal<NoteItem | null>(null);
   const [isComposerOpen, setIsComposerOpen] = createSignal(false);
   const [title, setTitle] = createSignal('');
   const [content, setContent] = createSignal('');
   const [color, setColor] = createSignal(NOTE_COLORS[0]);
-  const [loading, setLoading] = createSignal(true);
+  const ctxMenu = useContextMenu<NoteItem>();
 
   usePhoneKeyHandler({
     Backspace: () => {
@@ -33,15 +39,6 @@ export function NotesApp() {
       router.goBack();
     },
   });
-
-  const loadNotes = async () => {
-    setLoading(true);
-    const list = await fetchNui<NoteItem[]>('notesGetAll', {}, []);
-    setNotes(list || []);
-    setLoading(false);
-  };
-
-  onMount(() => { void loadNotes(); });
 
   const openComposer = (note?: NoteItem) => {
     if (note) {
@@ -154,7 +151,7 @@ export function NotesApp() {
             <div class={styles.list}>
               <For each={notes()}>
                 {(note) => (
-                  <article class={styles.card} style={{ '--note-color': note.color }}>
+                  <article class={styles.card} style={{ '--note-color': note.color }} onContextMenu={ctxMenu.onContextMenu(note)}>
                     <div class={styles.cardAccent} />
                     <div class={styles.cardBody}>
                       <div class={styles.cardHeader}>
@@ -175,6 +172,39 @@ export function NotesApp() {
           </div>
         </Show>
       </ScreenState>
+
+      <ActionSheet
+        open={ctxMenu.isOpen()}
+        title={ctxMenu.item()?.title || t('notes.title', language())}
+        onClose={ctxMenu.close}
+        actions={[
+          {
+            label: t('notes.edit', language()) || 'Editar',
+            onClick: () => {
+              const note = ctxMenu.item();
+              if (note) openComposer(note);
+              ctxMenu.close();
+            },
+          },
+          {
+            label: 'Mail',
+            onClick: () => {
+              const note = ctxMenu.item();
+              if (note) shareNoteByMail(note);
+              ctxMenu.close();
+            },
+          },
+          {
+            label: t('action.delete', language()),
+            tone: 'danger',
+            onClick: () => {
+              const note = ctxMenu.item();
+              if (note) void remove(note.id);
+              ctxMenu.close();
+            },
+          },
+        ]}
+      />
     </AppScaffold>
   );
 }

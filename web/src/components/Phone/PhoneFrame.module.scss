@@ -14,7 +14,7 @@
   --phone-bottom-ui-gap: calc(10px + var(--safe-b));
   overflow: hidden;
   position: absolute;
-  background-color: white;
+  background-color: var(--bg);
   width: var(--phone-screen-width);
   height: var(--phone-screen-height);
   bottom: var(--phone-screen-bottom);
@@ -101,7 +101,7 @@
 
 .multitask-card {
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.9);
+  background: var(--surface-overlay);
   display: grid;
   grid-template-columns: 1fr auto;
   align-items: center;
@@ -124,7 +124,7 @@
   span {
     font-size: 13px;
     font-weight: 700;
-    color: #13213a;
+    color: var(--text);
   }
 }
 
@@ -134,7 +134,7 @@
   border: none;
   border-radius: 999px;
   margin-right: 10px;
-  background: rgba(19, 33, 58, 0.1);
+  background: color-mix(in srgb, var(--text) 10%, transparent);
   font-size: 18px;
 }
 
@@ -155,7 +155,7 @@
   width: 100%;
   max-width: 320px;
   border-radius: 18px;
-  background: rgba(248, 251, 255, 0.98);
+  background: var(--sheet-bg);
   box-shadow: 0 18px 34px rgba(6, 17, 31, 0.28);
   padding: 14px;
   display: grid;
@@ -165,14 +165,14 @@
     margin: 0;
     font-size: 16px;
     font-weight: 760;
-    color: #12223d;
+    color: var(--text);
   }
 
   p {
     margin: 0;
     font-size: 13px;
     line-height: 1.42;
-    color: #334766;
+    color: var(--text-2);
   }
 }
 
@@ -264,7 +264,7 @@
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: radial-gradient(140% 120% at 50% -20%, #f9fbff, #eef2fb 52%, #e8edf8 100%);
+  background: radial-gradient(140% 120% at 50% -20%, var(--bg), color-mix(in srgb, var(--surface) 72%, var(--bg)) 52%, color-mix(in srgb, var(--surface) 52%, var(--bg)) 100%);
   animation: menu-open 240ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
@@ -284,8 +284,8 @@
   align-items: center;
   height: 58px;
   padding: 0 16px;
-  background: rgba(255, 255, 255, 0.68);
-  border-bottom: 1px solid rgba(223, 230, 242, 0.92);
+  background: var(--surface-glass);
+  border-bottom: 1px solid var(--separator);
   
   .back-btn {
     width: 40px;
@@ -293,14 +293,14 @@
     border: none;
     background: transparent;
     font-size: 28px;
-    color: #007aff;
+    color: var(--tint);
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
     
     &:hover {
-      background-color: rgba(0, 0, 0, 0.05);
+      background-color: var(--hover);
       border-radius: 50%;
     }
   }
@@ -339,7 +339,7 @@
   padding-top: 8px;
   background: transparent;
   border: none;
-  color: #19243a;
+  color: var(--text);
   cursor: pointer;
   
   img {
@@ -361,7 +361,7 @@
   }
   
   &:hover {
-    background-color: rgba(42, 87, 166, 0.08);
+    background-color: var(--hover);
     border-radius: 14px;
   }
 }
@@ -377,7 +377,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #34c759;
+  background: var(--success);
   color: #fff;
   font-size: 14px;
   font-weight: 700;
@@ -387,6 +387,6 @@
 .menu-drop-zone {
   width: 100%;
   height: 104px;
-  border: 1px dashed #c9c9c9;
+  border: 1px dashed var(--border);
   border-radius: 12px;
 }

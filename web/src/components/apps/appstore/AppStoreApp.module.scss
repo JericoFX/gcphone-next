@@ -10,18 +10,18 @@
   gap: 4px;
   padding: 12px 14px;
   border-radius: 16px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(237, 244, 255, 0.96));
-  border: 1px solid rgba(24, 106, 221, 0.1);
+  background: linear-gradient(180deg, var(--surface-overlay), color-mix(in srgb, var(--tint) 6%, var(--surface)));
+  border: 1px solid color-mix(in srgb, var(--tint) 10%, transparent);
 }
 
 .heroCard strong {
   font-size: 22px;
-  color: #0d2a5c;
+  color: var(--text);
 }
 
 .heroCard span {
   font-size: 12px;
-  color: rgba(13, 42, 92, 0.62);
+  color: var(--text-3);
 }
 
 .app-info {
@@ -53,9 +53,9 @@
   justify-items: start;
   gap: 8px;
   padding: 12px;
-  border: 1px solid rgba(24, 106, 221, 0.12);
+  border: 1px solid color-mix(in srgb, var(--tint) 12%, transparent);
   border-radius: 16px;
-  background: linear-gradient(180deg, rgba(247, 250, 255, 0.98), rgba(231, 239, 255, 0.96));
+  background: linear-gradient(180deg, var(--surface-overlay), color-mix(in srgb, var(--tint) 8%, var(--surface)));
   text-align: left;
 }
 
@@ -67,12 +67,12 @@
 
 .featuredCard strong {
   font-size: 13px;
-  color: #14305a;
+  color: var(--text);
 }
 
 .featuredCard span {
   font-size: 11px;
-  color: rgba(20, 48, 90, 0.62);
+  color: var(--text-3);
 }
 
 .rowTitleLine {
@@ -85,8 +85,8 @@
 .statusChip {
   padding: 2px 7px;
   border-radius: 999px;
-  background: rgba(24, 106, 221, 0.1);
-  color: #1561ce;
+  background: color-mix(in srgb, var(--tint) 10%, transparent);
+  color: var(--tint);
   font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
@@ -102,7 +102,7 @@
 .openBtn {
   border: none;
   background: transparent;
-  color: #1561ce;
+  color: var(--tint);
   font-size: 12px;
   font-weight: 700;
 }
@@ -112,5 +112,5 @@
   text-align: right;
   font-size: 12px;
   font-weight: 700;
-  color: #0b81ff;
+  color: var(--tint);
 }

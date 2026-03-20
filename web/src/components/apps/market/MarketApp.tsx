@@ -2,9 +2,9 @@ import { createMemo, createSignal, For, Show, onMount } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { fetchNui } from '../../../utils/fetchNui';
 import { sanitizeMediaUrl, sanitizeText } from '../../../utils/sanitize';
-import { uiPrompt } from '../../../utils/uiDialog';
-import { uiAlert } from '../../../utils/uiAlert';
 import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
+import { useMediaAttachment } from '../../../hooks/useMediaAttachment';
+import { useContextMenu } from '../../../hooks/useContextMenu';
 import { ActionSheet } from '../../shared/ui/ActionSheet';
 import { MediaLightbox } from '../../shared/ui/MediaLightbox';
 import { t } from '../../../i18n';
@@ -34,6 +34,7 @@ export function MarketApp() {
   const [category, setCategory] = createSignal('general');
   const [photoUrl, setPhotoUrl] = createSignal('');
   const [showAttachSheet, setShowAttachSheet] = createSignal(false);
+  const ctxMenu = useContextMenu<any>();
   const [viewerUrl, setViewerUrl] = createSignal<string | null>(null);
   const [query, setQuery] = createSignal('');
   const [selectedCategory, setSelectedCategory] = createSignal('all');
@@ -82,39 +83,7 @@ export function MarketApp() {
     }
   };
 
-  const attachFromGallery = async () => {
-    const gallery = await fetchNui<any[]>('getGallery', undefined, []);
-    if (gallery && gallery.length > 0) {
-      const nextUrl = sanitizeMediaUrl(gallery[0].url);
-      if (nextUrl) setPhotoUrl(nextUrl);
-    }
-  };
-
-  const attachFromCamera = async () => {
-    const shot = await fetchNui<{ url?: string }>('takePhoto', {} as any, { url: '' } as any);
-    if (shot?.url) {
-      const nextUrl = sanitizeMediaUrl(shot.url);
-      if (nextUrl) {
-        setPhotoUrl(nextUrl);
-        return;
-      }
-    }
-    const gallery = await fetchNui<any[]>('getGallery', undefined, []);
-    if (gallery && gallery.length > 0) {
-      const nextUrl = sanitizeMediaUrl(gallery[0].url);
-      if (nextUrl) setPhotoUrl(nextUrl);
-    }
-  };
-
-  const attachByUrl = async () => {
-    const input = await uiPrompt(t('market.url_prompt', language()), { title: t('market.url_prompt_title', language()) });
-    const nextUrl = sanitizeMediaUrl(input);
-    if (nextUrl) {
-      setPhotoUrl(nextUrl);
-      return;
-    }
-    if (input && input.trim()) uiAlert(t('market.url_invalid', language()));
-  };
+  const media = useMediaAttachment({ onAttached: (url) => setPhotoUrl(url) });
 
   const markSold = async (listingId: number) => {
     const result = await fetchNui<{ success?: boolean }>('marketMarkAsSold', { listingId });
@@ -212,7 +181,7 @@ export function MarketApp() {
       <div class={styles.list}>
         <For each={visibleListings()}>
           {(item) => (
-            <article class={styles.card}>
+            <article class={styles.card} onContextMenu={ctxMenu.onContextMenu(item)}>
               <strong>{item.title}</strong>
               <span class={styles.price}>${Number(item.price || 0).toLocaleString('en-US')}</span>
               <p>{item.description || t('market.no_description', language())}</p>
@@ -257,10 +226,22 @@ export function MarketApp() {
         title={t('market.attach_title', language())}
         onClose={() => setShowAttachSheet(false)}
         actions={[
-          { label: t('market.attach_gallery', language()), tone: 'primary', onClick: attachFromGallery },
-          { label: t('market.attach_camera', language()), onClick: attachFromCamera },
-          { label: t('market.attach_url', language()), onClick: attachByUrl },
+          { label: t('market.attach_gallery', language()), tone: 'primary', onClick: media.attachFromGallery },
+          { label: t('market.attach_camera', language()), onClick: media.attachFromCamera },
+          { label: t('market.attach_url', language()), onClick: media.attachByUrl },
           { label: t('market.attach_remove', language()), tone: 'danger', onClick: () => { setPhotoUrl(''); } },
+        ]}
+      />
+      <ActionSheet
+        open={ctxMenu.isOpen()}
+        title={ctxMenu.item()?.title || 'Listing'}
+        onClose={ctxMenu.close}
+        actions={[
+          { label: t('market.contact', language()), tone: 'primary' as const, onClick: () => { const id = ctxMenu.item()?.id; ctxMenu.close(); if (id) contactSeller(id); } },
+          ...(tab() === 'mine' ? [
+            { label: t('market.sold', language()), onClick: () => { const id = ctxMenu.item()?.id; ctxMenu.close(); if (id) markSold(id); } },
+            { label: t('common.delete', language()), tone: 'danger' as const, onClick: () => { const id = ctxMenu.item()?.id; ctxMenu.close(); if (id) deleteListing(id); } },
+          ] : []),
         ]}
       />
       <MediaLightbox url={viewerUrl()} onClose={() => setViewerUrl(null)} />

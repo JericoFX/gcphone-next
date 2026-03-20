@@ -6,6 +6,7 @@ import { sanitizeMediaUrl, sanitizeText } from '../../../utils/sanitize';
 import { uiConfirm } from '../../../utils/uiDialog';
 import { uiAlert } from '../../../utils/uiAlert';
 import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
+import { useContextMenu } from '../../../hooks/useContextMenu';
 import { usePhone } from '../../../store/phone';
 import { AppScaffold } from '../../shared/layout';
 import { useAppCache } from '../../../hooks';
@@ -17,6 +18,7 @@ import { SegmentedTabs } from '../../shared/ui/SegmentedTabs';
 import { SheetIntro } from '../../shared/ui/SheetIntro';
 import { FormRow, FormSection, Modal, ModalActions, ModalButton } from '../../shared/ui/Modal';
 import { t } from '../../../i18n';
+import { ActionSheet } from '../../shared/ui/ActionSheet';
 import styles from './YellowPagesApp.module.scss';
 
 interface Listing {
@@ -89,6 +91,7 @@ export function YellowPagesApp() {
   const [showComposer, setShowComposer] = createSignal(false);
   const [showContactModal, setShowContactModal] = createSignal(false);
   const [viewerUrl, setViewerUrl] = createSignal<string | null>(null);
+  const ctxMenu = useContextMenu<Listing>();
 
   // Composer
   const [title, setTitle] = createSignal('');
@@ -329,7 +332,7 @@ export function YellowPagesApp() {
           
           <For each={listings()}>
             {(listing) => (
-              <div class={styles.listingCard} onClick={() => openListing(listing)}>
+              <div class={styles.listingCard} onClick={() => openListing(listing)} onContextMenu={ctxMenu.onContextMenu(listing)}>
                 <div class={styles.cardImage}>
                   <Show when={Array.isArray(listing.photos) && listing.photos.length > 0}>
                     <img src={listing.photos[0]} alt="" />
@@ -598,6 +601,39 @@ export function YellowPagesApp() {
         </Modal>
 
         <MediaLightbox url={viewerUrl()} onClose={() => setViewerUrl(null)} />
+
+        <ActionSheet
+          open={ctxMenu.isOpen()}
+          title={ctxMenu.item()?.title || t('yellowpages.title', language())}
+          onClose={ctxMenu.close}
+          actions={[
+            {
+              label: t('calls.call', language()),
+              onClick: () => {
+                const listing = ctxMenu.item();
+                if (listing) void openListing(listing).then(() => setShowContactModal(true));
+                ctxMenu.close();
+              },
+            },
+            {
+              label: t('contacts.send_message', language()),
+              onClick: () => {
+                const listing = ctxMenu.item();
+                if (listing) void openListing(listing).then(() => setShowContactModal(true));
+                ctxMenu.close();
+              },
+            },
+            {
+              label: t('yellowpages.view_details', language()) || 'Ver detalle',
+              tone: 'primary',
+              onClick: () => {
+                const listing = ctxMenu.item();
+                if (listing) void openListing(listing);
+                ctxMenu.close();
+              },
+            },
+          ]}
+        />
       </div>
     </AppScaffold>
   );

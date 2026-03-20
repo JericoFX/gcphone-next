@@ -3,8 +3,8 @@ import { useRouter } from '../../Phone/PhoneFrame';
 import { fetchNui } from '../../../utils/fetchNui';
 import { timeAgo } from '../../../utils/misc';
 import { resolveMediaType, sanitizeMediaUrl, sanitizeText } from '../../../utils/sanitize';
-import { uiPrompt } from '../../../utils/uiDialog';
 import { uiAlert } from '../../../utils/uiAlert';
+import { useMediaAttachment } from '../../../hooks/useMediaAttachment';
 import { startMockLiveFeed } from '../../../utils/liveMock';
 import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { useNuiCustomEvent } from '../../../utils/useNui';
@@ -405,31 +405,7 @@ export function NewsApp() {
     await load();
   };
 
-  const attachFromGallery = async () => {
-    const gallery = await fetchNui<Array<{ url?: string }>>('getGallery', undefined, []);
-    const nextUrl = sanitizeMediaUrl(gallery?.[0]?.url || '');
-    if (nextUrl) setMediaUrl(nextUrl);
-  };
-
-  const attachFromCamera = async () => {
-    const shot = await fetchNui<{ url?: string }>('takePhoto', {}, { url: '' });
-    const nextUrl = sanitizeMediaUrl(shot?.url || '');
-    if (nextUrl) {
-      setMediaUrl(nextUrl);
-      return;
-    }
-    await attachFromGallery();
-  };
-
-  const attachByUrl = async () => {
-    const input = await uiPrompt(t('news.attach_prompt', language()), { title: t('messages.attach', language()) });
-    const nextUrl = sanitizeMediaUrl(input);
-    if (nextUrl) {
-      setMediaUrl(nextUrl);
-      return;
-    }
-    if (input && input.trim()) uiAlert(t('messages.error.invalid_media_url', language()));
-  };
+  const media = useMediaAttachment({ onAttached: (url) => setMediaUrl(url) });
 
   const viewArticle = async (articleId: number) => {
     await fetchNui('newsViewArticle', { articleId });
@@ -764,9 +740,9 @@ export function NewsApp() {
             <div class={styles.composeAttachments}>
               <MediaActionButtons
                 actions={[
-                  { icon: './img/icons_ios/gallery.svg', label: t('camera.gallery', language()), onClick: attachFromGallery },
-                  { icon: './img/icons_ios/camera.svg', label: t('chirp.camera', language()), onClick: attachFromCamera },
-                  { icon: './img/icons_ios/ui-link.svg', label: 'URL', onClick: () => void attachByUrl() },
+                  { icon: './img/icons_ios/gallery.svg', label: t('camera.gallery', language()), onClick: media.attachFromGallery },
+                  { icon: './img/icons_ios/camera.svg', label: t('chirp.camera', language()), onClick: media.attachFromCamera },
+                  { icon: './img/icons_ios/ui-link.svg', label: 'URL', onClick: () => void media.attachByUrl() },
                   ...(mediaUrl() ? [{ icon: './img/icons_ios/ui-close.svg', label: 'Quitar', onClick: () => setMediaUrl(''), tone: 'danger' as const }] : []),
                 ]}
                 variant="compact"

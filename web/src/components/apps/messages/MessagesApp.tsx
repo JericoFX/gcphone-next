@@ -4,12 +4,15 @@ import { useMessages } from '../../../store/messages';
 import { useContacts } from '../../../store/contacts';
 import { usePhoneState } from '../../../store/phone';
 import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
+import { useContextMenu } from '../../../hooks/useContextMenu';
+import { useMediaAttachment } from '../../../hooks/useMediaAttachment';
 import { fetchNui } from '../../../utils/fetchNui';
 import { formatPhoneNumber, generateColorForString, timeAgo } from '../../../utils/misc';
 import { resolveMediaType, sanitizeMediaUrl, sanitizePhone, sanitizeText } from '../../../utils/sanitize';
 import { parseSharedContactMessage } from '../../../utils/contactShare';
 import { uiPrompt } from '../../../utils/uiDialog';
 import { uiAlert } from '../../../utils/uiAlert';
+import { getPlayerCoords, formatLocationMessage } from '../../../utils/playerLocation';
 import { ActionSheet } from '../../shared/ui/ActionSheet';
 import { InlineNotice } from '../../shared/ui/InlineNotice';
 import { LetterAvatar } from '../../shared/ui/LetterAvatar';
@@ -43,6 +46,7 @@ export function MessagesApp() {
   const [selectedIndex, setSelectedIndex] = createSignal(-1);
   const [search, setSearch] = createSignal('');
   const [showUnreadOnly, setShowUnreadOnly] = createSignal(false);
+  const ctxMenu = useContextMenu<any>();
   const [routeConversationName, setRouteConversationName] = createSignal('');
   const language = () => phoneState.settings.language || 'es';
 
@@ -182,51 +186,15 @@ export function MessagesApp() {
     if (isReadOnly()) return;
     const number = selectedConversation();
     const content = sanitizeText(messageInput(), 800);
-    const media = sanitizeMediaUrl(attachmentUrl());
-    if (!number || (!content && !media)) return;
-    
-    await messagesActions.send(number, content, media || undefined);
+    const mediaFile = sanitizeMediaUrl(attachmentUrl());
+    if (!number || (!content && !mediaFile)) return;
+
+    await messagesActions.send(number, content, mediaFile || undefined);
     setMessageInput('');
     setAttachmentUrl(null);
   };
 
-  const attachFromGallery = async () => {
-    if (isReadOnly()) return;
-    const gallery = await fetchNui<any[]>('getGallery', undefined, []);
-    if (gallery && gallery.length > 0) {
-      const nextUrl = sanitizeMediaUrl(gallery[0].url);
-      if (nextUrl) setAttachmentUrl(nextUrl);
-    }
-  };
-
-  const attachFromCamera = async () => {
-    if (isReadOnly()) return;
-    const shot = await fetchNui<{ url?: string }>('takePhoto', {} as any, { url: '' } as any);
-    if (shot?.url) {
-      const nextUrl = sanitizeMediaUrl(shot.url);
-      if (nextUrl) {
-        setAttachmentUrl(nextUrl);
-        return;
-      }
-    }
-
-    const gallery = await fetchNui<any[]>('getGallery', undefined, []);
-    if (gallery && gallery.length > 0) {
-      const nextUrl = sanitizeMediaUrl(gallery[0].url);
-      if (nextUrl) setAttachmentUrl(nextUrl);
-    }
-  };
-
-  const attachByUrl = async () => {
-    if (isReadOnly()) return;
-    const input = await uiPrompt(t('messages.prompt.media_url', language()), { title: t('messages.attach', language()) });
-    const nextUrl = sanitizeMediaUrl(input);
-    if (nextUrl) {
-      setAttachmentUrl(nextUrl);
-      return;
-    }
-    if (input && input.trim()) uiAlert(t('messages.error.invalid_media_url', language()));
-  };
+  const media = useMediaAttachment({ onAttached: (url) => setAttachmentUrl(url) });
   
   const getContactName = (number: string) => {
     return contactsByNumber().get(number) || number;
@@ -264,10 +232,9 @@ export function MessagesApp() {
     if (isReadOnly()) return;
     const number = selectedConversation();
     if (!number) return;
-    const x = Number(await uiPrompt(t('messages.prompt.coord_x', language()), { title: t('maps.share_location', language()) }));
-    const y = Number(await uiPrompt(t('messages.prompt.coord_y', language()), { title: t('maps.share_location', language()) }));
-    if (!Number.isFinite(x) || !Number.isFinite(y)) return;
-    await messagesActions.send(number, `📍 ${t('maps.share_location', language())} LOC:${x.toFixed(2)},${y.toFixed(2)}`);
+    const coords = await getPlayerCoords();
+    if (!coords) return;
+    await messagesActions.send(number, formatLocationMessage(coords, t('maps.share_location', language())));
   };
   
   return (
@@ -281,9 +248,9 @@ export function MessagesApp() {
         attachmentUrl={attachmentUrl()}
         onInput={setMessageInput}
         onSend={sendMessage}
-        onAttachGallery={attachFromGallery}
-        onAttachCamera={attachFromCamera}
-        onAttachUrl={attachByUrl}
+        onAttachGallery={media.attachFromGallery}
+        onAttachCamera={media.attachFromCamera}
+        onAttachUrl={media.attachByUrl}
         onSendLocation={sendLocationText}
         onOpenCoords={(x, y) => router.navigate('maps', { x, y })}
         onClearAttachment={() => setAttachmentUrl(null)}
@@ -316,6 +283,7 @@ export function MessagesApp() {
                         class={styles.conversationItem}
                         classList={{ [styles.selected]: isSelectedConversationIndex(index()) }}
                         onClick={() => openConversation(convo.number, convo.display)}
+                        onContextMenu={ctxMenu.onContextMenu(convo)}
                       >
                       <LetterAvatar class={styles.avatar} color={generateColorForString(convo.number)} label={convo.display} />
                         <div class={styles.info}>
@@ -350,6 +318,43 @@ export function MessagesApp() {
         </AppScaffold>
       </Show>
       <MediaLightbox url={viewerUrl()} onClose={() => setViewerUrl(null)} />
+
+      <ActionSheet
+        open={ctxMenu.isOpen()}
+        title={ctxMenu.item()?.display || ctxMenu.item()?.number || ''}
+        onClose={ctxMenu.close}
+        actions={[
+          {
+            label: t('messages.title', language()),
+            tone: 'primary',
+            onClick: () => {
+              const c = ctxMenu.item();
+              if (!c) return;
+              ctxMenu.close();
+              openConversation(c.number, c.display);
+            },
+          },
+          {
+            label: t('contacts.call', language()),
+            onClick: () => {
+              const c = ctxMenu.item();
+              if (!c) return;
+              ctxMenu.close();
+              fetchNui('startCall', { phoneNumber: c.number });
+            },
+          },
+          {
+            label: t('messages.delete', language()),
+            tone: 'danger',
+            onClick: () => {
+              const c = ctxMenu.item();
+              if (!c) return;
+              ctxMenu.close();
+              void deleteConversation(c.number);
+            },
+          },
+        ]}
+      />
     </>
   );
 }

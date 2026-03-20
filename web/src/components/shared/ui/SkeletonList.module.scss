@@ -8,8 +8,8 @@
   min-height: 54px;
   border-radius: 12px;
   padding: 8px;
-  background: #fff;
-  border: 1px solid #e3e9f3;
+  background: var(--surface);
+  border: 1px solid var(--border);
   display: flex;
   align-items: center;
   gap: 8px;
@@ -19,7 +19,7 @@
   width: 36px;
   height: 36px;
   border-radius: 999px;
-  background: linear-gradient(90deg, #edf2f9 20%, #f7f9fc 40%, #edf2f9 60%);
+  background: linear-gradient(90deg, var(--surface-2) 20%, var(--surface) 40%, var(--surface-2) 60%);
   background-size: 180% 100%;
   animation: shimmer 1.15s linear infinite;
 }
@@ -31,7 +31,7 @@
 .line-lg,
 .line-sm {
   border-radius: 8px;
-  background: linear-gradient(90deg, #edf2f9 20%, #f7f9fc 40%, #edf2f9 60%);
+  background: linear-gradient(90deg, var(--surface-2) 20%, var(--surface) 40%, var(--surface-2) 60%);
   background-size: 180% 100%;
   animation: shimmer 1.15s linear infinite;
 }

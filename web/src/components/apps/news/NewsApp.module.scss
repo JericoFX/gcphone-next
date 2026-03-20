@@ -5,15 +5,15 @@
   background:
     radial-gradient(120% 90% at 0% -10%, rgba(31, 122, 203, 0.08), transparent 52%),
     radial-gradient(120% 90% at 100% 0%, rgba(15, 148, 168, 0.1), transparent 46%),
-    linear-gradient(180deg, #f8fbff 0%, #eef4fb 100%);
+    var(--bg);
 }
 
 .statusBanner {
   padding: 10px 12px;
   border-radius: 14px;
-  background: rgba(26, 67, 118, 0.12);
-  border: 1px solid rgba(55, 112, 188, 0.22);
-  color: #2c5b95;
+  background: color-mix(in srgb, var(--tint) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--tint) 22%, transparent);
+  color: var(--tint);
   font-size: 12px;
   font-weight: 600;
 }
@@ -56,14 +56,14 @@
   min-width: 0;
   padding: 11px 12px;
   border-radius: 14px;
-  border: 1px solid rgba(18, 43, 74, 0.12);
-  background: rgba(247, 250, 255, 0.96);
-  color: #143056;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
 }
 
 .searchInput {
   min-height: 44px;
-  background: rgba(255, 255, 255, 0.9);
+  background: var(--surface);
 }
 
 .searchInput::placeholder,
@@ -71,7 +71,7 @@
 .modalContent textarea::placeholder,
 .liveScaleformPanel input::placeholder,
 .liveChatInputRow input::placeholder {
-  color: rgba(20, 48, 86, 0.42);
+  color: var(--text-3);
 }
 
 .tools {
@@ -101,7 +101,7 @@
 .actions .primary,
 .liveChatInputRow button,
 .liveScaleformPanel button {
-  background: linear-gradient(135deg, #1f7acb, #0f94a8);
+  background: linear-gradient(135deg, var(--tint), color-mix(in srgb, var(--tint) 80%, var(--success)));
   color: #fff;
 }
 
@@ -111,8 +111,8 @@
 .deleteBtn,
 .liveUtilityButton,
 .liveReactionRow button {
-  background: rgba(224, 234, 247, 0.9);
-  color: #1a426f;
+  background: var(--fill-tertiary);
+  color: var(--text);
 }
 
 .liveBtn,
@@ -135,7 +135,7 @@
 .card strong,
 .modalContent h2,
 .liveChatHeader strong {
-  color: #102a45;
+  color: var(--text);
 }
 
 .liveRailHeader span,
@@ -150,7 +150,7 @@
 .liveTicker,
 .liveChatBody p,
 .liveChatItem small {
-  color: rgba(16, 42, 69, 0.68);
+  color: var(--text-2);
 }
 
 .liveRailList {
@@ -164,16 +164,16 @@
   min-width: 180px;
   padding: 0;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.96);
-  border: 1px solid rgba(18, 43, 74, 0.08);
+  background: var(--surface-card);
+  border: 1px solid var(--border-subtle);
   text-align: left;
-  box-shadow: 0 10px 24px rgba(16, 42, 69, 0.08);
+  box-shadow: var(--shadow-1);
 }
 
 .liveRailThumb {
   position: relative;
   height: 100px;
-  background: linear-gradient(135deg, #163b62, #0c8d95);
+  background: linear-gradient(135deg, var(--tint), color-mix(in srgb, var(--tint) 80%, var(--success)));
 }
 
 .liveRailThumb img,
@@ -234,9 +234,9 @@
   gap: 10px;
   padding: 14px;
   border-radius: 18px;
-  background: rgba(255, 255, 255, 0.96);
-  border: 1px solid rgba(18, 43, 74, 0.08);
-  box-shadow: 0 12px 26px rgba(16, 42, 69, 0.06);
+  background: var(--surface-card);
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow-1);
 }
 
 .meta {
@@ -264,8 +264,8 @@
 
 .cardLiveBadge {
   justify-self: start;
-  background: rgba(187, 31, 46, 0.1);
-  color: #b91f2e;
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
+  color: var(--danger);
 }
 
 .deleteBtn {
@@ -290,8 +290,8 @@
 .emptyState {
   margin-top: 8px;
   border-radius: 18px;
-  background: rgba(255, 255, 255, 0.84);
-  border: 1px solid rgba(18, 43, 74, 0.08);
+  background: var(--surface-overlay);
+  border: 1px solid var(--border-subtle);
 }
 
 .composePreviewMedia {
@@ -527,6 +527,6 @@
 }
 
 .fab {
-  background: linear-gradient(135deg, #1f7acb, #0f94a8);
+  background: linear-gradient(135deg, var(--tint), color-mix(in srgb, var(--tint) 80%, var(--success)));
   color: #fff;
 }

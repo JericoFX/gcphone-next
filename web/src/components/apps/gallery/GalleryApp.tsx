@@ -1,4 +1,4 @@
-import { createSignal, createEffect, For, Show, createMemo, onMount } from 'solid-js';
+import { createSignal, createEffect, For, Show, createMemo } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { usePhoneActions } from '../../../store/phone';
 import { usePhoneState } from '../../../store/phone';
@@ -7,6 +7,7 @@ import { useNotifications } from '../../../store/notifications';
 import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { useNfcShare } from '../../../hooks/useNfcShare';
 import { fetchNui } from '../../../utils/fetchNui';
+import { useAsyncData } from '../../../hooks/useAsyncData';
 import { useNuiEvent } from '../../../utils/useNui';
 import { sanitizeMediaUrl, sanitizePhone } from '../../../utils/sanitize';
 import { uiPrompt } from '../../../utils/uiDialog';
@@ -46,11 +47,14 @@ export function GalleryApp() {
   const phoneState = usePhoneState();
   const phoneActions = usePhoneActions();
   const [contactsState] = useContacts();
-  const [photos, setPhotos] = createSignal<any[]>([]);
+  const { data: photos, loading, setData: setPhotos, execute: loadPhotos } = useAsyncData(
+    () => fetchNui<any[]>('getGallery', undefined, []),
+    { initialData: [] as any[] }
+  );
   const [selectedPhoto, setSelectedPhoto] = createSignal<any>(null);
   const [selectedIndex, setSelectedIndex] = createSignal(-1);
-  const [loading, setLoading] = createSignal(true);
   const [showActions, setShowActions] = createSignal(false);
+  const [showShareSheet, setShowShareSheet] = createSignal(false);
   const [shareChatApp, setShareChatApp] = createSignal<'messages' | 'wavechat' | null>(null);
   const [, notificationsActions] = useNotifications();
   const [receivedPhotoUrl, setReceivedPhotoUrl] = createSignal<string | null>(null);
@@ -96,16 +100,6 @@ export function GalleryApp() {
   );
   const isReadOnly = createMemo(() => phoneState.accessMode === 'foreign-readonly');
   
-  const loadPhotos = async () => {
-    const result = await fetchNui('getGallery', undefined, []);
-    setPhotos(result || []);
-    setLoading(false);
-  };
-  
-  onMount(() => {
-    void loadPhotos();
-  });
-
   usePhoneKeyHandler({
     ArrowLeft: () => {
       if (!selectedPhoto()) return;
@@ -289,6 +283,12 @@ export function GalleryApp() {
                   class={styles.photoItem}
                   classList={{ [styles.selected]: selectedIndex() === index() }}
                   onClick={() => openPhotoAt(index())}
+                  onContextMenu={(e: MouseEvent) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    openPhotoAt(index());
+                    setShowActions(true);
+                  }}
                 >
                   <img src={photo.url} alt="Photo" />
                 </div>
@@ -325,14 +325,23 @@ export function GalleryApp() {
         title={t('app.gallery', language())}
         onClose={() => setShowActions(false)}
         actions={[
-          { label: 'Compartir NFC', tone: 'primary' as const, onClick: () => { setShowActions(false); nfcShare.open(); } },
-          { label: t('gallery.share_messages', language()), onClick: () => void shareToMessages('messages') },
-          { label: t('gallery.share_wavechat', language()), onClick: () => void shareToMessages('wavechat') },
-          { label: t('gallery.share_mail', language()), onClick: shareToMail },
-          { label: t('gallery.share_chirp', language()), onClick: () => shareToFeedApp('chirp') },
-          { label: t('gallery.share_snap', language()), onClick: () => shareToFeedApp('snap') },
-          { label: t('gallery.use_wallpaper', language()), tone: 'primary' as const, onClick: setAsWallpaper },
+          { label: t('garage.share', language()), tone: 'primary' as const, onClick: () => { setShowActions(false); setShowShareSheet(true); } },
+          { label: t('gallery.use_wallpaper', language()), onClick: setAsWallpaper },
           { label: t('gallery.delete_photo', language()), tone: 'danger' as const, onClick: deletePhoto },
+        ]}
+      />
+
+      <ActionSheet
+        open={showShareSheet()}
+        title={t('garage.share', language())}
+        onClose={() => setShowShareSheet(false)}
+        actions={[
+          { label: 'NFC', tone: 'primary' as const, onClick: () => { setShowShareSheet(false); nfcShare.open(); } },
+          { label: 'Messages', onClick: () => { setShowShareSheet(false); void shareToMessages('messages'); } },
+          { label: 'WaveChat', onClick: () => { setShowShareSheet(false); void shareToMessages('wavechat'); } },
+          { label: 'Mail', onClick: () => { setShowShareSheet(false); shareToMail(); } },
+          { label: 'Chirp', onClick: () => { setShowShareSheet(false); shareToFeedApp('chirp'); } },
+          { label: 'Snap', onClick: () => { setShowShareSheet(false); shareToFeedApp('snap'); } },
         ]}
       />
 

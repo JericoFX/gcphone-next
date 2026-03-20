@@ -7,6 +7,7 @@ import { formatPhoneNumber, generateColorForString, timeAgo } from '../../../uti
 import { sanitizePhone, sanitizeText } from '../../../utils/sanitize';
 import { uiPrompt } from '../../../utils/uiDialog';
 import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
+import { useContextMenu } from '../../../hooks/useContextMenu';
 import { ScreenState } from '../../shared/ui/ScreenState';
 import { SkeletonList } from '../../shared/ui/SkeletonList';
 import { ActionSheet } from '../../shared/ui/ActionSheet';
@@ -42,6 +43,7 @@ export function CallsApp() {
   const [contacts, setContacts] = createSignal<any[]>([]);
   const [loading, setLoading] = createSignal(true);
   const [showQuickActions, setShowQuickActions] = createSignal(false);
+  const ctxMenu = useContextMenu<any>();
   const [videoMode, setVideoMode] = createSignal(false);
   const [videoStatus, setVideoStatus] = createSignal('');
   const [videoParticipants, setVideoParticipants] = createSignal<string[]>([]);
@@ -503,8 +505,11 @@ export function CallsApp() {
               <div class={styles.historyList}>
                 <For each={callHistory()}>
                   {(call) => (
-                    <div class={styles.historyItem}>
-                      <div 
+                    <div
+                      class={styles.historyItem}
+                      onContextMenu={ctxMenu.onContextMenu(call)}
+                    >
+                      <div
                         class={styles.callIcon}
                         classList={{
                           [styles.missed]: !call.accepts && call.incoming,
@@ -584,6 +589,33 @@ export function CallsApp() {
               { label: t('calls.new_number', language()), tone: 'primary', onClick: () => { setActiveTab('keypad'); } },
               { label: t('calls.tab.recents', language()), onClick: () => { setActiveTab('recents'); } },
               { label: t('calls.tab.contacts', language()), onClick: () => { setActiveTab('contacts'); } },
+            ]}
+          />
+
+          <ActionSheet
+            open={ctxMenu.isOpen()}
+            title={ctxMenu.item()?.num ? formatPhoneNumber(ctxMenu.item().num, phoneState.framework || 'unknown') : ''}
+            onClose={ctxMenu.close}
+            actions={[
+              {
+                label: t('calls.callback', language()),
+                tone: 'primary',
+                onClick: () => {
+                  const c = ctxMenu.item();
+                  if (!c) return;
+                  ctxMenu.close();
+                  void startCall(c.num);
+                },
+              },
+              {
+                label: t('contacts.send_message', language()),
+                onClick: () => {
+                  const c = ctxMenu.item();
+                  if (!c) return;
+                  ctxMenu.close();
+                  router.navigate('messages', { phoneNumber: c.num });
+                },
+              },
             ]}
           />
         </AppScaffold>

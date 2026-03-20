@@ -6,22 +6,22 @@
   justify-content: center;
   gap: 8px;
   text-align: center;
-  color: #62708a;
+  color: var(--text-2);
 }
 
 .loader {
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  border: 3px solid #d6e0ef;
-  border-top-color: #0b81ff;
+  border: 3px solid var(--border);
+  border-top-color: var(--tint);
   animation: spin 850ms linear infinite;
 }
 
 .title {
   font-size: 14px;
   font-weight: 700;
-  color: #2a3550;
+  color: var(--text);
 }
 
 .desc {

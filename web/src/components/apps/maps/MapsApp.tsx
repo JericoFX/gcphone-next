@@ -8,6 +8,7 @@ import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { usePollingTask, useWindowEvent } from '../../../hooks';
 import { getStoredLanguage, t } from '../../../i18n';
 import { LeafletMap } from './LeafletMap';
+import { getPlayerCoords } from '../../../utils/playerLocation';
 import styles from './MapsApp.module.scss';
 
 interface SharedLocationItem {
@@ -276,8 +277,8 @@ export function MapsApp() {
   };
 
   const getMyLocation = async () => {
-    const coords = await fetchNui<{ x: number; y: number }>('getPlayerCoords', undefined, { x: 0, y: 0 });
-    if (coords && Number.isFinite(coords.x) && Number.isFinite(coords.y)) {
+    const coords = await getPlayerCoords();
+    if (coords) {
       addManualMarker(coords.x, coords.y, t('maps.my_location', language()));
     }
   };

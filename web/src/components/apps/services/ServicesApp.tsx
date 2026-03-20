@@ -5,6 +5,7 @@ import { sanitizeText } from '../../../utils/sanitize';
 import { uiConfirm } from '../../../utils/uiDialog';
 import { uiAlert } from '../../../utils/uiAlert';
 import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
+import { useContextMenu } from '../../../hooks/useContextMenu';
 import { usePhone } from '../../../store/phone';
 import { AppScaffold } from '../../shared/layout';
 import { useAppCache } from '../../../hooks';
@@ -13,6 +14,7 @@ import { SearchInput } from '../../shared/ui/SearchInput';
 import { SegmentedTabs } from '../../shared/ui/SegmentedTabs';
 import { FormSection, Modal, ModalActions, ModalButton } from '../../shared/ui/Modal';
 import { t } from '../../../i18n';
+import { ActionSheet } from '../../shared/ui/ActionSheet';
 import styles from './ServicesApp.module.scss';
 
 interface ServiceWorker {
@@ -81,6 +83,7 @@ export function ServicesApp() {
   // Rate
   const [rateScore, setRateScore] = createSignal(0);
   const [rateLoading, setRateLoading] = createSignal(false);
+  const ctxMenu = useContextMenu<ServiceWorker>();
 
   // Form fields (register/edit)
   const [formName, setFormName] = createSignal('');
@@ -331,7 +334,7 @@ export function ServicesApp() {
 
             <For each={listings()}>
               {(worker) => (
-                <div class={styles.workerCard} onClick={() => openWorker(worker)}>
+                <div class={styles.workerCard} onClick={() => openWorker(worker)} onContextMenu={ctxMenu.onContextMenu(worker)}>
                   <div class={styles.avatar}>
                     <Show when={worker.avatar} fallback={
                       <span>{(worker.display_name || 'U').charAt(0).toUpperCase()}</span>
@@ -612,6 +615,34 @@ export function ServicesApp() {
             </div>
           </div>
         </Show>
+
+        <ActionSheet
+          open={ctxMenu.isOpen()}
+          title={ctxMenu.item()?.display_name || t('services.title', language())}
+          onClose={ctxMenu.close}
+          actions={[
+            {
+              label: t('services.call', language()),
+              onClick: () => {
+                const worker = ctxMenu.item();
+                if (worker?.phone_number) {
+                  router.navigate('calls', { phoneNumber: worker.phone_number, autoStartCall: true });
+                }
+                ctxMenu.close();
+              },
+            },
+            {
+              label: t('services.message', language()),
+              onClick: () => {
+                const worker = ctxMenu.item();
+                if (worker?.phone_number) {
+                  router.navigate('messages', { phoneNumber: worker.phone_number });
+                }
+                ctxMenu.close();
+              },
+            },
+          ]}
+        />
       </div>
     </AppScaffold>
   );

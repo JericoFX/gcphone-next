@@ -311,12 +311,12 @@
 .group-title {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--s-1);
 
   img {
     width: 12px;
     height: 12px;
-    border-radius: 4px;
+    border-radius: var(--s-1);
     flex-shrink: 0;
     filter: brightness(0) invert(1);
     opacity: 0.6;
@@ -335,10 +335,10 @@
   border: none;
   border-radius: var(--r-pill);
   min-height: 22px;
-  padding: 0 10px;
+  padding: 0 var(--s-3);
   background: rgba(255, 255, 255, 0.1);
   color: var(--cc-text-soft);
-  font-size: 10px;
+  font-size: var(--fs-caption2);
   font-weight: 700;
   cursor: pointer;
 
@@ -358,11 +358,11 @@
   inset: 0;
   display: flex;
   align-items: center;
-  padding: 0 14px;
+  padding: 0 var(--s-3);
   font-size: var(--fs-caption1);
   font-weight: 700;
   color: #fff;
-  background: rgba(255, 59, 48, 0.72);
+  background: color-mix(in srgb, var(--danger) 72%, transparent);
   pointer-events: none;
   opacity: 0;
   transition: opacity 120ms ease;
@@ -435,7 +435,7 @@
   font-size: var(--fs-caption2);
   font-weight: 700;
   color: var(--cc-text-muted);
-  padding-left: 4px;
+  padding-left: var(--s-1);
 }
 
 /* ── Footer ── */

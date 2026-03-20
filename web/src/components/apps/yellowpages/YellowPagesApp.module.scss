@@ -16,8 +16,8 @@
 
 // Header
 .header {
-  background: rgba(255, 255, 255, 0.84);
-  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+  background: var(--surface-card);
+  border-bottom: 1px solid var(--border-subtle);
   padding: 12px 16px;
   display: flex;
   flex-direction: column;
@@ -84,9 +84,9 @@
   align-items: center;
   gap: 6px;
   padding: 8px 14px;
-  border: 1px solid rgba(15, 23, 42, 0.08);
+  border: 1px solid var(--border-subtle);
   border-radius: 20px;
-  background: rgba(255, 255, 255, 0.9);
+  background: var(--surface-overlay);
   color: var(--text-2);
   font-size: 13px;
   font-weight: 500;
@@ -95,13 +95,13 @@
   transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease, opacity 150ms ease, transform 150ms ease, box-shadow 150ms ease;
   
   &:hover {
-    background: #fffaf2;
+    background: color-mix(in srgb, var(--warning) 6%, var(--surface));
   }
-  
+
   &.active {
-    background: #fff4df;
+    background: color-mix(in srgb, var(--warning) 14%, var(--surface));
     border-color: rgba(255, 149, 0, 0.28);
-    color: #c26d00;
+    color: var(--warning);
   }
 }
 
@@ -139,8 +139,8 @@
 
 // Listing Card
 .listingCard {
-  background: rgba(255, 255, 255, 0.94);
-  border: 1px solid rgba(15, 23, 42, 0.06);
+  background: var(--surface-overlay);
+  border: 1px solid var(--border-subtle);
   border-radius: 18px;
   overflow: hidden;
   cursor: pointer;
@@ -175,7 +175,7 @@
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.95);
+  background: var(--surface-overlay);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -273,7 +273,7 @@
   font-size: 12px;
   color: var(--text-3);
   padding-top: 8px;
-  border-top: 1px solid rgba(15, 23, 42, 0.05);
+  border-top: 1px solid var(--border-subtle);
 }
 
 .category {
@@ -394,7 +394,7 @@
 
 .detailInfo {
   padding: 20px;
-  background: rgba(255, 255, 255, 0.96);
+  background: var(--surface-overlay);
   border-radius: 20px 20px 0 0;
   margin-top: -20px;
   position: relative;
@@ -405,7 +405,7 @@
   align-items: center;
   gap: 6px;
   padding: 6px 12px;
-  background: #fff8e6;
+  background: color-mix(in srgb, var(--warning) 14%, var(--surface));
   color: var(--warning);
   font-size: 13px;
   font-weight: 600;
@@ -496,7 +496,7 @@
   padding: 16px;
   background: var(--surface-2);
   border-radius: 16px;
-  border: 1px solid rgba(15, 23, 42, 0.06);
+  border: 1px solid var(--border-subtle);
 }
 
 .sellerAvatar {
@@ -743,7 +743,7 @@
   aspect-ratio: 1;
   border: 1px dashed rgba(255, 149, 0, 0.28);
   border-radius: 12px;
-  background: #fffaf2;
+  background: color-mix(in srgb, var(--warning) 6%, var(--surface));
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -757,6 +757,6 @@
   
   &:hover {
     border-color: var(--warning);
-    background: #fff8e6;
+    background: color-mix(in srgb, var(--warning) 14%, var(--surface));
   }
 }

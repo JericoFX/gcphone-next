@@ -52,7 +52,7 @@ export function SettingsSystem(props: SettingsSystemProps) {
         <div class={styles.freqRow}>
           <button class={styles.freqBtn} onClick={() => props.updateLiveLocationInterval(10)}>{t('settings.every_ten_seconds', props.language())}</button>
         </div>
-        <button class={styles.clearBtn} style={{ color: '#d84444', 'font-weight': '700', 'border-color': '#d84444', 'margin-top': '12px' }} onClick={async () => {
+        <button class={styles.clearBtn} style={{ color: 'var(--danger)', 'font-weight': '700', 'border-color': 'var(--danger)', 'margin-top': '12px' }} onClick={async () => {
           const response = await fetchNui<{ success?: boolean }>('stopLiveLocation', {}, { success: false });
           if (response?.success) { props.setLiveLocationEnabled(false); props.setLiveLocationStatus(t('settings.live_disabled', props.language())); }
         }}>

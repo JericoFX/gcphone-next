@@ -3,9 +3,9 @@
   top: 16px;
   left: 12px;
   right: 12px;
-  background-color: white;
+  background-color: var(--surface);
   border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--text) 15%, transparent);
   padding: 12px;
   display: flex;
   align-items: center;
@@ -28,7 +28,7 @@
 .icon {
   width: 48px;
   height: 48px;
-  background-color: #f0f0f0;
+  background-color: var(--surface-2);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -50,12 +50,12 @@
   .title {
     font-weight: 600;
     font-size: 15px;
-    color: #000;
+    color: var(--text);
   }
   
   .message {
     font-size: 13px;
-    color: #666;
+    color: var(--text-2);
     margin-top: 2px;
   }
   
@@ -66,12 +66,12 @@
     
     strong {
       font-size: 15px;
-      color: #000;
+      color: var(--text);
     }
-    
+
     span {
       font-size: 13px;
-      color: #888;
+      color: var(--text-3);
     }
   }
 }
@@ -99,20 +99,20 @@
     }
     
     &.accept {
-      background-color: #34c759;
+      background-color: var(--success);
       color: white;
-      
+
       &:hover {
-        background-color: #2db84e;
+        background-color: color-mix(in srgb, var(--success) 88%, black);
       }
     }
     
     &.reject {
-      background-color: #f0f0f0;
-      color: #888;
-      
+      background-color: var(--surface-2);
+      color: var(--text-3);
+
       &:hover {
-        background-color: #e0e0e0;
+        background-color: var(--surface-3);
       }
     }
   }

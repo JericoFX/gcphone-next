@@ -21,8 +21,8 @@
   min-height: 36px;
   border: 1px solid var(--border);
   border-radius: 12px;
-  background: var(--surface, #fff);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
+  background: var(--surface);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
   color: var(--text);
   font-size: 13px;
   padding: 0 12px;
@@ -38,9 +38,9 @@
   justify-content: center;
   font-size: 12px;
   font-weight: 700;
-  color: var(--tint, #007AFF);
-  background: color-mix(in srgb, var(--tint, #007AFF) 8%, white 92%);
-  border: 1px solid color-mix(in srgb, var(--tint, #007AFF) 16%, rgba(17, 17, 17, 0.08) 84%);
+  color: var(--tint);
+  background: color-mix(in srgb, var(--tint) 8%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--tint) 16%, var(--border));
 }
 
 .grid {
@@ -51,7 +51,7 @@
   padding: 6px;
   overflow-y: auto;
   border-radius: 18px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(247, 247, 250, 0.98));
+  background: var(--surface);
   border: 1px solid var(--border);
   box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
 }
@@ -61,7 +61,7 @@
   overflow: hidden;
   border-radius: 10px;
   position: relative;
-  background: var(--surface-2, #F7F7FA);
+  background: var(--surface-2);
 
   img {
     width: 100%;
@@ -75,16 +75,16 @@
   }
 
   &.selected {
-    outline: 2px solid var(--tint, #007AFF);
+    outline: 2px solid var(--tint);
     outline-offset: 1px;
-    box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.12);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--tint) 12%, transparent);
   }
 }
 
 .viewer {
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(14, 15, 20, 0.96), rgba(4, 4, 7, 0.98));
+  background: linear-gradient(180deg, rgba(14, 15, 20, 0.96), rgba(4, 4, 7, 0.99));
   display: flex;
   flex-direction: column;
   z-index: 100;

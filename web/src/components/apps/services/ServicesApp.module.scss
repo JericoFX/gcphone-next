@@ -226,7 +226,7 @@
 }
 
 .ratingStars {
-  color: #e6a800;
+  color: var(--warning);
   font-size: 12px;
   white-space: nowrap;
 
@@ -420,7 +420,7 @@
   }
 
   .ratingStarsBig {
-    color: #e6a800;
+    color: var(--warning);
     font-size: 16px;
   }
 
@@ -535,7 +535,7 @@
     transition: color var(--dur-1) var(--ease-standard), transform var(--dur-1) var(--ease-standard);
 
     &.filled {
-      color: #e6a800;
+      color: var(--warning);
     }
 
     &:active {

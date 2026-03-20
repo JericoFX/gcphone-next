@@ -10,6 +10,7 @@ import { uiPrompt } from '../../../utils/uiDialog';
 import { formatPhoneNumber, generateColorForString } from '../../../utils/misc';
 import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { useNfcShare } from '../../../hooks/useNfcShare';
+import { useContextMenu } from '../../../hooks/useContextMenu';
 import { AppScaffold } from '../../shared/layout';
 import { ActionSheet } from '../../shared/ui/ActionSheet';
 import { NfcShareSheet } from '../../shared/ui/NfcShareSheet';
@@ -33,7 +34,7 @@ export function ContactsApp() {
   const [selectedIndex, setSelectedIndex] = createSignal(-1);
   const [search, setSearch] = createSignal('');
   const [loading, setLoading] = createSignal(true);
-  const [actionContact, setActionContact] = createSignal<any | null>(null);
+  const ctxMenu = useContextMenu<any>();
   const [shareContact, setShareContact] = createSignal<any | null>(null);
   const [shareChannel, setShareChannel] = createSignal<'messages' | 'wavechat' | null>(null);
   const [tab, setTab] = createSignal<'todos' | 'favoritos'>('todos');
@@ -164,10 +165,10 @@ export function ContactsApp() {
 
   const openShareContact = () => {
     if (isReadOnly()) return;
-    if (!actionContact()) return;
-    setShareContact(actionContact());
+    if (!ctxMenu.item()) return;
+    setShareContact(ctxMenu.item());
     setShareChannel(null);
-    setActionContact(null);
+    ctxMenu.close();
   };
 
   const sendSharedContact = async (numberInput: string) => {
@@ -259,6 +260,7 @@ export function ContactsApp() {
                     class={styles.contactItem}
                     classList={{ [styles.selected]: selectedIndex() === index() + 1 }}
                     onClick={() => handleSelect(contact)}
+                    onContextMenu={ctxMenu.onContextMenu(contact)}
                   >
                 <LetterAvatar class={styles.avatar} color={generateColorForString(contact.number)} label={contact.display} />
               <div class={styles.info}>
@@ -271,7 +273,7 @@ export function ContactsApp() {
                     class={styles.actionBtn}
                     onClick={(e) => {
                       e.stopPropagation();
-                      setActionContact(contact);
+                      ctxMenu.open(contact);
                     }}
                   >
                     •••
@@ -335,23 +337,23 @@ export function ContactsApp() {
       </Show>
 
       <ActionSheet
-        open={!!actionContact()}
-        title={actionContact() ? actionContact().display : 'Contacto'}
-        onClose={() => setActionContact(null)}
+        open={ctxMenu.isOpen()}
+        title={ctxMenu.item() ? ctxMenu.item().display : 'Contacto'}
+        onClose={ctxMenu.close}
         actions={[
           {
             label: t('contacts.send_message', language()),
             tone: 'primary',
             onClick: () => {
-              if (!actionContact()) return;
-              handleSelect(actionContact());
+              if (!ctxMenu.item()) return;
+              handleSelect(ctxMenu.item());
             },
           },
           {
             label: t('notes.edit', language()),
             onClick: () => {
-              if (!actionContact()) return;
-              openEditForm(actionContact());
+              if (!ctxMenu.item()) return;
+              openEditForm(ctxMenu.item());
             },
           },
           {
@@ -362,8 +364,8 @@ export function ContactsApp() {
             label: t('action.delete', language()),
             tone: 'danger',
             onClick: async () => {
-              if (!actionContact()) return;
-              await deleteContact(actionContact().id);
+              if (!ctxMenu.item()) return;
+              await deleteContact(ctxMenu.item().id);
             },
           },
         ]}

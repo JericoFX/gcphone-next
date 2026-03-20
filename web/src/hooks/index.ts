@@ -15,3 +15,4 @@ export { usePollingTask } from './usePollingTask';
 export { useNfcShare } from './useNfcShare';
 export type { UseNfcShareOptions, UseNfcShareReturn } from './useNfcShare';
 export { useWindowEvent } from './useWindowEvent';
+export { useContextMenu } from './useContextMenu';

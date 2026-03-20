@@ -8,7 +8,7 @@
 
 .balanceSection {
   padding: var(--s-4);
-  background: linear-gradient(135deg, var(--success) 0%, #30b350 100%);
+  background: linear-gradient(135deg, var(--success) 0%, color-mix(in srgb, var(--success) 80%, #1a6b2e) 100%);
   margin: var(--s-4) var(--s-4) 0;
   border-radius: var(--r-xl);
   color: white;

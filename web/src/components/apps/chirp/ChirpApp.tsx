@@ -1,4 +1,5 @@
 import { For, Show, createEffect, createMemo, createSignal, onMount } from 'solid-js';
+import { useContextMenu } from '../../../hooks/useContextMenu';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { fetchNui } from '../../../utils/fetchNui';
 import { timeAgo } from '../../../utils/misc';
@@ -15,6 +16,7 @@ import { EmojiPickerButton } from '../../shared/ui/EmojiPicker';
 import { MediaActionButtons } from '../../shared/ui/MediaActionButtons';
 import { SegmentedTabs } from '../../shared/ui/SegmentedTabs';
 import { SheetIntro } from '../../shared/ui/SheetIntro';
+import { ActionSheet } from '../../shared/ui/ActionSheet';
 import { SocialOnboardingModal, type SocialOnboardingPayload } from '../../shared/ui/SocialOnboardingModal';
 import { getStoredLanguage, t } from '../../../i18n';
 import type { ChirpTweet, ChirpComment, ChirpFollowRequest, ChirpAccount, TabMode } from './ChirpTypes';
@@ -65,6 +67,7 @@ export function ChirpApp() {
   const [showRequestsModal, setShowRequestsModal] = createSignal(false);
   const [showOnboarding, setShowOnboarding] = createSignal(false);
   const [requestsLoading, setRequestsLoading] = createSignal(false);
+  const ctxMenu = useContextMenu<ChirpTweet>();
 
   const [profileDisplayName, setProfileDisplayName] = createSignal('');
   const [profileAvatar, setProfileAvatar] = createSignal('');
@@ -634,7 +637,7 @@ export function ChirpApp() {
     };
 
     return (
-      <article class={styles.tweetCard} onClick={() => openTweetDetail(tweet)}>
+      <article class={styles.tweetCard} onClick={() => openTweetDetail(tweet)} onContextMenu={ctxMenu.onContextMenu(tweet)}>
         <Show when={activityLabel()}>
           <div class={styles.activityBanner}>{activityLabel()}</div>
         </Show>
@@ -1168,6 +1171,39 @@ export function ChirpApp() {
       </Modal>
 
       <MediaLightbox url={viewerUrl()} onClose={() => setViewerUrl(null)} />
+
+      <ActionSheet
+        open={ctxMenu.isOpen()}
+        title={ctxMenu.item()?.display_name || 'Chirp'}
+        onClose={ctxMenu.close}
+        actions={[
+          {
+            label: ctxMenu.item()?.liked ? t('chirp.unlike', language()) || 'Unlike' : t('chirp.like', language()) || 'Like',
+            onClick: () => {
+              const tw = ctxMenu.item();
+              if (tw) void toggleLike(new Event('click'), tw);
+              ctxMenu.close();
+            },
+          },
+          {
+            label: t('chirp.rechirp', language()),
+            onClick: () => {
+              const tw = ctxMenu.item();
+              if (tw) openRechirpComposer(tw);
+              ctxMenu.close();
+            },
+          },
+          ...(ctxMenu.item()?.is_own ? [{
+            label: t('action.delete', language()),
+            tone: 'danger' as const,
+            onClick: () => {
+              const tw = ctxMenu.item();
+              if (tw) setDeleteTweetId(tw.id);
+              ctxMenu.close();
+            },
+          }] : []),
+        ]}
+      />
     </AppScaffold>
   );
 }

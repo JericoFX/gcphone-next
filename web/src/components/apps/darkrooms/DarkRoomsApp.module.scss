@@ -157,10 +157,10 @@
   align-items: center;
   gap: var(--s-2);
   font-size: var(--fs-caption2);
-  color: var(--text-3);
+  color: var(--text-2);
 
   span:not(.statDot) {
-    background: var(--bg);
+    background: var(--surface-2);
     border: 1px solid var(--border);
     padding: 1px var(--s-2);
     border-radius: var(--r-xs);
@@ -292,8 +292,8 @@
 
 .roomStat {
   font-size: var(--fs-caption2);
-  color: var(--text-3);
-  background: var(--bg);
+  color: var(--text-2);
+  background: var(--surface-2);
   border: 1px solid var(--border);
   padding: var(--s-1) var(--s-2);
   border-radius: var(--r-xs);

@@ -3,6 +3,9 @@ import { useRouter } from '../../Phone/PhoneFrame';
 import { useMessages } from '../../../store/messages';
 import { useContacts } from '../../../store/contacts';
 import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
+import { useContextMenu } from '../../../hooks/useContextMenu';
+import { useMediaAttachment } from '../../../hooks/useMediaAttachment';
+import { getPlayerCoords, formatLocationMessage } from '../../../utils/playerLocation';
 import { fetchNui } from '../../../utils/fetchNui';
 import { useNuiCustomEvent } from '../../../utils/useNui';
 import { formatPhoneNumber, generateColorForString, timeAgo } from '../../../utils/misc';
@@ -57,6 +60,7 @@ export function WaveChatApp() {
   const [statuses, setStatuses] = createSignal<WaveStatus[]>([]);
   const [statusMediaConfig, setStatusMediaConfig] = createSignal<WaveStatusMediaConfig>({ canUploadImage: false, canUploadVideo: false, maxVideoDurationSeconds: 10 });
   const [selectedGroupId, setSelectedGroupId] = createSignal<number | null>(null);
+  const ctxMenu = useContextMenu<any>();
   const [groupMessages, setGroupMessages] = createSignal<Record<number, WaveChatGroupMessage[]>>({});
   const [groupMessageInput, setGroupMessageInput] = createSignal('');
   const [showCreateGroupModal, setShowCreateGroupModal] = createSignal(false);
@@ -417,38 +421,9 @@ export function WaveChatApp() {
     setAttachmentUrl(null);
   };
 
-  const attachFromGallery = async () => {
-    const gallery = await fetchNui<any[]>('getGallery', undefined, []);
-    if (gallery && gallery.length > 0) {
-      const nextUrl = sanitizeMediaUrl(gallery[0].url);
-      if (nextUrl) setAttachmentUrl(nextUrl);
-    }
-    setShowAttachSheet(false);
-  };
-
-  const attachFromCamera = async () => {
-    const shot = await fetchNui<{ url?: string }>('takePhoto', {} as any, { url: '' } as any);
-    if (shot?.url) {
-      const nextUrl = sanitizeMediaUrl(shot.url);
-      if (nextUrl) {
-        setAttachmentUrl(nextUrl);
-        setShowAttachSheet(false);
-        return;
-      }
-    }
-    setShowAttachSheet(false);
-  };
-
-  const attachByUrl = async () => {
-    const input = await uiPrompt('Pega URL de imagen, video, audio o GIF', { title: 'Adjuntar' });
-    const nextUrl = sanitizeMediaUrl(input);
-    if (nextUrl) {
-      setAttachmentUrl(nextUrl);
-    } else if (input && input.trim()) {
-      uiAlert('URL invalida o formato no permitido');
-    }
-    setShowAttachSheet(false);
-  };
+  const media = useMediaAttachment({
+    onAttached: (url) => { setAttachmentUrl(url); setShowAttachSheet(false); },
+  });
 
   const createStatusFromMedia = async (mediaUrl: string, mediaType: 'image' | 'video') => {
     const safeUrl = sanitizeMediaUrl(mediaUrl);
@@ -590,10 +565,9 @@ export function WaveChatApp() {
   const sendLocationText = async () => {
     const number = selectedConversation();
     if (!number) return;
-    const x = Number(await uiPrompt('Coordenada X', { title: 'Compartir ubicacion' }));
-    const y = Number(await uiPrompt('Coordenada Y', { title: 'Compartir ubicacion' }));
-    if (!Number.isFinite(x) || !Number.isFinite(y)) return;
-    await messagesActions.send(number, `📍 Ubicacion compartida LOC:${x.toFixed(2)},${y.toFixed(2)}`);
+    const coords = await getPlayerCoords();
+    if (!coords) return;
+    await messagesActions.send(number, formatLocationMessage(coords, t('maps.share_location', language())));
   };
 
   const clearRecordingTimer = () => {
@@ -700,9 +674,9 @@ export function WaveChatApp() {
             setShowAttachSheet={setShowAttachSheet}
             onInput={setMessageInput}
             onSend={sendMessage}
-            onAttachGallery={attachFromGallery}
-            onAttachCamera={attachFromCamera}
-            onAttachUrl={attachByUrl}
+            onAttachGallery={media.attachFromGallery}
+            onAttachCamera={media.attachFromCamera}
+            onAttachUrl={media.attachByUrl}
             onAttachAudioUrl={attachAudioUrl}
             onSendLocation={sendLocationText}
             isRecordingVoice={isRecordingVoice()}
@@ -745,6 +719,7 @@ export function WaveChatApp() {
                     class={styles.conversationItem}
                     classList={{ [styles.selected]: isSelectedConversationIndex(index()) }}
                     onClick={() => openConversation(convo.number, convo.display)}
+                    onContextMenu={ctxMenu.onContextMenu(convo)}
                   >
                     <LetterAvatar class={styles.avatar} color={generateColorForString(convo.number)} label={convo.display} />
                     <div class={styles.info}>
@@ -1053,6 +1028,16 @@ export function WaveChatApp() {
         </div>
       </Modal>
       <MediaLightbox url={viewerUrl()} onClose={() => setViewerUrl(null)} />
+      <ActionSheet
+        open={ctxMenu.isOpen()}
+        title={ctxMenu.item()?.display || 'Chat'}
+        onClose={ctxMenu.close}
+        actions={[
+          { label: t('contacts.send_message', language()), tone: 'primary' as const, onClick: () => { const c = ctxMenu.item(); ctxMenu.close(); if (c) openConversation(c.number, c.display); } },
+          { label: t('contacts.call', language()), onClick: () => { const c = ctxMenu.item(); ctxMenu.close(); if (c) fetchNui('startCall', { number: c.number }); } },
+          { label: t('action.delete', language()), tone: 'danger' as const, onClick: () => { const c = ctxMenu.item(); ctxMenu.close(); if (c) void deleteConversation(c.number); } },
+        ]}
+      />
     </>
   );
 }
