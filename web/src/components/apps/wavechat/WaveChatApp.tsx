@@ -37,6 +37,7 @@ import styles from './WaveChatApp.module.scss';
 export function WaveChatApp() {
   const router = useRouter();
   const [phoneState] = usePhone();
+  const language = () => getStoredLanguage();
   const [messagesState, messagesActions] = useMessages();
   const [contactsState, contactsActions] = useContacts();
   const [selectedConversation, setSelectedConversation] = createSignal<string | null>(null);

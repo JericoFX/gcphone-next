@@ -226,9 +226,9 @@ export function MarketApp() {
         title={t('market.attach_title', language())}
         onClose={() => setShowAttachSheet(false)}
         actions={[
-          { label: t('market.attach_gallery', language()), tone: 'primary', onClick: media.attachFromGallery },
-          { label: t('market.attach_camera', language()), onClick: media.attachFromCamera },
-          { label: t('market.attach_url', language()), onClick: media.attachByUrl },
+          { label: t('market.attach_gallery', language()), tone: 'primary', onClick: () => void media.attachFromGallery() },
+          { label: t('market.attach_camera', language()), onClick: () => void media.attachFromCamera() },
+          { label: t('market.attach_url', language()), onClick: () => void media.attachByUrl() },
           { label: t('market.attach_remove', language()), tone: 'danger', onClick: () => { setPhotoUrl(''); } },
         ]}
       />
