@@ -12,6 +12,7 @@ import { EmptyState } from '../../shared/ui/EmptyState';
 import { SearchInput } from '../../shared/ui/SearchInput';
 import { SegmentedTabs } from '../../shared/ui/SegmentedTabs';
 import { FormSection, Modal, ModalActions, ModalButton } from '../../shared/ui/Modal';
+import { t } from '../../../i18n';
 import styles from './ServicesApp.module.scss';
 
 interface ServiceWorker {
@@ -47,11 +48,6 @@ const CATEGORY_ICON: Record<string, string> = {
   other: './img/icons_ios/svc-other.svg',
 };
 
-const AVAILABILITY_LABEL: Record<string, string> = {
-  online: 'Disponible',
-  offline: 'No disponible',
-  busy: 'Ocupado',
-};
 
 function renderStars(rating: number): string {
   const full = Math.round(rating);
@@ -94,10 +90,11 @@ export function ServicesApp() {
   const [formAvailability, setFormAvailability] = createSignal<'online' | 'offline' | 'busy'>('offline');
 
   const isReadOnly = () => phoneState.accessMode === 'foreign-readonly';
+  const language = () => phoneState.settings.language || 'es';
 
-  const tabs = [
-    { id: 'browse', label: 'Explorar' },
-    { id: 'my', label: 'Mi Servicio' },
+  const tabs = () => [
+    { id: 'browse', label: t('services.tab.browse', language()) },
+    { id: 'my', label: t('services.tab.my', language()) },
   ];
 
   const categoryNameMap = createMemo(() => {
@@ -108,7 +105,7 @@ export function ServicesApp() {
     return map;
   });
 
-  const getCategoryName = (catId: string) => categoryNameMap().get(catId) || 'Otro';
+  const getCategoryName = (catId: string) => categoryNameMap().get(catId) || t('services.category.other', language());
   const getCategoryIcon = (catId: string) => CATEGORY_ICON[catId] || CATEGORY_ICON.other;
 
   const loadCategories = async () => {
@@ -201,12 +198,12 @@ export function ServicesApp() {
     setRateLoading(false);
 
     if (result?.success) {
-      uiAlert('Calificacion enviada');
+      uiAlert(t('services.rating_sent', language()));
       // Reload worker info
       const updated = await fetchNui<ServiceWorker | null>('servicesGetWorkerInfo', worker.id, null);
       if (updated) setSelectedWorker(updated);
     } else {
-      uiAlert('No se pudo calificar');
+      uiAlert(t('services.rating_failed', language()));
     }
   };
 
@@ -214,7 +211,7 @@ export function ServicesApp() {
     if (isReadOnly()) return;
     const name = sanitizeText(formName(), 60);
     if (!name) {
-      uiAlert('El nombre es obligatorio');
+      uiAlert(t('services.name_required', language()));
       return;
     }
 
@@ -232,7 +229,7 @@ export function ServicesApp() {
       cache.invalidate();
       await loadMyService();
     } else {
-      uiAlert('No se pudo registrar');
+      uiAlert(t('services.register_failed', language()));
     }
   };
 
@@ -240,7 +237,7 @@ export function ServicesApp() {
     if (isReadOnly()) return;
     const name = sanitizeText(formName(), 60);
     if (!name) {
-      uiAlert('El nombre es obligatorio');
+      uiAlert(t('services.name_required', language()));
       return;
     }
 
@@ -256,9 +253,9 @@ export function ServicesApp() {
     if (result?.success) {
       cache.invalidate();
       await loadMyService();
-      uiAlert('Servicio actualizado');
+      uiAlert(t('services.update_success', language()));
     } else {
-      uiAlert('No se pudo actualizar');
+      uiAlert(t('services.update_failed', language()));
     }
   };
 
@@ -273,7 +270,7 @@ export function ServicesApp() {
 
   const deleteService = async () => {
     if (isReadOnly()) return;
-    if (!(await uiConfirm('Se eliminara tu servicio permanentemente. Continuar?', { title: 'Eliminar servicio' }))) return;
+    if (!(await uiConfirm(t('services.delete_confirm', language()), { title: t('services.delete_title', language()) }))) return;
 
     await fetchNui('servicesDeleteService', {});
     cache.invalidate();
@@ -286,11 +283,11 @@ export function ServicesApp() {
   };
 
   return (
-    <AppScaffold title="Servicios" subtitle="Encuentra profesionales" onBack={() => router.goBack()} bodyClass={styles.body}>
+    <AppScaffold title={t('services.title', language())} subtitle={t('services.subtitle', language())} onBack={() => router.goBack()} bodyClass={styles.body}>
       <div class={styles.servicesApp}>
         {/* Tabs */}
         <div class={styles.tabs}>
-          <SegmentedTabs items={tabs} active={currentTab()} onChange={(id) => setCurrentTab(id as 'browse' | 'my')} />
+          <SegmentedTabs items={tabs()} active={currentTab()} onChange={(id) => setCurrentTab(id as 'browse' | 'my')} />
         </div>
 
         {/* Browse View */}
@@ -300,7 +297,7 @@ export function ServicesApp() {
               <SearchInput
                 value={searchQuery()}
                 onInput={setSearchQuery}
-                placeholder="Buscar servicios..."
+                placeholder={t('services.search_placeholder', language())}
                 class={styles.searchInputRoot}
                 inputClass={styles.searchInput}
               />
@@ -329,7 +326,7 @@ export function ServicesApp() {
           {/* Listings */}
           <div class={styles.listingsGrid}>
             <Show when={loading() && listings().length === 0}>
-              <div class={styles.loading}>Cargando...</div>
+              <div class={styles.loading}>{t('common.loading', language())}</div>
             </Show>
 
             <For each={listings()}>
@@ -365,14 +362,14 @@ export function ServicesApp() {
                     }}
                   >
                     <span class={styles.dot} />
-                    <span>{AVAILABILITY_LABEL[worker.availability] || 'Offline'}</span>
+                    <span>{t('services.availability.' + worker.availability, language()) || 'Offline'}</span>
                   </div>
                 </div>
               )}
             </For>
 
             <Show when={!loading() && listings().length === 0}>
-              <EmptyState class={styles.emptyState} title="Sin resultados" description="No hay servicios disponibles en esta categoria." />
+              <EmptyState class={styles.emptyState} title={t('services.empty_title', language())} description={t('services.empty_desc', language())} />
             </Show>
           </div>
         </Show>
@@ -382,11 +379,11 @@ export function ServicesApp() {
           <div class={styles.myServiceView}>
             <Show when={!myService() && !showRegister()}>
               <div class={styles.registerPrompt}>
-                <h3>Ofrece tus servicios</h3>
-                <p>Registrate como profesional para que otros jugadores te encuentren.</p>
+                <h3>{t('services.offer_title', language())}</h3>
+                <p>{t('services.offer_desc', language())}</p>
                 <Show when={!isReadOnly()}>
                   <button class={styles.registerBtn} onClick={() => setShowRegister(true)}>
-                    Registrarme
+                    {t('common.register', language())}
                   </button>
                 </Show>
               </div>
@@ -395,17 +392,17 @@ export function ServicesApp() {
             {/* Register Form */}
             <Show when={showRegister() && !myService()}>
               <div class={styles.serviceForm}>
-                <FormSection class={styles.formField} label="Nombre *">
+                <FormSection class={styles.formField} label={t('services.form.name', language())}>
                   <input
                     type="text"
-                    placeholder="Tu nombre profesional"
+                    placeholder={t('services.form.name_placeholder', language())}
                     value={formName()}
                     onInput={(e) => setFormName(e.currentTarget.value)}
                     maxlength={60}
                   />
                 </FormSection>
 
-                <FormSection class={styles.formField} label="Avatar (URL)">
+                <FormSection class={styles.formField} label={t('services.form.avatar', language())}>
                   <input
                     type="text"
                     placeholder="https://..."
@@ -415,7 +412,7 @@ export function ServicesApp() {
                   />
                 </FormSection>
 
-                <FormSection class={styles.formField} label="Categoria">
+                <FormSection class={styles.formField} label={t('services.form.category', language())}>
                   <select value={formCategory()} onChange={(e) => setFormCategory(e.currentTarget.value)}>
                     <For each={categories().filter(c => c.id !== 'all')}>
                       {(cat) => <option value={cat.id}>{cat.name}</option>}
@@ -423,9 +420,9 @@ export function ServicesApp() {
                   </select>
                 </FormSection>
 
-                <FormSection class={styles.formField} label="Descripcion">
+                <FormSection class={styles.formField} label={t('services.form.description', language())}>
                   <textarea
-                    placeholder="Describe tus servicios..."
+                    placeholder={t('services.form.description_placeholder', language())}
                     value={formDescription()}
                     onInput={(e) => setFormDescription(e.currentTarget.value)}
                     rows={4}
@@ -434,9 +431,9 @@ export function ServicesApp() {
                 </FormSection>
 
                 <div class={styles.formActions}>
-                  <button class={styles.deleteBtn} onClick={() => setShowRegister(false)}>Cancelar</button>
+                  <button class={styles.deleteBtn} onClick={() => setShowRegister(false)}>{t('common.cancel', language())}</button>
                   <button class={styles.saveBtn} onClick={() => void registerService()} disabled={loading()}>
-                    {loading() ? 'Registrando...' : 'Registrarme'}
+                    {loading() ? t('services.registering', language()) : t('common.register', language())}
                   </button>
                 </div>
               </div>
@@ -445,34 +442,34 @@ export function ServicesApp() {
             {/* Edit Form */}
             <Show when={myService()}>
               <div class={styles.serviceForm}>
-                <FormSection class={styles.formField} label="Disponibilidad">
+                <FormSection class={styles.formField} label={t('services.form.availability', language())}>
                   <div class={styles.availabilityToggle}>
                     <button
                       classList={{ [styles.activeOnline]: formAvailability() === 'online' }}
                       onClick={() => void setAvailability('online')}
-                    >Disponible</button>
+                    >{t('services.availability.online', language())}</button>
                     <button
                       classList={{ [styles.activeBusy]: formAvailability() === 'busy' }}
                       onClick={() => void setAvailability('busy')}
-                    >Ocupado</button>
+                    >{t('services.availability.busy', language())}</button>
                     <button
                       classList={{ [styles.activeOffline]: formAvailability() === 'offline' }}
                       onClick={() => void setAvailability('offline')}
-                    >No disponible</button>
+                    >{t('services.availability.offline', language())}</button>
                   </div>
                 </FormSection>
 
-                <FormSection class={styles.formField} label="Nombre *">
+                <FormSection class={styles.formField} label={t('services.form.name', language())}>
                   <input
                     type="text"
-                    placeholder="Tu nombre profesional"
+                    placeholder={t('services.form.name_placeholder', language())}
                     value={formName()}
                     onInput={(e) => setFormName(e.currentTarget.value)}
                     maxlength={60}
                   />
                 </FormSection>
 
-                <FormSection class={styles.formField} label="Avatar (URL)">
+                <FormSection class={styles.formField} label={t('services.form.avatar', language())}>
                   <input
                     type="text"
                     placeholder="https://..."
@@ -482,7 +479,7 @@ export function ServicesApp() {
                   />
                 </FormSection>
 
-                <FormSection class={styles.formField} label="Categoria">
+                <FormSection class={styles.formField} label={t('services.form.category', language())}>
                   <select value={formCategory()} onChange={(e) => setFormCategory(e.currentTarget.value)}>
                     <For each={categories().filter(c => c.id !== 'all')}>
                       {(cat) => <option value={cat.id}>{cat.name}</option>}
@@ -490,9 +487,9 @@ export function ServicesApp() {
                   </select>
                 </FormSection>
 
-                <FormSection class={styles.formField} label="Descripcion">
+                <FormSection class={styles.formField} label={t('services.form.description', language())}>
                   <textarea
-                    placeholder="Describe tus servicios..."
+                    placeholder={t('services.form.description_placeholder', language())}
                     value={formDescription()}
                     onInput={(e) => setFormDescription(e.currentTarget.value)}
                     rows={4}
@@ -501,9 +498,9 @@ export function ServicesApp() {
                 </FormSection>
 
                 <div class={styles.formActions}>
-                  <button class={styles.deleteBtn} onClick={() => void deleteService()}>Eliminar</button>
+                  <button class={styles.deleteBtn} onClick={() => void deleteService()}>{t('common.delete', language())}</button>
                   <button class={styles.saveBtn} onClick={() => void updateService()} disabled={loading()}>
-                    {loading() ? 'Guardando...' : 'Guardar'}
+                    {loading() ? t('services.saving', language()) : t('common.save', language())}
                   </button>
                 </div>
               </div>
@@ -542,7 +539,7 @@ export function ServicesApp() {
                     }}
                   >
                     <span class={styles.dot} />
-                    <span>{AVAILABILITY_LABEL[selectedWorker()!.availability] || 'Offline'}</span>
+                    <span>{t('services.availability.' + selectedWorker()!.availability, language()) || 'Offline'}</span>
                   </div>
                 </div>
               </div>
@@ -558,7 +555,7 @@ export function ServicesApp() {
                   {renderStars(selectedWorker()!.rating || 0)}
                 </span>
                 <span class={styles.ratingCountLabel}>
-                  {selectedWorker()!.rating_count || 0} calificaciones
+                  {t('services.rating_count', language(), { count: selectedWorker()!.rating_count || 0 })}
                 </span>
               </div>
 
@@ -580,18 +577,18 @@ export function ServicesApp() {
                 <div class={styles.contactButtons}>
                   <button class={styles.contactBtn} onClick={callWorker}>
                     <img src="./img/icons_ios/ui-phone.svg" alt="" />
-                    Llamar
+                    {t('services.call', language())}
                   </button>
                   <button class={styles.messageBtn} onClick={messageWorker}>
                     <img src="./img/icons_ios/ui-chat.svg" alt="" />
-                    Mensaje
+                    {t('services.message', language())}
                   </button>
                 </div>
               </Show>
 
               {/* Rate Section */}
               <div class={styles.rateSection}>
-                <h4>Calificar</h4>
+                <h4>{t('services.rate', language())}</h4>
                 <div class={styles.rateStars}>
                   <For each={[1, 2, 3, 4, 5]}>
                     {(star) => (
@@ -609,7 +606,7 @@ export function ServicesApp() {
                   onClick={() => void submitRating()}
                   disabled={rateScore() < 1 || rateLoading()}
                 >
-                  {rateLoading() ? 'Enviando...' : 'Enviar calificacion'}
+                  {rateLoading() ? t('services.sending_rating', language()) : t('services.rate_submit', language())}
                 </button>
               </div>
             </div>

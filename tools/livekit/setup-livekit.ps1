@@ -58,7 +58,7 @@ function Read-Int {
       return $parsed
     }
 
-    Write-Host "Valor invalido. Debe ser numero entre $Min y $Max." -ForegroundColor Yellow
+    Write-Host "Invalid value. Must be a number between $Min and $Max." -ForegroundColor Yellow
   }
 }
 
@@ -133,51 +133,51 @@ function Install-DockerDesktop {
   $installerPath = Join-Path $env:TEMP 'DockerDesktopInstaller.exe'
 
   Write-Host ''
-  Write-Host 'Docker Desktop no esta instalado.' -ForegroundColor Yellow
-  Write-Host 'Es necesario para ejecutar LiveKit + Redis.' -ForegroundColor Gray
+  Write-Host 'Docker Desktop is not installed.' -ForegroundColor Yellow
+  Write-Host 'It is required to run LiveKit + Redis.' -ForegroundColor Gray
   Write-Host ''
 
-  $install = Read-YesNo -Prompt 'Descargar e instalar Docker Desktop automaticamente?' -Default 'y'
+  $install = Read-YesNo -Prompt 'Download and install Docker Desktop automatically?' -Default 'y'
   if (-not $install) {
     Write-Host ''
-    Write-Host 'Puedes instalarlo manualmente desde: https://www.docker.com/products/docker-desktop/' -ForegroundColor Gray
-    Write-Host 'Una vez instalado, vuelve a ejecutar este script.' -ForegroundColor Gray
+    Write-Host 'You can install it manually from: https://www.docker.com/products/docker-desktop/' -ForegroundColor Gray
+    Write-Host 'Once installed, run this script again.' -ForegroundColor Gray
     return $false
   }
 
   Write-Host ''
-  Write-Host 'Descargando Docker Desktop...' -ForegroundColor Cyan
-  Write-Host "(~600 MB, puede tomar unos minutos)" -ForegroundColor Gray
+  Write-Host 'Downloading Docker Desktop...' -ForegroundColor Cyan
+  Write-Host "(~600 MB, this may take a few minutes)" -ForegroundColor Gray
 
   try {
     $ProgressPreference = 'SilentlyContinue'
     Invoke-WebRequest -Uri $installerUrl -OutFile $installerPath -UseBasicParsing
     $ProgressPreference = 'Continue'
   } catch {
-    Write-Host "Error al descargar: $_" -ForegroundColor Red
-    Write-Host 'Descargalo manualmente: https://www.docker.com/products/docker-desktop/' -ForegroundColor Yellow
+    Write-Host "Download failed: $_" -ForegroundColor Red
+    Write-Host 'Download it manually: https://www.docker.com/products/docker-desktop/' -ForegroundColor Yellow
     return $false
   }
 
   $fileSize = (Get-Item $installerPath).Length / 1MB
   if ($fileSize -lt 100) {
-    Write-Host 'El archivo descargado parece incompleto. Descargalo manualmente.' -ForegroundColor Red
+    Write-Host 'The downloaded file appears incomplete. Download it manually.' -ForegroundColor Red
     Remove-Item -Path $installerPath -Force -ErrorAction SilentlyContinue
     return $false
   }
 
-  Write-Host "Descarga completa ($([math]::Round($fileSize)) MB)." -ForegroundColor Green
+  Write-Host "Download complete ($([math]::Round($fileSize)) MB)." -ForegroundColor Green
   Write-Host ''
-  Write-Host 'Instalando Docker Desktop (modo silencioso)...' -ForegroundColor Cyan
-  Write-Host 'Esto puede tomar varios minutos. No cierres esta ventana.' -ForegroundColor Gray
+  Write-Host 'Installing Docker Desktop (silent mode)...' -ForegroundColor Cyan
+  Write-Host 'This may take several minutes. Do not close this window.' -ForegroundColor Gray
 
   try {
     $process = Start-Process -FilePath $installerPath `
       -ArgumentList 'install', '--quiet', '--accept-license' `
       -Wait -PassThru -NoNewWindow
   } catch {
-    Write-Host "Error al ejecutar el instalador: $_" -ForegroundColor Red
-    Write-Host 'Ejecuta manualmente el instalador descargado en:' -ForegroundColor Yellow
+    Write-Host "Failed to run the installer: $_" -ForegroundColor Red
+    Write-Host 'Manually run the downloaded installer at:' -ForegroundColor Yellow
     Write-Host "  $installerPath" -ForegroundColor Yellow
     return $false
   }
@@ -185,8 +185,8 @@ function Install-DockerDesktop {
   Remove-Item -Path $installerPath -Force -ErrorAction SilentlyContinue
 
   if ($process.ExitCode -ne 0) {
-    Write-Host "El instalador finalizo con codigo: $($process.ExitCode)" -ForegroundColor Red
-    Write-Host 'Es posible que necesites reiniciar el equipo o ejecutar como administrador.' -ForegroundColor Yellow
+    Write-Host "Installer exited with code: $($process.ExitCode)" -ForegroundColor Red
+    Write-Host 'You may need to restart your computer or run as administrator.' -ForegroundColor Yellow
     return $false
   }
 
@@ -196,17 +196,17 @@ function Install-DockerDesktop {
   $env:Path = "$machinePath;$userPath"
 
   Write-Host ''
-  Write-Host 'Docker Desktop instalado correctamente.' -ForegroundColor Green
+  Write-Host 'Docker Desktop installed successfully.' -ForegroundColor Green
 
   if (-not (Test-DockerInstalled)) {
     Write-Host ''
-    Write-Host 'Docker se instalo pero no se detecta en PATH todavia.' -ForegroundColor Yellow
-    Write-Host 'Es posible que necesites:' -ForegroundColor Yellow
-    Write-Host '  1. Reiniciar esta terminal' -ForegroundColor Gray
-    Write-Host '  2. Iniciar Docker Desktop desde el menu de inicio' -ForegroundColor Gray
-    Write-Host '  3. Reiniciar el equipo si se activo WSL/Hyper-V' -ForegroundColor Gray
+    Write-Host 'Docker was installed but is not detected in PATH yet.' -ForegroundColor Yellow
+    Write-Host 'You may need to:' -ForegroundColor Yellow
+    Write-Host '  1. Restart this terminal' -ForegroundColor Gray
+    Write-Host '  2. Launch Docker Desktop from the Start menu' -ForegroundColor Gray
+    Write-Host '  3. Restart your computer if WSL/Hyper-V was enabled' -ForegroundColor Gray
     Write-Host ''
-    Write-Host 'Despues de eso, vuelve a ejecutar este script.' -ForegroundColor Yellow
+    Write-Host 'After that, run this script again.' -ForegroundColor Yellow
     return $false
   }
 
@@ -215,7 +215,7 @@ function Install-DockerDesktop {
 
 Write-Host ''
 Write-Host '== gcphone LiveKit setup ==' -ForegroundColor Cyan
-Write-Host 'Este asistente configura LiveKit + Redis para gcphone.' -ForegroundColor Gray
+Write-Host 'This wizard configures LiveKit + Redis for gcphone.' -ForegroundColor Gray
 Write-Host ''
 
 # ── Docker check ──────────────────────────────────────────────────
@@ -223,68 +223,81 @@ if (-not (Test-DockerInstalled)) {
   $installed = Install-DockerDesktop
   if (-not $installed) {
     Write-Host ''
-    Write-Host 'Continuando con la configuracion de todos modos...' -ForegroundColor Gray
-    Write-Host 'Podras iniciar los servicios despues de instalar Docker.' -ForegroundColor Gray
+    Write-Host 'Continuing with configuration anyway...' -ForegroundColor Gray
+    Write-Host 'You can start the services after installing Docker.' -ForegroundColor Gray
     Write-Host ''
   }
 } else {
-  Write-Host 'Docker detectado.' -ForegroundColor Green
+  Write-Host 'Docker detected.' -ForegroundColor Green
   if (Test-DockerRunning) {
-    Write-Host 'Docker daemon esta corriendo.' -ForegroundColor Green
+    Write-Host 'Docker daemon is running.' -ForegroundColor Green
   } else {
-    Write-Host 'Docker esta instalado pero el daemon no esta corriendo.' -ForegroundColor Yellow
-    Write-Host 'Inicia Docker Desktop antes de ejecutar start-livekit.bat.' -ForegroundColor Yellow
+    Write-Host 'Docker is installed but the daemon is not running.' -ForegroundColor Yellow
+    Write-Host 'Start Docker Desktop before running start-livekit.bat.' -ForegroundColor Yellow
   }
   if (Test-DockerComposeAvailable) {
-    Write-Host 'Docker Compose disponible.' -ForegroundColor Green
+    Write-Host 'Docker Compose available.' -ForegroundColor Green
   } else {
-    Write-Host 'Docker Compose no detectado. Actualiza Docker Desktop.' -ForegroundColor Yellow
+    Write-Host 'Docker Compose not detected. Update Docker Desktop.' -ForegroundColor Yellow
   }
 }
 
 Write-Host ''
 
-$signalScheme = Read-Text -Prompt 'Esquema de conexion para FiveM (ws o wss)' -Default 'ws'
+$signalScheme = Read-Text -Prompt 'Connection scheme for FiveM (ws or wss)' -Default 'ws'
 $signalScheme = $signalScheme.ToLowerInvariant()
 if ($signalScheme -notin @('ws', 'wss')) {
-  Write-Host 'Esquema invalido, se usara ws.' -ForegroundColor Yellow
+  Write-Host 'Invalid scheme, defaulting to ws.' -ForegroundColor Yellow
   $signalScheme = 'ws'
 }
 
-$publicHost = Read-Text -Prompt 'IP o host publico del LiveKit' -Default '127.0.0.1'
+# Auto-detect public IP so remote clients can connect
+$detectedIp = '127.0.0.1'
+try {
+  $detectedIp = (Invoke-WebRequest -Uri 'https://api.ipify.org' -UseBasicParsing -TimeoutSec 5).Content.Trim()
+  Write-Host "Detected public IP: $detectedIp" -ForegroundColor Green
+} catch {
+  Write-Host 'Could not detect public IP, defaulting to 127.0.0.1' -ForegroundColor Yellow
+  Write-Host 'IMPORTANT: 127.0.0.1 only works for local testing.' -ForegroundColor Yellow
+  Write-Host 'For remote players, use your server public IP or domain.' -ForegroundColor Yellow
+}
+
+$publicHost = Read-Text -Prompt 'LiveKit public IP or host (remote players connect to this)' -Default $detectedIp
 $publicHost = ($publicHost -replace '^wss?://', '').TrimEnd('/')
-$signalPort = Read-Int -Prompt 'Puerto signal/WebSocket de LiveKit' -Default 7880
-$rtcTcpPort = Read-Int -Prompt 'Puerto RTC TCP de LiveKit' -Default 7881
-$rtcUdpStart = Read-Int -Prompt 'Inicio rango RTC UDP' -Default 50000
-$rtcUdpEnd = Read-Int -Prompt 'Fin rango RTC UDP' -Default 50100
+$signalPort = Read-Int -Prompt 'LiveKit signal/WebSocket port' -Default 7880
+$rtcTcpPort = Read-Int -Prompt 'LiveKit RTC TCP port' -Default 7881
+$rtcUdpStart = Read-Int -Prompt 'RTC UDP range start' -Default 50000
+$rtcUdpEnd = Read-Int -Prompt 'RTC UDP range end' -Default 50100
 
 if ($rtcUdpEnd -lt $rtcUdpStart) {
-  Write-Host 'El fin de rango UDP era menor que el inicio. Se ajusta automaticamente.' -ForegroundColor Yellow
+  Write-Host 'UDP range end was less than start. Swapping automatically.' -ForegroundColor Yellow
   $tmp = $rtcUdpStart
   $rtcUdpStart = $rtcUdpEnd
   $rtcUdpEnd = $tmp
 }
 
-$useExternalIp = Read-YesNo -Prompt 'Usar use_external_ip en LiveKit' -Default 'y'
+$useExternalIp = Read-YesNo -Prompt 'Use use_external_ip in LiveKit' -Default 'y'
 
 $apiKey = Read-Text -Prompt 'LiveKit API key' -Default 'gcphone'
-$apiSecretInput = Read-Text -Prompt 'LiveKit API secret (vacio para generar)' -AllowEmpty
+$apiSecretInput = Read-Text -Prompt 'LiveKit API secret (empty to generate)' -AllowEmpty
 $apiSecret = if ([string]::IsNullOrWhiteSpace($apiSecretInput)) { New-RandomToken -Length 48 } else { $apiSecretInput }
 
-$roomPrefix = Read-Text -Prompt 'Prefijo de room (livekit_room_prefix)' -Default 'gcphone'
-$maxCallDuration = Read-Int -Prompt 'Max duracion de llamada (segundos)' -Default 300 -Min 30 -Max 86400
+$roomPrefix = Read-Text -Prompt 'Room prefix (livekit_room_prefix)' -Default 'gcphone'
+$maxCallDuration = Read-Int -Prompt 'Max call duration (seconds)' -Default 300 -Min 30 -Max 86400
 
-$enableTurnTls = Read-YesNo -Prompt 'Habilitar TURN/TLS integrado en LiveKit (requiere dominio + cert)' -Default 'n'
+$socketPort = Read-Int -Prompt 'Socket.IO server port (WaveChat / SnapLive chat)' -Default 3001
+
+$enableTurnTls = Read-YesNo -Prompt 'Enable built-in TURN/TLS in LiveKit (requires domain + cert)' -Default 'n'
 $turnDomain = ''
 $turnTlsPort = 5349
 $turnCertFile = ''
 $turnKeyFile = ''
 
 if ($enableTurnTls) {
-  $turnDomain = Read-Text -Prompt 'Dominio TURN (ej: turn.midominio.com)'
-  $turnTlsPort = Read-Int -Prompt 'Puerto TURN TLS' -Default 5349
-  $turnCertFile = Read-Text -Prompt 'Ruta cert_file dentro del contenedor' -Default '/etc/livekit/certs/turn.crt'
-  $turnKeyFile = Read-Text -Prompt 'Ruta key_file dentro del contenedor' -Default '/etc/livekit/certs/turn.key'
+  $turnDomain = Read-Text -Prompt 'TURN domain (e.g. turn.mydomain.com)'
+  $turnTlsPort = Read-Int -Prompt 'TURN TLS port' -Default 5349
+  $turnCertFile = Read-Text -Prompt 'cert_file path inside the container' -Default '/etc/livekit/certs/turn.crt'
+  $turnKeyFile = Read-Text -Prompt 'key_file path inside the container' -Default '/etc/livekit/certs/turn.key'
 }
 
 $livekitHost = ('{0}://{1}:{2}' -f $signalScheme, $publicHost, $signalPort)
@@ -364,31 +377,31 @@ $startBat = @(
   '',
   'where docker >nul 2>nul',
   'if errorlevel 1 (',
-  '  echo [gcphone-livekit] Docker no esta instalado.',
+  '  echo [gcphone-livekit] Docker is not installed.',
   '  echo.',
-  '  set /p INSTALL_DOCKER=[gcphone-livekit] Descargar e instalar Docker Desktop automaticamente? (Y/N): ',
+  '  set /p INSTALL_DOCKER=[gcphone-livekit] Download and install Docker Desktop automatically? (Y/N): ',
   '  if /I "%INSTALL_DOCKER%"=="Y" (',
-  '    echo [gcphone-livekit] Descargando Docker Desktop...',
-  '    powershell -NoProfile -ExecutionPolicy Bypass -Command "try { $ProgressPreference=''SilentlyContinue''; Invoke-WebRequest -Uri ''https://desktop.docker.com/win/main/amd64/Docker%%20Desktop%%20Installer.exe'' -OutFile ''%TEMP%\DockerDesktopInstaller.exe'' -UseBasicParsing; Write-Host ''Descarga completa.'' } catch { Write-Host ''Error al descargar.''; exit 1 }"',
+  '    echo [gcphone-livekit] Downloading Docker Desktop...',
+  '    powershell -NoProfile -ExecutionPolicy Bypass -Command "try { $ProgressPreference=''SilentlyContinue''; Invoke-WebRequest -Uri ''https://desktop.docker.com/win/main/amd64/Docker%%20Desktop%%20Installer.exe'' -OutFile ''%TEMP%\DockerDesktopInstaller.exe'' -UseBasicParsing; Write-Host ''Download complete.'' } catch { Write-Host ''Download failed.''; exit 1 }"',
   '    if errorlevel 1 (',
-  '      echo [gcphone-livekit] Error al descargar. Visita: https://www.docker.com/products/docker-desktop/',
+  '      echo [gcphone-livekit] Download failed. Visit: https://www.docker.com/products/docker-desktop/',
   '      pause',
   '      exit /b 1',
   '    )',
-  '    echo [gcphone-livekit] Instalando Docker Desktop (modo silencioso)...',
-  '    echo [gcphone-livekit] Esto puede tomar varios minutos. No cierres esta ventana.',
+  '    echo [gcphone-livekit] Installing Docker Desktop (silent mode)...',
+  '    echo [gcphone-livekit] This may take several minutes. Do not close this window.',
   '    "%TEMP%\DockerDesktopInstaller.exe" install --quiet --accept-license',
   '    if errorlevel 1 (',
-  '      echo [gcphone-livekit] Instalacion fallo. Puede requerir reinicio o permisos de administrador.',
+  '      echo [gcphone-livekit] Installation failed. May require restart or administrator privileges.',
   '      pause',
   '      exit /b 1',
   '    )',
   '    del "%TEMP%\DockerDesktopInstaller.exe" >nul 2>nul',
-  '    echo [gcphone-livekit] Docker Desktop instalado. Reinicia esta terminal e inicia Docker Desktop.',
+  '    echo [gcphone-livekit] Docker Desktop installed. Restart this terminal and start Docker Desktop.',
   '    pause',
   '    exit /b 0',
   '  ) else (',
-  '    echo [gcphone-livekit] Instala Docker Desktop manualmente: https://www.docker.com/products/docker-desktop/',
+  '    echo [gcphone-livekit] Install Docker Desktop manually: https://www.docker.com/products/docker-desktop/',
   '    pause',
   '    exit /b 1',
   '  )',
@@ -396,19 +409,19 @@ $startBat = @(
   '',
   'docker compose version >nul 2>nul',
   'if errorlevel 1 (',
-  '  echo [gcphone-livekit] Docker Compose no disponible. Actualiza Docker Desktop.',
+  '  echo [gcphone-livekit] Docker Compose not available. Update Docker Desktop.',
   '  pause',
   '  exit /b 1',
   ')',
   '',
   'docker compose --env-file "%SCRIPT_DIR%\.env" -f "%SCRIPT_DIR%\docker-compose.yml" up -d',
   'if errorlevel 1 (',
-  '  echo [gcphone-livekit] Docker compose fallo.',
+  '  echo [gcphone-livekit] Docker compose failed.',
   '  pause',
   '  exit /b 1',
   ')',
   '',
-  'echo [gcphone-livekit] LiveKit stack corriendo.',
+  'echo [gcphone-livekit] LiveKit stack running.',
   'docker compose --env-file "%SCRIPT_DIR%\.env" -f "%SCRIPT_DIR%\docker-compose.yml" ps',
   'pause',
   'exit /b 0'
@@ -433,13 +446,9 @@ $stopBat = @(
 )
 Set-Content -Path $stopScriptPath -Value ($stopBat -join "`r`n") -Encoding Ascii
 
-# ── Socket.IO port ────────────────────────────────────────────────
-Write-Host ''
-$socketPort = Read-Int -Prompt 'Puerto del Socket.IO server (WaveChat / SnapLive chat)' -Default 3001
-
 # ── Firewall rules ────────────────────────────────────────────────
 Write-Host ''
-$openFirewall = Read-YesNo -Prompt 'Abrir los puertos de LiveKit y Socket.IO en el Firewall de Windows?' -Default 'y'
+$openFirewall = Read-YesNo -Prompt 'Open LiveKit and Socket.IO ports in Windows Firewall?' -Default 'y'
 
 if ($openFirewall) {
   $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole(
@@ -466,32 +475,32 @@ if ($openFirewall) {
   )
 
   if ($isAdmin) {
-    Write-Host 'Configurando reglas de firewall...' -ForegroundColor Cyan
+    Write-Host 'Configuring firewall rules...' -ForegroundColor Cyan
     cmd /c $fwScript
     if ($LASTEXITCODE -eq 0) {
-      Write-Host 'Reglas de firewall creadas:' -ForegroundColor Green
+      Write-Host 'Firewall rules created:' -ForegroundColor Green
       $ruleList | ForEach-Object { Write-Host $_ -ForegroundColor Gray }
     } else {
-      Write-Host 'Error al crear reglas de firewall.' -ForegroundColor Red
-      Write-Host 'Puedes crearlas manualmente desde un terminal con permisos de administrador.' -ForegroundColor Yellow
+      Write-Host 'Failed to create firewall rules.' -ForegroundColor Red
+      Write-Host 'You can create them manually from an administrator terminal.' -ForegroundColor Yellow
     }
   } else {
-    Write-Host 'Se necesitan permisos de administrador para modificar el firewall.' -ForegroundColor Yellow
-    Write-Host 'Abriendo ventana elevada...' -ForegroundColor Cyan
+    Write-Host 'Administrator privileges required to modify the firewall.' -ForegroundColor Yellow
+    Write-Host 'Opening elevated window...' -ForegroundColor Cyan
 
     try {
       $process = Start-Process -FilePath 'cmd.exe' `
         -ArgumentList '/c', $fwScript `
         -Verb RunAs -Wait -PassThru
       if ($process.ExitCode -eq 0) {
-        Write-Host 'Reglas de firewall creadas:' -ForegroundColor Green
+        Write-Host 'Firewall rules created:' -ForegroundColor Green
         $ruleList | ForEach-Object { Write-Host $_ -ForegroundColor Gray }
       } else {
-        Write-Host 'Error al crear reglas de firewall.' -ForegroundColor Red
+        Write-Host 'Failed to create firewall rules.' -ForegroundColor Red
       }
     } catch {
-      Write-Host 'El usuario cancelo la elevacion o hubo un error.' -ForegroundColor Yellow
-      Write-Host 'Puedes abrir los puertos manualmente ejecutando como administrador:' -ForegroundColor Yellow
+      Write-Host 'User cancelled elevation or an error occurred.' -ForegroundColor Yellow
+      Write-Host 'You can open the ports manually by running as administrator:' -ForegroundColor Yellow
       Write-Host "  netsh advfirewall firewall add rule name=`"gcphone-livekit-signal`" dir=in action=allow protocol=TCP localport=$signalPort" -ForegroundColor Gray
       Write-Host "  netsh advfirewall firewall add rule name=`"gcphone-livekit-rtc-tcp`" dir=in action=allow protocol=TCP localport=$rtcTcpPort" -ForegroundColor Gray
       Write-Host "  netsh advfirewall firewall add rule name=`"gcphone-livekit-rtc-udp`" dir=in action=allow protocol=UDP localport=$rtcUdpStart-$rtcUdpEnd" -ForegroundColor Gray
@@ -500,21 +509,82 @@ if ($openFirewall) {
   }
 } else {
   Write-Host ''
-  Write-Host 'Recuerda abrir estos puertos manualmente si es necesario:' -ForegroundColor Yellow
+  Write-Host 'Remember to open these ports manually if needed:' -ForegroundColor Yellow
   Write-Host "  - TCP $signalPort (LiveKit signal/WebSocket)" -ForegroundColor Gray
   Write-Host "  - TCP $rtcTcpPort (LiveKit RTC TCP)" -ForegroundColor Gray
   Write-Host "  - UDP $rtcUdpStart-$rtcUdpEnd (LiveKit RTC media)" -ForegroundColor Gray
   Write-Host "  - TCP $socketPort (Socket.IO server)" -ForegroundColor Gray
 }
 
+# ── Auto-start option ─────────────────────────────────────────────
 Write-Host ''
-Write-Host 'Archivos generados:' -ForegroundColor Green
+Write-Host 'Auto-start options for start-livekit.bat:' -ForegroundColor Cyan
+Write-Host '  1. No auto-start (manual only)' -ForegroundColor Gray
+Write-Host '  2. Start when Windows boots (scheduled task at logon)' -ForegroundColor Gray
+Write-Host '  3. Both are explained, choose later' -ForegroundColor Gray
+
+$autoStartChoice = Read-Int -Prompt 'Auto-start option' -Default 1 -Min 1 -Max 3
+
+$taskName = 'gcphone-livekit-autostart'
+
+if ($autoStartChoice -eq 2) {
+  $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole(
+    [Security.Principal.WindowsBuiltInRole]::Administrator
+  )
+
+  $taskAction = "cmd.exe /c `"$startScriptPath`""
+
+  $schtasksCmd = "schtasks /create /tn `"$taskName`" /tr `"$taskAction`" /sc onlogon /rl highest /f"
+  $deleteCmd = "schtasks /delete /tn `"$taskName`" /f >nul 2>&1"
+
+  if ($isAdmin) {
+    Write-Host 'Creating scheduled task...' -ForegroundColor Cyan
+    cmd /c "$deleteCmd & $schtasksCmd"
+    if ($LASTEXITCODE -eq 0) {
+      Write-Host "Scheduled task '$taskName' created (runs at logon)." -ForegroundColor Green
+    } else {
+      Write-Host 'Failed to create scheduled task.' -ForegroundColor Red
+      Write-Host 'You can create it manually with:' -ForegroundColor Yellow
+      Write-Host "  $schtasksCmd" -ForegroundColor Gray
+    }
+  } else {
+    Write-Host 'Administrator privileges required to create a scheduled task.' -ForegroundColor Yellow
+    Write-Host 'Opening elevated window...' -ForegroundColor Cyan
+
+    try {
+      $process = Start-Process -FilePath 'cmd.exe' `
+        -ArgumentList '/c', "$deleteCmd & $schtasksCmd" `
+        -Verb RunAs -Wait -PassThru
+      if ($process.ExitCode -eq 0) {
+        Write-Host "Scheduled task '$taskName' created (runs at logon)." -ForegroundColor Green
+      } else {
+        Write-Host 'Failed to create scheduled task.' -ForegroundColor Red
+      }
+    } catch {
+      Write-Host 'User cancelled elevation or an error occurred.' -ForegroundColor Yellow
+      Write-Host 'You can create the task manually by running as administrator:' -ForegroundColor Yellow
+      Write-Host "  $schtasksCmd" -ForegroundColor Gray
+    }
+  }
+} elseif ($autoStartChoice -eq 3) {
+  Write-Host ''
+  Write-Host 'To auto-start LiveKit on Windows boot, run as administrator:' -ForegroundColor Yellow
+  Write-Host "  schtasks /create /tn `"$taskName`" /tr `"cmd.exe /c \`"$startScriptPath\`"`" /sc onlogon /rl highest /f" -ForegroundColor Gray
+  Write-Host ''
+  Write-Host 'To remove the auto-start task later:' -ForegroundColor Yellow
+  Write-Host "  schtasks /delete /tn `"$taskName`" /f" -ForegroundColor Gray
+} else {
+  Write-Host 'No auto-start configured. Run start-livekit.bat manually.' -ForegroundColor Gray
+}
+
+Write-Host ''
+Write-Host 'Generated files:' -ForegroundColor Green
 Write-Host "- $configPath"
 Write-Host "- $envPath"
 Write-Host "- $startScriptPath"
 Write-Host "- $stopScriptPath"
 Write-Host ''
-Write-Host 'Convars para FiveM (copiar en server.cfg):' -ForegroundColor Green
+Write-Host 'Convars for FiveM (copy to server.cfg):' -ForegroundColor Green
 Write-Host "setr livekit_host `"$livekitHost`""
 Write-Host "setr livekit_api_key `"$apiKey`""
 Write-Host "setr livekit_api_secret `"$apiSecret`""
@@ -522,7 +592,7 @@ Write-Host "setr livekit_room_prefix `"$roomPrefix`""
 Write-Host "setr livekit_max_call_duration `"$maxCallDuration`""
 Write-Host ''
 $socketHost = ('{0}://{1}:{2}' -f $signalScheme, $publicHost, $socketPort)
-Write-Host 'Convars Socket.IO (copiar en server.cfg):' -ForegroundColor Green
+Write-Host 'Socket.IO convars (copy to server.cfg):' -ForegroundColor Green
 Write-Host "setr gcphone_socket_host `"$socketHost`""
 Write-Host ''
-Write-Host 'Listo. Ejecuta start-livekit.bat para levantar LiveKit + Redis.' -ForegroundColor Cyan
+Write-Host 'Done. Run start-livekit.bat to start LiveKit + Redis.' -ForegroundColor Cyan

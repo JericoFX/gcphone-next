@@ -1,0 +1,5 @@
+{
+  "notification_default": "Benachrichtigung",
+  "server_initialized": "Server initialisiert",
+  "database_version": "Datenbankversion: %s"
+}

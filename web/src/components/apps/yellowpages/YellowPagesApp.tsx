@@ -97,9 +97,9 @@ export function YellowPagesApp() {
   const [composerCategory, setComposerCategory] = createSignal('items');
   const [photos, setPhotos] = createSignal<string[]>([]);
   const isReadOnly = () => phoneState.accessMode === 'foreign-readonly';
-  const tabs = [
-    { id: 'all', label: 'Explorar' },
-    { id: 'my', label: 'Mis anuncios' },
+  const tabs = () => [
+    { id: 'all', label: t('yellowpages.tab.browse', language()) },
+    { id: 'my', label: t('yellowpages.tab.my', language()) },
   ];
   const categoryNameMap = createMemo(() => {
     const map = new Map<string, string>();
@@ -171,7 +171,7 @@ export function YellowPagesApp() {
   const getCategoryIcon = (catId: string) => CATEGORY_ICON_MAP[catId] || './img/icons_ios/ui-list.svg';
 
   const getCategoryName = (catId: string) => {
-    return categoryNameMap().get(catId) || 'Otros';
+    return categoryNameMap().get(catId) || t('yellowpages.category.other', language());
   };
 
   const openListing = async (listing: Listing) => {
@@ -230,7 +230,7 @@ export function YellowPagesApp() {
     };
     
     if (!payload.title) {
-      uiAlert('El titulo es obligatorio');
+      uiAlert(t('yellowpages.title_required', language()));
       return;
     }
 
@@ -318,7 +318,7 @@ export function YellowPagesApp() {
 
         {/* Tabs */}
         <div class={styles.tabs}>
-          <SegmentedTabs items={tabs} active={currentTab()} onChange={(id) => setCurrentTab(id as 'all' | 'my')} />
+          <SegmentedTabs items={tabs()} active={currentTab()} onChange={(id) => setCurrentTab(id as 'all' | 'my')} />
         </div>
 
         {/* Listings */}
@@ -411,16 +411,16 @@ export function YellowPagesApp() {
                 </div>
                 
                 <div class={styles.detailMeta}>
-                  <span class={styles.metaWithIcon}><img src="./img/icons_ios/ui-eye.svg" alt="" /> {selectedListing().views || 0} visitas</span>
+                  <span class={styles.metaWithIcon}><img src="./img/icons_ios/ui-eye.svg" alt="" /> {selectedListing().views || 0} {t('yellowpages.visits', language())}</span>
                   <span>•</span>
-                  <span>Publicado {selectedListing().created_at ? timeAgo(selectedListing().created_at) : ''}</span>
+                  <span>{t('yellowpages.published', language())} {selectedListing().created_at ? timeAgo(selectedListing().created_at) : ''}</span>
                 </div>
               </div>
               
               {/* Seller Info */}
               <Show when={sellerInfo()}>
                 <div class={styles.sellerSection}>
-                  <h4>Vendedor</h4>
+                  <h4>{t('yellowpages.seller_section', language())}</h4>
                   <div class={styles.sellerCard}>
                     <div class={styles.sellerAvatar}>
                       {sellerInfo().seller_avatar ? (
@@ -430,7 +430,7 @@ export function YellowPagesApp() {
                       )}
                     </div>
                     <div class={styles.sellerInfo}>
-                      <strong>{sellerInfo().seller_name || 'Vendedor'}</strong>
+                      <strong>{sellerInfo().seller_name || t('yellowpages.seller', language())}</strong>
                       <span class={styles.metaWithIcon}><img src="./img/icons_ios/ui-phone.svg" alt="" /> {sellerInfo().phone_number ? formatPhoneNumber(sellerInfo().phone_number, phoneState.framework || 'unknown') : t('yellowpages.no_phone', language())}</span>
                     </div>
                   </div>
@@ -491,18 +491,18 @@ export function YellowPagesApp() {
                 const seller = sellerInfo();
                 if (!seller?.phone_number) return;
                 const result = await fetchNui<{ success?: boolean }>('addContact', {
-                  display: seller.seller_name || seller.title || 'Vendedor',
+                  display: seller.seller_name || t('yellowpages.seller', language()),
                   number: seller.phone_number,
                 }, { success: true });
                 if (result?.success) {
                   setShowContactModal(false);
-                  uiAlert('Contacto guardado');
+                  uiAlert(t('yellowpages.contact_saved', language()));
                 }
               }}>
                 <span class={styles.contactIcon}><img src="./img/icons_ios/ui-user.svg" alt="" /></span>
                 <div class={styles.contactInfo}>
-                  <strong>Agregar contacto</strong>
-                  <span>Guardar en tu lista de contactos</span>
+                  <strong>{t('yellowpages.add_contact', language())}</strong>
+                  <span>{t('yellowpages.add_contact_desc', language())}</span>
                 </div>
               </button>
             </Show>
@@ -516,25 +516,25 @@ export function YellowPagesApp() {
         {/* Composer Modal */}
         <Modal
           open={showComposer()}
-          title="Nuevo Anuncio"
+          title={t('yellowpages.new_listing', language())}
           onClose={() => setShowComposer(false)}
           size="md"
         >
           <div class={styles.composerContent}>
-            <SheetIntro title="Publica tu anuncio" description="Completa lo esencial y agrega hasta 5 fotos para que el aviso se vea limpio en el feed." tone="warm" />
-            <FormSection class={styles.formField} label="Titulo *">
+            <SheetIntro title={t('yellowpages.listing_intro_title', language())} description={t('yellowpages.listing_intro_desc', language())} tone="warm" />
+            <FormSection class={styles.formField} label={t('yellowpages.form.title', language())}>
               <input
                 type="text"
-                placeholder="Ej: Auto deportivo en venta"
+                placeholder={t('yellowpages.form.title_placeholder', language())}
                 value={title()}
                 onInput={(e) => setTitle(e.currentTarget.value)}
                 maxlength={100}
               />
             </FormSection>
             
-            <FormSection class={styles.formField} label="Descripcion">
+            <FormSection class={styles.formField} label={t('yellowpages.form.description', language())}>
               <textarea
-                placeholder="Describe tu producto o servicio..."
+                placeholder={t('yellowpages.form.description_placeholder', language())}
                 value={description()}
                 onInput={(e) => setDescription(e.currentTarget.value)}
                 rows={4}
@@ -543,7 +543,7 @@ export function YellowPagesApp() {
             </FormSection>
             
             <FormRow class={styles.formRow}>
-              <FormSection class={styles.formField} label="Precio ($)">
+              <FormSection class={styles.formField} label={t('yellowpages.form.price', language())}>
                 <input
                   type="number"
                   placeholder="0"
@@ -553,7 +553,7 @@ export function YellowPagesApp() {
                 />
               </FormSection>
               
-              <FormSection class={styles.formField} label="Categoria">
+              <FormSection class={styles.formField} label={t('yellowpages.form.category', language())}>
                 <select
                   value={composerCategory()}
                   onChange={(e) => setComposerCategory(e.currentTarget.value)}
@@ -567,7 +567,7 @@ export function YellowPagesApp() {
               </FormSection>
             </FormRow>
             
-            <FormSection class={styles.formField} label={`Fotos (${photos().length}/5)`}>
+            <FormSection class={styles.formField} label={t('yellowpages.form.photos', language(), { count: photos().length })}>
               <div class={styles.photosGrid}>
                 <For each={photos()}>
                   {(photo, index) => (

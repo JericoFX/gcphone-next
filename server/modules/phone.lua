@@ -251,6 +251,10 @@ local function SafeLanguage(value)
     if normalized == 'en' or normalized == 'en_us' then return 'en' end
     if normalized == 'pt' or normalized == 'pt_br' then return 'pt' end
     if normalized == 'fr' or normalized == 'fr_fr' then return 'fr' end
+    if normalized == 'de' or normalized == 'de_de' then return 'de' end
+    if normalized == 'it' or normalized == 'it_it' then return 'it' end
+    if normalized == 'pl' or normalized == 'pl_pl' then return 'pl' end
+    if normalized == 'ru' or normalized == 'ru_ru' then return 'ru' end
 
     return nil
 end

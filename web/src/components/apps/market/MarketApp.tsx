@@ -7,6 +7,8 @@ import { uiAlert } from '../../../utils/uiAlert';
 import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { ActionSheet } from '../../shared/ui/ActionSheet';
 import { MediaLightbox } from '../../shared/ui/MediaLightbox';
+import { t } from '../../../i18n';
+import { usePhone } from '../../../store/phone';
 import styles from './MarketApp.module.scss';
 
 interface MarketListing {
@@ -20,6 +22,8 @@ interface MarketListing {
 
 export function MarketApp() {
   const router = useRouter();
+  const [phoneState] = usePhone();
+  const language = () => phoneState.settings.language || 'es';
   const [listings, setListings] = createSignal<MarketListing[]>([]);
   const [myListings, setMyListings] = createSignal<MarketListing[]>([]);
   const [tab, setTab] = createSignal<'all' | 'mine'>('all');
@@ -103,13 +107,13 @@ export function MarketApp() {
   };
 
   const attachByUrl = async () => {
-    const input = await uiPrompt('Pega URL de imagen', { title: 'Adjuntar en market' });
+    const input = await uiPrompt(t('market.url_prompt', language()), { title: t('market.url_prompt_title', language()) });
     const nextUrl = sanitizeMediaUrl(input);
     if (nextUrl) {
       setPhotoUrl(nextUrl);
       return;
     }
-    if (input && input.trim()) uiAlert('URL invalida o formato no permitido');
+    if (input && input.trim()) uiAlert(t('market.url_invalid', language()));
   };
 
   const markSold = async (listingId: number) => {
@@ -125,7 +129,7 @@ export function MarketApp() {
   const contactSeller = async (listingId: number) => {
     const result = await fetchNui<{ phoneNumber?: string }>('marketContactSeller', { listingId });
     if (result?.phoneNumber) {
-      router.navigate('messages.view', { phoneNumber: result.phoneNumber, display: 'Vendedor' });
+      router.navigate('messages.view', { phoneNumber: result.phoneNumber, display: t('market.seller', language()) });
     }
   };
 
@@ -158,7 +162,7 @@ export function MarketApp() {
     <div class={styles.app}>
       <div class={styles.header}>
         <button class={styles.backBtn} onClick={() => router.goBack()}><img src="./img/icons_ios/ui-chevron-left.svg" alt="" draggable={false} /></button>
-        <h1>Market Pro</h1>
+        <h1>{t('market.title', language())}</h1>
         <button class={styles.addBtn} onClick={() => setShowCreate(true)}>+</button>
       </div>
 
@@ -166,15 +170,15 @@ export function MarketApp() {
         <input
           class={styles.searchInput}
           type="text"
-          placeholder="Buscar productos, servicios"
+          placeholder={t('market.search_placeholder', language())}
           value={query()}
           onInput={(event) => setQuery(event.currentTarget.value)}
         />
       </div>
 
       <div class={styles.tabs}>
-        <button class={styles.tabBtn} classList={{ [styles.active]: tab() === 'all' }} onClick={() => setTab('all')}>Publico</button>
-        <button class={styles.tabBtn} classList={{ [styles.active]: tab() === 'mine' }} onClick={() => setTab('mine')}>Mis avisos</button>
+        <button class={styles.tabBtn} classList={{ [styles.active]: tab() === 'all' }} onClick={() => setTab('all')}>{t('market.tab.public', language())}</button>
+        <button class={styles.tabBtn} classList={{ [styles.active]: tab() === 'mine' }} onClick={() => setTab('mine')}>{t('market.tab.mine', language())}</button>
       </div>
 
       <div class={styles.categoryRow}>
@@ -197,13 +201,13 @@ export function MarketApp() {
             <article class={styles.card}>
               <strong>{item.title}</strong>
               <span class={styles.price}>${Number(item.price || 0).toLocaleString('en-US')}</span>
-              <p>{item.description || 'Sin descripcion'}</p>
+              <p>{item.description || t('market.no_description', language())}</p>
               <small class={styles.cardCategory}>{item.category || 'general'}</small>
               <div class={styles.cardActions}>
-                <button onClick={() => contactSeller(item.id)}>Contactar</button>
+                <button onClick={() => contactSeller(item.id)}>{t('market.contact', language())}</button>
                 <Show when={tab() === 'mine'}>
-                  <button onClick={() => markSold(item.id)}>Vendido</button>
-                  <button onClick={() => deleteListing(item.id)}>Eliminar</button>
+                  <button onClick={() => markSold(item.id)}>{t('market.sold', language())}</button>
+                  <button onClick={() => deleteListing(item.id)}>{t('common.delete', language())}</button>
                 </Show>
               </div>
             </article>
@@ -214,21 +218,21 @@ export function MarketApp() {
       <Show when={showCreate()}>
         <div class={styles.modal}>
           <div class={styles.modalContent}>
-            <h2>Nueva publicacion</h2>
-            <input type="text" placeholder="Titulo" value={title()} onInput={(e) => setTitle(e.currentTarget.value)} />
-            <input type="text" placeholder="Descripcion" value={description()} onInput={(e) => setDescription(e.currentTarget.value)} />
-            <input type="number" placeholder="Precio" value={price()} onInput={(e) => setPrice(e.currentTarget.value)} />
+            <h2>{t('market.new_listing', language())}</h2>
+            <input type="text" placeholder={t('market.form.title', language())} value={title()} onInput={(e) => setTitle(e.currentTarget.value)} />
+            <input type="text" placeholder={t('market.form.description', language())} value={description()} onInput={(e) => setDescription(e.currentTarget.value)} />
+            <input type="number" placeholder={t('market.form.price', language())} value={price()} onInput={(e) => setPrice(e.currentTarget.value)} />
             <div class={styles.attachRow}>
-              <button onClick={() => setShowAttachSheet(true)}>Adjuntar</button>
-              <input type="text" placeholder="URL foto" value={photoUrl()} onInput={(e) => setPhotoUrl(sanitizeMediaUrl(e.currentTarget.value))} />
+              <button onClick={() => setShowAttachSheet(true)}>{t('market.form.attach', language())}</button>
+              <input type="text" placeholder={t('market.form.photo_url', language())} value={photoUrl()} onInput={(e) => setPhotoUrl(sanitizeMediaUrl(e.currentTarget.value))} />
             </div>
             <Show when={photoUrl()}>
               <img class={styles.photoPreview} src={photoUrl()} alt="foto" onClick={() => setViewerUrl(photoUrl())} />
             </Show>
-            <input type="text" placeholder="Categoria" value={category()} onInput={(e) => setCategory(sanitizeText(e.currentTarget.value, 30))} />
+            <input type="text" placeholder={t('market.form.category', language())} value={category()} onInput={(e) => setCategory(sanitizeText(e.currentTarget.value, 30))} />
             <div class={styles.actions}>
-              <button onClick={() => setShowCreate(false)}>Cancelar</button>
-              <button class={styles.primary} onClick={createListing}>Publicar</button>
+              <button onClick={() => setShowCreate(false)}>{t('common.cancel', language())}</button>
+              <button class={styles.primary} onClick={createListing}>{t('market.publish', language())}</button>
             </div>
           </div>
         </div>
@@ -236,13 +240,13 @@ export function MarketApp() {
 
       <ActionSheet
         open={showAttachSheet()}
-        title="Adjuntar en market"
+        title={t('market.attach_title', language())}
         onClose={() => setShowAttachSheet(false)}
         actions={[
-          { label: 'Elegir desde galeria', tone: 'primary', onClick: attachFromGallery },
-          { label: 'Tomar foto con camara', onClick: attachFromCamera },
-          { label: 'Pegar URL de imagen', onClick: attachByUrl },
-          { label: 'Quitar adjunto', tone: 'danger', onClick: () => { setPhotoUrl(''); } },
+          { label: t('market.attach_gallery', language()), tone: 'primary', onClick: attachFromGallery },
+          { label: t('market.attach_camera', language()), onClick: attachFromCamera },
+          { label: t('market.attach_url', language()), onClick: attachByUrl },
+          { label: t('market.attach_remove', language()), tone: 'danger', onClick: () => { setPhotoUrl(''); } },
         ]}
       />
       <MediaLightbox url={viewerUrl()} onClose={() => setViewerUrl(null)} />

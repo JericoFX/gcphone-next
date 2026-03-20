@@ -2,10 +2,14 @@ import esES from '../locales/es_ES.json';
 import enUS from '../locales/en_US.json';
 import ptBR from '../locales/pt_BR.json';
 import frFR from '../locales/fr_FR.json';
+import deDE from '../locales/de_DE.json';
+import itIT from '../locales/it_IT.json';
+import plPL from '../locales/pl_PL.json';
+import ruRU from '../locales/ru_RU.json';
 import { normalizeAppLanguage } from '../utils/misc';
 
-export type AppLanguage = 'es' | 'en' | 'pt' | 'fr';
-export type LocaleCode = 'es_ES' | 'en_US' | 'pt_BR' | 'fr_FR';
+export type AppLanguage = 'es' | 'en' | 'pt' | 'fr' | 'de' | 'it' | 'pl' | 'ru';
+export type LocaleCode = 'es_ES' | 'en_US' | 'pt_BR' | 'fr_FR' | 'de_DE' | 'it_IT' | 'pl_PL' | 'ru_RU';
 
 type LocaleDictionary = {
   lang: LocaleCode;
@@ -18,6 +22,10 @@ const LOCALES: Record<LocaleCode, LocaleDictionary> = {
   en_US: enUS as LocaleDictionary,
   pt_BR: ptBR as LocaleDictionary,
   fr_FR: frFR as LocaleDictionary,
+  de_DE: deDE as LocaleDictionary,
+  it_IT: itIT as LocaleDictionary,
+  pl_PL: plPL as LocaleDictionary,
+  ru_RU: ruRU as LocaleDictionary,
 };
 
 const LANGUAGE_TO_LOCALE: Record<AppLanguage, LocaleCode> = {
@@ -25,6 +33,10 @@ const LANGUAGE_TO_LOCALE: Record<AppLanguage, LocaleCode> = {
   en: 'en_US',
   pt: 'pt_BR',
   fr: 'fr_FR',
+  de: 'de_DE',
+  it: 'it_IT',
+  pl: 'pl_PL',
+  ru: 'ru_RU',
 };
 
 const LOCALE_TO_BCP47: Record<LocaleCode, string> = {
@@ -32,6 +44,10 @@ const LOCALE_TO_BCP47: Record<LocaleCode, string> = {
   en_US: 'en-US',
   pt_BR: 'pt-BR',
   fr_FR: 'fr-FR',
+  de_DE: 'de-DE',
+  it_IT: 'it-IT',
+  pl_PL: 'pl-PL',
+  ru_RU: 'ru-RU',
 };
 
 const ES_VALUE_TO_KEY = Object.entries(esES.strings || {}).reduce<Record<string, string>>((acc, [key, value]) => {
