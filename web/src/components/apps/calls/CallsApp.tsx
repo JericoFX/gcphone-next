@@ -1,4 +1,4 @@
-import { createSignal, For, Show, createEffect, onCleanup, batch, untrack } from 'solid-js';
+import { createSignal, For, Show, createEffect, onCleanup, onMount, batch, untrack } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { usePhoneState } from '../../../store/phone';
 import { fetchNui } from '../../../utils/fetchNui';
@@ -648,7 +648,7 @@ function ActiveCallView(props: { callInfo: any; framework: 'esx' | 'qbcore' | 'q
   let timer: number | undefined;
   let countdownTimer: number | undefined;
 
-  createEffect(() => {
+  onMount(() => {
     timer = setInterval(() => {
       setDuration((d) => d + 1);
     }, 1000);
@@ -657,11 +657,11 @@ function ActiveCallView(props: { callInfo: any; framework: 'esx' | 'qbcore' | 'q
       const remaining = getCallRemainingTime();
       setRemainingTime(remaining && remaining > 0 ? remaining : 0);
     }, 1000);
+  });
 
-    onCleanup(() => {
-      if (timer) clearInterval(timer);
-      if (countdownTimer) clearInterval(countdownTimer);
-    });
+  onCleanup(() => {
+    if (timer) clearInterval(timer);
+    if (countdownTimer) clearInterval(countdownTimer);
   });
 
   const formatDuration = (seconds: number) => {

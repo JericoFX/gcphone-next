@@ -307,11 +307,12 @@ lib.callback.register('gcphone:startCall', function(source, data)
     end
     
     if Config.FixePhone[targetNumber] then
+        local fixeCallId = GenerateCallId()
         if type(TriggerPhoneHook) == 'function' then
             local payload = {
                 source = source,
                 identifier = identifier,
-                callId = LastCallId,
+                callId = fixeCallId,
                 fromNumber = myNumber,
                 toNumber = targetNumber,
                 isEmergency = emergencyContact ~= nil,
@@ -330,7 +331,7 @@ lib.callback.register('gcphone:startCall', function(source, data)
         end
 
         return {
-            id = LastCallId,
+            id = fixeCallId,
             transmitterNum = myNumber,
             receiverNum = targetNumber,
             isValid = false,

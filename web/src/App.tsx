@@ -174,6 +174,8 @@ export function App() {
   });
 
   useWindowEvent<MessageEvent>('message', (event) => {
+    if (!event.data || typeof event.data !== 'object') return;
+
     const payload = event.data as {
       action?: string;
       data?: unknown;

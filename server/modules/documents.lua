@@ -130,7 +130,7 @@ lib.callback.register('gcphone:documents:delete', function(source, data)
     local id = tonumber(type(data) == 'table' and data.documentId or nil)
     if not id then return { success = false, error = 'INVALID_DOCUMENT' } end
 
-    MySQL.update.await('DELETE FROM phone_documents WHERE id = ? AND identifier = ?', { id, identifier })
+    MySQL.execute.await('DELETE FROM phone_documents WHERE id = ? AND identifier = ?', { id, identifier })
     return { success = true }
 end)
 

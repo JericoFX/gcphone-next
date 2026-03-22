@@ -94,39 +94,44 @@ export const MessagesProvider: ParentComponent = (props) => {
     
     delete: async (messageId: number) => {
       const result = await fetchNui<{ success: boolean }>('deleteMessage', { id: messageId });
-      
+
       if (result?.success) {
-        setState('messages', messages => messages.filter(msg => msg.id !== messageId));
-        setState('unreadCount', countUnread(state.messages));
-        return true;
-      }
-      return false;
-    },
-    
-    deleteConversation: async (phoneNumber: string) => {
-      const result = await fetchNui<{ success: boolean }>('deleteConversation', { phoneNumber });
-      
-      if (result?.success) {
+        const filtered = state.messages.filter(msg => msg.id !== messageId);
         batch(() => {
-          setState('messages', m => m.filter(msg => msg.transmitter !== phoneNumber && msg.receiver !== phoneNumber));
-          setState('unreadCount', countUnread(state.messages));
+          setState('messages', filtered);
+          setState('unreadCount', countUnread(filtered));
         });
         return true;
       }
       return false;
     },
-    
+
+    deleteConversation: async (phoneNumber: string) => {
+      const result = await fetchNui<{ success: boolean }>('deleteConversation', { phoneNumber });
+
+      if (result?.success) {
+        const filtered = state.messages.filter(msg => msg.transmitter !== phoneNumber && msg.receiver !== phoneNumber);
+        batch(() => {
+          setState('messages', filtered);
+          setState('unreadCount', countUnread(filtered));
+        });
+        return true;
+      }
+      return false;
+    },
+
     markAsRead: async (phoneNumber: string) => {
       const result = await fetchNui<{ success: boolean }>('markAsRead', { phoneNumber });
-      
+
       if (result?.success) {
+        const updated = state.messages.map(msg => (
+          msg.transmitter === phoneNumber && msg.owner === 0
+            ? { ...msg, isRead: true }
+            : msg
+        ));
         batch(() => {
-          setState('messages', messages => messages.map(msg => (
-            msg.transmitter === phoneNumber && msg.owner === 0
-              ? { ...msg, isRead: true }
-              : msg
-          )));
-          setState('unreadCount', countUnread(state.messages));
+          setState('messages', updated);
+          setState('unreadCount', countUnread(updated));
         });
         return true;
       }

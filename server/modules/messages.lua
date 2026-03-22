@@ -298,7 +298,7 @@ lib.callback.register('gcphone:sendMessage', function(source, data)
     end
     
     local targetIdentifier = GetIdentifierByPhone(targetPhone)
-    if IsBlockedEither(identifier, targetIdentifier, myNumber, targetPhone) then
+    if targetIdentifier and IsBlockedEither(identifier, targetIdentifier, myNumber, targetPhone) then
         return false, 'BLOCKED_CONTACT'
     end
     
@@ -311,8 +311,10 @@ lib.callback.register('gcphone:sendMessage', function(source, data)
         'SELECT * FROM phone_messages WHERE id = ?',
         { messageId }
     )
-    
-    TriggerClientEvent('gcphone:messageSent', source, sentMessage)
+
+    if sentMessage then
+        TriggerClientEvent('gcphone:messageSent', source, sentMessage)
+    end
     
     if targetIdentifier then
         local targetSource = GetSourceFromIdentifier(targetIdentifier)
@@ -327,8 +329,10 @@ lib.callback.register('gcphone:sendMessage', function(source, data)
                 'SELECT * FROM phone_messages WHERE id = ?',
                 { receivedId }
             )
-            
-            TriggerClientEvent('gcphone:messageReceived', targetSource, receivedMessage)
+
+            if receivedMessage then
+                TriggerClientEvent('gcphone:messageReceived', targetSource, receivedMessage)
+            end
 
             local autoReply = AutoReplyByIdentifier[targetIdentifier]
             if autoReply and autoReply ~= '' then

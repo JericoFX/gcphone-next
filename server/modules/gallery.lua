@@ -44,10 +44,14 @@ lib.callback.register('gcphone:setPhotoAsWallpaper', function(source, data)
     if IsPhoneReadOnly(source) then return false end
     local identifier = GetIdentifier(source)
     if not identifier then return false end
-    
+    if type(data) ~= 'table' then return false end
+
+    local photoId = tonumber(data.photoId)
+    if not photoId or photoId < 1 then return false end
+
     local photo = MySQL.single.await(
         'SELECT url FROM phone_gallery WHERE id = ? AND identifier = ?',
-        { data.photoId, identifier }
+        { photoId, identifier }
     )
     
     if not photo then return false end

@@ -2,7 +2,7 @@
 -- Bank module with transaction history
 
 local function RecordTransaction(identifier, amount, txType, title, targetPhone)
-    MySQL.insert('INSERT INTO phone_wallet_transactions (identifier, amount, type, title, target_phone) VALUES (?, ?, ?, ?, ?)',
+    MySQL.insert.await('INSERT INTO phone_wallet_transactions (identifier, amount, type, title, target_phone) VALUES (?, ?, ?, ?, ?)',
         { identifier, amount, txType, title, targetPhone }
     )
 end

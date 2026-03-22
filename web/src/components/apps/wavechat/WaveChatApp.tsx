@@ -130,6 +130,8 @@ export function WaveChatApp() {
   };
 
   const reconnectWaveRealtime = async () => {
+    disconnectWaveSocket();
+
     const auth = await fetchSocketToken() as WaveSocketAuth | undefined;
     if (!auth?.success || !auth.host || !auth.token) {
       setSocketReady(false);

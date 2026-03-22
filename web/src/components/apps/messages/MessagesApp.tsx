@@ -515,11 +515,11 @@ function ConversationView(props: {
 
       <ActionSheet
         open={selectedMessage() !== null}
-        title="Mensaje"
+        title={t('messages.action_title', language())}
         onClose={() => setSelectedMessage(null)}
         actions={[
           {
-            label: 'Guardar en Notas',
+            label: t('messages.save_to_notes', language()),
             tone: 'primary',
             onClick: () => {
               const text = selectedMessage();
@@ -527,17 +527,17 @@ function ConversationView(props: {
               try {
                 const raw = localStorage.getItem('gcphone:notes');
                 const notes: any[] = raw ? JSON.parse(raw) : [];
-                notes.push({ id: Date.now(), title: 'Mensaje guardado', content: text, color: '#007aff' });
+                notes.push({ id: Date.now(), title: t('messages.saved_note_title', language()), content: text, color: '#007aff' });
                 localStorage.setItem('gcphone:notes', JSON.stringify(notes));
-                uiAlert('Mensaje guardado en Notas');
+                uiAlert(t('messages.saved_to_notes', language()));
               } catch {
-                uiAlert('Error al guardar nota');
+                uiAlert(t('messages.save_note_error', language()));
               }
               setSelectedMessage(null);
             },
           },
           {
-            label: 'Copiar texto',
+            label: t('messages.copy_text', language()),
             onClick: () => {
               const text = selectedMessage();
               if (text) navigator.clipboard.writeText(text).catch(() => {});
@@ -545,7 +545,7 @@ function ConversationView(props: {
             },
           },
           {
-            label: 'Cerrar',
+            label: t('messages.close', language()),
             onClick: () => setSelectedMessage(null),
           },
         ]}
