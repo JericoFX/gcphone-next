@@ -157,6 +157,16 @@ jobs:
 
           echo "TOOLS_ZIP=$TOOLS_ZIP" >> "$GITHUB_ENV"
 
+      - name: Create sounds zip
+        run: |
+          VERSION="${{ needs.build.outputs.version }}"
+          SOUNDS_ZIP="gcphone-sounds-v${VERSION}.zip"
+
+          zip -r "$SOUNDS_ZIP" \
+            '[gcphone_sounds]/'
+
+          echo "SOUNDS_ZIP=$SOUNDS_ZIP" >> "$GITHUB_ENV"
+
       - name: Extract changelog for this version
         run: |
           VERSION="${{ needs.build.outputs.version }}"
@@ -174,5 +184,6 @@ jobs:
           files: |
             ${{ env.ZIP_NAME }}
             ${{ env.TOOLS_ZIP }}
+            ${{ env.SOUNDS_ZIP }}
           draft: false
           prerelease: false

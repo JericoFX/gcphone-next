@@ -229,7 +229,7 @@ The `gcphone_sounds` resource provides the native GTA audio bank used for ringto
 
 ### Where to get it
 
-The `gcphone_sounds` resource is included in the GitHub releases as a separate download. Place it in your resources folder:
+The `gcphone_sounds` resource is **required** unless you provide your own custom audio bank. It is included in the GitHub releases as a separate download (`gcphone-sounds-v*.zip`). Place it in your resources folder:
 
 ```
 resources/[phone]/gcphone_sounds/
