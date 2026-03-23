@@ -133,7 +133,6 @@ jobs:
             server/ \
             socket-server/ \
             web/dist/ \
-            '[gcphone_sounds]/' \
             CHANGELOG.md \
             LICENSE.md \
             -x "*.git*" \

@@ -8,7 +8,7 @@ import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { AppScaffold } from '../../shared/layout';
 import { InlineNotice } from '../../shared/ui/InlineNotice';
 import { t } from '../../../i18n';
-import { FALLBACK_AUDIO_CATALOG, type PhoneToneCatalog, type ToneCategory } from '../../../utils/phoneAudio';
+import { TONE_CATALOG, type ToneCategory } from '../../../utils/phoneAudio';
 import { SettingsMain } from './SettingsMain';
 import { SettingsAppearance } from './SettingsAppearance';
 import { SettingsSound } from './SettingsSound';
@@ -27,7 +27,7 @@ export function SettingsApp() {
 
   const [section, setSection] = createSignal<SettingsSection>('main');
   const [urlInput, setUrlInput] = createSignal('');
-  const [toneCatalog, setToneCatalog] = createSignal<PhoneToneCatalog>(FALLBACK_AUDIO_CATALOG);
+  const toneCatalog = () => TONE_CATALOG;
   const [previewToneId, setPreviewToneId] = createSignal<string | null>(null);
   const [liveLocationEnabled, setLiveLocationEnabled] = createSignal(false);
   const [liveLocationInterval, setLiveLocationInterval] = createSignal<10>(10);
@@ -50,22 +50,6 @@ export function SettingsApp() {
   });
 
   onMount(async () => {
-    try {
-      const response = await fetch('./audio/catalog.json');
-      if (response.ok) {
-        const payload = await response.json() as PhoneToneCatalog;
-        setToneCatalog({
-          source: payload.source || FALLBACK_AUDIO_CATALOG.source,
-          categories: {
-            ringtones: payload.categories?.ringtones?.length ? payload.categories.ringtones : FALLBACK_AUDIO_CATALOG.categories.ringtones,
-            notifications: payload.categories?.notifications?.length ? payload.categories.notifications : FALLBACK_AUDIO_CATALOG.categories.notifications,
-            messages: payload.categories?.messages?.length ? payload.categories.messages : FALLBACK_AUDIO_CATALOG.categories.messages,
-            calling: payload.categories?.calling?.length ? payload.categories.calling : FALLBACK_AUDIO_CATALOG.categories.calling,
-          },
-        });
-      }
-    } catch { setToneCatalog(FALLBACK_AUDIO_CATALOG); }
-
     const persisted = window.localStorage.getItem('gcphone:liveLocationInterval');
     if (persisted === '10') setLiveLocationInterval(10);
 

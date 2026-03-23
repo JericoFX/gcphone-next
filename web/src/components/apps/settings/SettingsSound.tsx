@@ -78,15 +78,6 @@ export function SettingsSound(props: SettingsSoundProps) {
         />
       </Group>
 
-      <SectionHeader title={t('settings.ringtone', props.language()).toUpperCase()} />
-      <div class={styles.customUrl}>
-        <div class={styles.customUrlInfo}>
-          <div class={styles.customUrlTitle}>{t('settings.public_library', props.language())}</div>
-          <div class={styles.customUrlText}>{t('settings.public_library_desc', props.language(), { source: props.toneCatalog().source?.name || 'Pixabay Sound Effects', license: props.toneCatalog().source?.license || 'royalty-free' })}</div>
-        </div>
-        <button onClick={() => window.open(props.toneCatalog().source?.downloadPage || 'https://pixabay.com/sound-effects/', '_blank')}>{t('settings.download', props.language())}</button>
-      </div>
-
       <SectionHeader title={t('settings.call_ringtone', props.language()).toUpperCase()} />
       <ToneList tones={props.toneCatalog().categories?.ringtones || []} category="ringtone" selected={props.phoneState.settings.callRingtone || props.phoneState.settings.ringtone} onSelect={(id) => props.phoneActions.setCallRingtone(id)} icon={ICONS.ringtone} />
 

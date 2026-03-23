@@ -225,15 +225,41 @@ bun run typecheck
 
 ## Native Audio (gcphone_sounds)
 
-The `gcphone_sounds` resource provides the native GTA audio bank used for ringtones, notification sounds, and other phone audio. It must be started **before** `gcphone-next`.
+The `gcphone_sounds` resource provides the native GTA audio bank used for ringtones, notification sounds, and other phone audio. It is a **separate resource** that must be installed and started **before** `gcphone-next`.
+
+### Where to get it
+
+The `gcphone_sounds` resource is included in the GitHub releases as a separate download. Place it in your resources folder:
+
+```
+resources/[phone]/gcphone_sounds/
+```
+
+### Custom sounds
+
+If you want to use your own ringtones and notification sounds, use [Audiotool](https://github.com/JericoFX/Audiotool) to compile custom `.awc` audio banks for GTA V. This tool includes a special fix for audio bank compilation that other tools don't have.
+
+After generating your custom audio bank:
+
+1. Replace the files in `gcphone_sounds/audiodirectory/`
+2. Update the sound catalog in `shared/config.lua` under `Config.NativeAudio.Catalog` to match your new sound names
+3. Restart both `gcphone_sounds` and `gcphone-next`
+
+### Configuration
 
 The audio configuration is in `shared/config.lua` under `Config.NativeAudio`. You can customize:
 
-- Sound bank name
-- Ringtone catalog (which tones are available)
+- Sound bank name and sound set
+- Ringtone catalog (which tones are available and their GTA sound names)
 - Default tones per category (calls, messages, notifications)
 
-All audio plays through GTA's native sound system, so players hear ringtones and notifications spatially in-game. Respect the audio -- if a player's phone rings, nearby players will hear it.
+All audio plays through GTA's native sound system, so players hear ringtones and notifications spatially in-game. If a player's phone rings, nearby players will hear it.
+
+## Tools (separate download)
+
+The `tools/` directory contains Docker setup scripts for self-hosting LiveKit (video calls). It is distributed as a separate zip in the GitHub releases (`gcphone-next-tools-v*.zip`).
+
+See the [LiveKit Setup Guide](/guides/livekit-setup) for full instructions.
 
 ## Open Source
 

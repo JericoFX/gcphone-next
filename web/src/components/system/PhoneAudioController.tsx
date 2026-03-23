@@ -1,7 +1,7 @@
 import { createEffect, onCleanup } from 'solid-js';
 import { useNotifications, usePhone } from '../../store';
 import { useInternalEvent } from '../../utils/internalEvents';
-import { phoneAudio, type AudioProfile, type ToneCategory } from '../../utils/phoneAudio';
+import type { ToneCategory } from '../../utils/phoneAudio';
 import { fetchNui } from '../../utils/fetchNui';
 
 type PreviewDetail = {
@@ -15,27 +15,15 @@ type SoundDetail = {
   loop?: boolean;
 };
 
-type MessageDetail = {
-  id?: number;
-};
-
-type IncomingCallDetail = {
-  nativeTone?: boolean;
-};
-
 type NativeCallToneDetail = {
   active?: boolean;
   toneId?: string;
   placeholder?: boolean;
 };
 
-type NativeAudioResult = {
-  success?: boolean;
-};
-
 async function tryNativeAudio(callback: string, data: Record<string, unknown>): Promise<boolean> {
   try {
-    const result = await fetchNui<NativeAudioResult>(callback, data);
+    const result = await fetchNui<{ success?: boolean }>(callback, data);
     return result?.success === true;
   } catch {
     return false;
@@ -46,89 +34,33 @@ export function PhoneAudioController() {
   const [phoneState] = usePhone();
   const [notifications] = useNotifications();
   let lastNotificationId: string | null = null;
-  let nativeIncomingCallActive = false;
 
-  const audioProfile = () => (phoneState.settings.audioProfile || 'normal') as AudioProfile;
-  const masterVolume = () => phoneState.settings.volume ?? 0.5;
-  const shouldUseVibrateVariant = () => {
-    return audioProfile() === 'silent' || notifications.silentMode || notifications.doNotDisturb;
-  };
-
-  const playIncomingTone = () => {
-    phoneAudio.playTone('incoming-call', {
-      toneId: phoneState.settings.callRingtone || phoneState.settings.ringtone,
-      category: 'ringtone',
-      volume: masterVolume(),
-      loop: true,
-      audioProfile: audioProfile(),
-      forceVibrate: shouldUseVibrateVariant(),
-    });
-  };
-
-  const stopCallAudio = () => {
-    phoneAudio.stop('incoming-call');
-    phoneAudio.stop('outgoing-call');
-    fetchNui('stopNativeOutgoing').catch(() => {});
-  };
-
-  const stopPreview = () => {
-    phoneAudio.stop('tone-preview');
-  };
-
-  const playAlertTone = async (channel: string, category: ToneCategory) => {
+  const playAlertTone = async (_channel: string, category: ToneCategory) => {
     const toneId = category === 'message'
       ? phoneState.settings.messageTone
       : phoneState.settings.notificationTone;
 
     const nativeCallback = category === 'message' ? 'playNativeMessage' : 'playNativeNotification';
-    const ok = await tryNativeAudio(nativeCallback, { toneId });
-    if (ok) return;
-
-    phoneAudio.playTone(channel, {
-      toneId,
-      category,
-      volume: masterVolume(),
-      audioProfile: audioProfile(),
-      forceVibrate: shouldUseVibrateVariant(),
-    });
+    await tryNativeAudio(nativeCallback, { toneId });
   };
 
-  const onIncomingCall = (detail: IncomingCallDetail | undefined) => {
-    phoneAudio.stop('outgoing-call');
+  const onIncomingCall = () => {
     fetchNui('stopNativeOutgoing').catch(() => {});
-    if (nativeIncomingCallActive || detail?.nativeTone === true) {
-      phoneAudio.stop('incoming-call');
-      return;
-    }
-    playIncomingTone();
   };
 
   const onCallResolved = () => {
-    stopCallAudio();
+    fetchNui('stopNativeOutgoing').catch(() => {});
   };
 
   const onPreviewTone = (detail: PreviewDetail | undefined) => {
     if (!detail?.toneId) return;
-    phoneAudio.playTone('tone-preview', {
-      toneId: detail.toneId,
-      category: detail.category || 'ringtone',
-      volume: masterVolume(),
-      audioProfile: audioProfile(),
-      forceVibrate: shouldUseVibrateVariant(),
-    });
+    fetchNui('previewNativeTone', { toneId: detail.toneId, category: detail.category || 'ringtone' }).catch(() => {});
   };
 
   const onPlaySound = async (detail: SoundDetail | undefined) => {
     if (!detail?.sound) return;
     if (detail.sound === 'calling_loop' || detail.sound === 'calling_short') {
-      const ok = await tryNativeAudio('playNativeOutgoing', { sound: detail.sound });
-      if (ok) return;
-
-      phoneAudio.playNamed('outgoing-call', {
-        sound: detail.sound,
-        volume: typeof detail.volume === 'number' ? detail.volume : masterVolume(),
-        loop: detail.sound === 'calling_loop' ? true : detail.loop === true,
-      });
+      await tryNativeAudio('playNativeOutgoing', { sound: detail.sound });
     }
   };
 
@@ -139,45 +71,29 @@ export function PhoneAudioController() {
   const onStopSound = (detail: SoundDetail | undefined) => {
     if (!detail?.sound) return;
     if (detail.sound === 'calling_loop' || detail.sound === 'calling_short') {
-      phoneAudio.stop('outgoing-call');
       fetchNui('stopNativeOutgoing').catch(() => {});
     }
   };
 
-  const onSetSoundVolume = (detail: SoundDetail | undefined) => {
-    if (!detail?.sound || typeof detail.volume !== 'number') return;
-    if (detail.sound === 'calling_loop' || detail.sound === 'calling_short') {
-      phoneAudio.updateNamedVolume('outgoing-call', detail.volume);
-    }
-  };
-
-  const onHidePhone = () => {
-    stopPreview();
-  };
-
-  const onNativeCallToneState = (detail: NativeCallToneDetail | undefined) => {
-    nativeIncomingCallActive = detail?.active === true && detail?.placeholder !== true;
-    if (nativeIncomingCallActive) {
-      phoneAudio.stop('incoming-call');
-    }
-  };
-
   onCleanup(() => {
-    phoneAudio.stopAll();
+    fetchNui('stopNativeOutgoing').catch(() => {});
   });
 
-  useInternalEvent<IncomingCallDetail>('incomingCall', onIncomingCall);
+  useInternalEvent('incomingCall', onIncomingCall);
   useInternalEvent('callAccepted', onCallResolved);
   useInternalEvent('callRejected', onCallResolved);
   useInternalEvent('callEnded', onCallResolved);
   useInternalEvent<PreviewDetail>('gcphone:previewTone', onPreviewTone);
-  useInternalEvent('gcphone:stopTonePreview', stopPreview);
-  useInternalEvent<MessageDetail>('messageReceived', onMessageReceived);
+  useInternalEvent('gcphone:stopTonePreview', () => {
+    fetchNui('stopNativeTonePreview').catch(() => {});
+  });
+  useInternalEvent('messageReceived', onMessageReceived);
   useInternalEvent<SoundDetail>('playSound', onPlaySound);
   useInternalEvent<SoundDetail>('stopSound', onStopSound);
-  useInternalEvent<SoundDetail>('setSoundVolume', onSetSoundVolume);
-  useInternalEvent('phone:hide', onHidePhone);
-  useInternalEvent<NativeCallToneDetail>('gcphone:nativeCallToneState', onNativeCallToneState);
+  useInternalEvent<NativeCallToneDetail>('gcphone:nativeCallToneState', () => {});
+  useInternalEvent('phone:hide', () => {
+    fetchNui('stopNativeTonePreview').catch(() => {});
+  });
 
   createEffect(() => {
     const current = notifications.current;
@@ -186,26 +102,6 @@ export function PhoneAudioController() {
 
     lastNotificationId = currentId;
     playAlertTone('notification', 'notification');
-  });
-
-  createEffect(() => {
-    audioProfile();
-    masterVolume();
-    notifications.silentMode;
-    notifications.doNotDisturb;
-
-    if (phoneAudio.has('incoming-call')) {
-      playIncomingTone();
-    }
-  });
-
-  createEffect(() => {
-    phoneState.settings.callRingtone;
-    phoneState.settings.ringtone;
-
-    if (phoneAudio.has('incoming-call')) {
-      playIncomingTone();
-    }
   });
 
   return null;
