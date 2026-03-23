@@ -131,6 +131,7 @@ jobs:
             shared/ \
             client/ \
             server/ \
+            socket-server/ \
             web/dist/ \
             '[gcphone_sounds]/' \
             CHANGELOG.md \
@@ -138,10 +139,24 @@ jobs:
             -x "*.git*" \
             -x "version.txt" \
             -x "*.local*" \
-            -x "docs/*"
+            -x "docs/*" \
+            -x "socket-server/node_modules/*"
 
           echo "ZIP_NAME=$ZIP_NAME" >> "$GITHUB_ENV"
           echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+
+      - name: Create tools zip
+        run: |
+          VERSION="${{ needs.build.outputs.version }}"
+          TOOLS_ZIP="gcphone-next-tools-v${VERSION}.zip"
+
+          zip -r "$TOOLS_ZIP" \
+            tools/ \
+            -x "tools/livekit/.env" \
+            -x "tools/livekit/livekit.yaml" \
+            -x "tools/livekit/data/*"
+
+          echo "TOOLS_ZIP=$TOOLS_ZIP" >> "$GITHUB_ENV"
 
       - name: Extract changelog for this version
         run: |
@@ -157,6 +172,8 @@ jobs:
           tag_name: v${{ env.VERSION }}
           name: gcphone-next v${{ env.VERSION }}
           body_path: release_notes.md
-          files: ${{ env.ZIP_NAME }}
+          files: |
+            ${{ env.ZIP_NAME }}
+            ${{ env.TOOLS_ZIP }}
           draft: false
           prerelease: false
