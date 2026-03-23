@@ -13,7 +13,8 @@ local function SafeType(value)
         passport = 'Pasaporte',
         insurance = 'Seguro',
         registration = 'Registro',
-        work_permit = 'Permiso Trabajo'
+        work_permit = 'Permiso Trabajo',
+        receipt = 'Recibo'
     }
     if validTypes[docType] then
         return docType
@@ -250,7 +251,8 @@ lib.callback.register('gcphone:documents:getTypes', function(source)
         { id = 'permit', name = 'Permiso Especial', icon = 'PERM', color = '#af52de' },
         { id = 'work_permit', name = 'Permiso de Trabajo', icon = 'WORK', color = '#5856d6' },
         { id = 'insurance', name = 'Seguro', icon = 'INS', color = '#ff3b30' },
-        { id = 'registration', name = 'Registro Civil', icon = 'REG', color = '#5ac8fa' }
+        { id = 'registration', name = 'Registro Civil', icon = 'REG', color = '#5ac8fa' },
+        { id = 'receipt', name = 'Recibo', icon = 'REC', color = '#8e8e93' }
     }
 end)
 

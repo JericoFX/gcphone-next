@@ -348,6 +348,18 @@ RegisterNUICallback('walletTransfer', function(data, cb)
     end, data)
 end)
 
+RegisterNUICallback('walletChatTransfer', function(data, cb)
+    lib.callback('gcphone:wallet:chatTransfer', false, function(payload)
+        cb(payload or { success = false })
+    end, data)
+end)
+
+RegisterNUICallback('walletSplitPayment', function(data, cb)
+    lib.callback('gcphone:wallet:splitPayment', false, function(payload)
+        cb(payload or { success = false })
+    end, data)
+end)
+
 RegisterNUICallback('walletProximityTransfer', function(data, cb)
     lib.callback('gcphone:wallet:proximityTransfer', false, function(payload)
         cb(payload or { success = false })

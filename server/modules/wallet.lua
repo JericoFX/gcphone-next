@@ -821,4 +821,116 @@ exports('WalletTransferByIdentifier', function(senderIdentifier, receiverIdentif
     return success, payload
 end)
 
+-- Send money from chat + auto-create receipt document
+lib.callback.register('gcphone:wallet:chatTransfer', function(source, data)
+    if Phone.IsPhoneReadOnly(source) then return { success = false, error = 'READ_ONLY' } end
+    if type(data) ~= 'table' then return { success = false, error = 'INVALID_DATA' } end
+
+    local transferMs = Utils.GetRateLimitWindow('wallet_transfer', 900)
+    if Utils.HitRateLimit(source, 'wallet_chat_transfer', transferMs, 1) then
+        return { success = false, error = 'RATE_LIMITED' }
+    end
+
+    local identifier = Bridge.GetIdentifier(source)
+    if not identifier then return { success = false, error = 'INVALID_SOURCE' } end
+
+    local targetPhone = Utils.SafePhone(data.targetPhone)
+    if not targetPhone then return { success = false, error = 'INVALID_TARGET' } end
+
+    local amount = Utils.SafeNumber(data.amount, 1, 500000)
+    if not amount then return { success = false, error = 'INVALID_AMOUNT' } end
+
+    local title = Utils.SafeString(data.title, 64) or 'Pago via chat'
+
+    local receiverIdentifier = Bridge.GetIdentifierByPhone(targetPhone)
+    if not receiverIdentifier then return { success = false, error = 'UNKNOWN_TARGET' } end
+    if receiverIdentifier == identifier then return { success = false, error = 'SELF_TRANSFER' } end
+
+    local success, payload = ExecuteWalletTransfer(identifier, receiverIdentifier, targetPhone, amount, title)
+    if not success then return { success = false, error = payload and payload.error or 'TRANSFER_FAILED' } end
+
+    -- Notify receiver
+    local receiverSource = Bridge.GetSourceFromIdentifier(receiverIdentifier)
+    if receiverSource then
+        PushWalletNotification(receiverSource, 'Pago recibido', ('$%s via chat'):format(math.floor(amount)))
+    end
+
+    -- Auto-create receipt document
+    pcall(function()
+        local senderName = Bridge.GetName(source) or 'Desconocido'
+        local receiverName = receiverSource and Bridge.GetName(receiverSource) or targetPhone
+        local receiptTitle = string.format('Recibo $%s - %s', math.floor(amount), receiverName)
+
+        MySQL.insert.await(
+            'INSERT INTO phone_documents (identifier, doc_type, title, holder_name, holder_number, verification_code, nfc_enabled) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            { identifier, 'receipt', receiptTitle, senderName, targetPhone, string.format('%08X', math.random(0, 0xFFFFFFFF)), 0 }
+        )
+    end)
+
+    return { success = true, balance = payload.balance }
+end)
+
+-- Split payment among multiple contacts
+lib.callback.register('gcphone:wallet:splitPayment', function(source, data)
+    if Phone.IsPhoneReadOnly(source) then return { success = false, error = 'READ_ONLY' } end
+    if type(data) ~= 'table' then return { success = false, error = 'INVALID_DATA' } end
+
+    if Utils.HitRateLimit(source, 'wallet_split', 3000, 1) then
+        return { success = false, error = 'RATE_LIMITED' }
+    end
+
+    local identifier = Bridge.GetIdentifier(source)
+    if not identifier then return { success = false, error = 'INVALID_SOURCE' } end
+
+    local totalAmount = Utils.SafeNumber(data.totalAmount, 1, 500000)
+    if not totalAmount then return { success = false, error = 'INVALID_AMOUNT' } end
+
+    local recipients = type(data.recipients) == 'table' and data.recipients or {}
+    if #recipients < 2 or #recipients > 20 then return { success = false, error = 'INVALID_RECIPIENTS' } end
+
+    -- Validate all recipients
+    local validRecipients = {}
+    for _, phone in ipairs(recipients) do
+        local targetPhone = Utils.SafePhone(phone)
+        if targetPhone then
+            local recvId = Bridge.GetIdentifierByPhone(targetPhone)
+            if recvId and recvId ~= identifier and not validRecipients[recvId] then
+                validRecipients[recvId] = targetPhone
+            end
+        end
+    end
+
+    local count = 0
+    for _ in pairs(validRecipients) do count = count + 1 end
+    if count < 2 then return { success = false, error = 'INVALID_RECIPIENTS' } end
+
+    local splitAmount = math.floor(totalAmount / count)
+    if splitAmount < 1 then return { success = false, error = 'AMOUNT_TOO_LOW' } end
+
+    local title = string.format('Split $%d (%d personas)', math.floor(totalAmount), count)
+    local failed = 0
+    local lastBalance = 0
+
+    for recvId, targetPhone in pairs(validRecipients) do
+        local ok, payload = ExecuteWalletTransfer(identifier, recvId, targetPhone, splitAmount, title)
+        if ok then
+            lastBalance = payload.balance
+            local recvSource = Bridge.GetSourceFromIdentifier(recvId)
+            if recvSource then
+                PushWalletNotification(recvSource, 'Split recibido', ('$%s'):format(splitAmount))
+            end
+        else
+            failed = failed + 1
+        end
+    end
+
+    return {
+        success = failed == 0,
+        balance = lastBalance,
+        splitAmount = splitAmount,
+        sent = count - failed,
+        failed = failed,
+    }
+end)
+
 return {}

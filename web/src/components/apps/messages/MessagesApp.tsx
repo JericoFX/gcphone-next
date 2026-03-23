@@ -232,6 +232,26 @@ export function MessagesApp() {
     await messagesActions.react(messageId, emoji);
   };
 
+  const sendPayment = async () => {
+    if (isReadOnly()) return;
+    const number = selectedConversation();
+    if (!number) return;
+    const input = await uiPrompt('Monto a enviar', { title: 'Enviar pago' });
+    const amount = parseInt(input || '0', 10);
+    if (!amount || amount < 1) return;
+    const result = await fetchNui<{ success?: boolean; balance?: number; error?: string }>('walletChatTransfer', {
+      targetPhone: number,
+      amount,
+      title: 'Pago via chat',
+    });
+    if (result?.success) {
+      await messagesActions.send({ phoneNumber: number, message: `[Pago enviado: $${amount}]` });
+      uiAlert(`Pago de $${amount} enviado`);
+    } else {
+      uiAlert(result?.error === 'INSUFFICIENT_FUNDS' ? 'Fondos insuficientes' : 'Error al enviar pago');
+    }
+  };
+
   const handleForward = (msg: any) => {
     const mediaUrl = sanitizeMediaUrl(msg.mediaUrl || msg.media_url) || undefined;
     setForwardPayload({
@@ -304,6 +324,7 @@ export function MessagesApp() {
           onAttachCamera={media.attachFromCamera}
           onAttachUrl={media.attachByUrl}
           onSendLocation={sendLocationText}
+          onSendPayment={sendPayment}
           onOpenCoords={(x, y) => router.navigate('maps', { x, y })}
           onClearAttachment={() => setAttachmentUrl(null)}
           onOpenViewer={setViewerUrl}
@@ -486,6 +507,7 @@ function ConversationView(props: {
   onAttachCamera: () => void;
   onAttachUrl: () => void;
   onSendLocation: () => void;
+  onSendPayment: () => void;
   onOpenCoords: (x: number, y: number) => void;
   onClearAttachment: () => void;
   onOpenViewer: (url: string | null) => void;
@@ -697,6 +719,7 @@ function ConversationView(props: {
           { label: t('messages.attach_camera', language()), onClick: props.onAttachCamera },
           { label: t('messages.attach_url', language()), onClick: props.onAttachUrl },
           { label: t('maps.share_location', language()), onClick: props.onSendLocation },
+          { label: 'Enviar pago', onClick: props.onSendPayment },
           { label: t('messages.remove_attachment', language()), tone: 'danger', onClick: props.onClearAttachment },
         ]}
       />
