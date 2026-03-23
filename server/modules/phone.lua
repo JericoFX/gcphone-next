@@ -1,9 +1,13 @@
 -- Creado/Modificado por JericoFX
 
+local Bridge = require 'server.bridge'
+local Hooks = require 'server.modules.hooks'
+local Utils = require 'server.lib.utils'
+
 local PhoneExists
 local RESOURCE_NAME = GetCurrentResourceName()
 
-GCPhone.StreamerModePlayers = {}
+local StreamerModePlayers = {}
 
 ---@class GCPhoneLookupOwner
 ---@field identifier string
@@ -35,7 +39,7 @@ end
 local function GenerateUniquePhoneNumber()
     for _ = 1, 40 do
         local phoneNumber = GeneratePhoneNumber()
-        if not PhoneExists(phoneNumber) and not GetIdentifierByPhone(phoneNumber) then
+        if not PhoneExists(phoneNumber) and not Bridge.GetIdentifierByPhone(phoneNumber) then
             return phoneNumber
         end
     end
@@ -48,8 +52,7 @@ local function CanAccessIdentifierExport(identifier, requestSource)
     if not src or src <= 0 or not identifier then
         return false
     end
-
-    local ownerIdentifier = GetPhoneOwnerIdentifier and GetPhoneOwnerIdentifier(src, true) or GetIdentifier(src)
+    local ownerIdentifier = GetPhoneOwnerIdentifier(src, true) or Bridge.GetIdentifier(src)
     return ownerIdentifier ~= nil and ownerIdentifier == identifier
 end
 
@@ -75,14 +78,6 @@ local function SafeString(value, maxLen)
         trimmed = trimmed:sub(1, maxLen)
     end
     return trimmed
-end
-
-local function SafeNumber(value, min, max)
-    local num = tonumber(value)
-    if not num then return nil end
-    if min and num < min then num = min end
-    if max and num > max then num = max end
-    return num
 end
 
 local function SafeTheme(value)
@@ -466,20 +461,20 @@ PhoneExists = function(phoneNumber)
 end
 
 local function GetOrCreatePhone(source)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return nil end
-    
+
     local phone = MySQL.single.await(
         'SELECT * FROM phone_numbers WHERE identifier = ?',
         { identifier }
     )
 
-    local framework = GetFramework and GetFramework() or nil
-    local frameworkPhoneNumber = GetFrameworkPhoneNumber and GetFrameworkPhoneNumber(source, identifier) or nil
+    local framework = Bridge.GetFramework()
+    local frameworkPhoneNumber = Bridge.GetFrameworkPhoneNumber(source, identifier)
     
     if phone then
-        if framework == 'esx' and (not frameworkPhoneNumber or frameworkPhoneNumber == '') and phone.phone_number and SetFrameworkPhoneNumber then
-            SetFrameworkPhoneNumber(source, identifier, phone.phone_number)
+        if framework == 'esx' and (not frameworkPhoneNumber or frameworkPhoneNumber == '') and phone.phone_number then
+            Bridge.SetFrameworkPhoneNumber(source, identifier, phone.phone_number)
             frameworkPhoneNumber = phone.phone_number
         end
 
@@ -511,8 +506,8 @@ local function GetOrCreatePhone(source)
     local phoneNumber = frameworkPhoneNumber
     if (type(phoneNumber) ~= 'string' or phoneNumber == '') and framework == 'esx' then
         phoneNumber = GenerateUniquePhoneNumber()
-        if phoneNumber and SetFrameworkPhoneNumber then
-            SetFrameworkPhoneNumber(source, identifier, phoneNumber)
+        if phoneNumber then
+            Bridge.SetFrameworkPhoneNumber(source, identifier, phoneNumber)
         end
     end
 
@@ -553,13 +548,13 @@ local function GetPhoneByIdentifier(identifier)
     )
 end
 
-function GetPhoneRecordByIdentifier(identifier)
+local function GetPhoneRecordByIdentifier(identifier)
     return GetPhoneByIdentifier(identifier)
 end
 
 local function ResolvePhoneOwnerName(source, identifier)
     if source then
-        local name = GetName(source)
+        local name = Bridge.GetName(source)
         if type(name) == 'string' and name ~= '' then
             return name
         end
@@ -603,7 +598,7 @@ local function VerifyPinForIdentifier(identifier, pin)
     return tostring(phone.lock_code or '') == pin, nil
 end
 
-function VerifyPhonePinForIdentifier(identifier, pin)
+local function VerifyPhonePinForIdentifier(identifier, pin)
     return VerifyPinForIdentifier(identifier, pin)
 end
 
@@ -617,15 +612,15 @@ local function BuildReadOnlyEnabledApps()
     return enabled
 end
 
-function GetPhoneAccessContext(source)
+local function GetPhoneAccessContext(source)
     return ActivePhoneContexts[tonumber(source) or -1]
 end
 
-function ClearPhoneAccessContext(source)
+local function ClearPhoneAccessContext(source)
     ActivePhoneContexts[tonumber(source) or -1] = nil
 end
 
-function SetPhoneAccessContext(source, context)
+local function SetPhoneAccessContext(source, context)
     local src = tonumber(source)
     if not src or src <= 0 then return end
 
@@ -644,16 +639,16 @@ function SetPhoneAccessContext(source, context)
     }
 end
 
-function GetPhoneOwnerIdentifier(source, allowForeign)
+local function GetPhoneOwnerIdentifier(source, allowForeign)
     local context = GetPhoneAccessContext(source)
     if allowForeign and context and type(context.ownerIdentifier) == 'string' and context.ownerIdentifier ~= '' then
         return context.ownerIdentifier
     end
 
-    return GetIdentifier(source)
+    return Bridge.GetIdentifier(source)
 end
 
-function GetPhoneLanguageForSource(source, allowForeign)
+local function GetPhoneLanguageForSource(source, allowForeign)
     local identifier = GetPhoneOwnerIdentifier(source, allowForeign)
     if not identifier then return 'es' end
 
@@ -661,7 +656,7 @@ function GetPhoneLanguageForSource(source, allowForeign)
     return SafeLanguage(phone and phone.language) or 'es'
 end
 
-function IsPhoneReadOnly(source)
+local function IsPhoneReadOnly(source)
     local context = GetPhoneAccessContext(source)
     return context and context.readOnly == true or false
 end
@@ -671,7 +666,7 @@ local function BuildPhonePayload(phone, source)
 
     local context = source and GetPhoneAccessContext(source) or nil
     local isForeignReadOnly = context and context.mode == 'foreign-readonly'
-    local framework = GetFramework and GetFramework() or 'unknown'
+    local framework = Bridge.GetFramework() or 'unknown'
     local featureFlags = GetFeatureFlags()
     local enabledApps = isForeignReadOnly and BuildReadOnlyEnabledApps() or BuildEnabledApps(featureFlags)
     local layoutRaw = MySQL.scalar.await(
@@ -685,7 +680,7 @@ local function BuildPhonePayload(phone, source)
 
     local isStreamer = tonumber(phone.streamer_mode) == 1
     if source then
-        GCPhone.StreamerModePlayers[source] = isStreamer or nil
+        StreamerModePlayers[source] = isStreamer or nil
     end
 
     return {
@@ -715,12 +710,12 @@ local function BuildPhonePayload(phone, source)
         accessMode = isForeignReadOnly and 'foreign-readonly' or 'own',
         accessOwnerName = isForeignReadOnly and context.ownerName or nil,
         accessPhoneId = isForeignReadOnly and context.phoneId or nil,
-        resourceVersion = GCPhone and GCPhone.Version or '0.0.0',
-        resourceAuthor = GCPhone and GCPhone.Author or 'JericoFX',
+        resourceVersion = GetResourceMetadata(GetCurrentResourceName(), 'version', 0) or '0.0.0',
+        resourceAuthor = GetResourceMetadata(GetCurrentResourceName(), 'author', 0) or 'JericoFX',
     }
 end
 
-function BuildPhonePayloadForSource(phone, source)
+local function BuildPhonePayloadForSource(phone, source)
     return BuildPhonePayload(phone, source)
 end
 
@@ -858,13 +853,13 @@ lib.callback.register('gcphone:getPhoneData', function(source)
     end
 
     local identifier = GetPhoneOwnerIdentifier(source, true)
-    local phone = identifier == GetIdentifier(source) and GetOrCreatePhone(source) or GetPhoneByIdentifier(identifier)
+    local phone = identifier == Bridge.GetIdentifier(source) and GetOrCreatePhone(source) or GetPhoneByIdentifier(identifier)
     if not phone then return nil end
     return BuildPhonePayload(phone, source)
 end)
 
 lib.callback.register('gcphone:phone:getSetupState', function(source)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then
         return { success = false, error = 'MISSING_IDENTIFIER', requiresSetup = true }
     end
@@ -878,7 +873,7 @@ lib.callback.register('gcphone:phone:getSetupState', function(source)
 end)
 
 lib.callback.register('gcphone:phone:completeSetup', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then
         return { success = false, error = 'MISSING_IDENTIFIER' }
     end
@@ -914,7 +909,7 @@ lib.callback.register('gcphone:phone:completeSetup', function(source, data)
         return { success = false, error = 'EMAIL_IN_USE' }
     end
 
-    local name = GetName(source) or 'User'
+    local name = Bridge.GetName(source) or 'User'
     local mailDomain = MailDomain()
     local mailEmail = mailAlias and (mailAlias .. '@' .. mailDomain) or nil
 
@@ -980,27 +975,25 @@ lib.callback.register('gcphone:phone:completeSetup', function(source, data)
         return { success = false, error = 'SETUP_FAILED', detail = tostring(err) }
     end
 
-    if type(TriggerPhoneHook) == 'function' then
-        TriggerPhoneHook('phoneSetupCompleted', {
+    Hooks.triggerHook('phoneSetupCompleted', {
+        source = source,
+        identifier = identifier,
+        phoneNumber = Bridge.GetPhoneNumber(identifier),
+        snapUsername = snapUsername,
+        chirpUsername = chirpUsername,
+        clipsUsername = clipsUsername,
+        mail = mailEmail,
+        language = language,
+    })
+
+    if mailEmail then
+        Hooks.triggerHook('mailAccountCreated', {
             source = source,
             identifier = identifier,
-            phoneNumber = GetPhoneNumber(identifier),
-            snapUsername = snapUsername,
-            chirpUsername = chirpUsername,
-            clipsUsername = clipsUsername,
-            mail = mailEmail,
-            language = language,
+            email = mailEmail,
+            alias = mailAlias,
+            domain = mailDomain,
         })
-
-        if mailEmail then
-            TriggerPhoneHook('mailAccountCreated', {
-                source = source,
-                identifier = identifier,
-                email = mailEmail,
-                alias = mailAlias,
-                domain = mailDomain,
-            })
-        end
     end
 
     local setup = ResolveSetupState(identifier)
@@ -1027,13 +1020,13 @@ lib.callback.register('gcphone:phone:verifyPin', function(source, data)
         return { success = false, unlocked = false, error = err }
     end
 
-    if unlocked and type(TriggerPhoneHook) == 'function' then
+    if unlocked then
         local phone = GetPhoneByIdentifier(identifier)
-        TriggerPhoneHook('deviceUnlocked', {
+        Hooks.triggerHook('deviceUnlocked', {
             source = source,
             identifier = identifier,
             imei = phone and phone.imei or nil,
-            phoneNumber = phone and phone.phone_number or GetPhoneNumber(identifier),
+            phoneNumber = phone and phone.phone_number or Bridge.GetPhoneNumber(identifier),
         })
     end
 
@@ -1054,21 +1047,19 @@ lib.callback.register('gcphone:phone:reportImeiViewed', function(source, data)
         return { success = false, error = 'PHONE_NOT_FOUND' }
     end
 
-    if type(TriggerPhoneHook) == 'function' then
-        TriggerPhoneHook('imeiViewed', {
-            source = source,
-            identifier = identifier,
-            imei = phone.imei,
-            context = SafeString(type(data) == 'table' and data.context or nil, 24) or 'unknown',
-        })
-    end
+    Hooks.triggerHook('imeiViewed', {
+        source = source,
+        identifier = identifier,
+        imei = phone.imei,
+        context = SafeString(type(data) == 'table' and data.context or nil, 24) or 'unknown',
+    })
 
     return { success = true, imei = phone.imei }
 end)
 
 lib.callback.register('gcphone:setWallpaper', function(source, data)
     if IsPhoneReadOnly(source) then return false end
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false end
     local url = SafeString(type(data) == 'table' and data.url or nil, 500)
     if not url then return false end
@@ -1083,7 +1074,7 @@ end)
 
 lib.callback.register('gcphone:setRingtone', function(source, data)
     if IsPhoneReadOnly(source) then return false end
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false end
     local ringtone = ResolveToneId(type(data) == 'table' and data.ringtone or nil, 'ringtone')
     if not ringtone then return false end
@@ -1098,7 +1089,7 @@ end)
 
 lib.callback.register('gcphone:setCallRingtone', function(source, data)
     if IsPhoneReadOnly(source) then return false end
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false end
     local ringtone = ResolveToneId(type(data) == 'table' and data.ringtone or nil, 'ringtone')
     if not ringtone then return false end
@@ -1113,7 +1104,7 @@ end)
 
 lib.callback.register('gcphone:setNotificationTone', function(source, data)
     if IsPhoneReadOnly(source) then return false end
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false end
     local tone = ResolveToneId(type(data) == 'table' and data.tone or nil, 'notification')
     if not tone then return false end
@@ -1128,7 +1119,7 @@ end)
 
 lib.callback.register('gcphone:setMessageTone', function(source, data)
     if IsPhoneReadOnly(source) then return false end
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false end
     local tone = ResolveToneId(type(data) == 'table' and data.tone or nil, 'message')
     if not tone then return false end
@@ -1143,9 +1134,9 @@ end)
 
 lib.callback.register('gcphone:setVolume', function(source, data)
     if IsPhoneReadOnly(source) then return false end
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false end
-    local volume = SafeNumber(type(data) == 'table' and data.volume or nil, 0.0, 1.0)
+    local volume = Utils.SafeNumber(type(data) == 'table' and data.volume or nil, 0.0, 1.0)
     if not volume then return false end
     
     MySQL.update.await(
@@ -1158,7 +1149,7 @@ end)
 
 lib.callback.register('gcphone:setLockCode', function(source, data)
     if IsPhoneReadOnly(source) then return false end
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false end
     local code = SafeString(type(data) == 'table' and data.code or nil, 16)
     if not code then return false end
@@ -1173,7 +1164,7 @@ end)
 
 lib.callback.register('gcphone:factoryResetPhone', function(source)
     if IsPhoneReadOnly(source) then return { success = false, error = 'READ_ONLY' } end
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return { success = false, error = 'MISSING_IDENTIFIER' } end
 
     local phone = ResetPhone(identifier)
@@ -1186,7 +1177,7 @@ end)
 
 lib.callback.register('gcphone:setTheme', function(source, data)
     if IsPhoneReadOnly(source) then return false end
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false end
     local theme = SafeTheme(type(data) == 'table' and data.theme or nil)
     if not theme then return false end
@@ -1201,7 +1192,7 @@ end)
 
 lib.callback.register('gcphone:setLanguage', function(source, data)
     if IsPhoneReadOnly(source) then return false end
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false end
     local language = SafeLanguage(type(data) == 'table' and data.language or nil)
     if not language then return false end
@@ -1216,7 +1207,7 @@ end)
 
 lib.callback.register('gcphone:setAudioProfile', function(source, data)
     if IsPhoneReadOnly(source) then return false end
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false end
     local profile = SafeString(type(data) == 'table' and data.audioProfile or nil, 16)
     if profile ~= 'normal' and profile ~= 'street' and profile ~= 'vehicle' and profile ~= 'silent' then
@@ -1233,7 +1224,7 @@ end)
 
 lib.callback.register('gcphone:setStreamerMode', function(source, data)
     if IsPhoneReadOnly(source) then return false end
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false end
     local enabled = type(data) == 'table' and data.enabled == true
     local dbVal = enabled and 1 or 0
@@ -1243,12 +1234,12 @@ lib.callback.register('gcphone:setStreamerMode', function(source, data)
         { dbVal, identifier }
     )
 
-    GCPhone.StreamerModePlayers[source] = enabled or nil
+    StreamerModePlayers[source] = enabled or nil
     return true
 end)
 
 lib.callback.register('gcphone:getAppLayout', function(source)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     local enabledApps = BuildEnabledApps(GetFeatureFlags())
     if not identifier then return NormalizeLayout(DefaultLayout, enabledApps) end
 
@@ -1267,7 +1258,7 @@ end)
 
 lib.callback.register('gcphone:setAppLayout', function(source, layout)
     if IsPhoneReadOnly(source) then return false end
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false end
 
     local normalized = NormalizeLayout(layout, BuildEnabledApps(GetFeatureFlags()))
@@ -1282,7 +1273,7 @@ lib.callback.register('gcphone:setAppLayout', function(source, layout)
 end)
 
 lib.callback.register('gcphone:getPhoneMetadata', function(source, phoneId)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return nil end
     
     local phone = MySQL.single.await(
@@ -1292,7 +1283,7 @@ lib.callback.register('gcphone:getPhoneMetadata', function(source, phoneId)
     
     if not phone then return nil end
     
-    local name = GetName(source)
+    local name = Bridge.GetName(source)
     
     return {
         owner = name,
@@ -1334,7 +1325,7 @@ end)
 
 AddEventHandler('playerDropped', function()
     ClearPhoneAccessContext(source)
-    GCPhone.StreamerModePlayers[source] = nil
+    StreamerModePlayers[source] = nil
 end)
 
 ---Get a phone number by owner identifier.
@@ -1346,8 +1337,9 @@ exports('GetPhoneNumber', function(identifier, requestSource)
         return nil
     end
 
-    if GetPhoneNumber then
-        return GetPhoneNumber(identifier)
+    local result = Bridge.GetPhoneNumber(identifier)
+    if result then
+        return result
     end
 
     return MySQL.scalar.await(
@@ -1360,8 +1352,9 @@ end)
 ---@param phoneNumber string
 ---@return string|nil
 exports('GetIdentifierByPhone', function(phoneNumber)
-    if GetIdentifierByPhone then
-        return GetIdentifierByPhone(phoneNumber)
+    local result = Bridge.GetIdentifierByPhone(phoneNumber)
+    if result then
+        return result
     end
 
     return MySQL.scalar.await(
@@ -1398,7 +1391,7 @@ exports('MarkPhoneAsStolenByIMEI', function(imei, reason, reporter)
 
     -- Notify the owner if online
     if result and result.identifier then
-        local ownerSource = GetSourceFromIdentifier(result.identifier)
+        local ownerSource = Bridge.GetSourceFromIdentifier(result.identifier)
         if ownerSource then
             TriggerClientEvent('gcphone:phoneMarkedStolen', ownerSource, {
                 isStolen = true,
@@ -1516,7 +1509,7 @@ local function GetPhoneLookupRecordByNumber(phoneNumber)
         return nil, 'INVALID_PHONE_NUMBER'
     end
 
-    local identifier = GetIdentifierByPhone and GetIdentifierByPhone(safePhone) or nil
+    local identifier = Bridge.GetIdentifierByPhone(safePhone)
     if not identifier then
         return nil, 'PHONE_NOT_FOUND'
     end
@@ -1627,7 +1620,7 @@ exports('MarkPhoneAsStolenByNumber', function(phoneNumber, reason, reporter)
 
     -- Notify the owner if online
     if result and result.identifier then
-        local ownerSource = GetSourceFromIdentifier(result.identifier)
+        local ownerSource = Bridge.GetSourceFromIdentifier(result.identifier)
         if ownerSource then
             TriggerClientEvent('gcphone:phoneMarkedStolen', ownerSource, {
                 isStolen = true,
@@ -1682,3 +1675,17 @@ exports('ClearPhoneStolenByNumber', function(phoneNumber)
         phone = result,
     }
 end)
+
+return {
+    GetPhoneOwnerIdentifier = GetPhoneOwnerIdentifier,
+    GetPhoneAccessContext = GetPhoneAccessContext,
+    ClearPhoneAccessContext = ClearPhoneAccessContext,
+    SetPhoneAccessContext = SetPhoneAccessContext,
+    GetPhoneRecordByIdentifier = GetPhoneRecordByIdentifier,
+    GetPhoneLanguageForSource = GetPhoneLanguageForSource,
+    IsPhoneReadOnly = IsPhoneReadOnly,
+    BuildPhonePayloadForSource = BuildPhonePayloadForSource,
+    VerifyPhonePinForIdentifier = VerifyPhonePinForIdentifier,
+    PlayerHasPhoneItem = PlayerHasPhoneItem,
+    StreamerModePlayers = StreamerModePlayers,
+}

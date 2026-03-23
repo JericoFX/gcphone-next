@@ -3,7 +3,7 @@ game 'gta5'
 
 author 'JericoFX'
 description 'Modern FiveM Phone - SolidJS + ox_lib + oxmysql'
-version '2.1.1'
+version '2.2.1'
 
 lua54 'yes'
 
@@ -16,15 +16,9 @@ files {
 
     'shared/config.lua',
     'shared/locales/*.json',
-}
 
-shared_scripts {
-    '@ox_lib/init.lua',
-    'shared/locale.lua',
-    'shared/config.lua',
-}
-
-client_scripts {
+    -- Client modules (required by lib.require on client side)
+    'client/state.lua',
     'client/main.lua',
     'client/phone_animation.lua',
     'client/phone.lua',
@@ -44,54 +38,22 @@ client_scripts {
     'client/cityride.lua',
 }
 
+shared_scripts {
+    '@ox_lib/init.lua',
+    'shared/locale.lua',
+    'shared/config.lua',
+}
+
+client_scripts {
+    'client/init.lua',
+}
+
 server_scripts {
     'server/js/livekit.js',
     'server/js/socket_auth.js',
     'server/js/youtube_search.js',
     '@oxmysql/lib/MySQL.lua',
-    'server/modules/database.lua',
-    'server/main.lua',
-    'server/modules/hooks.lua',
-    'server/bridge/qbcore.lua',
-    'server/bridge/esx.lua',
-    'server/modules/phone.lua',
-    'server/modules/contacts.lua',
-    'server/modules/security.lua',
-    'server/modules/_utils.lua',
-    'server/modules/notifications.lua',
-    'server/modules/messages.lua',
-    'server/modules/mail.lua',
-    'server/modules/calls.lua',
-    'server/modules/flashlight.lua',
-    'server/modules/nearby_voice.lua',
-    'server/modules/gallery.lua',
-    'server/modules/bank.lua',
-    'server/modules/wallet.lua',
-    'server/modules/documents.lua',
-    'server/modules/documents_fix.lua',
-    'server/modules/chirp.lua',
-    'server/modules/snap.lua',
-    'server/modules/social.lua',
-    'server/modules/garage.lua',
-    'server/modules/yellowpages.lua',
-    'server/modules/matchmylove.lua',
-    'server/modules/services.lua',
-    'server/modules/news.lua',
-    'server/modules/clips.lua',
-    'server/modules/live.lua',
-    'server/modules/proximity.lua',
-    'server/modules/external.lua',
-    'server/modules/storage.lua',
-    'server/modules/livekit.lua',
-    'server/modules/socket.lua',
-    'server/modules/location_tracking.lua',
-    'server/modules/phone_drop.lua',
-    'server/modules/music.lua',
-    'server/modules/notes.lua',
-    'server/modules/retention.lua',
-    'server/modules/darkrooms.lua',
-    'server/modules/radio.lua',
-    'server/modules/cityride.lua',
+    'server/init.lua',
 }
 
 dependencies {

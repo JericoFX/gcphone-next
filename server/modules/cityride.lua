@@ -1,4 +1,7 @@
-local Utils = GcPhoneUtils
+local Bridge = require 'server.bridge'
+local Phone = require 'server.modules.phone'
+local Utils = require 'server.lib.utils'
+
 local function SafeString(v, m) return Utils.SafeString(v, m) end
 local function SanitizeText(v, m) return Utils.SanitizeText(v, m, true) end
 local function HitRateLimit(s, k, w, m) return Utils.HitRateLimit(s, k, w, m) end
@@ -132,7 +135,7 @@ local function BroadcastToAvailableDrivers(rideData)
     local payload = BuildRidePayload(rideData)
     for _, driver in ipairs(drivers) do
         if driver.identifier ~= rideData.passengerIdentifier then
-            local driverSource = GetSourceFromIdentifier(driver.identifier)
+            local driverSource = Bridge.GetSourceFromIdentifier(driver.identifier)
             if driverSource then
                 TriggerClientEvent('gcphone:cityride:newRequest', driverSource, payload)
             end
@@ -142,15 +145,15 @@ end
 
 -- registerDriver
 lib.callback.register('gcphone:cityride:registerDriver', function(source, data)
-    if IsPhoneReadOnly(source) then return { success = false, error = 'READ_ONLY' } end
-    local identifier = GetIdentifier(source)
+    if Phone.IsPhoneReadOnly(source) then return { success = false, error = 'READ_ONLY' } end
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return { success = false, error = 'INVALID_SOURCE' } end
     if HitRateLimit(source, 'cityride_register', 2000, 1) then return { success = false, error = 'RATE_LIMITED' } end
     if type(data) ~= 'table' then return { success = false, error = 'INVALID_DATA' } end
 
-    local phoneNumber = GetPhoneNumber(identifier)
+    local phoneNumber = Bridge.GetPhoneNumber(identifier)
     if not phoneNumber then return { success = false, error = 'NO_PHONE' } end
-    local displayName = GetName(source) or 'Conductor'
+    local displayName = Bridge.GetName(source) or 'Conductor'
 
     local vehicleName = SanitizeText(data.vehicle_name, 50)
     local vehiclePlate = SanitizeText(data.vehicle_plate, 10)
@@ -173,7 +176,7 @@ end)
 
 -- getDriverProfile
 lib.callback.register('gcphone:cityride:getDriverProfile', function(source)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return nil end
 
     local driver = MySQL.single.await(
@@ -196,8 +199,8 @@ end)
 
 -- updateDriver
 lib.callback.register('gcphone:cityride:updateDriver', function(source, data)
-    if IsPhoneReadOnly(source) then return { success = false, error = 'READ_ONLY' } end
-    local identifier = GetIdentifier(source)
+    if Phone.IsPhoneReadOnly(source) then return { success = false, error = 'READ_ONLY' } end
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return { success = false, error = 'INVALID_SOURCE' } end
     if HitRateLimit(source, 'cityride_update', 1500, 1) then return { success = false, error = 'RATE_LIMITED' } end
     if type(data) ~= 'table' then return { success = false, error = 'INVALID_DATA' } end
@@ -217,8 +220,8 @@ end)
 
 -- setDriverAvailability
 lib.callback.register('gcphone:cityride:setDriverAvailability', function(source, data)
-    if IsPhoneReadOnly(source) then return { success = false, error = 'READ_ONLY' } end
-    local identifier = GetIdentifier(source)
+    if Phone.IsPhoneReadOnly(source) then return { success = false, error = 'READ_ONLY' } end
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return { success = false, error = 'INVALID_SOURCE' } end
     if HitRateLimit(source, 'cityride_availability', 1000, 2) then return { success = false, error = 'RATE_LIMITED' } end
     if type(data) ~= 'table' then return { success = false, error = 'INVALID_DATA' } end
@@ -235,8 +238,8 @@ end)
 
 -- requestRide
 lib.callback.register('gcphone:cityride:requestRide', function(source, data)
-    if IsPhoneReadOnly(source) then return { success = false, error = 'READ_ONLY' } end
-    local identifier = GetIdentifier(source)
+    if Phone.IsPhoneReadOnly(source) then return { success = false, error = 'READ_ONLY' } end
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return { success = false, error = 'INVALID_SOURCE' } end
     if HitRateLimit(source, 'cityride_request', 3000, 1) then return { success = false, error = 'RATE_LIMITED' } end
     if type(data) ~= 'table' then return { success = false, error = 'INVALID_DATA' } end
@@ -248,7 +251,7 @@ lib.callback.register('gcphone:cityride:requestRide', function(source, data)
     local dest = ValidateCoords(data.dest)
     if not pickup or not dest then return { success = false, error = 'INVALID_COORDS' } end
 
-    local phoneNumber = GetPhoneNumber(identifier) or ''
+    local phoneNumber = Bridge.GetPhoneNumber(identifier) or ''
     local distance = CalcDistance(pickup, dest)
     local price = CalcPrice(distance)
 
@@ -258,7 +261,7 @@ lib.callback.register('gcphone:cityride:requestRide', function(source, data)
         passengerSource = source,
         passengerIdentifier = identifier,
         passengerPhone = phoneNumber,
-        passengerName = GetName(source) or 'Pasajero',
+        passengerName = Bridge.GetName(source) or 'Pasajero',
         driverSource = nil,
         driverIdentifier = nil,
         driverPhone = nil,
@@ -284,7 +287,7 @@ end)
 
 -- getAvailableRides
 lib.callback.register('gcphone:cityride:getAvailableRides', function(source)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return {} end
 
     local rides = {}
@@ -299,8 +302,8 @@ end)
 
 -- acceptRide
 lib.callback.register('gcphone:cityride:acceptRide', function(source, data)
-    if IsPhoneReadOnly(source) then return { success = false, error = 'READ_ONLY' } end
-    local identifier = GetIdentifier(source)
+    if Phone.IsPhoneReadOnly(source) then return { success = false, error = 'READ_ONLY' } end
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return { success = false, error = 'INVALID_SOURCE' } end
     if HitRateLimit(source, 'cityride_accept', 1500, 1) then return { success = false, error = 'RATE_LIMITED' } end
     if type(data) ~= 'table' then return { success = false, error = 'INVALID_DATA' } end
@@ -343,7 +346,7 @@ end)
 
 -- confirmPickup
 lib.callback.register('gcphone:cityride:confirmPickup', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return { success = false, error = 'INVALID_SOURCE' } end
     if HitRateLimit(source, 'cityride_pickup', 1500, 1) then return { success = false, error = 'RATE_LIMITED' } end
     if type(data) ~= 'table' then return { success = false, error = 'INVALID_DATA' } end
@@ -372,7 +375,7 @@ end)
 
 -- completeRide
 lib.callback.register('gcphone:cityride:completeRide', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return { success = false, error = 'INVALID_SOURCE' } end
     if HitRateLimit(source, 'cityride_complete', 2000, 1) then return { success = false, error = 'RATE_LIMITED' } end
     if type(data) ~= 'table' then return { success = false, error = 'INVALID_DATA' } end
@@ -426,7 +429,7 @@ end)
 
 -- cancelRide
 lib.callback.register('gcphone:cityride:cancelRide', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return { success = false, error = 'INVALID_SOURCE' } end
     if HitRateLimit(source, 'cityride_cancel', 1500, 1) then return { success = false, error = 'RATE_LIMITED' } end
     if type(data) ~= 'table' then return { success = false, error = 'INVALID_DATA' } end
@@ -463,7 +466,7 @@ end)
 
 -- getActiveRide
 lib.callback.register('gcphone:cityride:getActiveRide', function(source)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return nil end
 
     local ride = FindActiveRideForPlayer(identifier)
@@ -478,7 +481,7 @@ end)
 
 -- getRideHistory
 lib.callback.register('gcphone:cityride:getRideHistory', function(source)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return {} end
 
     local rows = MySQL.query.await(
@@ -506,8 +509,8 @@ end)
 
 -- rateDriver
 lib.callback.register('gcphone:cityride:rateDriver', function(source, data)
-    if IsPhoneReadOnly(source) then return { success = false, error = 'READ_ONLY' } end
-    local identifier = GetIdentifier(source)
+    if Phone.IsPhoneReadOnly(source) then return { success = false, error = 'READ_ONLY' } end
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return { success = false, error = 'INVALID_SOURCE' } end
     if HitRateLimit(source, 'cityride_rate', 2000, 1) then return { success = false, error = 'RATE_LIMITED' } end
     if type(data) ~= 'table' then return { success = false, error = 'INVALID_DATA' } end
@@ -581,3 +584,5 @@ AddEventHandler('playerDropped', function()
         end
     end
 end)
+
+return {}

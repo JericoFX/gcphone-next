@@ -1,5 +1,3 @@
-GCPhone = GCPhone or {}
-
 local RESOURCE_NAME = GetCurrentResourceName()
 
 local function ReadLocalVersion()
@@ -8,8 +6,8 @@ local function ReadLocalVersion()
     return raw:gsub('%s+', '')
 end
 
-GCPhone.Version = ReadLocalVersion()
-GCPhone.Author = GetResourceMetadata(RESOURCE_NAME, 'author', 0) or 'JericoFX'
+local Version = ReadLocalVersion()
+local Author = GetResourceMetadata(RESOURCE_NAME, 'author', 0) or 'JericoFX'
 
 local function CheckRemoteVersion()
     PerformHttpRequest('https://raw.githubusercontent.com/JericoFX/gcphone-next/main/version.txt', function(status, body)
@@ -18,16 +16,14 @@ local function CheckRemoteVersion()
         local remote = body:gsub('%s+', '')
         if remote == '' then return end
 
-        if remote ~= GCPhone.Version then
-            print(string.format('^3[gcphone-next]^7 New version available: %s (current: %s)', remote, GCPhone.Version))
+        if remote ~= Version then
+            print(string.format('^3[gcphone-next]^7 New version available: %s (current: %s)', remote, Version))
             print('^3[gcphone-next]^7 https://github.com/JericoFX/gcphone-next/releases')
         else
-            print(string.format('^2[gcphone-next]^7 Up to date (v%s)', GCPhone.Version))
+            print(string.format('^2[gcphone-next]^7 Up to date (v%s)', Version))
         end
-    end, 'GET', '', { ['User-Agent'] = 'gcphone-next/' .. GCPhone.Version })
+    end, 'GET', '', { ['User-Agent'] = 'gcphone-next/' .. Version })
 end
-
-local Bridge = nil
 
 -- Validate critical Config shapes at load time with safe fallbacks.
 -- Prevents nil-index crashes when a config section is missing.
@@ -76,6 +72,8 @@ do
     Config.Bank = Config.Bank or {}
 end
 
+local Bridge = require 'server.bridge'
+
 ---@alias GCPhoneNotificationPriority 'low'|'normal'|'high'
 
 ---@class GCPhoneNotificationPayload
@@ -102,12 +100,6 @@ local function L(key, ...)
     end
 
     return key
-end
-
-local function bridgeCall(name, ...)
-    local fn = rawget(_G, name)
-    if type(fn) ~= 'function' then return nil end
-    return fn(...)
 end
 
 local function sanitizeText(value, maxLength)
@@ -163,25 +155,6 @@ local function toTargetList(target)
 end
 
 CreateThread(function()
-    -- Verified: CommunityOX ox_lib WaitFor/Shared supports lib.waitFor(cb, errMessage, timeout)
-    lib.waitFor(function()
-        if GetResourceState('qb-core') == 'started' or GetResourceState('qbx_core') == 'started' or GetResourceState('es_extended') == 'started' then
-            return true
-        end
-    end, 'gcphone-next failed to detect a supported framework', false)
-    
-    Bridge = {
-        GetIdentifier = function(source) return bridgeCall('GetIdentifier', source) end,
-        GetName = function(source) return bridgeCall('GetName', source) end,
-        GetMoney = function(source, accountType) return bridgeCall('GetMoney', source, accountType) end,
-        AddMoney = function(source, amount, accountType, reason) return bridgeCall('AddMoney', source, amount, accountType, reason) end,
-        RemoveMoney = function(source, amount, accountType, reason) return bridgeCall('RemoveMoney', source, amount, accountType, reason) end,
-        GetJob = function(source) return bridgeCall('GetJob', source) end,
-        GetFramework = function() return bridgeCall('GetFramework') end,
-        GetSourceFromIdentifier = function(identifier) return bridgeCall('GetSourceFromIdentifier', identifier) end,
-        IsPlayerActionAllowed = function(source) return bridgeCall('IsPlayerActionAllowed', source) end,
-    }
-
     print(('^2[gcphone-next]^7 %s'):format(L('server_initialized')))
 
     -- Check database version
@@ -192,11 +165,11 @@ CreateThread(function()
 end)
 
 exports('GetVersion', function()
-    return GCPhone.Version
+    return Version
 end)
 
 exports('GetAuthor', function()
-    return GCPhone.Author
+    return Author
 end)
 
 exports('GetBridge', function()
@@ -204,39 +177,39 @@ exports('GetBridge', function()
 end)
 
 exports('GetIdentifier', function(source)
-    return bridgeCall('GetIdentifier', source)
+    return Bridge.GetIdentifier(source)
 end)
 
 exports('GetName', function(source)
-    return bridgeCall('GetName', source)
+    return Bridge.GetName(source)
 end)
 
 exports('GetMoney', function(source, accountType)
-    return bridgeCall('GetMoney', source, accountType) or 0
+    return Bridge.GetMoney(source, accountType) or 0
 end)
 
 exports('AddMoney', function(source, amount, accountType, reason)
-    return bridgeCall('AddMoney', source, amount, accountType, reason) == true
+    return Bridge.AddMoney(source, amount, accountType, reason) == true
 end)
 
 exports('RemoveMoney', function(source, amount, accountType, reason)
-    return bridgeCall('RemoveMoney', source, amount, accountType, reason) == true
+    return Bridge.RemoveMoney(source, amount, accountType, reason) == true
 end)
 
 exports('GetJob', function(source)
-    return bridgeCall('GetJob', source)
+    return Bridge.GetJob(source)
 end)
 
 exports('GetFramework', function()
-    return bridgeCall('GetFramework')
+    return Bridge.GetFramework()
 end)
 
 exports('GetSourceFromIdentifier', function(identifier)
-    return bridgeCall('GetSourceFromIdentifier', identifier)
+    return Bridge.GetSourceFromIdentifier(identifier)
 end)
 
 exports('IsPlayerActionAllowed', function(source)
-    return bridgeCall('IsPlayerActionAllowed', source)
+    return Bridge.IsPlayerActionAllowed(source)
 end)
 
 ---Send an ephemeral phone notification to one or more players.
@@ -263,3 +236,8 @@ exports('SendPhoneNotification', function(target, payload)
 
     return true
 end)
+
+return {
+    Version = Version,
+    Author = Author,
+}

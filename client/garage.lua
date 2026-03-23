@@ -128,3 +128,5 @@ RegisterNetEvent('gcphone:garage:spawnVehicle', function(vehicle)
         })
     end
 end)
+
+return {}

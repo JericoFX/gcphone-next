@@ -1,3 +1,5 @@
+local Bridge = require 'server.bridge'
+
 local RateLimitBuckets = {}
 local IdentifierBuckets = {}
 local SourceToIdentifier = {}
@@ -78,8 +80,8 @@ local function HitRateLimit(source, key, windowMs, maxHits)
 
     -- Resolve identifier for this source (cached per session)
     local identifier = SourceToIdentifier[source]
-    if not identifier and type(GetIdentifier) == 'function' then
-        identifier = GetIdentifier(source)
+    if not identifier then
+        identifier = Bridge.GetIdentifier(source)
         if identifier then
             SourceToIdentifier[source] = identifier
         end
@@ -129,7 +131,7 @@ local function RecordReport(identifier, targetIdentifier, targetPhone, appId, ev
 end
 
 lib.callback.register('gcphone:security:getBlockedNumbers', function(source)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return {} end
 
     return MySQL.query.await(
@@ -139,7 +141,7 @@ lib.callback.register('gcphone:security:getBlockedNumbers', function(source)
 end)
 
 lib.callback.register('gcphone:security:blockNumber', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return { success = false, error = 'INVALID_SOURCE' } end
     if type(data) ~= 'table' then return { success = false, error = 'INVALID_DATA' } end
 
@@ -147,7 +149,7 @@ lib.callback.register('gcphone:security:blockNumber', function(source, data)
     local reason = SafeString(data.reason, 120)
     if not targetPhone then return { success = false, error = 'INVALID_PHONE' } end
 
-    local targetIdentifier = GetIdentifierByPhone(targetPhone)
+    local targetIdentifier = Bridge.GetIdentifierByPhone(targetPhone)
     MySQL.query.await(
         'INSERT INTO phone_user_blocks (identifier, target_identifier, target_phone, reason) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE reason = VALUES(reason)',
         { identifier, targetIdentifier, targetPhone, reason }
@@ -157,7 +159,7 @@ lib.callback.register('gcphone:security:blockNumber', function(source, data)
 end)
 
 lib.callback.register('gcphone:security:unblockNumber', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return { success = false, error = 'INVALID_SOURCE' } end
     if type(data) ~= 'table' then return { success = false, error = 'INVALID_DATA' } end
 
@@ -173,7 +175,7 @@ lib.callback.register('gcphone:security:unblockNumber', function(source, data)
 end)
 
 lib.callback.register('gcphone:security:reportUser', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return { success = false, error = 'INVALID_SOURCE' } end
     if type(data) ~= 'table' then return { success = false, error = 'INVALID_DATA' } end
 
@@ -187,7 +189,7 @@ lib.callback.register('gcphone:security:reportUser', function(source, data)
         return { success = false, error = 'RATE_LIMITED' }
     end
 
-    local targetIdentifier = GetIdentifierByPhone(targetPhone)
+    local targetIdentifier = Bridge.GetIdentifierByPhone(targetPhone)
     RecordReport(identifier, targetIdentifier, targetPhone, appId, evidence)
     return { success = true }
 end)
@@ -246,3 +248,10 @@ CreateThread(function()
         end
     end
 end)
+
+return {
+    HitRateLimit = HitRateLimit,
+    IsBlockedByIdentifier = IsBlockedByIdentifier,
+    IsBlockedEither = IsBlockedEither,
+    RecordReport = RecordReport,
+}

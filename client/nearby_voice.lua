@@ -1,7 +1,6 @@
 local NearbyVoiceSession = nil
 local NearbyVoiceLastState = nil
 local NearbyVoiceLastVolume = nil
--- Verified: CommunityOX ox_lib Math/Shared exposes lib.math.clamp and lib.math.round
 local libmath = lib.math
 
 local function ComputeVoiceVolume(distance, maxDistance, minVolume, maxVolume, curve)
@@ -136,7 +135,8 @@ RegisterNUICallback('setListeningPeerId', function(data, cb)
         distanceCurve = libmath.clamp(tonumber(type(data) == 'table' and data.distanceCurve or nil) or 1.0, 0.5, 4.0),
         volumeSmoothing = libmath.clamp(tonumber(type(data) == 'table' and data.volumeSmoothing or nil) or 0.1, 0.05, 1.0),
         useMumbleRangeClamp = not (type(data) == 'table' and data.useMumbleRangeClamp == false),
-        updateIntervalMs = math.floor(libmath.clamp(tonumber(type(data) == 'table' and data.updateIntervalMs or nil) or 80.0, 80.0, 1500.0)),
+        updateIntervalMs = math.floor(libmath.clamp(
+        tonumber(type(data) == 'table' and data.updateIntervalMs or nil) or 80.0, 80.0, 1500.0)),
         currentVolume = 0.0,
         listening = false,
         targetOnline = false,
@@ -200,7 +200,8 @@ CreateThread(function()
 
             local targetVolume = 0.0
             if session.listening then
-                targetVolume = ComputeVoiceVolume(currentDistance, activeDistance, session.minVolume, session.maxVolume, session.distanceCurve)
+                targetVolume = ComputeVoiceVolume(currentDistance, activeDistance, session.minVolume, session.maxVolume,
+                    session.distanceCurve)
             end
 
             session.currentVolume = SmoothVolume(session.currentVolume, targetVolume, session.volumeSmoothing)
@@ -230,3 +231,5 @@ AddEventHandler('onResourceStop', function(resourceName)
     if resourceName ~= GetCurrentResourceName() then return end
     StopNearbyVoiceSession(true)
 end)
+
+return {}

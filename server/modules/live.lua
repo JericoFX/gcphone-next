@@ -1,3 +1,7 @@
+local Bridge = require 'server.bridge'
+local Phone = require 'server.modules.phone'
+local Utils = require 'server.lib.utils'
+
 -- Live Chat System for Clips
 -- Handles real-time chat during live streams with Socket.IO
 
@@ -10,14 +14,6 @@ local MutedMessages = {
     fr = 'Vous etes muet',
 }
 
-local function SanitizeText(value, maxLength)
-    if type(value) ~= 'string' then return '' end
-    local text = value:gsub('[%z\1-\31\127]', '')
-    text = text:gsub('<.->', '')
-    text = text:gsub('^%s+', ''):gsub('%s+$', '')
-    return text:sub(1, maxLength or 500)
-end
-
 local function GenerateMessageId()
     return string.format('%x-%x-%x', os.time(), math.random(1000, 9999), math.random(1000, 9999))
 end
@@ -26,10 +22,10 @@ end
 RegisterNetEvent('gcphone:live:create')
 AddEventHandler('gcphone:live:create', function(clipId, avatar)
     local source = source
-    local identifier = GetIdentifier(source)
-    
+    local identifier = Bridge.GetIdentifier(source)
+
     if not identifier then return end
-    
+
     ActiveLives[clipId] = {
         owner = source,
         ownerIdentifier = identifier,
@@ -39,7 +35,7 @@ AddEventHandler('gcphone:live:create', function(clipId, avatar)
         reactions = {},
         createdAt = os.time()
     }
-    
+
     TriggerClientEvent('gcphone:live:created', source, clipId)
 end)
 
@@ -48,25 +44,25 @@ RegisterNetEvent('gcphone:live:join')
 AddEventHandler('gcphone:live:join', function(clipId)
     local source = source
     local live = ActiveLives[clipId]
-    
+
     if not live then return end
-    
+
     local username = GetPlayerName(source) or 'Usuario'
-    local account = MySQL.single.await('SELECT avatar FROM phone_snap_accounts WHERE identifier = ?', { GetIdentifier(source) })
-    
+    local account = MySQL.single.await('SELECT avatar FROM phone_snap_accounts WHERE identifier = ?', { Bridge.GetIdentifier(source) })
+
     live.users[source] = {
         username = username,
         avatar = account and account.avatar or nil,
         joinedAt = os.time()
     }
-    
+
     -- Send last 20 messages to new user
     local history = {}
     local startIdx = math.max(1, #live.messages - 19)
     for i = startIdx, #live.messages do
         history[#history + 1] = live.messages[i]
     end
-    
+
     TriggerClientEvent('gcphone:live:joined', source, {
         clipId = clipId,
         history = history,
@@ -80,9 +76,9 @@ RegisterNetEvent('gcphone:live:leave')
 AddEventHandler('gcphone:live:leave', function(clipId)
     local source = source
     local live = ActiveLives[clipId]
-    
+
     if not live then return end
-    
+
     live.users[source] = nil
 end)
 
@@ -91,22 +87,22 @@ RegisterNetEvent('gcphone:live:message')
 AddEventHandler('gcphone:live:message', function(clipId, content)
     local source = source
     local live = ActiveLives[clipId]
-    
+
     if not live then return end
-    
+
     -- Check if user is muted
     if MutedUsers[source] and MutedUsers[source][clipId] then
-        local lang = type(GetPhoneLanguageForSource) == 'function' and GetPhoneLanguageForSource(source, true) or 'es'
+        local lang = Phone.GetPhoneLanguageForSource(source, true) or 'es'
         TriggerClientEvent('gcphone:live:error', source, MutedMessages[lang] or MutedMessages.es)
         return
     end
-    
-    content = SanitizeText(content, 500)
+
+    content = Utils.SanitizeText(content, 500, true)
     if content == '' then return end
-    
+
     local user = live.users[source]
     if not user then return end
-    
+
     local message = {
         id = GenerateMessageId(),
         clipId = clipId,
@@ -116,13 +112,13 @@ AddEventHandler('gcphone:live:message', function(clipId, content)
         isMention = content:find('@' .. GetPlayerName(live.owner)) ~= nil,
         timestamp = os.time()
     }
-    
+
     -- Add to history (keep only last 20)
     live.messages[#live.messages + 1] = message
     if #live.messages > 20 then
         table.remove(live.messages, 1)
     end
-    
+
     -- Broadcast to all users in room
     for userSource, _ in pairs(live.users) do
         TriggerClientEvent('gcphone:live:message', userSource, message)
@@ -130,20 +126,20 @@ AddEventHandler('gcphone:live:message', function(clipId, content)
     TriggerClientEvent('gcphone:live:message', live.owner, message)
 end)
 
--- Send reaction (👍❤️😂)
+-- Send reaction
 RegisterNetEvent('gcphone:live:reaction')
 AddEventHandler('gcphone:live:reaction', function(clipId, reaction)
     local source = source
     local live = ActiveLives[clipId]
-    
+
     if not live then return end
-    
-    local validReactions = { '👍', '❤️', '😂', '🔥', '👏' }
+
+    local validReactions = { '\240\159\145\141', '\226\157\164\239\184\143', '\240\159\152\130', '\240\159\148\165', '\240\159\145\143' }
     if not table.concat(validReactions):find(reaction) then return end
-    
+
     local user = live.users[source]
     if not user then return end
-    
+
     local reactionData = {
         id = GenerateMessageId(),
         clipId = clipId,
@@ -152,7 +148,7 @@ AddEventHandler('gcphone:live:reaction', function(clipId, reaction)
         reaction = reaction,
         timestamp = os.time()
     }
-    
+
     -- Broadcast reaction (doesn't save to history)
     for userSource, _ in pairs(live.users) do
         TriggerClientEvent('gcphone:live:reaction', userSource, reactionData)
@@ -165,10 +161,10 @@ RegisterNetEvent('gcphone:live:deleteMessage')
 AddEventHandler('gcphone:live:deleteMessage', function(clipId, messageId)
     local source = source
     local live = ActiveLives[clipId]
-    
+
     if not live then return end
     if source ~= live.owner then return end
-    
+
     -- Remove from messages
     for i, msg in ipairs(live.messages) do
         if msg.id == messageId then
@@ -176,7 +172,7 @@ AddEventHandler('gcphone:live:deleteMessage', function(clipId, messageId)
             break
         end
     end
-    
+
     -- Broadcast deletion
     for userSource, _ in pairs(live.users) do
         TriggerClientEvent('gcphone:live:messageDeleted', userSource, messageId)
@@ -189,10 +185,10 @@ RegisterNetEvent('gcphone:live:mute')
 AddEventHandler('gcphone:live:mute', function(clipId, targetUsername)
     local source = source
     local live = ActiveLives[clipId]
-    
+
     if not live then return end
     if source ~= live.owner then return end
-    
+
     -- Find user by username
     for userSource, userData in pairs(live.users) do
         if userData.username == targetUsername then
@@ -200,7 +196,7 @@ AddEventHandler('gcphone:live:mute', function(clipId, targetUsername)
                 MutedUsers[userSource] = {}
             end
             MutedUsers[userSource][clipId] = true
-            
+
             TriggerClientEvent('gcphone:live:muted', userSource, clipId)
             break
         end
@@ -212,10 +208,10 @@ RegisterNetEvent('gcphone:live:unmute')
 AddEventHandler('gcphone:live:unmute', function(clipId, targetUsername)
     local source = source
     local live = ActiveLives[clipId]
-    
+
     if not live then return end
     if source ~= live.owner then return end
-    
+
     for userSource, userData in pairs(live.users) do
         if userData.username == targetUsername then
             if MutedUsers[userSource] then
@@ -232,15 +228,15 @@ RegisterNetEvent('gcphone:live:end')
 AddEventHandler('gcphone:live:end', function(clipId)
     local source = source
     local live = ActiveLives[clipId]
-    
+
     if not live then return end
     if source ~= live.owner then return end
-    
+
     -- Notify all users
     for userSource, _ in pairs(live.users) do
         TriggerClientEvent('gcphone:live:ended', userSource, clipId)
     end
-    
+
     -- Cleanup
     ActiveLives[clipId] = nil
 end)
@@ -262,3 +258,5 @@ end)
 exports('GetLiveRoom', function(clipId)
     return ActiveLives[clipId]
 end)
+
+return {}

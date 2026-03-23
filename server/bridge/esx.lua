@@ -1,5 +1,3 @@
-if Config.Framework ~= 'esx' then return end
-
 local ESX = nil
 local Framework = nil
 
@@ -70,16 +68,16 @@ local function getESXPhoneFromPlayer(player)
     return nil
 end
 
-function GetFramework()
+local function GetFramework()
     return Framework
 end
 
-function GetPlayer(source)
+local function GetPlayer(source)
     if not ESX then return nil end
     return ESX.GetPlayerFromId(source)
 end
 
-function IsPlayerActionAllowed(source)
+local function IsPlayerActionAllowed(source)
     local player = GetPlayer(source)
     if not player then return false, 'PLAYER_NOT_FOUND' end
 
@@ -93,7 +91,7 @@ function IsPlayerActionAllowed(source)
     return true, nil
 end
 
-function GetIdentifier(source)
+local function GetIdentifier(source)
     local allowed = IsPlayerActionAllowed(source)
     if not allowed then return nil end
 
@@ -102,13 +100,13 @@ function GetIdentifier(source)
     return player.getIdentifier and player.getIdentifier() or player.identifier
 end
 
-function GetName(source)
+local function GetName(source)
     local player = GetPlayer(source)
     if not player then return nil end
     return player.getName and player.getName() or player.name
 end
 
-function GetMoney(source, accountType)
+local function GetMoney(source, accountType)
     local player = GetPlayer(source)
     if not player then return 0 end
     accountType = accountType or 'bank'
@@ -121,7 +119,7 @@ function GetMoney(source, accountType)
     return account and account.money or 0
 end
 
-function AddMoney(source, amount, accountType, reason)
+local function AddMoney(source, amount, accountType, reason)
     local player = GetPlayer(source)
     if not player then return false end
     accountType = accountType or 'bank'
@@ -136,7 +134,7 @@ function AddMoney(source, amount, accountType, reason)
     return true
 end
 
-function RemoveMoney(source, amount, accountType, reason)
+local function RemoveMoney(source, amount, accountType, reason)
     local player = GetPlayer(source)
     if not player then return false end
     accountType = accountType or 'bank'
@@ -151,13 +149,13 @@ function RemoveMoney(source, amount, accountType, reason)
     return true
 end
 
-function GetJob(source)
+local function GetJob(source)
     local player = GetPlayer(source)
     if not player then return nil end
     return player.getJob and player.getJob() or player.job
 end
 
-function GetSourceFromIdentifier(identifier)
+local function GetSourceFromIdentifier(identifier)
     if not ESX or not identifier then return nil end
 
     local xPlayer = ESX.GetPlayerFromIdentifier and ESX.GetPlayerFromIdentifier(identifier) or nil
@@ -168,7 +166,7 @@ function GetSourceFromIdentifier(identifier)
     return nil
 end
 
-function GetFrameworkPhoneNumber(source, identifier)
+local function GetFrameworkPhoneNumber(source, identifier)
     local player = source and GetPlayer(source) or nil
     if not player and identifier then
         local onlineSource = GetSourceFromIdentifier(identifier)
@@ -191,7 +189,7 @@ function GetFrameworkPhoneNumber(source, identifier)
     return nil
 end
 
-function SetFrameworkPhoneNumber(source, identifier, phoneNumber)
+local function SetFrameworkPhoneNumber(source, identifier, phoneNumber)
     if type(phoneNumber) ~= 'string' or phoneNumber == '' then
         return false
     end
@@ -209,7 +207,7 @@ function SetFrameworkPhoneNumber(source, identifier, phoneNumber)
         nil
 end
 
-function GetPhoneNumber(identifier)
+local function GetPhoneNumber(identifier)
     if not identifier then return nil end
 
     local frameworkPhone = GetFrameworkPhoneNumber(nil, identifier)
@@ -221,7 +219,7 @@ function GetPhoneNumber(identifier)
     )
 end
 
-function GetIdentifierByPhone(phoneNumber)
+local function GetIdentifierByPhone(phoneNumber)
     if not phoneNumber then return nil end
 
     if ESX then
@@ -244,3 +242,20 @@ function GetIdentifierByPhone(phoneNumber)
         { phoneNumber }
     )
 end
+
+return {
+    GetFramework = GetFramework,
+    GetPlayer = GetPlayer,
+    IsPlayerActionAllowed = IsPlayerActionAllowed,
+    GetIdentifier = GetIdentifier,
+    GetName = GetName,
+    GetMoney = GetMoney,
+    AddMoney = AddMoney,
+    RemoveMoney = RemoveMoney,
+    GetJob = GetJob,
+    GetSourceFromIdentifier = GetSourceFromIdentifier,
+    GetFrameworkPhoneNumber = GetFrameworkPhoneNumber,
+    SetFrameworkPhoneNumber = SetFrameworkPhoneNumber,
+    GetPhoneNumber = GetPhoneNumber,
+    GetIdentifierByPhone = GetIdentifierByPhone,
+}

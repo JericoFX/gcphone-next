@@ -1,24 +1,11 @@
-local SecurityResource = GetCurrentResourceName()
-local function HitRateLimit(source, key, windowMs, maxHits)
-    local ok, blocked = pcall(function()
-        return exports[SecurityResource]:HitRateLimit(source, key, windowMs, maxHits)
-    end)
-    if not ok then return false end
-    return blocked == true
-end
+local Bridge = require 'server.bridge'
+local Phone = require 'server.modules.phone'
+local Utils = require 'server.lib.utils'
 
-local function SafeString(value, maxLen)
-    if type(value) ~= 'string' then return nil end
-    local trimmed = value:gsub('%s+', ' '):gsub('^%s+', ''):gsub('%s+$', '')
-    if trimmed == '' then return nil end
-    if maxLen and #trimmed > maxLen then
-        trimmed = trimmed:sub(1, maxLen)
-    end
-    return trimmed
-end
+local GetIdentifierFromPlayer
 
 local function SafeType(value)
-    local docType = SafeString(value, 24)
+    local docType = Utils.SafeString(value, 24)
     local validTypes = {
         id = 'ID',
         license = 'Licencia',
@@ -43,18 +30,15 @@ local function RequirePlayerIdentifier(source)
     local src = tonumber(source)
     if not src or src <= 0 then return nil end
 
-    if type(GetPlayer) == 'function' and not GetPlayer(src) then
+    if not Bridge.GetPlayer(src) then
         return nil
     end
 
-    if type(IsPlayerActionAllowed) == 'function' then
-        local allowed = IsPlayerActionAllowed(src)
-        if not allowed then
-            return nil
-        end
+    if not Bridge.IsPlayerActionAllowed(src) then
+        return nil
     end
 
-    return GetPhoneOwnerIdentifier(src, true)
+    return Phone.GetPhoneOwnerIdentifier(src, true)
 end
 
 local function IsWithinPlayerDistance(sourceA, sourceB, maxDistance)
@@ -90,17 +74,17 @@ lib.callback.register('gcphone:documents:getList', function(source)
 end)
 
 lib.callback.register('gcphone:documents:create', function(source, data)
-    if IsPhoneReadOnly(source) then return { success = false, error = 'READ_ONLY' } end
-    if HitRateLimit(source, 'doc_create', 2000, 2) then return { success = false, error = 'RATE_LIMITED' } end
+    if Phone.IsPhoneReadOnly(source) then return { success = false, error = 'READ_ONLY' } end
+    if Utils.HitRateLimit(source, 'doc_create', 2000, 2) then return { success = false, error = 'RATE_LIMITED' } end
     local identifier = RequirePlayerIdentifier(source)
     if not identifier then return { success = false, error = 'INVALID_SOURCE' } end
     if type(data) ~= 'table' then return { success = false, error = 'INVALID_DATA' } end
 
     local docType = SafeType(data.docType)
-    local title = SafeString(data.title, 64) or 'Documento'
-    local holderName = SafeString(data.holderName, 64) or (GetName(source) or 'Ciudadano')
-    local holderNumber = SafeString(data.holderNumber, 20)
-    local expiresAt = SafeString(data.expiresAt, 24)
+    local title = Utils.SafeString(data.title, 64) or 'Documento'
+    local holderName = Utils.SafeString(data.holderName, 64) or (Bridge.GetName(source) or 'Ciudadano')
+    local holderNumber = Utils.SafeString(data.holderNumber, 20)
+    local expiresAt = Utils.SafeString(data.expiresAt, 24)
     local nfcEnabled = data.nfcEnabled and 1 or 0
 
     if not docType then return { success = false, error = 'INVALID_TYPE' } end
@@ -123,8 +107,8 @@ lib.callback.register('gcphone:documents:create', function(source, data)
 end)
 
 lib.callback.register('gcphone:documents:delete', function(source, data)
-    if IsPhoneReadOnly(source) then return { success = false, error = 'READ_ONLY' } end
-    if HitRateLimit(source, 'doc_delete', 1500, 2) then return { success = false, error = 'RATE_LIMITED' } end
+    if Phone.IsPhoneReadOnly(source) then return { success = false, error = 'READ_ONLY' } end
+    if Utils.HitRateLimit(source, 'doc_delete', 1500, 2) then return { success = false, error = 'RATE_LIMITED' } end
     local identifier = RequirePlayerIdentifier(source)
     if not identifier then return { success = false, error = 'INVALID_SOURCE' } end
     local id = tonumber(type(data) == 'table' and data.documentId or nil)
@@ -135,7 +119,7 @@ lib.callback.register('gcphone:documents:delete', function(source, data)
 end)
 
 lib.callback.register('gcphone:documents:toggleNFC', function(source, data)
-    if IsPhoneReadOnly(source) then return { success = false, error = 'READ_ONLY' } end
+    if Phone.IsPhoneReadOnly(source) then return { success = false, error = 'READ_ONLY' } end
     local identifier = RequirePlayerIdentifier(source)
     if not identifier then return { success = false, error = 'INVALID_SOURCE' } end
     
@@ -175,7 +159,7 @@ lib.callback.register('gcphone:documents:getScanHistory', function(source)
 end)
 
 lib.callback.register('gcphone:documents:share', function(source, data)
-    if IsPhoneReadOnly(source) then return { success = false, error = 'READ_ONLY' } end
+    if Phone.IsPhoneReadOnly(source) then return { success = false, error = 'READ_ONLY' } end
     if type(data) ~= 'table' then return { success = false, error = 'INVALID_DATA' } end
     
     local identifier = RequirePlayerIdentifier(source)
@@ -188,14 +172,11 @@ lib.callback.register('gcphone:documents:share', function(source, data)
         return { success = false, error = 'INVALID_PARAMS' }
     end
 
-    if type(GetPlayer) == 'function' and not GetPlayer(targetServerId) then
+    if not Bridge.GetPlayer(targetServerId) then
         return { success = false, error = 'TARGET_OFFLINE' }
     end
-    if type(IsPlayerActionAllowed) == 'function' then
-        local allowed = IsPlayerActionAllowed(targetServerId)
-        if not allowed then
-            return { success = false, error = 'TARGET_UNAVAILABLE' }
-        end
+    if not Bridge.IsPlayerActionAllowed(targetServerId) then
+        return { success = false, error = 'TARGET_UNAVAILABLE' }
     end
 
     local shareDistance = tonumber(Config.Proximity and Config.Proximity.ShareDocumentDistance)
@@ -224,7 +205,7 @@ lib.callback.register('gcphone:documents:share', function(source, data)
         end
     end
     
-    local senderName = GetName(source) or 'Ciudadano'
+    local senderName = Bridge.GetName(source) or 'Ciudadano'
     
     local targetIdentifier = GetIdentifierFromPlayer(targetServerId)
     if not targetIdentifier then
@@ -252,7 +233,7 @@ lib.callback.register('gcphone:documents:share', function(source, data)
     return { success = true }
 end)
 
-function GetIdentifierFromPlayer(serverId)
+GetIdentifierFromPlayer = function(serverId)
     for _, playerId in ipairs(GetPlayers()) do
         if tonumber(playerId) == serverId then
             return RequirePlayerIdentifier(playerId)
@@ -272,3 +253,5 @@ lib.callback.register('gcphone:documents:getTypes', function(source)
         { id = 'registration', name = 'Registro Civil', icon = 'REG', color = '#5ac8fa' }
     }
 end)
+
+return {}

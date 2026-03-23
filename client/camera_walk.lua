@@ -84,12 +84,10 @@ local function OffsetFromHeading(baseCoords, heading, offsetX, offsetY, offsetZ)
 end
 
 local function SyncPhoneVisualMode()
-    if type(SetPhoneVisualMode) == 'function' then
-        SetPhoneVisualMode('camera', {
-            landscape = scriptedCamera.landscape,
-            selfie = scriptedCamera.selfie,
-        })
-    end
+    require('client.phone').SetPhoneVisualMode('camera', {
+        landscape = scriptedCamera.landscape,
+        selfie = scriptedCamera.selfie,
+    })
 end
 
 local function EnsureScriptCamera()
@@ -200,7 +198,7 @@ local function ApplyScriptedPhoneCameraState(data)
     UpdateScriptCameraTransform()
 end
 
-function StartAdvancedPhoneCamera(data)
+local function StartAdvancedPhoneCamera(data)
     local cfg = GetCameraConfig()
 
     scriptedCamera.active = true
@@ -219,11 +217,11 @@ function StartAdvancedPhoneCamera(data)
     end
 
     EnsureScriptCamera()
-    PhonePlayCamera()
+    require('client.phone_animation').PhonePlayCamera()
     UpdateScriptCameraTransform()
 end
 
-function StopAdvancedPhoneCamera()
+local function StopAdvancedPhoneCamera()
     scriptedCamera.active = false
     scriptedCamera.yaw = 0.0
     scriptedCamera.pitch = 0.0
@@ -235,19 +233,19 @@ function StopAdvancedPhoneCamera()
     DestroyScriptCamera()
 end
 
-function UpdateAdvancedPhoneCamera(data)
+local function UpdateAdvancedPhoneCamera(data)
     ApplyScriptedPhoneCameraState(data)
 end
 
-function IsAdvancedPhoneCameraActive()
+local function IsAdvancedPhoneCameraActive()
     return scriptedCamera.active == true
 end
 
-function GetAdvancedPhoneCameraState()
+local function GetAdvancedPhoneCameraState()
     return scriptedCamera
 end
 
-function SetAdvancedPhoneCameraFreeze(enabled)
+local function SetAdvancedPhoneCameraFreeze(enabled)
     if enabled == true then
         CaptureFrozenAnchor()
     else
@@ -258,18 +256,18 @@ function SetAdvancedPhoneCameraFreeze(enabled)
     return scriptedCamera.frozen == true
 end
 
-function SetAdvancedPhoneCameraLandscape(enabled)
+local function SetAdvancedPhoneCameraLandscape(enabled)
     scriptedCamera.landscape = enabled == true
     UpdateScriptCameraTransform()
     return scriptedCamera.landscape == true
 end
 
-function SetAdvancedPhoneCameraQuickZoom(index)
+local function SetAdvancedPhoneCameraQuickZoom(index)
     SetQuickZoomIndex(index)
     return scriptedCamera.fov, scriptedCamera.quickZoomIndex
 end
 
-function StepAdvancedPhoneCameraQuickZoom(direction)
+local function StepAdvancedPhoneCameraQuickZoom(direction)
     local nextIndex = scriptedCamera.quickZoomIndex + (direction >= 0 and 1 or -1)
     SetQuickZoomIndex(nextIndex)
     return scriptedCamera.fov, scriptedCamera.quickZoomIndex
@@ -344,3 +342,15 @@ CreateThread(function()
         end
     end
 end)
+
+return {
+    StartAdvancedPhoneCamera = StartAdvancedPhoneCamera,
+    StopAdvancedPhoneCamera = StopAdvancedPhoneCamera,
+    UpdateAdvancedPhoneCamera = UpdateAdvancedPhoneCamera,
+    IsAdvancedPhoneCameraActive = IsAdvancedPhoneCameraActive,
+    GetAdvancedPhoneCameraState = GetAdvancedPhoneCameraState,
+    SetAdvancedPhoneCameraFreeze = SetAdvancedPhoneCameraFreeze,
+    SetAdvancedPhoneCameraLandscape = SetAdvancedPhoneCameraLandscape,
+    SetAdvancedPhoneCameraQuickZoom = SetAdvancedPhoneCameraQuickZoom,
+    StepAdvancedPhoneCameraQuickZoom = StepAdvancedPhoneCameraQuickZoom,
+}

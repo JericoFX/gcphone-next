@@ -1,3 +1,5 @@
+local PhoneState = require 'client.state'
+
 local function cbSuccess(success, message, extra)
     local payload = {
         success = success and true or false
@@ -1231,7 +1233,7 @@ RegisterNUICallback('setGPS', function(data, cb)
 end)
 
 RegisterNUICallback('getPlayerCoords', function(_, cb)
-    local ped = PlayerPedId()
+    local ped = cache.ped
     if not ped or ped <= 0 then
         cb({ x = 0, y = 0 })
         return
@@ -1569,37 +1571,45 @@ RegisterNUICallback('getWeatherData', function(_, cb)
     local minute = GetClockMinutes()
 
     local weatherNames = {
-        [GetHashKey('EXTRASUNNY')]  = 'Despejado',
-        [GetHashKey('CLEAR')]       = 'Despejado',
-        [GetHashKey('CLOUDS')]      = 'Nublado',
-        [GetHashKey('OVERCAST')]    = 'Cubierto',
-        [GetHashKey('RAIN')]        = 'Lluvia',
-        [GetHashKey('THUNDER')]     = 'Tormenta',
-        [GetHashKey('CLEARING')]    = 'Despejando',
-        [GetHashKey('SMOG')]        = 'Smog',
-        [GetHashKey('FOGGY')]       = 'Niebla',
-        [GetHashKey('SNOW')]        = 'Nieve',
-        [GetHashKey('BLIZZARD')]    = 'Ventisca',
-        [GetHashKey('SNOWLIGHT')]   = 'Nieve leve',
-        [GetHashKey('XMAS')]        = 'Navidad',
-        [GetHashKey('HALLOWEEN')]   = 'Halloween',
-        [GetHashKey('NEUTRAL')]     = 'Neutral',
+        [GetHashKey('EXTRASUNNY')] = 'Despejado',
+        [GetHashKey('CLEAR')]      = 'Despejado',
+        [GetHashKey('CLOUDS')]     = 'Nublado',
+        [GetHashKey('OVERCAST')]   = 'Cubierto',
+        [GetHashKey('RAIN')]       = 'Lluvia',
+        [GetHashKey('THUNDER')]    = 'Tormenta',
+        [GetHashKey('CLEARING')]   = 'Despejando',
+        [GetHashKey('SMOG')]       = 'Smog',
+        [GetHashKey('FOGGY')]      = 'Niebla',
+        [GetHashKey('SNOW')]       = 'Nieve',
+        [GetHashKey('BLIZZARD')]   = 'Ventisca',
+        [GetHashKey('SNOWLIGHT')]  = 'Nieve leve',
+        [GetHashKey('XMAS')]       = 'Navidad',
+        [GetHashKey('HALLOWEEN')]  = 'Halloween',
+        [GetHashKey('NEUTRAL')]    = 'Neutral',
     }
 
     local current = weatherNames[weatherHash1] or 'Desconocido'
     local next = weatherNames[weatherHash2] or current
 
     local temp = 22
-    if current == 'Despejado' then temp = 28
-    elseif current == 'Nublado' then temp = 20
-    elseif current == 'Cubierto' then temp = 18
-    elseif current == 'Lluvia' or current == 'Tormenta' then temp = 15
-    elseif current == 'Niebla' then temp = 14
-    elseif current == 'Nieve' or current == 'Ventisca' or current == 'Nieve leve' then temp = -2
+    if current == 'Despejado' then
+        temp = 28
+    elseif current == 'Nublado' then
+        temp = 20
+    elseif current == 'Cubierto' then
+        temp = 18
+    elseif current == 'Lluvia' or current == 'Tormenta' then
+        temp = 15
+    elseif current == 'Niebla' then
+        temp = 14
+    elseif current == 'Nieve' or current == 'Ventisca' or current == 'Nieve leve' then
+        temp = -2
     end
 
-    if hour >= 6 and hour < 12 then temp = temp - 3
-    elseif hour >= 18 or hour < 6 then temp = temp - 6
+    if hour >= 6 and hour < 12 then
+        temp = temp - 3
+    elseif hour >= 18 or hour < 6 then
+        temp = temp - 6
     end
 
     cb({
@@ -1787,7 +1797,7 @@ RegisterNUICallback('cityrideSetWaypoint', function(data, cb)
 end)
 
 RegisterNUICallback('cityrideGetPlayerCoords', function(_, cb)
-    local ped = PlayerPedId()
+    local ped = cache.ped
     local coords = GetEntityCoords(ped)
     cb({
         x = coords.x,
@@ -1796,3 +1806,4 @@ RegisterNUICallback('cityrideGetPlayerCoords', function(_, cb)
     })
 end)
 
+return {}

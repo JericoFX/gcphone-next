@@ -1,6 +1,8 @@
 -- Creado/Modificado por JericoFX
 
-local Utils = GcPhoneUtils
+local Bridge = require 'server.bridge'
+local Phone = require 'server.modules.phone'
+local Utils = require 'server.lib.utils'
 
 local function SafeString(value, maxLen)
     return Utils.SafeString(value, maxLen)
@@ -90,7 +92,7 @@ local function GetPlayerCoords(source)
 end
 
 local function MuteForStreamerPlayers(soundName)
-    local streamers = GCPhone and GCPhone.StreamerModePlayers
+    local streamers = Phone.StreamerModePlayers
     if not streamers then return end
     for src in pairs(streamers) do
         exports['olisound']:Destroy(src, soundName)
@@ -151,7 +153,7 @@ lib.callback.register('gcphone:radio:getStations', function(source)
 end)
 
 lib.callback.register('gcphone:radio:createStation', function(source, data)
-    if IsPhoneReadOnly(source) then
+    if Phone.IsPhoneReadOnly(source) then
         return { success = false, error = 'READ_ONLY' }
     end
 
@@ -159,7 +161,7 @@ lib.callback.register('gcphone:radio:createStation', function(source, data)
         return { success = false, error = 'RATE_LIMITED' }
     end
 
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then
         return { success = false, error = 'INVALID_SOURCE' }
     end
@@ -185,7 +187,7 @@ lib.callback.register('gcphone:radio:createStation', function(source, data)
         category = 'other'
     end
 
-    local hostName = SafeString(GetName(source) or ('Player-' .. tostring(source)), 64) or 'Unknown'
+    local hostName = SafeString(Bridge.GetName(source) or ('Player-' .. tostring(source)), 64) or 'Unknown'
 
     local stationId = NextId()
     local livekitRoom = 'radio-' .. tostring(stationId)
@@ -540,3 +542,5 @@ AddEventHandler('onResourceStop', function(resourceName)
     if resourceName ~= cache.resource or not RadioMusicPositionTimer then return end
     RadioMusicPositionTimer:forceEnd(false)
 end)
+
+return {}

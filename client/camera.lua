@@ -1,3 +1,9 @@
+local PhoneState = require 'client.state'
+local PhoneMod = require 'client.phone'
+local Anim = require 'client.phone_animation'
+local CameraWalk = require 'client.camera_walk'
+local Flashlight = require 'client.flashlight'
+
 local takePhoto = false
 
 local cameraSession = {
@@ -67,19 +73,17 @@ local function ApplyCameraVisuals()
     end
 
     SetTimecycleModifierStrength(cameraSession.blur / 140.0)
-    UpdateAdvancedPhoneCamera({
+    CameraWalk.UpdateAdvancedPhoneCamera({
         fov = cameraSession.fov,
         selfie = cameraSession.selfie,
         frozen = cameraSession.frozen,
         landscape = cameraSession.landscape,
     })
 
-    if type(SetPhoneVisualMode) == 'function' then
-        SetPhoneVisualMode('camera', {
-            landscape = cameraSession.landscape,
-            selfie = cameraSession.selfie,
-        })
-    end
+    PhoneMod.SetPhoneVisualMode('camera', {
+        landscape = cameraSession.landscape,
+        selfie = cameraSession.selfie,
+    })
 end
 
 local function NormalizeCameraData(data)
@@ -109,7 +113,7 @@ local function StartCameraSession(data)
     cameraSession.active = true
     PhoneState.cameraActive = true
     SetPedCurrentWeaponVisible(ped, false, true, true, true)
-    StartAdvancedPhoneCamera({
+    CameraWalk.StartAdvancedPhoneCamera({
         fov = cameraSession.fov,
         selfie = cameraSession.selfie,
         frozen = cameraSession.frozen,
@@ -134,15 +138,13 @@ local function StartCameraSession(data)
             end
         end
 
-        StopAdvancedPhoneCamera()
+        CameraWalk.StopAdvancedPhoneCamera()
         PhoneState.cameraActive = false
         ClearTimecycleModifier()
         SetTimecycleModifierStrength(0.0)
         SetPedCurrentWeaponVisible(ped, true, true, true, true)
-        if type(SetPhoneFlashlightEnabled) == 'function' then
-            SetPhoneFlashlightEnabled(false)
-        end
-        PhonePlayText()
+        Flashlight.SetPhoneFlashlightEnabled(false)
+        Anim.PhonePlayText()
     end)
 
     return true
@@ -240,7 +242,7 @@ RegisterNUICallback('cameraSetFreeze', function(data, cb)
         return
     end
 
-    cameraSession.frozen = SetAdvancedPhoneCameraFreeze(type(data) == 'table' and data.enabled == true)
+    cameraSession.frozen = CameraWalk.SetAdvancedPhoneCameraFreeze(type(data) == 'table' and data.enabled == true)
     cb({ success = true, frozen = cameraSession.frozen })
 end)
 
@@ -250,7 +252,7 @@ RegisterNUICallback('cameraSetLandscape', function(data, cb)
         return
     end
 
-    cameraSession.landscape = SetAdvancedPhoneCameraLandscape(type(data) == 'table' and data.enabled == true)
+    cameraSession.landscape = CameraWalk.SetAdvancedPhoneCameraLandscape(type(data) == 'table' and data.enabled == true)
     ApplyCameraVisuals()
     cb({ success = true, landscape = cameraSession.landscape })
 end)
@@ -261,7 +263,7 @@ RegisterNUICallback('cameraSetQuickZoom', function(data, cb)
         return
     end
 
-    local fov, quickZoomIndex = SetAdvancedPhoneCameraQuickZoom(type(data) == 'table' and data.index or cameraSession.quickZoomIndex)
+    local fov, quickZoomIndex = CameraWalk.SetAdvancedPhoneCameraQuickZoom(type(data) == 'table' and data.index or cameraSession.quickZoomIndex)
     cameraSession.fov = ClampFov(fov)
     cameraSession.quickZoomIndex = quickZoomIndex
     cb({ success = true, fov = cameraSession.fov, quickZoomIndex = cameraSession.quickZoomIndex })
@@ -320,7 +322,7 @@ end)
 RegisterNUICallback('faketakePhoto', function(_, cb)
     menuIsOpen = false
     SendNUIMessage({ action = 'hidePhone' })
-    PhonePlayOut()
+    Anim.PhonePlayOut()
     cb(true)
 
     TriggerEvent('camera:open')
@@ -329,8 +331,10 @@ end)
 AddEventHandler('onResourceStop', function(resourceName)
     if resourceName ~= GetCurrentResourceName() then return end
     StopCameraSession()
-    StopAdvancedPhoneCamera()
+    CameraWalk.StopAdvancedPhoneCamera()
     PhoneState.cameraActive = false
     ClearTimecycleModifier()
     SetTimecycleModifierStrength(0.0)
 end)
+
+return {}

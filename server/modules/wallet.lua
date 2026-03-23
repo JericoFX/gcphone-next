@@ -1,59 +1,32 @@
-local function SafeString(value, maxLen)
-    if type(value) ~= 'string' then return nil end
-    local trimmed = value:gsub('%s+', ' '):gsub('^%s+', ''):gsub('%s+$', '')
-    if trimmed == '' then return nil end
-    if maxLen and #trimmed > maxLen then
-        trimmed = trimmed:sub(1, maxLen)
-    end
-    return trimmed
-end
-
-local function SafeNumber(value, min, max)
-    local num = tonumber(value)
-    if not num then return nil end
-    if min and num < min then num = min end
-    if max and num > max then num = max end
-    return num
-end
+local Bridge = require 'server.bridge'
+local Phone = require 'server.modules.phone'
+local Utils = require 'server.lib.utils'
 
 local function RequirePlayerIdentifier(source)
     local src = tonumber(source)
     if not src or src <= 0 then return nil end
 
-    if type(GetPlayer) == 'function' and not GetPlayer(src) then
+    if not Bridge.GetPlayer(src) then
         return nil
     end
 
-    if type(IsPlayerActionAllowed) == 'function' then
-        local allowed = IsPlayerActionAllowed(src)
-        if not allowed then
-            return nil
-        end
+    if not Bridge.IsPlayerActionAllowed(src) then
+        return nil
     end
 
-    return GetIdentifier(src)
+    return Bridge.GetIdentifier(src)
 end
 
 local function EnsureWallet(identifier)
     local wallet = MySQL.single.await('SELECT id, balance FROM phone_wallets WHERE identifier = ? LIMIT 1', { identifier })
     if wallet then return wallet end
 
-    local initial = SafeNumber(Config.Wallet and Config.Wallet.InitialBalance or nil, 0, 999999999) or 2500
+    local initial = Utils.SafeNumber(Config.Wallet and Config.Wallet.InitialBalance or nil, 0, 999999999) or 2500
     local walletId = MySQL.insert.await('INSERT INTO phone_wallets (identifier, balance) VALUES (?, ?)', { identifier, initial })
     return {
         id = walletId,
         balance = initial,
     }
-end
-
-local SecurityResource = GetCurrentResourceName()
-
-local function HitRateLimit(source, key, windowMs, maxHits)
-    local ok, blocked = pcall(function()
-        return exports[SecurityResource]:HitRateLimit(source, key, windowMs, maxHits)
-    end)
-    if not ok then return false end
-    return blocked == true
 end
 
 local function EnsureWalletTables()
@@ -83,9 +56,9 @@ CreateThread(function()
 end)
 
 local function ResolveTargetByPhone(phoneNumber)
-    local receiverIdentifier = GetIdentifierByPhone(phoneNumber)
+    local receiverIdentifier = Bridge.GetIdentifierByPhone(phoneNumber)
     if not receiverIdentifier then return nil, nil end
-    return receiverIdentifier, GetSourceFromIdentifier(receiverIdentifier)
+    return receiverIdentifier, Bridge.GetSourceFromIdentifier(receiverIdentifier)
 end
 
 local function GetPlayerCoordsSafe(source)
@@ -102,7 +75,7 @@ local function IsWithinDistance(sourceA, sourceB, maxDistance)
     local coordsB = GetPlayerCoordsSafe(sourceB)
     if not coordsA or not coordsB then return false, nil end
     local distance = #(coordsA - coordsB)
-    local limit = SafeNumber(maxDistance, 1.0, 10.0) or 3.0
+    local limit = Utils.SafeNumber(maxDistance, 1.0, 10.0) or 3.0
     return distance <= limit, distance
 end
 
@@ -170,19 +143,19 @@ end
 local function TransferFrameworkMoney(payerSource, receiverSource, amount, method)
     local moneyType = method == 'cash' and 'cash' or 'bank'
 
-    local payerBalance = GetMoney(payerSource, moneyType)
+    local payerBalance = Bridge.GetMoney(payerSource, moneyType)
     if not payerBalance or payerBalance < amount then
         return false, 'INSUFFICIENT_' .. string.upper(moneyType)
     end
 
-    local removed = RemoveMoney(payerSource, amount, moneyType, 'gcphone-invoice-' .. moneyType)
+    local removed = Bridge.RemoveMoney(payerSource, amount, moneyType, 'gcphone-invoice-' .. moneyType)
     if not removed then
         return false, 'PAYMENT_FAILED'
     end
 
-    local added = AddMoney(receiverSource, amount, moneyType, 'gcphone-invoice-' .. moneyType)
+    local added = Bridge.AddMoney(receiverSource, amount, moneyType, 'gcphone-invoice-' .. moneyType)
     if not added then
-        AddMoney(payerSource, amount, moneyType, 'gcphone-invoice-revert-' .. moneyType)
+        Bridge.AddMoney(payerSource, amount, moneyType, 'gcphone-invoice-revert-' .. moneyType)
         return false, 'PAYMENT_FAILED'
     end
 
@@ -213,44 +186,35 @@ local function ResolveInvoiceTarget(source, data)
     if type(data) ~= 'table' then return nil, nil, nil, 'INVALID_DATA' end
 
     local targetServerId = tonumber(data.targetServerId)
-    local targetPhone = SafeString(data.targetPhone, 20)
-    local targetIdentifier = SafeString(data.targetIdentifier, 80)
+    local targetPhone = Utils.SafeString(data.targetPhone, 20)
+    local targetIdentifier = Utils.SafeString(data.targetIdentifier, 80)
 
     if targetServerId then
-        local targetId = GetIdentifier(targetServerId)
+        local targetId = Bridge.GetIdentifier(targetServerId)
         if not targetId then return nil, nil, nil, 'TARGET_NOT_FOUND' end
-        if type(IsPlayerActionAllowed) == 'function' then
-            local allowed = IsPlayerActionAllowed(targetServerId)
-            if not allowed then return nil, nil, nil, 'TARGET_UNAVAILABLE' end
-        end
+        if not Bridge.IsPlayerActionAllowed(targetServerId) then return nil, nil, nil, 'TARGET_UNAVAILABLE' end
         if targetId == fromIdentifier then return nil, nil, nil, 'INVALID_TARGET' end
-        local distanceLimit = SafeNumber(Config.Wallet and Config.Wallet.ProximityDistance or nil, 1.0, 10.0) or 3.0
+        local distanceLimit = Utils.SafeNumber(Config.Wallet and Config.Wallet.ProximityDistance or nil, 1.0, 10.0) or 3.0
         local near = IsWithinDistance(source, targetServerId, distanceLimit)
         if not near then return nil, nil, nil, 'TOO_FAR' end
         return targetServerId, targetId, 'nfc'
     end
 
     if targetPhone then
-        local targetId = GetIdentifierByPhone(targetPhone)
+        local targetId = Bridge.GetIdentifierByPhone(targetPhone)
         if not targetId then return nil, nil, nil, 'TARGET_NOT_FOUND' end
         if targetId == fromIdentifier then return nil, nil, nil, 'INVALID_TARGET' end
-        local targetSource = GetSourceFromIdentifier(targetId)
+        local targetSource = Bridge.GetSourceFromIdentifier(targetId)
         if not targetSource then return nil, nil, nil, 'TARGET_OFFLINE' end
-        if type(IsPlayerActionAllowed) == 'function' then
-            local allowed = IsPlayerActionAllowed(targetSource)
-            if not allowed then return nil, nil, nil, 'TARGET_UNAVAILABLE' end
-        end
+        if not Bridge.IsPlayerActionAllowed(targetSource) then return nil, nil, nil, 'TARGET_UNAVAILABLE' end
         return targetSource, targetId, 'remote'
     end
 
     if targetIdentifier then
         if targetIdentifier == fromIdentifier then return nil, nil, nil, 'INVALID_TARGET' end
-        local targetSource = GetSourceFromIdentifier(targetIdentifier)
+        local targetSource = Bridge.GetSourceFromIdentifier(targetIdentifier)
         if not targetSource then return nil, nil, nil, 'TARGET_OFFLINE' end
-        if type(IsPlayerActionAllowed) == 'function' then
-            local allowed = IsPlayerActionAllowed(targetSource)
-            if not allowed then return nil, nil, nil, 'TARGET_UNAVAILABLE' end
-        end
+        if not Bridge.IsPlayerActionAllowed(targetSource) then return nil, nil, nil, 'TARGET_UNAVAILABLE' end
         return targetSource, targetIdentifier, 'remote'
     end
 
@@ -258,7 +222,7 @@ local function ResolveInvoiceTarget(source, data)
 end
 
 local function NotifyInvoiceResult(invoice, status)
-    local fromSource = GetSourceFromIdentifier(invoice.fromIdentifier)
+    local fromSource = Bridge.GetSourceFromIdentifier(invoice.fromIdentifier)
     if fromSource then
         TriggerClientEvent('gcphone:walletNfcInvoiceResult', fromSource, {
             invoiceId = invoice.id,
@@ -270,7 +234,7 @@ local function NotifyInvoiceResult(invoice, status)
     end
 
     if invoice.channel == 'remote' then
-        local toSource = GetSourceFromIdentifier(invoice.toIdentifier)
+        local toSource = Bridge.GetSourceFromIdentifier(invoice.toIdentifier)
         if toSource then
             TriggerClientEvent('gcphone:bankInvoiceResult', toSource, {
                 invoiceId = invoice.id,
@@ -315,9 +279,9 @@ lib.callback.register('gcphone:wallet:addCard', function(source, data)
     local identifier = RequirePlayerIdentifier(source)
     if not identifier then return { success = false, error = 'INVALID_SOURCE' } end
 
-    local label = SafeString(type(data) == 'table' and data.label or nil, 32)
-    local last4 = SafeString(type(data) == 'table' and data.last4 or nil, 4)
-    local color = SafeString(type(data) == 'table' and data.color or nil, 20) or '#2E3B57'
+    local label = Utils.SafeString(type(data) == 'table' and data.label or nil, 32)
+    local last4 = Utils.SafeString(type(data) == 'table' and data.last4 or nil, 4)
+    local color = Utils.SafeString(type(data) == 'table' and data.color or nil, 20) or '#2E3B57'
 
     if not label or not last4 or not last4:match('^%d%d%d%d$') then
         return { success = false, error = 'INVALID_CARD' }
@@ -342,25 +306,25 @@ lib.callback.register('gcphone:wallet:removeCard', function(source, data)
 end)
 
 lib.callback.register('gcphone:wallet:transfer', function(source, data)
-    if IsPhoneReadOnly(source) then return { success = false, error = 'READ_ONLY' } end
+    if Phone.IsPhoneReadOnly(source) then return { success = false, error = 'READ_ONLY' } end
     local identifier = RequirePlayerIdentifier(source)
     if not identifier then return { success = false, error = 'INVALID_SOURCE' } end
     if type(data) ~= 'table' then return { success = false, error = 'INVALID_DATA' } end
 
-    local targetPhone = SafeString(data.targetPhone, 20)
-    local title = SafeString(data.title, 64) or 'Transferencia'
-    local amount = SafeNumber(data.amount, 1, Config.Wallet and Config.Wallet.MaxTransferAmount or 500000)
+    local targetPhone = Utils.SafeString(data.targetPhone, 20)
+    local title = Utils.SafeString(data.title, 64) or 'Transferencia'
+    local amount = Utils.SafeNumber(data.amount, 1, Config.Wallet and Config.Wallet.MaxTransferAmount or 500000)
 
     if not targetPhone or not amount then
         return { success = false, error = 'INVALID_TRANSFER' }
     end
 
     local walletMs = (Config.Security and Config.Security.RateLimits and Config.Security.RateLimits.wallet) or 900
-    if HitRateLimit(source, 'wallet_transfer', walletMs, 1) then
+    if Utils.HitRateLimit(source, 'wallet_transfer', walletMs, 1) then
         return { success = false, error = 'RATE_LIMITED' }
     end
 
-    local receiverIdentifier = GetIdentifierByPhone(targetPhone)
+    local receiverIdentifier = Bridge.GetIdentifierByPhone(targetPhone)
     if not receiverIdentifier then
         return { success = false, error = 'TARGET_NOT_FOUND' }
     end
@@ -370,7 +334,7 @@ lib.callback.register('gcphone:wallet:transfer', function(source, data)
         return { success = false, error = transferPayload.error or 'TRANSFER_FAILED' }
     end
 
-    local receiverSource = GetSourceFromIdentifier(receiverIdentifier)
+    local receiverSource = Bridge.GetSourceFromIdentifier(receiverIdentifier)
     if receiverSource then
         PushWalletNotification(receiverSource, 'Wallet', ('Recibiste $%s'):format(math.floor(amount)))
     end
@@ -382,15 +346,15 @@ lib.callback.register('gcphone:wallet:transfer', function(source, data)
 end)
 
 lib.callback.register('gcphone:wallet:proximityTransfer', function(source, data)
-    if IsPhoneReadOnly(source) then return { success = false, error = 'READ_ONLY' } end
+    if Phone.IsPhoneReadOnly(source) then return { success = false, error = 'READ_ONLY' } end
     local identifier = RequirePlayerIdentifier(source)
     if not identifier then return { success = false, error = 'INVALID_SOURCE' } end
     if type(data) ~= 'table' then return { success = false, error = 'INVALID_DATA' } end
 
-    local targetPhone = SafeString(data.targetPhone, 20)
-    local title = SafeString(data.title, 64) or 'Pago QR/NFC'
-    local amount = SafeNumber(data.amount, 1, Config.Wallet and Config.Wallet.MaxTransferAmount or 500000)
-    local method = SafeString(data.method, 8) or 'qr'
+    local targetPhone = Utils.SafeString(data.targetPhone, 20)
+    local title = Utils.SafeString(data.title, 64) or 'Pago QR/NFC'
+    local amount = Utils.SafeNumber(data.amount, 1, Config.Wallet and Config.Wallet.MaxTransferAmount or 500000)
+    local method = Utils.SafeString(data.method, 8) or 'qr'
     if method ~= 'qr' and method ~= 'nfc' then method = 'qr' end
 
     if not targetPhone or not amount then
@@ -398,7 +362,7 @@ lib.callback.register('gcphone:wallet:proximityTransfer', function(source, data)
     end
 
     local walletMs = (Config.Security and Config.Security.RateLimits and Config.Security.RateLimits.wallet) or 900
-    if HitRateLimit(source, 'wallet_proximity_transfer', walletMs, 1) then
+    if Utils.HitRateLimit(source, 'wallet_proximity_transfer', walletMs, 1) then
         return { success = false, error = 'RATE_LIMITED' }
     end
 
@@ -406,18 +370,15 @@ lib.callback.register('gcphone:wallet:proximityTransfer', function(source, data)
     if not receiverIdentifier or not receiverSource then
         return { success = false, error = 'TARGET_OFFLINE' }
     end
-    if type(IsPlayerActionAllowed) == 'function' then
-        local allowed = IsPlayerActionAllowed(receiverSource)
-        if not allowed then
-            return { success = false, error = 'TARGET_UNAVAILABLE' }
-        end
+    if not Bridge.IsPlayerActionAllowed(receiverSource) then
+        return { success = false, error = 'TARGET_UNAVAILABLE' }
     end
 
     if receiverIdentifier == identifier then
         return { success = false, error = 'INVALID_TARGET' }
     end
 
-    local distanceLimit = SafeNumber(Config.Wallet and Config.Wallet.ProximityDistance or nil, 1.0, 10.0) or 3.0
+    local distanceLimit = Utils.SafeNumber(Config.Wallet and Config.Wallet.ProximityDistance or nil, 1.0, 10.0) or 3.0
     local near, distance = IsWithinDistance(source, receiverSource, distanceLimit)
     if not near then
         return {
@@ -445,22 +406,22 @@ lib.callback.register('gcphone:wallet:proximityTransfer', function(source, data)
 end)
 
 lib.callback.register('gcphone:wallet:createRequest', function(source, data)
-    if IsPhoneReadOnly(source) then return { success = false, error = 'READ_ONLY' } end
+    if Phone.IsPhoneReadOnly(source) then return { success = false, error = 'READ_ONLY' } end
     local requesterIdentifier = RequirePlayerIdentifier(source)
     if not requesterIdentifier then return { success = false, error = 'INVALID_SOURCE' } end
     if type(data) ~= 'table' then return { success = false, error = 'INVALID_DATA' } end
 
-    local targetPhone = SafeString(data.targetPhone, 20)
-    local title = SafeString(data.title, 64) or 'Solicitud QR/NFC'
-    local amount = SafeNumber(data.amount, 1, Config.Wallet and Config.Wallet.MaxTransferAmount or 500000)
-    local method = SafeString(data.method, 8) or 'qr'
+    local targetPhone = Utils.SafeString(data.targetPhone, 20)
+    local title = Utils.SafeString(data.title, 64) or 'Solicitud QR/NFC'
+    local amount = Utils.SafeNumber(data.amount, 1, Config.Wallet and Config.Wallet.MaxTransferAmount or 500000)
+    local method = Utils.SafeString(data.method, 8) or 'qr'
     if method ~= 'qr' and method ~= 'nfc' then method = 'qr' end
     if not targetPhone or not amount then
         return { success = false, error = 'INVALID_REQUEST' }
     end
 
     local requestMs = (Config.Security and Config.Security.RateLimits and Config.Security.RateLimits.walletRequest) or 1300
-    if HitRateLimit(source, 'wallet_create_request', requestMs, 1) then
+    if Utils.HitRateLimit(source, 'wallet_create_request', requestMs, 1) then
         return { success = false, error = 'RATE_LIMITED' }
     end
 
@@ -468,22 +429,19 @@ lib.callback.register('gcphone:wallet:createRequest', function(source, data)
     if not targetIdentifier or not targetSource then
         return { success = false, error = 'TARGET_OFFLINE' }
     end
-    if type(IsPlayerActionAllowed) == 'function' then
-        local allowed = IsPlayerActionAllowed(targetSource)
-        if not allowed then
-            return { success = false, error = 'TARGET_UNAVAILABLE' }
-        end
+    if not Bridge.IsPlayerActionAllowed(targetSource) then
+        return { success = false, error = 'TARGET_UNAVAILABLE' }
     end
     if targetIdentifier == requesterIdentifier then
         return { success = false, error = 'INVALID_TARGET' }
     end
 
-    local requesterPhone = GetPhoneNumber(requesterIdentifier)
+    local requesterPhone = Bridge.GetPhoneNumber(requesterIdentifier)
     if not requesterPhone then
         return { success = false, error = 'INVALID_SOURCE' }
     end
 
-    local distanceLimit = SafeNumber(Config.Wallet and Config.Wallet.ProximityDistance or nil, 1.0, 10.0) or 3.0
+    local distanceLimit = Utils.SafeNumber(Config.Wallet and Config.Wallet.ProximityDistance or nil, 1.0, 10.0) or 3.0
     local near, distance = IsWithinDistance(source, targetSource, distanceLimit)
     if not near then
         return {
@@ -494,7 +452,7 @@ lib.callback.register('gcphone:wallet:createRequest', function(source, data)
         }
     end
 
-    local ttlSeconds = SafeNumber(Config.Wallet and Config.Wallet.RequestTtlSeconds or nil, 15, 300) or 60
+    local ttlSeconds = Utils.SafeNumber(Config.Wallet and Config.Wallet.RequestTtlSeconds or nil, 15, 300) or 60
     local requestId = MySQL.insert.await(
         'INSERT INTO phone_wallet_requests (requester_identifier, requester_phone, target_identifier, target_phone, amount, title, method, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, DATE_ADD(NOW(), INTERVAL ? SECOND))',
         { requesterIdentifier, requesterPhone, targetIdentifier, targetPhone, amount, title, method, ttlSeconds }
@@ -544,7 +502,7 @@ lib.callback.register('gcphone:wallet:getPendingRequests', function(source)
 end)
 
 lib.callback.register('gcphone:wallet:respondRequest', function(source, data)
-    if IsPhoneReadOnly(source) then return { success = false, error = 'READ_ONLY' } end
+    if Phone.IsPhoneReadOnly(source) then return { success = false, error = 'READ_ONLY' } end
     local responderIdentifier = RequirePlayerIdentifier(source)
     if not responderIdentifier then return { success = false, error = 'INVALID_SOURCE' } end
     if type(data) ~= 'table' then return { success = false, error = 'INVALID_DATA' } end
@@ -562,26 +520,23 @@ lib.callback.register('gcphone:wallet:respondRequest', function(source, data)
 
     if not accept then
         MySQL.update.await('UPDATE phone_wallet_requests SET status = "declined", responded_at = NOW() WHERE id = ? AND status = "pending"', { requestId })
-        local requesterSource = GetSourceFromIdentifier(row.requester_identifier)
+        local requesterSource = Bridge.GetSourceFromIdentifier(row.requester_identifier)
         if requesterSource then
             PushWalletNotification(requesterSource, 'Wallet', 'Solicitud rechazada')
         end
         return { success = true, status = 'declined' }
     end
 
-    local requesterSource = GetSourceFromIdentifier(row.requester_identifier)
+    local requesterSource = Bridge.GetSourceFromIdentifier(row.requester_identifier)
     if not requesterSource then
         MySQL.update.await('UPDATE phone_wallet_requests SET status = "expired", responded_at = NOW() WHERE id = ? AND status = "pending"', { requestId })
         return { success = false, error = 'REQUESTER_OFFLINE' }
     end
-    if type(IsPlayerActionAllowed) == 'function' then
-        local allowed = IsPlayerActionAllowed(requesterSource)
-        if not allowed then
-            return { success = false, error = 'TARGET_UNAVAILABLE' }
-        end
+    if not Bridge.IsPlayerActionAllowed(requesterSource) then
+        return { success = false, error = 'TARGET_UNAVAILABLE' }
     end
 
-    local distanceLimit = SafeNumber(Config.Wallet and Config.Wallet.ProximityDistance or nil, 1.0, 10.0) or 3.0
+    local distanceLimit = Utils.SafeNumber(Config.Wallet and Config.Wallet.ProximityDistance or nil, 1.0, 10.0) or 3.0
     local near, distance = IsWithinDistance(source, requesterSource, distanceLimit)
     if not near then
         return {
@@ -658,9 +613,9 @@ end)
 exports('ProximityTransfer', function(source, targetSource, amount, title, method)
     source = tonumber(source)
     targetSource = tonumber(targetSource)
-    local amountValue = SafeNumber(amount, 1, Config.Wallet and Config.Wallet.MaxTransferAmount or 500000)
-    local transferTitle = SafeString(title, 64) or 'Pago QR/NFC'
-    local transferMethod = SafeString(method, 8) or 'qr'
+    local amountValue = Utils.SafeNumber(amount, 1, Config.Wallet and Config.Wallet.MaxTransferAmount or 500000)
+    local transferTitle = Utils.SafeString(title, 64) or 'Pago QR/NFC'
+    local transferMethod = Utils.SafeString(method, 8) or 'qr'
     if transferMethod ~= 'qr' and transferMethod ~= 'nfc' then transferMethod = 'qr' end
 
     if not source or source <= 0 or not targetSource or targetSource <= 0 then
@@ -671,17 +626,13 @@ exports('ProximityTransfer', function(source, targetSource, amount, title, metho
         return { success = false, error = 'INVALID_AMOUNT' }
     end
 
-    local sourceIdentifier = GetIdentifier(source)
-    local targetIdentifier = GetIdentifier(targetSource)
+    local sourceIdentifier = Bridge.GetIdentifier(source)
+    local targetIdentifier = Bridge.GetIdentifier(targetSource)
     if not sourceIdentifier or not targetIdentifier then
         return { success = false, error = 'TARGET_OFFLINE' }
     end
-    if type(IsPlayerActionAllowed) == 'function' then
-        local sourceAllowed = IsPlayerActionAllowed(source)
-        local targetAllowed = IsPlayerActionAllowed(targetSource)
-        if not sourceAllowed then return { success = false, error = 'INVALID_SOURCE' } end
-        if not targetAllowed then return { success = false, error = 'TARGET_UNAVAILABLE' } end
-    end
+    if not Bridge.IsPlayerActionAllowed(source) then return { success = false, error = 'INVALID_SOURCE' } end
+    if not Bridge.IsPlayerActionAllowed(targetSource) then return { success = false, error = 'TARGET_UNAVAILABLE' } end
 
     if sourceIdentifier == targetIdentifier then
         return { success = false, error = 'INVALID_TARGET' }
@@ -692,7 +643,7 @@ exports('ProximityTransfer', function(source, targetSource, amount, title, metho
         return { success = false, error = 'TOO_FAR', distance = distance }
     end
 
-    local targetPhone = GetPhoneNumber(targetIdentifier)
+    local targetPhone = Bridge.GetPhoneNumber(targetIdentifier)
     if not targetPhone then
         return { success = false, error = 'TARGET_NOT_FOUND' }
     end
@@ -718,19 +669,19 @@ local function CreateInvoice(source, data)
     if not fromIdentifier then return { success = false, error = 'INVALID_SOURCE' } end
     if type(data) ~= 'table' then return { success = false, error = 'INVALID_DATA' } end
 
-    local amount = SafeNumber(data.amount, 1, Config.Wallet and Config.Wallet.MaxTransferAmount or 500000)
+    local amount = Utils.SafeNumber(data.amount, 1, Config.Wallet and Config.Wallet.MaxTransferAmount or 500000)
     local invoiceTitles = {
         es = 'Factura',
         en = 'Invoice',
         pt = 'Fatura',
         fr = 'Facture',
     }
-    local lang = type(GetPhoneLanguageForSource) == 'function' and GetPhoneLanguageForSource(source, true) or 'es'
-    local title = SafeString(data.title, 64) or invoiceTitles[lang] or invoiceTitles.es
+    local lang = Phone.GetPhoneLanguageForSource(source, true) or 'es'
+    local title = Utils.SafeString(data.title, 64) or invoiceTitles[lang] or invoiceTitles.es
     if not amount then return { success = false, error = 'INVALID_AMOUNT' } end
 
     local invoiceMs = (Config.Security and Config.Security.RateLimits and Config.Security.RateLimits.walletRequest) or 1300
-    if HitRateLimit(source, 'wallet_create_invoice', invoiceMs, 1) then
+    if Utils.HitRateLimit(source, 'wallet_create_invoice', invoiceMs, 1) then
         return { success = false, error = 'RATE_LIMITED' }
     end
 
@@ -754,7 +705,7 @@ local function CreateInvoice(source, data)
 
     local payload = {
         invoiceId = invoiceId,
-        fromName = GetName(source) or 'Ciudadano',
+        fromName = Bridge.GetName(source) or 'Ciudadano',
         amount = amount,
         title = title,
         expiresAt = expiresAt,
@@ -775,9 +726,9 @@ local function RespondInvoice(source, data)
     if not toIdentifier then return { success = false, error = 'INVALID_SOURCE' } end
     if type(data) ~= 'table' then return { success = false, error = 'INVALID_DATA' } end
 
-    local invoiceId = SafeString(data.invoiceId, 64)
+    local invoiceId = Utils.SafeString(data.invoiceId, 64)
     local accept = data.accept == true
-    local requestedMethod = SafeString(data.paymentMethod, 10)
+    local requestedMethod = Utils.SafeString(data.paymentMethod, 10)
     if not invoiceId then return { success = false, error = 'INVALID_INVOICE' } end
 
     local invoice = PendingInvoices[invoiceId]
@@ -797,15 +748,12 @@ local function RespondInvoice(source, data)
     end
 
     local payerSource = source
-    local receiverSource = GetSourceFromIdentifier(invoice.fromIdentifier)
+    local receiverSource = Bridge.GetSourceFromIdentifier(invoice.fromIdentifier)
     if not receiverSource then
         return { success = false, error = 'TARGET_OFFLINE' }
     end
-    if type(IsPlayerActionAllowed) == 'function' then
-        local allowed = IsPlayerActionAllowed(receiverSource)
-        if not allowed then
-            return { success = false, error = 'TARGET_UNAVAILABLE' }
-        end
+    if not Bridge.IsPlayerActionAllowed(receiverSource) then
+        return { success = false, error = 'TARGET_UNAVAILABLE' }
     end
 
     local method = invoice.channel == 'nfc' and ((requestedMethod == 'cash' and 'cash') or 'bank') or 'bank'
@@ -843,8 +791,8 @@ end)
 ---@param title? string
 ---@return boolean, table
 exports('WalletTransferByIdentifier', function(senderIdentifier, receiverIdentifier, amount, title)
-    local amountValue = SafeNumber(amount, 1, Config.Wallet and Config.Wallet.MaxTransferAmount or 500000)
-    local transferTitle = SafeString(title, 64) or 'Transferencia'
+    local amountValue = Utils.SafeNumber(amount, 1, Config.Wallet and Config.Wallet.MaxTransferAmount or 500000)
+    local transferTitle = Utils.SafeString(title, 64) or 'Transferencia'
 
     if not senderIdentifier or not receiverIdentifier then
         return false, { error = 'INVALID_IDENTIFIERS' }
@@ -856,15 +804,15 @@ exports('WalletTransferByIdentifier', function(senderIdentifier, receiverIdentif
         return false, { error = 'INVALID_TARGET' }
     end
 
-    local receiverPhone = GetPhoneNumber(receiverIdentifier) or ''
+    local receiverPhone = Bridge.GetPhoneNumber(receiverIdentifier) or ''
     local success, payload = ExecuteWalletTransfer(senderIdentifier, receiverIdentifier, receiverPhone, amountValue, transferTitle)
 
     if success then
-        local receiverSource = GetSourceFromIdentifier(receiverIdentifier)
+        local receiverSource = Bridge.GetSourceFromIdentifier(receiverIdentifier)
         if receiverSource then
             PushWalletNotification(receiverSource, 'Wallet', ('Recibiste $%s'):format(math.floor(amountValue)))
         end
-        local senderSource = GetSourceFromIdentifier(senderIdentifier)
+        local senderSource = Bridge.GetSourceFromIdentifier(senderIdentifier)
         if senderSource then
             PushWalletNotification(senderSource, 'Wallet', ('Pago enviado: $%s'):format(math.floor(amountValue)))
         end
@@ -872,3 +820,5 @@ exports('WalletTransferByIdentifier', function(senderIdentifier, receiverIdentif
 
     return success, payload
 end)
+
+return {}

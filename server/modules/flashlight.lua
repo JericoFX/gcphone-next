@@ -42,3 +42,5 @@ AddEventHandler('playerDropped', function()
     state:set('gcphoneOpen', false, true)
     state:set('gcphoneFlashlightProfile', nil, true)
 end)
+
+return {}

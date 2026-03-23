@@ -1,5 +1,7 @@
 -- Creado/Modificado por JericoFX
 
+local Bridge = require 'server.bridge'
+
 local MySQL = exports.oxmysql
 local USE_SQL_CLEANUP_EVENTS = GetConvar('gcphone_sql_cleanup_events', '0') == '1'
 local ActiveLocationRecipients = {}
@@ -46,9 +48,9 @@ local function RebuildPhoneToSourceCache()
     for _, playerSrc in ipairs(players) do
         local src = tonumber(playerSrc)
         if src then
-            local identifier = GetIdentifier(src)
+            local identifier = Bridge.GetIdentifier(src)
             if identifier then
-                local phone = GetPhoneNumber(identifier)
+                local phone = Bridge.GetPhoneNumber(identifier)
                 if phone then
                     PhoneToSourceCache[phone] = src
                 end
@@ -68,9 +70,9 @@ local function GetPlayerByPhone(phoneNumber)
     for _, playerSrc in ipairs(players) do
         local src = tonumber(playerSrc)
         if src then
-            local identifier = GetIdentifier(src)
+            local identifier = Bridge.GetIdentifier(src)
             if identifier then
-                local phone = GetPhoneNumber(identifier)
+                local phone = Bridge.GetPhoneNumber(identifier)
                 if phone then
                     PhoneToSourceCache[phone] = src
                     if phone == phoneNumber then
@@ -112,12 +114,12 @@ if not USE_SQL_CLEANUP_EVENTS then
 end
 
 lib.callback.register('gcphone:liveLocation:start', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then
         return { success = false, error = 'INVALID_SOURCE' }
     end
 
-    local senderPhone = GetPhoneNumber(identifier)
+    local senderPhone = Bridge.GetPhoneNumber(identifier)
     if not senderPhone then
         return { success = false, error = 'PHONE_NOT_FOUND' }
     end
@@ -130,7 +132,7 @@ lib.callback.register('gcphone:liveLocation:start', function(source, data)
         return { success = false, error = 'NO_RECIPIENTS' }
     end
 
-    local senderName = GetName(source) or senderPhone
+    local senderName = Bridge.GetName(source) or senderPhone
     local expiresAt = os.date('%Y-%m-%d %H:%M:%S', os.time() + (durationMinutes * 60))
 
     local coords = GetEntityCoords(GetPlayerPed(source))
@@ -181,12 +183,12 @@ lib.callback.register('gcphone:liveLocation:start', function(source, data)
 end)
 
 lib.callback.register('gcphone:liveLocation:stop', function(source)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then
         return { success = false, error = 'INVALID_SOURCE' }
     end
 
-    local senderPhone = GetPhoneNumber(identifier)
+    local senderPhone = Bridge.GetPhoneNumber(identifier)
     if not senderPhone then
         return { success = false, error = 'PHONE_NOT_FOUND' }
     end
@@ -198,12 +200,12 @@ lib.callback.register('gcphone:liveLocation:stop', function(source)
 end)
 
 lib.callback.register('gcphone:liveLocation:getActive', function(source)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then
         return { success = false, locations = {} }
     end
 
-    local myPhone = GetPhoneNumber(identifier)
+    local myPhone = Bridge.GetPhoneNumber(identifier)
     if not myPhone then
         return { success = false, locations = {} }
     end
@@ -225,10 +227,10 @@ RegisterNetEvent('gcphone:liveLocation:updatePosition', function()
     if now - lastUpdate < 1000 then return end
     LastLocationUpdateAt[src] = now
 
-    local identifier = GetIdentifier(src)
+    local identifier = Bridge.GetIdentifier(src)
     if not identifier then return end
 
-    local senderPhone = GetPhoneNumber(identifier)
+    local senderPhone = Bridge.GetPhoneNumber(identifier)
     if not senderPhone then return end
 
     local activeShares = ActiveLocationRecipients[senderPhone] or {}
@@ -264,3 +266,5 @@ AddEventHandler('playerDropped', function()
         end
     end
 end)
+
+return {}

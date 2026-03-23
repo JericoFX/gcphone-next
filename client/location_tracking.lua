@@ -97,3 +97,5 @@ RegisterNUICallback('getLiveLocationState', function(_, cb)
         intervalSeconds = math.floor(updateInterval / 1000),
     })
 end)
+
+return {}

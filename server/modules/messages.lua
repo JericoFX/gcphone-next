@@ -1,5 +1,15 @@
 -- Creado/Modificado por JericoFX
 
+local Bridge = require 'server.bridge'
+local Phone = require 'server.modules.phone'
+local Utils = require 'server.lib.utils'
+
+local LastMessageSentBySource = {}
+local LastStatusViewByIdentifier = {}
+local STATUS_VIEW_DEBOUNCE_MS = 5 * 60 * 1000
+local AutoReplyByIdentifier = {}
+local AutoReplySentTo = {}
+
 local function SanitizeText(value, maxLength)
     if type(value) ~= 'string' then return '' end
     local text = value:gsub('[%z\1-\31\127]', '')
@@ -8,32 +18,9 @@ local function SanitizeText(value, maxLength)
     return text:sub(1, maxLength or 800)
 end
 
-local LastMessageSentBySource = {}
-local LastStatusViewByIdentifier = {}
-local SecurityResource = GetCurrentResourceName()
-local STATUS_VIEW_DEBOUNCE_MS = 5 * 60 * 1000
-local AutoReplyByIdentifier = {}
-local AutoReplySentTo = {}
-
-local function HitRateLimit(source, key, windowMs, maxHits)
-    local ok, blocked = pcall(function()
-        return exports[SecurityResource]:HitRateLimit(source, key, windowMs, maxHits)
-    end)
-    if not ok then return false end
-    return blocked == true
-end
-
-local function IsBlockedEither(sourceIdentifier, targetIdentifier, sourcePhone, targetPhone)
-    local ok, blocked = pcall(function()
-        return exports[SecurityResource]:IsBlockedEither(sourceIdentifier, targetIdentifier, sourcePhone, targetPhone)
-    end)
-    if not ok then return false end
-    return blocked == true
-end
-
 local function CanSendMessage(source)
     local securityMs = (Config.Security and Config.Security.RateLimits and Config.Security.RateLimits.messages) or 900
-    if HitRateLimit(source, 'messages', securityMs, 1) then
+    if Utils.HitRateLimit(source, 'messages', securityMs, 1) then
         return false
     end
 
@@ -193,10 +180,10 @@ end
 
 local function GetMessages(identifier)
     if not identifier then return {} end
-    
-    local phoneNumber = GetPhoneNumber(identifier)
+
+    local phoneNumber = Bridge.GetPhoneNumber(identifier)
     if not phoneNumber then return {} end
-    
+
     return MySQL.query.await(
         'SELECT * FROM phone_messages WHERE receiver = ? OR transmitter = ? ORDER BY time DESC',
         { phoneNumber, phoneNumber }
@@ -206,7 +193,7 @@ end
 local function GetWaveStatuses(identifier)
     if not identifier then return {} end
 
-    local myNumber = GetPhoneNumber(identifier)
+    local myNumber = Bridge.GetPhoneNumber(identifier)
     if not myNumber then return {} end
 
     return MySQL.query.await([[
@@ -227,50 +214,40 @@ end
 
 local function GetConversation(identifier, phoneNumber)
     if not identifier or not phoneNumber then return {} end
-    
-    local myNumber = GetPhoneNumber(identifier)
+
+    local myNumber = Bridge.GetPhoneNumber(identifier)
     if not myNumber then return {} end
-    
+
     return MySQL.query.await(
         'SELECT * FROM phone_messages WHERE (receiver = ? AND transmitter = ?) OR (receiver = ? AND transmitter = ?) ORDER BY time ASC',
         { myNumber, phoneNumber, phoneNumber, myNumber }
     ) or {}
 end
 
-local function CanAccessIdentifierExport(identifier, requestSource)
-    local src = tonumber(requestSource)
-    if not src or src <= 0 or not identifier then
-        return false
-    end
-
-    local ownerIdentifier = GetPhoneOwnerIdentifier and GetPhoneOwnerIdentifier(src, true) or GetIdentifier(src)
-    return ownerIdentifier ~= nil and ownerIdentifier == identifier
-end
-
 lib.callback.register('gcphone:getMessages', function(source)
-    if HitRateLimit(source, 'get_messages', 2000, 3) then return {} end
-    local identifier = GetPhoneOwnerIdentifier(source, true)
+    if Utils.HitRateLimit(source, 'get_messages', 2000, 3) then return {} end
+    local identifier = Phone.GetPhoneOwnerIdentifier(source, true)
     return GetMessages(identifier)
 end)
 
 lib.callback.register('gcphone:getConversation', function(source, phoneNumber)
-    if HitRateLimit(source, 'get_conversation', 1000, 5) then return {} end
-    local identifier = GetPhoneOwnerIdentifier(source, true)
+    if Utils.HitRateLimit(source, 'get_conversation', 1000, 5) then return {} end
+    local identifier = Phone.GetPhoneOwnerIdentifier(source, true)
     return GetConversation(identifier, phoneNumber)
 end)
 
 lib.callback.register('gcphone:sendMessage', function(source, data)
-    if IsPhoneReadOnly(source) then return false, 'READ_ONLY' end
-    local identifier = GetIdentifier(source)
+    if Phone.IsPhoneReadOnly(source) then return false, 'READ_ONLY' end
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false end
-    
-    local myNumber = GetPhoneNumber(identifier)
+
+    local myNumber = Bridge.GetPhoneNumber(identifier)
     if not myNumber then return false end
 
     if not CanSendMessage(source) then
         return false, 'Rate limited'
     end
-    
+
     if type(data) ~= 'table' then
         return false, 'Invalid data'
     end
@@ -296,17 +273,17 @@ lib.callback.register('gcphone:sendMessage', function(source, data)
         local coords = GetEntityCoords(ped)
         message = string.format('GPS: %.2f, %.2f', coords.x, coords.y)
     end
-    
-    local targetIdentifier = GetIdentifierByPhone(targetPhone)
-    if targetIdentifier and IsBlockedEither(identifier, targetIdentifier, myNumber, targetPhone) then
+
+    local targetIdentifier = Bridge.GetIdentifierByPhone(targetPhone)
+    if targetIdentifier and Utils.IsBlockedEither(identifier, targetIdentifier, myNumber, targetPhone) then
         return false, 'BLOCKED_CONTACT'
     end
-    
+
     local messageId = MySQL.insert.await(
         'INSERT INTO phone_messages (transmitter, receiver, message, media_url, owner) VALUES (?, ?, ?, ?, ?)',
         { myNumber, targetPhone, message, mediaUrl, 1 }
     )
-    
+
     local sentMessage = MySQL.single.await(
         'SELECT * FROM phone_messages WHERE id = ?',
         { messageId }
@@ -315,16 +292,16 @@ lib.callback.register('gcphone:sendMessage', function(source, data)
     if sentMessage then
         TriggerClientEvent('gcphone:messageSent', source, sentMessage)
     end
-    
+
     if targetIdentifier then
-        local targetSource = GetSourceFromIdentifier(targetIdentifier)
-        
+        local targetSource = Bridge.GetSourceFromIdentifier(targetIdentifier)
+
         if targetSource then
             local receivedId = MySQL.insert.await(
                 'INSERT INTO phone_messages (transmitter, receiver, message, media_url, owner, is_read) VALUES (?, ?, ?, ?, ?, ?)',
                 { myNumber, targetPhone, message, mediaUrl, 0, 0 }
             )
-            
+
             local receivedMessage = MySQL.single.await(
                 'SELECT * FROM phone_messages WHERE id = ?',
                 { receivedId }
@@ -366,32 +343,32 @@ lib.callback.register('gcphone:sendMessage', function(source, data)
 end)
 
 lib.callback.register('gcphone:deleteMessage', function(source, messageId)
-    if IsPhoneReadOnly(source) then return false end
-    local identifier = GetIdentifier(source)
+    if Phone.IsPhoneReadOnly(source) then return false end
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false end
-    
-    local myNumber = GetPhoneNumber(identifier)
+
+    local myNumber = Bridge.GetPhoneNumber(identifier)
     if not myNumber then return false end
 
     local id = ToPositiveInt(messageId)
     if not id then return false end
-    
+
     MySQL.execute.await(
         'DELETE FROM phone_messages WHERE id = ? AND (receiver = ? OR transmitter = ?)',
         { id, myNumber, myNumber }
     )
-    
+
     return true
 end)
 
 lib.callback.register('gcphone:deleteConversation', function(source, phoneNumber)
-    if IsPhoneReadOnly(source) then return false end
-    local identifier = GetIdentifier(source)
+    if Phone.IsPhoneReadOnly(source) then return false end
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false end
-    
-    local myNumber = GetPhoneNumber(identifier)
+
+    local myNumber = Bridge.GetPhoneNumber(identifier)
     if not myNumber then return false end
-    
+
     local targetPhone = SanitizePhoneNumber(phoneNumber)
     if targetPhone == '' then return false end
 
@@ -399,17 +376,17 @@ lib.callback.register('gcphone:deleteConversation', function(source, phoneNumber
         'DELETE FROM phone_messages WHERE (receiver = ? AND transmitter = ?) OR (receiver = ? AND transmitter = ?)',
         { myNumber, targetPhone, targetPhone, myNumber }
     )
-    
+
     return true
 end)
 
 lib.callback.register('gcphone:markAsRead', function(source, phoneNumber)
-    local identifier = GetPhoneOwnerIdentifier(source, true)
+    local identifier = Phone.GetPhoneOwnerIdentifier(source, true)
     if not identifier then return false end
-    
-    local myNumber = GetPhoneNumber(identifier)
+
+    local myNumber = Bridge.GetPhoneNumber(identifier)
     if not myNumber then return false end
-    
+
     local targetPhone = SanitizePhoneNumber(phoneNumber)
     if targetPhone == '' then return false end
 
@@ -417,27 +394,27 @@ lib.callback.register('gcphone:markAsRead', function(source, phoneNumber)
         'UPDATE phone_messages SET is_read = 1 WHERE receiver = ? AND transmitter = ? AND is_read = 0',
         { myNumber, targetPhone }
     )
-    
+
     return true
 end)
 
 lib.callback.register('gcphone:getUnreadCount', function(source)
-    local identifier = GetPhoneOwnerIdentifier(source, true)
+    local identifier = Phone.GetPhoneOwnerIdentifier(source, true)
     if not identifier then return 0 end
-    
-    local myNumber = GetPhoneNumber(identifier)
+
+    local myNumber = Bridge.GetPhoneNumber(identifier)
     if not myNumber then return 0 end
-    
+
     local count = MySQL.scalar.await(
         'SELECT COUNT(*) FROM phone_messages WHERE receiver = ? AND is_read = 0 AND owner = 0',
         { myNumber }
     )
-    
+
     return count or 0
 end)
 
 lib.callback.register('gcphone:wavechatGetGroups', function(source)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return {} end
 
     return MySQL.query.await(
@@ -456,17 +433,17 @@ lib.callback.register('gcphone:wavechatGetGroups', function(source)
 end)
 
 lib.callback.register('gcphone:wavechatGetInvites', function(source)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return {} end
     return GetPendingGroupInvites(identifier)
 end)
 
 lib.callback.register('gcphone:wavechatCreateGroup', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false, 'Invalid source' end
     if type(data) ~= 'table' then return false, 'Invalid data' end
 
-    if HitRateLimit(source, 'wavechat_create_group', 4000, 1) then
+    if Utils.HitRateLimit(source, 'wavechat_create_group', 4000, 1) then
         return false, 'RATE_LIMITED'
     end
 
@@ -480,7 +457,7 @@ lib.callback.register('gcphone:wavechatCreateGroup', function(source, data)
     for _, entry in ipairs(members) do
         local number = SanitizePhoneNumber(tostring(entry or ''))
         if number ~= '' then
-            local targetIdentifier = GetIdentifierByPhone(number)
+            local targetIdentifier = Bridge.GetIdentifierByPhone(number)
             if targetIdentifier and targetIdentifier ~= identifier and not memberIdentifiers[targetIdentifier] then
                 memberIdentifiers[targetIdentifier] = true
                 totalMembers = totalMembers + 1
@@ -519,7 +496,7 @@ lib.callback.register('gcphone:wavechatCreateGroup', function(source, data)
 end)
 
 lib.callback.register('gcphone:wavechatGetGroupMessages', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return {} end
     if type(data) ~= 'table' then return {} end
 
@@ -542,11 +519,11 @@ lib.callback.register('gcphone:wavechatGetGroupMessages', function(source, data)
 end)
 
 lib.callback.register('gcphone:wavechatRespondInvite', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false, 'Invalid source' end
     if type(data) ~= 'table' then return false, 'Invalid data' end
 
-    if HitRateLimit(source, 'wavechat_invite_response', 1500, 2) then
+    if Utils.HitRateLimit(source, 'wavechat_invite_response', 1500, 2) then
         return false, 'RATE_LIMITED'
     end
 
@@ -579,7 +556,7 @@ lib.callback.register('gcphone:wavechatRespondInvite', function(source, data)
 end)
 
 lib.callback.register('gcphone:wavechatSendGroupMessage', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false, 'Invalid source' end
     if type(data) ~= 'table' then return false, 'Invalid data' end
 
@@ -588,13 +565,13 @@ lib.callback.register('gcphone:wavechatSendGroupMessage', function(source, data)
     if not IsGroupMember(groupId, identifier) then return false, 'Not a member' end
 
     local waveMs = (Config.Security and Config.Security.RateLimits and Config.Security.RateLimits.wavechat) or 700
-    if HitRateLimit(source, 'wavechat', waveMs, 1) then return false, 'RATE_LIMITED' end
+    if Utils.HitRateLimit(source, 'wavechat', waveMs, 1) then return false, 'RATE_LIMITED' end
 
     local message = SanitizeText(data.message, 800)
     local mediaUrl = SanitizeMediaUrl(data.mediaUrl)
     if message == '' and not mediaUrl then return false, 'Empty message' end
 
-    local senderNumber = GetPhoneNumber(identifier)
+    local senderNumber = Bridge.GetPhoneNumber(identifier)
     local messageId = MySQL.insert.await(
         'INSERT INTO phone_chat_group_messages (group_id, sender_identifier, sender_number, message, media_url) VALUES (?, ?, ?, ?, ?)',
         { groupId, identifier, senderNumber, message, mediaUrl }
@@ -609,7 +586,7 @@ lib.callback.register('gcphone:wavechatSendGroupMessage', function(source, data)
 
     local members = MySQL.query.await('SELECT identifier FROM phone_chat_group_members WHERE group_id = ?', { groupId }) or {}
     for _, row in ipairs(members) do
-        local memberSource = GetSourceFromIdentifier(row.identifier)
+        local memberSource = Bridge.GetSourceFromIdentifier(row.identifier)
         if memberSource then
             TriggerClientEvent('gcphone:wavechatGroupMessage', memberSource, payload)
         end
@@ -623,7 +600,7 @@ end)
 ---@param requestSource integer
 ---@return table[]
 exports('GetMessages', function(identifier, requestSource)
-    if not CanAccessIdentifierExport(identifier, requestSource) then
+    if not Utils.CanAccessIdentifierExport(identifier, requestSource, Phone.GetPhoneOwnerIdentifier, Bridge.GetIdentifier) then
         return {}
     end
 
@@ -636,7 +613,7 @@ end)
 ---@param requestSource integer
 ---@return table[]
 exports('GetConversation', function(identifier, targetNumber, requestSource)
-    if not CanAccessIdentifierExport(identifier, requestSource) then
+    if not Utils.CanAccessIdentifierExport(identifier, requestSource, Phone.GetPhoneOwnerIdentifier, Bridge.GetIdentifier) then
         return {}
     end
 
@@ -667,7 +644,7 @@ AddEventHandler('gcphone:wavechat:persistBatch', function(requestId, entries)
             local mediaUrl = SanitizeMediaUrl(entry.mediaUrl)
 
             if identifier and groupId and (message ~= '' or mediaUrl) and IsGroupMember(groupId, identifier) then
-                local senderNumber = GetPhoneNumber(identifier)
+                local senderNumber = Bridge.GetPhoneNumber(identifier)
                 if senderNumber then
                     placeholders[#placeholders + 1] = '(?, ?, ?, ?, ?)'
                     params[#params + 1] = groupId
@@ -701,16 +678,16 @@ AddEventHandler('gcphone:wavechat:persistBatch', function(requestId, entries)
 end)
 
 lib.callback.register('gcphone:wavechatGetStatuses', function(source)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     return GetWaveStatuses(identifier)
 end)
 
 lib.callback.register('gcphone:wavechatCreateStatus', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false, 'Invalid source' end
     if type(data) ~= 'table' then return false, 'Invalid data' end
 
-    local phoneNumber = GetPhoneNumber(identifier)
+    local phoneNumber = Bridge.GetPhoneNumber(identifier)
     if not phoneNumber then return false, 'Invalid source' end
 
     local mediaUrl = SanitizeMediaUrl(data.mediaUrl)
@@ -725,7 +702,7 @@ lib.callback.register('gcphone:wavechatCreateStatus', function(source, data)
     end
 
     local waveMs = (Config.Security and Config.Security.RateLimits and Config.Security.RateLimits.wavechat) or 700
-    if HitRateLimit(source, 'wavechat_status', waveMs * 2, 1) then return false, 'RATE_LIMITED' end
+    if Utils.HitRateLimit(source, 'wavechat_status', waveMs * 2, 1) then return false, 'RATE_LIMITED' end
 
     MySQL.insert.await(
         'INSERT INTO phone_wavechat_statuses (identifier, phone_number, media_url, media_type, caption, expires_at) VALUES (?, ?, ?, ?, ?, DATE_ADD(NOW(), INTERVAL 24 HOUR))',
@@ -746,10 +723,10 @@ lib.callback.register('gcphone:wavechatCreateStatus', function(source, data)
 end)
 
 lib.callback.register('gcphone:wavechatMarkStatusViewed', function(source, statusId)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     local id = ToPositiveInt(statusId)
     if not identifier or not id then return false end
-    if HitRateLimit(source, 'wavechat_status_view', 1000, 8) then return false end
+    if Utils.HitRateLimit(source, 'wavechat_status_view', 1000, 8) then return false end
     if not ShouldCountStatusView(identifier, id) then return true end
 
     MySQL.update.await(
@@ -761,7 +738,7 @@ lib.callback.register('gcphone:wavechatMarkStatusViewed', function(source, statu
 end)
 
 lib.callback.register('gcphone:setAutoReply', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false end
 
     local enabled = type(data) == 'table' and data.enabled == true
@@ -777,7 +754,7 @@ lib.callback.register('gcphone:setAutoReply', function(source, data)
 end)
 
 lib.callback.register('gcphone:getAutoReply', function(source)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return { enabled = false, message = '' } end
     local msg = AutoReplyByIdentifier[identifier]
     return { enabled = msg ~= nil, message = msg or '' }
@@ -786,7 +763,7 @@ end)
 AddEventHandler('playerDropped', function()
     local src = source
     LastMessageSentBySource[src] = nil
-    local identifier = GetIdentifier(src)
+    local identifier = Bridge.GetIdentifier(src)
     if identifier then
         AutoReplyByIdentifier[identifier] = nil
         for key, _ in pairs(AutoReplySentTo) do
@@ -796,3 +773,5 @@ AddEventHandler('playerDropped', function()
         end
     end
 end)
+
+return {}

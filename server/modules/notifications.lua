@@ -39,15 +39,9 @@
 --   data = { x = 123.4, y = 456.7 }
 -- }
 
-local function SafeText(value, maxLen)
-    if type(value) ~= 'string' then return nil end
-    local text = value:gsub('[%c]', ''):gsub('^%s+', ''):gsub('%s+$', '')
-    if text == '' then return nil end
-    if maxLen and #text > maxLen then
-        text = text:sub(1, maxLen)
-    end
-    return text
-end
+local Bridge = require 'server.bridge'
+local Phone = require 'server.modules.phone'
+local Utils = require 'server.lib.utils'
 
 local function SafeMeta(value)
     if value == nil then return nil end
@@ -72,14 +66,14 @@ end
 ---@param payload GCPhoneNotificationPayload
 ---@return integer|nil
 local function InsertNotification(identifier, payload)
-    local appId = SafeText(payload.appId or payload.app or 'system', 40) or 'system'
-    local title = SafeText(payload.title or 'Notificacion', 80) or 'Notificacion'
-    local content = SafeText(payload.content or payload.message or '', 255)
+    local appId = Utils.SafeText(payload.appId or payload.app or 'system', 40) or 'system'
+    local title = Utils.SafeText(payload.title or 'Notificacion', 80) or 'Notificacion'
+    local content = Utils.SafeText(payload.content or payload.message or '', 255)
     if not content then
         return nil
     end
 
-    local avatar = SafeText(payload.avatar or '', 500)
+    local avatar = Utils.SafeText(payload.avatar or '', 500)
     local meta = SafeMeta(payload.meta)
 
     return MySQL.insert.await(
@@ -101,7 +95,7 @@ local function ParseMeta(raw)
 end
 
 lib.callback.register('gcphone:notifications:get', function(source, data)
-    local identifier = GetPhoneOwnerIdentifier(source, true)
+    local identifier = Phone.GetPhoneOwnerIdentifier(source, true)
     if not identifier then
         return { success = false, error = 'MISSING_IDENTIFIER' }
     end
@@ -142,8 +136,8 @@ lib.callback.register('gcphone:notifications:get', function(source, data)
 end)
 
 lib.callback.register('gcphone:notifications:markRead', function(source, data)
-    if IsPhoneReadOnly(source) then return false end
-    local identifier = GetIdentifier(source)
+    if Phone.IsPhoneReadOnly(source) then return false end
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false end
 
     local notificationId = tonumber(type(data) == 'table' and data.id or nil)
@@ -159,8 +153,8 @@ lib.callback.register('gcphone:notifications:markRead', function(source, data)
 end)
 
 lib.callback.register('gcphone:notifications:markAllRead', function(source)
-    if IsPhoneReadOnly(source) then return false end
-    local identifier = GetIdentifier(source)
+    if Phone.IsPhoneReadOnly(source) then return false end
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false end
 
     MySQL.update.await(
@@ -172,8 +166,8 @@ lib.callback.register('gcphone:notifications:markAllRead', function(source)
 end)
 
 lib.callback.register('gcphone:notifications:delete', function(source, data)
-    if IsPhoneReadOnly(source) then return false end
-    local identifier = GetIdentifier(source)
+    if Phone.IsPhoneReadOnly(source) then return false end
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false end
 
     local notificationId = tonumber(type(data) == 'table' and data.id or nil)
@@ -201,7 +195,7 @@ exports('AddPersistentNotification', function(identifier, payload)
     local id = InsertNotification(identifier, payload)
     if not id then return nil end
 
-    local target = GetSourceFromIdentifier(identifier)
+    local target = Bridge.GetSourceFromIdentifier(identifier)
     if target then
         TriggerClientEvent('gcphone:notify', target, {
             title = payload.title or 'Notificacion',
@@ -213,3 +207,5 @@ exports('AddPersistentNotification', function(identifier, payload)
 
     return id
 end)
+
+return {}

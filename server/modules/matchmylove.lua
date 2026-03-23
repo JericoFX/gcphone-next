@@ -1,7 +1,10 @@
 -- Creado/Modificado por JericoFX
 -- MatchMyLove - Dating App Backend
 
-local Utils = GcPhoneUtils
+local Bridge = require 'server.bridge'
+local Phone = require 'server.modules.phone'
+local Utils = require 'server.lib.utils'
+
 local function SafeString(v, m) return Utils.SafeString(v, m) end
 local function SanitizeText(v, m) return Utils.SanitizeText(v, m, true) end
 local function SanitizeMediaUrl(v) return Utils.SanitizeMediaUrl(v, {'.png','.jpg','.jpeg','.webp','.gif'}, 500) end
@@ -13,7 +16,7 @@ local VALID_SWIPE_DIR = { left = true, right = true }
 
 local function IsBlockedPair(identifierA, identifierB)
     local ok, blocked = pcall(function()
-        return exports[GetCurrentResourceName()]:IsBlockedEither(identifierA, identifierB, '', '')
+        return Utils.IsBlockedEither(identifierA, identifierB, '', '')
     end)
     return ok and blocked == true
 end
@@ -65,7 +68,7 @@ end
 
 -- Get own profile
 lib.callback.register('gcphone:matchmylove:getProfile', function(source)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return nil end
 
     local row = MySQL.single.await(
@@ -77,9 +80,9 @@ end)
 
 -- Create profile
 lib.callback.register('gcphone:matchmylove:createProfile', function(source, data)
-    if IsPhoneReadOnly(source) then return false, 'READ_ONLY' end
+    if Phone.IsPhoneReadOnly(source) then return false, 'READ_ONLY' end
     if HitRateLimit(source, 'mml_create', 3000, 1) then return false, 'RATE_LIMITED' end
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false, 'NOT_AUTHENTICATED' end
     if type(data) ~= 'table' then return false, 'INVALID_DATA' end
 
@@ -135,9 +138,9 @@ end)
 
 -- Update profile
 lib.callback.register('gcphone:matchmylove:updateProfile', function(source, data)
-    if IsPhoneReadOnly(source) then return false, 'READ_ONLY' end
+    if Phone.IsPhoneReadOnly(source) then return false, 'READ_ONLY' end
     if HitRateLimit(source, 'mml_update', 3000, 1) then return false, 'RATE_LIMITED' end
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false, 'NOT_AUTHENTICATED' end
     if type(data) ~= 'table' then return false, 'INVALID_DATA' end
 
@@ -194,9 +197,9 @@ end)
 
 -- Delete profile
 lib.callback.register('gcphone:matchmylove:deleteProfile', function(source)
-    if IsPhoneReadOnly(source) then return false, 'READ_ONLY' end
+    if Phone.IsPhoneReadOnly(source) then return false, 'READ_ONLY' end
     if HitRateLimit(source, 'mml_delete', 3000, 1) then return false, 'RATE_LIMITED' end
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false, 'NOT_AUTHENTICATED' end
 
     local existing = MySQL.scalar.await(
@@ -235,7 +238,7 @@ end)
 
 -- Get unswiped cards
 lib.callback.register('gcphone:matchmylove:getCards', function(source)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return {} end
 
     local myProfile = MySQL.single.await(
@@ -274,9 +277,9 @@ end)
 
 -- Swipe on a profile
 lib.callback.register('gcphone:matchmylove:swipe', function(source, data)
-    if IsPhoneReadOnly(source) then return false, 'READ_ONLY' end
+    if Phone.IsPhoneReadOnly(source) then return false, 'READ_ONLY' end
     if HitRateLimit(source, 'mml_swipe', 500, 1) then return false, 'RATE_LIMITED' end
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false, 'NOT_AUTHENTICATED' end
     if type(data) ~= 'table' then return false, 'INVALID_DATA' end
 
@@ -341,7 +344,7 @@ lib.callback.register('gcphone:matchmylove:swipe', function(source, data)
                 priority = 'normal'
             })
 
-            local targetSource = GetSourceFromIdentifier(targetId)
+            local targetSource = Bridge.GetSourceFromIdentifier(targetId)
             if targetSource then
                 TriggerClientEvent('gcphone:notify', targetSource, {
                     appId = 'matchmylove',
@@ -360,7 +363,7 @@ end)
 
 -- Get matches with profile info and last message
 lib.callback.register('gcphone:matchmylove:getMatches', function(source)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return {} end
 
     local matches = MySQL.query.await([[
@@ -399,7 +402,7 @@ end)
 
 -- Get messages for a match
 lib.callback.register('gcphone:matchmylove:getMessages', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return {} end
     if type(data) ~= 'table' then return {} end
 
@@ -427,9 +430,9 @@ end)
 
 -- Send message in a match
 lib.callback.register('gcphone:matchmylove:sendMessage', function(source, data)
-    if IsPhoneReadOnly(source) then return false, 'READ_ONLY' end
+    if Phone.IsPhoneReadOnly(source) then return false, 'READ_ONLY' end
     if HitRateLimit(source, 'mml_msg', 700, 1) then return false, 'RATE_LIMITED' end
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false, 'NOT_AUTHENTICATED' end
     if type(data) ~= 'table' then return false, 'INVALID_DATA' end
 
@@ -458,7 +461,7 @@ lib.callback.register('gcphone:matchmylove:sendMessage', function(source, data)
 
     -- Notify the other person
     local otherId = match.profile_a_id == identifier and match.profile_b_id or match.profile_a_id
-    local otherSource = GetSourceFromIdentifier(otherId)
+    local otherSource = Bridge.GetSourceFromIdentifier(otherId)
     if otherSource then
         local myProfile = MySQL.single.await(
             'SELECT display_name FROM phone_matchmylove_profiles WHERE identifier = ? LIMIT 1',
@@ -482,9 +485,9 @@ end)
 
 -- Unmatch
 lib.callback.register('gcphone:matchmylove:unmatch', function(source, data)
-    if IsPhoneReadOnly(source) then return false, 'READ_ONLY' end
+    if Phone.IsPhoneReadOnly(source) then return false, 'READ_ONLY' end
     if HitRateLimit(source, 'mml_unmatch', 3000, 1) then return false, 'RATE_LIMITED' end
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false, 'NOT_AUTHENTICATED' end
 
     local matchId = tonumber(type(data) == 'table' and data.matchId or data)
@@ -560,3 +563,5 @@ RegisterNetEvent('gcphone:matchmylove:persistBatch', function(requestId, batch)
 
     emit('gcphone:matchmylove:persistBatchResult', id, true, count, '')
 end)
+
+return {}

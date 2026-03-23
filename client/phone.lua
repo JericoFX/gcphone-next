@@ -1,3 +1,7 @@
+local PhoneState = require 'client.state'
+local Main = require 'client.main'
+local Anim = require 'client.phone_animation'
+
 local menuIsOpen = false
 local phoneProp = nil
 local PHONE_PROP_MODEL = GetHashKey(Config.Phone.PropModel or 'prop_npc_phone_02')
@@ -135,16 +139,16 @@ local function ShowPhonePayload(data)
     EnsurePhoneProp()
     UpdateNuiInputState(true)
 
-    data.nuiAuthToken = GCPhone.RotateNuiAuthToken()
+    data.nuiAuthToken = Main.RotateNuiAuthToken()
     SendNUIMessage({
         action = 'showPhone',
         data = data
     })
 
-    PlayPhoneAnimation('in')
+    Anim.PlayPhoneAnimation('in')
 end
 
-function OpenPhoneUsingServerData()
+local function OpenPhoneUsingServerData()
     lib.callback('gcphone:getPhoneData', false, function(data)
         if not data then return end
 
@@ -162,7 +166,8 @@ function OpenPhoneUsingServerData()
     end)
 end
 
-function TogglePhone()
+local TogglePhone
+TogglePhone = function()
     menuIsOpen = not menuIsOpen
     
     if menuIsOpen then
@@ -178,21 +183,21 @@ function TogglePhone()
         SendNUIMessage({ action = 'hidePhone' })
         UpdateNuiInputState(true)
         
-        PlayPhoneAnimation('out')
+        Anim.PlayPhoneAnimation('out')
     end
 end
 
-function SetPhoneVisualMode(mode, options)
+local function SetPhoneVisualMode(mode, options)
     phoneVisualMode = type(mode) == 'string' and mode or 'text'
     phoneVisualOptions = type(options) == 'table' and options or {}
     ApplyPhonePropAttachment()
 end
 
-function GetPhoneVisualMode()
+local function GetPhoneVisualMode()
     return phoneVisualMode, phoneVisualOptions
 end
 
-function ClosePhone()
+local function ClosePhone()
     if menuIsOpen then
         TogglePhone()
     end
@@ -308,3 +313,11 @@ exports('SetPhoneVisualMode', SetPhoneVisualMode)
 ---Get the current phone visual mode.
 ---@return string, table<string, any>
 exports('GetPhoneVisualMode', GetPhoneVisualMode)
+
+return {
+    TogglePhone = TogglePhone,
+    ClosePhone = ClosePhone,
+    OpenPhoneUsingServerData = OpenPhoneUsingServerData,
+    SetPhoneVisualMode = SetPhoneVisualMode,
+    GetPhoneVisualMode = GetPhoneVisualMode,
+}

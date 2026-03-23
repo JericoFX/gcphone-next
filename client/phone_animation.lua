@@ -26,15 +26,16 @@ local function EnsureAnimDict(dict)
     return true
 end
 
-function PlayPhoneAnimation(anim)
+local function PlayPhoneAnimation(anim)
     local ped = cache.ped
     if not ped or ped <= 0 then return false end
 
+    -- Lazy require to break phone_animation <-> phone cycle
+    local PhoneMod = require 'client.phone'
+
     local config = PHONE_ANIMATIONS[anim or 'text'] or PHONE_ANIMATIONS.text
     if config.clear then
-        if type(SetPhoneVisualMode) == 'function' then
-            SetPhoneVisualMode('text')
-        end
+        PhoneMod.SetPhoneVisualMode('text')
         ClearPedSecondaryTask(ped)
         ClearPedTasks(ped)
         return true
@@ -46,42 +47,40 @@ function PlayPhoneAnimation(anim)
 
     TaskPlayAnim(ped, config.dict, config.name, 8.0, -8.0, -1, config.flag or 50, 0.0, false, false, false)
 
-    if type(SetPhoneVisualMode) == 'function' then
-        if anim == 'call' then
-            SetPhoneVisualMode('call')
-        elseif anim == 'camera' then
-            SetPhoneVisualMode('camera')
-        elseif anim == 'live' then
-            SetPhoneVisualMode('live')
-        else
-            SetPhoneVisualMode('text')
-        end
+    if anim == 'call' then
+        PhoneMod.SetPhoneVisualMode('call')
+    elseif anim == 'camera' then
+        PhoneMod.SetPhoneVisualMode('camera')
+    elseif anim == 'live' then
+        PhoneMod.SetPhoneVisualMode('live')
+    else
+        PhoneMod.SetPhoneVisualMode('text')
     end
 
     return true
 end
 
-function PhonePlayIn()
+local function PhonePlayIn()
     return PlayPhoneAnimation('in')
 end
 
-function PhonePlayOut()
+local function PhonePlayOut()
     return PlayPhoneAnimation('out')
 end
 
-function PhonePlayCall()
+local function PhonePlayCall()
     return PlayPhoneAnimation('call')
 end
 
-function PhonePlayText()
+local function PhonePlayText()
     return PlayPhoneAnimation('text')
 end
 
-function PhonePlayCamera()
+local function PhonePlayCamera()
     return PlayPhoneAnimation('camera')
 end
 
-function PhonePlayLive()
+local function PhonePlayLive()
     return PlayPhoneAnimation('live')
 end
 
@@ -109,3 +108,13 @@ exports('PhonePlayCamera', PhonePlayCamera)
 
 ---@return boolean
 exports('PhonePlayLive', PhonePlayLive)
+
+return {
+    PlayPhoneAnimation = PlayPhoneAnimation,
+    PhonePlayIn = PhonePlayIn,
+    PhonePlayOut = PhonePlayOut,
+    PhonePlayCall = PhonePlayCall,
+    PhonePlayText = PhonePlayText,
+    PhonePlayCamera = PhonePlayCamera,
+    PhonePlayLive = PhonePlayLive,
+}

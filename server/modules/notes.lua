@@ -1,16 +1,11 @@
-local SecurityResource = GetCurrentResourceName()
-local function HitRateLimit(source, key, windowMs, maxHits)
-    local ok, blocked = pcall(function()
-        return exports[SecurityResource]:HitRateLimit(source, key, windowMs, maxHits)
-    end)
-    if not ok then return false end
-    return blocked == true
-end
+local Bridge = require 'server.bridge'
+local Phone = require 'server.modules.phone'
+local Utils = require 'server.lib.utils'
 
 local function GetIdentifierSafe(source)
     local src = tonumber(source)
     if not src or src <= 0 then return nil end
-    return GetIdentifier(src)
+    return Bridge.GetIdentifier(src)
 end
 
 lib.callback.register('gcphone:notes:getAll', function(source)
@@ -24,15 +19,15 @@ lib.callback.register('gcphone:notes:getAll', function(source)
 end)
 
 lib.callback.register('gcphone:notes:save', function(source, data)
-    if IsPhoneReadOnly(source) then return false end
-    if HitRateLimit(source, 'notes_save', 1000, 3) then return false end
+    if Phone.IsPhoneReadOnly(source) then return false end
+    if Utils.HitRateLimit(source, 'notes_save', 1000, 3) then return false end
     local identifier = GetIdentifierSafe(source)
     if not identifier then return false end
     if type(data) ~= 'table' then return false end
 
-    local title = GcPhoneUtils.SanitizeText(data.title, 100, true)
-    local content = GcPhoneUtils.SanitizeText(data.content, 5000, true)
-    local color = GcPhoneUtils.SanitizeText(data.color, 10, true)
+    local title = Utils.SanitizeText(data.title, 100, true)
+    local content = Utils.SanitizeText(data.content, 5000, true)
+    local color = Utils.SanitizeText(data.color, 10, true)
     if content == '' then return false end
 
     local noteId = tonumber(data.id)
@@ -56,8 +51,8 @@ lib.callback.register('gcphone:notes:save', function(source, data)
 end)
 
 lib.callback.register('gcphone:notes:delete', function(source, data)
-    if IsPhoneReadOnly(source) then return false end
-    if HitRateLimit(source, 'notes_delete', 1000, 3) then return false end
+    if Phone.IsPhoneReadOnly(source) then return false end
+    if Utils.HitRateLimit(source, 'notes_delete', 1000, 3) then return false end
     local identifier = GetIdentifierSafe(source)
     if not identifier then return false end
     if type(data) ~= 'table' then return false end
@@ -68,3 +63,5 @@ lib.callback.register('gcphone:notes:delete', function(source, data)
     MySQL.execute.await('DELETE FROM phone_notes WHERE id = ? AND identifier = ?', { noteId, identifier })
     return true
 end)
+
+return {}

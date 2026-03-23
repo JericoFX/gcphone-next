@@ -1,18 +1,12 @@
 -- Creado/Modificado por JericoFX
 
+local Bridge = require 'server.bridge'
+local Phone = require 'server.modules.phone'
+local Utils = require 'server.lib.utils'
+
 local PICKUP_DISTANCE = 2.0
 local DISCOVERY_DISTANCE = 25.0
-local SecurityResource = GetCurrentResourceName()
 local droppedPhones = {}
-
-local function HitRateLimit(source, key, windowMs, maxHits)
-    local ok, blocked = pcall(function()
-        return exports[SecurityResource]:HitRateLimit(source, key, windowMs, maxHits)
-    end)
-
-    if not ok then return false end
-    return blocked == true
-end
 
 local function GetPlayerCoords(source)
     local ped = GetPlayerPed(source)
@@ -70,14 +64,6 @@ end
 
 LoadDroppedPhones()
 
-local function SafeText(value, maxLen)
-    if type(value) ~= 'string' then return '' end
-    local text = value:gsub('[%z\1-\31\127]', '')
-    text = text:gsub('<.->', '')
-    text = text:gsub('^%s+', ''):gsub('%s+$', '')
-    return text:sub(1, maxLen or 120)
-end
-
 local function BuildForensicReport(ownerIdentifier, phoneNumber, imei)
     local lines = {}
     lines[#lines + 1] = ('IMEI: %s'):format(imei or 'N/A')
@@ -90,7 +76,7 @@ local function BuildForensicReport(ownerIdentifier, phoneNumber, imei)
     lines[#lines + 1] = ('Contactos: %d'):format(#contacts)
     for i = 1, #contacts do
         local row = contacts[i]
-        lines[#lines + 1] = ('  - %s (%s)'):format(SafeText(row.display, 40), SafeText(row.number, 20))
+        lines[#lines + 1] = ('  - %s (%s)'):format(Utils.SafeText(row.display, 40) or '', Utils.SafeText(row.number, 20) or '')
     end
 
     local messages = MySQL.query.await(
@@ -100,11 +86,11 @@ local function BuildForensicReport(ownerIdentifier, phoneNumber, imei)
     lines[#lines + 1] = ('Mensajes recientes: %d'):format(#messages)
     for i = 1, #messages do
         local row = messages[i]
-        local snippet = SafeText(row.message, 70)
+        local snippet = Utils.SafeText(row.message, 70) or ''
         lines[#lines + 1] = ('  - [%s] %s -> %s: %s'):format(
             tostring(row.time or ''),
-            SafeText(row.transmitter, 20),
-            SafeText(row.receiver, 20),
+            Utils.SafeText(row.transmitter, 20) or '',
+            Utils.SafeText(row.receiver, 20) or '',
             snippet
         )
     end
@@ -119,7 +105,7 @@ local function BuildForensicReport(ownerIdentifier, phoneNumber, imei)
         local dir = tonumber(row.incoming) == 1 and 'Entrante' or 'Saliente'
         local accepted = tonumber(row.accepts) == 1 and 'Atendida' or 'Perdida'
         lines[#lines + 1] = ('  - [%s] %s %s (%ss)'):format(tostring(row.time or ''), dir, accepted, tonumber(row.duration) or 0)
-        lines[#lines + 1] = ('    Num: %s'):format(SafeText(row.num, 20))
+        lines[#lines + 1] = ('    Num: %s'):format(Utils.SafeText(row.num, 20) or '')
     end
 
     local gallery = MySQL.query.await(
@@ -129,7 +115,7 @@ local function BuildForensicReport(ownerIdentifier, phoneNumber, imei)
     lines[#lines + 1] = ('Galeria recientes: %d'):format(#gallery)
     for i = 1, #gallery do
         local row = gallery[i]
-        lines[#lines + 1] = ('  - [%s] %s %s'):format(tostring(row.created_at or ''), SafeText(row.type or 'image', 10), SafeText(row.url or '', 80))
+        lines[#lines + 1] = ('  - [%s] %s %s'):format(tostring(row.created_at or ''), Utils.SafeText(row.type or 'image', 10) or '', Utils.SafeText(row.url or '', 80) or '')
     end
 
     local docs = MySQL.query.await(
@@ -139,7 +125,7 @@ local function BuildForensicReport(ownerIdentifier, phoneNumber, imei)
     lines[#lines + 1] = ('Documentos: %d'):format(#docs)
     for i = 1, #docs do
         local row = docs[i]
-        lines[#lines + 1] = ('  - [%s] %s'):format(tostring(row.updated_at or ''), SafeText(row.title or 'Documento', 60))
+        lines[#lines + 1] = ('  - [%s] %s'):format(tostring(row.updated_at or ''), Utils.SafeText(row.title or 'Documento', 60) or '')
     end
 
     local wallet = MySQL.single.await(
@@ -169,7 +155,7 @@ local function ResolveOwnerName(ownerIdentifier)
 end
 
 lib.callback.register('gcphone:dropPhone', function(source)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then
         return { success = false, error = 'INVALID_SOURCE' }
     end
@@ -340,11 +326,11 @@ lib.callback.register('gcphone:unlockDroppedPhone', function(source, data)
         return { success = false, error = 'INVALID_PIN_FORMAT' }
     end
 
-    if HitRateLimit(source, 'drop_unlock_global', 1500, 3) then
+    if Utils.HitRateLimit(source, 'drop_unlock_global', 1500, 3) then
         return { success = false, error = 'RATE_LIMITED' }
     end
 
-    if HitRateLimit(source, 'drop_unlock:' .. tostring(phoneId), 30000, 5) then
+    if Utils.HitRateLimit(source, 'drop_unlock:' .. tostring(phoneId), 30000, 5) then
         return { success = false, error = 'PIN_LOCKED' }
     end
 
@@ -357,7 +343,7 @@ lib.callback.register('gcphone:unlockDroppedPhone', function(source, data)
         return { success = false, error = 'PHONE_NOT_FOUND' }
     end
 
-    local unlocked, err = VerifyPhonePinForIdentifier(droppedPhone.owner_identifier, pin)
+    local unlocked, err = Phone.VerifyPhonePinForIdentifier(droppedPhone.owner_identifier, pin)
     if err == 'PHONE_NOT_FOUND' then
         return { success = false, error = 'PHONE_OWNER_NOT_FOUND' }
     end
@@ -367,7 +353,7 @@ lib.callback.register('gcphone:unlockDroppedPhone', function(source, data)
     end
 
     local ownerName = ResolveOwnerName(droppedPhone.owner_identifier)
-    SetPhoneAccessContext(source, {
+    Phone.SetPhoneAccessContext(source, {
         mode = 'foreign-readonly',
         ownerIdentifier = droppedPhone.owner_identifier,
         phoneId = phoneId,
@@ -375,8 +361,8 @@ lib.callback.register('gcphone:unlockDroppedPhone', function(source, data)
         readOnly = true,
     })
 
-    local phone = GetPhoneRecordByIdentifier(droppedPhone.owner_identifier)
-    local payload = phone and BuildPhonePayloadForSource(phone, source) or nil
+    local phone = Phone.GetPhoneRecordByIdentifier(droppedPhone.owner_identifier)
+    local payload = phone and Phone.BuildPhonePayloadForSource(phone, source) or nil
     if payload then
         payload.useLockScreen = false
         payload.forceLockScreen = false
@@ -396,3 +382,5 @@ lib.callback.register('gcphone:unlockDroppedPhone', function(source, data)
         report = report,
     }
 end)
+
+return {}

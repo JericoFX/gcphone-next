@@ -1,7 +1,8 @@
 -- Creado/Modificado por JericoFX
 -- Chirp (Twitter/X Clone) - Backend
 
-local Utils = GcPhoneUtils
+local Bridge = require 'server.bridge'
+local Utils = require 'server.lib.utils'
 
 local function SanitizeText(value, maxLength)
     return Utils.SanitizeText(value, maxLength or 280, true)
@@ -171,7 +172,7 @@ local function GetRechirpRows(account, scope, limit, offset)
 end
 
 local function GenerateUsername(source)
-    local name = GetName(source) or 'User'
+    local name = Bridge.GetName(source) or 'User'
     local cleanName = string.lower(string.gsub(name, '%s+', ''))
     local random = math.random(1000, 9999)
     return cleanName .. random
@@ -183,7 +184,7 @@ local function IsPublishJobAllowed(source)
         return true
     end
 
-    local job = GetJob(source)
+    local job = Bridge.GetJob(source)
     local jobName = type(job) == 'table' and tostring(job.name or ''):lower() or ''
     if jobName == '' then
         return false
@@ -196,14 +197,14 @@ local function IsPublishJobAllowed(source)
 end
 
 lib.callback.register('gcphone:chirp:getAccount', function(source)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return nil end
 
     return GetAccount(identifier)
 end)
 
 lib.callback.register('gcphone:chirp:createAccount', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false, 'INVALID_PLAYER' end
     if type(data) ~= 'table' then return false, 'INVALID_PAYLOAD' end
 
@@ -226,13 +227,13 @@ lib.callback.register('gcphone:chirp:createAccount', function(source, data)
         return false, 'USERNAME_TAKEN'
     end
 
-    local name = GetName(source) or 'User'
+    local name = Bridge.GetName(source) or 'User'
     local created = CreateAccount(identifier, username, name, nil)
     return created ~= nil, created
 end)
 
 lib.callback.register('gcphone:chirp:updateAccount', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false end
 
     if type(data) ~= 'table' then return false end
@@ -249,7 +250,7 @@ end)
 
 -- Get tweets with optional filters
 lib.callback.register('gcphone:chirp:getTweets', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
 
     data = type(data) == 'table' and data or {}
     local tab = data.tab or 'forYou'
@@ -391,7 +392,7 @@ lib.callback.register('gcphone:chirp:getTweets', function(source, data)
 end)
 
 lib.callback.register('gcphone:chirp:publishTweet', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false end
 
     if type(data) ~= 'table' then return false end
@@ -433,7 +434,7 @@ lib.callback.register('gcphone:chirp:publishTweet', function(source, data)
 end)
 
 lib.callback.register('gcphone:chirp:toggleLike', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false end
 
     if type(data) ~= 'table' then return false end
@@ -472,7 +473,7 @@ end)
 
 -- ReChirp functionality
 lib.callback.register('gcphone:chirp:toggleRechirp', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false end
 
     if type(data) ~= 'table' then return false end
@@ -546,7 +547,7 @@ lib.callback.register('gcphone:chirp:getComments', function(source, data)
 end)
 
 lib.callback.register('gcphone:chirp:addComment', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false end
 
     if type(data) ~= 'table' then return false end
@@ -579,7 +580,7 @@ lib.callback.register('gcphone:chirp:addComment', function(source, data)
 end)
 
 lib.callback.register('gcphone:chirp:deleteComment', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false end
 
     local chirpMs = GetRateLimitWindow('chirp', 1400)
@@ -611,7 +612,7 @@ lib.callback.register('gcphone:chirp:deleteComment', function(source, data)
 end)
 
 lib.callback.register('gcphone:chirp:deleteTweet', function(source, tweetId)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false end
 
     local chirpMs = GetRateLimitWindow('chirp', 1400)
@@ -631,7 +632,7 @@ lib.callback.register('gcphone:chirp:deleteTweet', function(source, tweetId)
 end)
 
 lib.callback.register('gcphone:chirp:follow', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false end
 
     if type(data) ~= 'table' then return false end
@@ -731,7 +732,7 @@ lib.callback.register('gcphone:chirp:follow', function(source, data)
 end)
 
 lib.callback.register('gcphone:chirp:getPendingFollowRequests', function(source)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return {} end
 
     return MySQL.query.await([[
@@ -755,7 +756,7 @@ lib.callback.register('gcphone:chirp:getPendingFollowRequests', function(source)
 end)
 
 lib.callback.register('gcphone:chirp:getSentFollowRequests', function(source)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return {} end
 
     return MySQL.query.await([[
@@ -779,7 +780,7 @@ lib.callback.register('gcphone:chirp:getSentFollowRequests', function(source)
 end)
 
 lib.callback.register('gcphone:chirp:respondFollowRequest', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false end
     if type(data) ~= 'table' then return false end
 
@@ -832,7 +833,7 @@ lib.callback.register('gcphone:chirp:respondFollowRequest', function(source, dat
 end)
 
 lib.callback.register('gcphone:chirp:cancelFollowRequest', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false end
     if type(data) ~= 'table' then return false end
 
@@ -863,7 +864,7 @@ lib.callback.register('gcphone:chirp:cancelFollowRequest', function(source, data
 end)
 
 lib.callback.register('gcphone:chirp:getProfile', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if type(data) ~= 'table' then return nil end
 
     local accountId = tonumber(data.accountId)
@@ -931,3 +932,5 @@ lib.callback.register('gcphone:chirp:getProfile', function(source, data)
         }
     }
 end)
+
+return {}

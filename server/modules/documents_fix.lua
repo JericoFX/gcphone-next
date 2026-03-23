@@ -9,3 +9,5 @@ lib.callback.register('gcphone:documents:getTypes', function(source)
         { id = 'registration', name = 'Registro Civil', icon = 'REG', color = '#5ac8fa' }
     }
 end)
+
+return {}

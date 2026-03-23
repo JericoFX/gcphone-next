@@ -93,3 +93,5 @@ end)
 AddEventHandler('playerDropped', function()
     LastSearchBySource[source] = nil
 end)
+
+return {}

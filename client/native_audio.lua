@@ -1,3 +1,5 @@
+local PhoneState = require 'client.state'
+
 local activeCallTone = nil
 local activePreviewTone = nil
 local activeNotifTone = nil
@@ -87,7 +89,7 @@ local function WaitForSoundFinished(handle, activeRef, setter, maxMs)
 end
 
 local function ResolveToneForProfile(toneId)
-    local profile = PhoneState and PhoneState.audioProfile or 'normal'
+    local profile = PhoneState.audioProfile or 'normal'
     local entry = GetToneConfig(toneId)
     if not entry then return nil, toneId end
 
@@ -124,7 +126,7 @@ local function PlayTone(toneId, mode)
         return false
     end
 
-    local profile = PhoneState and PhoneState.audioProfile or 'normal'
+    local profile = PhoneState.audioProfile or 'normal'
     if profile == 'silent' and entry.vibrando then
         soundName = entry.vibrando
     end
@@ -289,3 +291,5 @@ exports('StopPhoneNativeOutgoingTone', StopOutgoingTone)
 ---Check whether native call tones are fully enabled and not in placeholder mode.
 ---@return boolean
 exports('IsPhoneNativeCallToneEnabled', IsNativeCallToneEnabled)
+
+return {}

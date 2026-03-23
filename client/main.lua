@@ -1,14 +1,4 @@
-GCPhone = GCPhone or {}
-
-GCPhone.State = {
-    isOpen = false,
-    phoneNumber = nil,
-    hasFocus = false,
-    useMouse = false,
-    airplaneMode = false
-}
-
-PhoneState = GCPhone.State
+local PhoneState = require 'client.state'
 
 ---@alias GCPhoneNotificationPriority 'low'|'normal'|'high'
 
@@ -25,15 +15,15 @@ PhoneState = GCPhone.State
 ---@field data? table<string, any> Optional route payload passed to the app router.
 ---@field createdAt? integer Unix ms timestamp used for ordering.
 
+local NuiToken = nil
+local NuiLastSeq = 0
+
 local function CreateNuiAuthToken()
     local now = GetGameTimer() or 0
     local a = math.random(100000, 999999)
     local b = math.random(100000, 999999)
     return ('%d-%d-%d'):format(now, a, b)
 end
-
-GCPhone.NuiToken = nil
-GCPhone.NuiLastSeq = 0
 
 local function BuildNuiSignature(token, seq, eventName)
     local input = ('%s|%s|%s'):format(token, seq, eventName)
@@ -47,17 +37,17 @@ local function BuildNuiSignature(token, seq, eventName)
     return string.format('%08x', hash)
 end
 
-function GCPhone.RotateNuiAuthToken()
-    GCPhone.NuiToken = CreateNuiAuthToken()
-    GCPhone.NuiLastSeq = 0
-    return GCPhone.NuiToken
+local function RotateNuiAuthToken()
+    NuiToken = CreateNuiAuthToken()
+    NuiLastSeq = 0
+    return NuiToken
 end
 
-function GCPhone.GetNuiAuthToken()
-    if not GCPhone.NuiToken then
-        GCPhone.NuiToken = CreateNuiAuthToken()
+local function GetNuiAuthToken()
+    if not NuiToken then
+        NuiToken = CreateNuiAuthToken()
     end
-    return GCPhone.NuiToken
+    return NuiToken
 end
 
 local UnprotectedNuiCallbacks = {
@@ -85,7 +75,7 @@ RegisterNUICallback = function(name, handler)
         end
 
         if not UnprotectedNuiCallbacks[name] then
-            local expectedToken = GCPhone.GetNuiAuthToken()
+            local expectedToken = GetNuiAuthToken()
             if not PhoneState.isOpen then
                 cb({ success = false, message = 'PHONE_CLOSED' })
                 return
@@ -96,7 +86,7 @@ RegisterNUICallback = function(name, handler)
                 return
             end
 
-            if not providedSeq or providedSeq <= GCPhone.NuiLastSeq then
+            if not providedSeq or providedSeq <= NuiLastSeq then
                 cb({ success = false, message = 'UNAUTHORIZED' })
                 return
             end
@@ -107,7 +97,7 @@ RegisterNUICallback = function(name, handler)
                 return
             end
 
-            GCPhone.NuiLastSeq = providedSeq
+            NuiLastSeq = providedSeq
         end
 
         handler(payload, cb)
@@ -117,7 +107,7 @@ end
 CreateThread(function()
     Wait(1000)
     print('^2[gcphone-next]^7 Client initialized')
-    
+
     lib.callback('gcphone:getPhoneData', false, function(data)
         if data then
             PhoneState.phoneNumber = data.phoneNumber
@@ -130,8 +120,8 @@ CreateThread(function()
             PhoneState.lockCode = data.lockCode
             PhoneState.language = data.language
             PhoneState.audioProfile = data.audioProfile
-            data.nuiAuthToken = GCPhone.RotateNuiAuthToken()
-            
+            data.nuiAuthToken = RotateNuiAuthToken()
+
             SendNUIMessage({
                 action = 'initPhone',
                 data = data
@@ -151,8 +141,8 @@ RegisterNetEvent('gcphone:init', function(data)
     PhoneState.lockCode = data.lockCode
     PhoneState.language = data.language
     PhoneState.audioProfile = data.audioProfile
-    data.nuiAuthToken = GCPhone.RotateNuiAuthToken()
-    
+    data.nuiAuthToken = RotateNuiAuthToken()
+
     SendNUIMessage({
         action = 'initPhone',
         data = data
@@ -199,3 +189,9 @@ end)
 exports('NotifyPhone', function(payload)
     return PushPhoneNotification(payload)
 end)
+
+return {
+    PhoneState = PhoneState,
+    RotateNuiAuthToken = RotateNuiAuthToken,
+    GetNuiAuthToken = GetNuiAuthToken,
+}

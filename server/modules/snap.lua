@@ -1,6 +1,7 @@
 -- Creado/Modificado por JericoFX
 
-local Utils = GcPhoneUtils
+local Bridge = require 'server.bridge'
+local Utils = require 'server.lib.utils'
 
 local function SanitizeText(value, maxLength)
     return Utils.SanitizeText(value, maxLength or 2200, true)
@@ -34,7 +35,7 @@ local function CreateAccount(identifier, username, displayName, avatar)
 end
 
 local function GenerateUsername(source)
-    local name = GetName(source) or 'User'
+    local name = Bridge.GetName(source) or 'User'
     local cleanName = string.lower(string.gsub(name, '%s+', ''))
     local random = math.random(1000, 9999)
     return cleanName .. random
@@ -46,7 +47,7 @@ local function IsPublishJobAllowed(source)
         return true
     end
 
-    local job = GetJob(source)
+    local job = Bridge.GetJob(source)
     local jobName = type(job) == 'table' and tostring(job.name or ''):lower() or ''
     if jobName == '' then
         return false
@@ -91,7 +92,7 @@ end)
 
 AddEventHandler('playerDropped', function()
     local src = source
-    local identifier = GetIdentifier(src)
+    local identifier = Bridge.GetIdentifier(src)
 
     for liveId, stream in pairs(ActiveStreams) do
         if type(stream) == 'table' and stream.source == src then
@@ -136,7 +137,7 @@ local function BuildLiveParticipantProfile(identifier, source)
         { identifier }
     ) or nil
     local username = SanitizeText(account and account.username or '', 32)
-    local display = SanitizeText(account and account.display_name or GetName(source) or username or 'Invitado', 50)
+    local display = SanitizeText(account and account.display_name or Bridge.GetName(source) or username or 'Invitado', 50)
     local avatar = SanitizeMediaUrl(account and account.avatar or nil)
 
     return {
@@ -201,7 +202,7 @@ local function RemoveViewerFromLive(liveId, source, identifier)
         return false
     end
 
-    local key = identifier or GetIdentifier(source)
+    local key = identifier or Bridge.GetIdentifier(source)
     if not key or key == '' then return false end
     if not stream.viewers[key] then return false end
 
@@ -307,28 +308,28 @@ local function UpsertSocialNotification(accountIdentifier, fromIdentifier, appTy
 end
 
 lib.callback.register('gcphone:snap:getAccount', function(source)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return nil end
 
     return GetAccount(identifier)
 end)
 
 lib.callback.register('gcphone:clips:getAccount', function(source)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return nil end
 
     return GetAccount(identifier)
 end)
 
 lib.callback.register('gcphone:news:getAccount', function(source)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return nil end
 
     return GetAccount(identifier)
 end)
 
 lib.callback.register('gcphone:snap:getDiscoverAccounts', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return {} end
 
     local me = GetAccount(identifier)
@@ -376,7 +377,7 @@ lib.callback.register('gcphone:snap:getDiscoverAccounts', function(source, data)
 end)
 
 lib.callback.register('gcphone:snap:getDiscoverFeed', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return {} end
 
     local me = GetAccount(identifier)
@@ -508,7 +509,7 @@ lib.callback.register('gcphone:snap:getDiscoverFeed', function(source, data)
 end)
 
 lib.callback.register('gcphone:snap:createAccount', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false, 'INVALID_PLAYER' end
     if type(data) ~= 'table' then return false, 'INVALID_PAYLOAD' end
 
@@ -531,13 +532,13 @@ lib.callback.register('gcphone:snap:createAccount', function(source, data)
         return false, 'USERNAME_TAKEN'
     end
 
-    local name = GetName(source) or 'User'
+    local name = Bridge.GetName(source) or 'User'
     local created = CreateAccount(identifier, username, name, nil)
     return created ~= nil, created
 end)
 
 lib.callback.register('gcphone:clips:createAccount', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false, 'INVALID_PLAYER' end
     if type(data) ~= 'table' then return false, 'INVALID_PAYLOAD' end
 
@@ -560,14 +561,14 @@ lib.callback.register('gcphone:clips:createAccount', function(source, data)
         return false, 'USERNAME_TAKEN'
     end
 
-    local name = GetName(source) or 'User'
+    local name = Bridge.GetName(source) or 'User'
     local avatar = SanitizeMediaUrl(data.avatar)
     local created = CreateAccount(identifier, username, name, avatar ~= '' and avatar or nil)
     return created ~= nil, created
 end)
 
 lib.callback.register('gcphone:news:createAccount', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false, 'INVALID_PLAYER' end
     if type(data) ~= 'table' then return false, 'INVALID_PAYLOAD' end
 
@@ -590,13 +591,13 @@ lib.callback.register('gcphone:news:createAccount', function(source, data)
         return false, 'USERNAME_TAKEN'
     end
 
-    local name = GetName(source) or 'User'
+    local name = Bridge.GetName(source) or 'User'
     local created = CreateAccount(identifier, username, name, nil)
     return created ~= nil, created
 end)
 
 lib.callback.register('gcphone:snap:updateAccount', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false end
 
     if type(data) ~= 'table' then return false end
@@ -610,7 +611,7 @@ lib.callback.register('gcphone:snap:updateAccount', function(source, data)
 end)
 
 lib.callback.register('gcphone:clips:updateAccount', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false end
 
     if type(data) ~= 'table' then return false end
@@ -634,7 +635,7 @@ lib.callback.register('gcphone:clips:updateAccount', function(source, data)
 end)
 
 lib.callback.register('gcphone:news:updateAccount', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false end
 
     if type(data) ~= 'table' then return false end
@@ -653,7 +654,7 @@ lib.callback.register('gcphone:news:updateAccount', function(source, data)
 end)
 
 lib.callback.register('gcphone:snap:getFeed', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
 
     data = type(data) == 'table' and data or {}
     local limit = tonumber(data.limit) or 30
@@ -693,7 +694,7 @@ lib.callback.register('gcphone:snap:getStories', function(source)
 end)
 
 lib.callback.register('gcphone:snap:publishPost', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false end
 
     if type(data) ~= 'table' then return false end
@@ -733,7 +734,7 @@ lib.callback.register('gcphone:snap:publishPost', function(source, data)
 end)
 
 lib.callback.register('gcphone:snap:publishStory', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false end
 
     if type(data) ~= 'table' then return false end
@@ -774,7 +775,7 @@ lib.callback.register('gcphone:snap:publishStory', function(source, data)
 end)
 
 lib.callback.register('gcphone:snap:toggleLike', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false end
 
     if type(data) ~= 'table' then return false end
@@ -822,7 +823,7 @@ lib.callback.register('gcphone:snap:toggleLike', function(source, data)
 end)
 
 lib.callback.register('gcphone:snap:deletePost', function(source, postId)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false end
 
     local snapMs = GetRateLimitWindow('snap', 1500)
@@ -842,7 +843,7 @@ lib.callback.register('gcphone:snap:deletePost', function(source, postId)
 end)
 
 lib.callback.register('gcphone:snap:deleteStory', function(source, storyId)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false end
 
     local snapMs = GetRateLimitWindow('snap', 1500)
@@ -865,7 +866,7 @@ lib.callback.register('gcphone:snap:deleteStory', function(source, storyId)
 end)
 
 lib.callback.register('gcphone:snap:startLive', function(source)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false end
     
     local account = GetAccount(identifier)
@@ -905,7 +906,7 @@ lib.callback.register('gcphone:snap:startLive', function(source)
 end)
 
 lib.callback.register('gcphone:snap:endLive', function(source, postId)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false end
 
     local id = tonumber(postId)
@@ -939,7 +940,7 @@ lib.callback.register('gcphone:snap:getLiveStreams', function(source)
 end)
 
 lib.callback.register('gcphone:snap:joinLive', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false, 'MISSING_IDENTIFIER' end
     if type(data) ~= 'table' then return false, 'INVALID_PAYLOAD' end
     if HitRateLimit(source, 'snap_live_join', 1000, 4) then return false, 'RATE_LIMITED' end
@@ -988,7 +989,7 @@ lib.callback.register('gcphone:snap:leaveLive', function(source, data)
 end)
 
 lib.callback.register('gcphone:snap:sendLiveMessage', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false, 'MISSING_IDENTIFIER' end
     if type(data) ~= 'table' then return false, 'INVALID_PAYLOAD' end
     if HitRateLimit(source, 'snap_live_message', 1200, 6) then return false, 'RATE_LIMITED' end
@@ -1027,7 +1028,7 @@ lib.callback.register('gcphone:snap:sendLiveMessage', function(source, data)
 end)
 
 lib.callback.register('gcphone:snap:sendLiveReaction', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false, 'MISSING_IDENTIFIER' end
     if type(data) ~= 'table' then return false, 'INVALID_PAYLOAD' end
     if HitRateLimit(source, 'snap_live_reaction', 900, 8) then return false, 'RATE_LIMITED' end
@@ -1059,7 +1060,7 @@ lib.callback.register('gcphone:snap:sendLiveReaction', function(source, data)
 end)
 
 lib.callback.register('gcphone:snap:removeLiveMessage', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false, 'MISSING_IDENTIFIER' end
     if type(data) ~= 'table' then return false, 'INVALID_PAYLOAD' end
     if HitRateLimit(source, 'snap_live_moderation', 1000, 5) then return false, 'RATE_LIMITED' end
@@ -1085,7 +1086,7 @@ lib.callback.register('gcphone:snap:removeLiveMessage', function(source, data)
 end)
 
 lib.callback.register('gcphone:snap:muteLiveUser', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false, 'MISSING_IDENTIFIER' end
     if type(data) ~= 'table' then return false, 'INVALID_PAYLOAD' end
     if HitRateLimit(source, 'snap_live_moderation', 1000, 5) then return false, 'RATE_LIMITED' end
@@ -1119,7 +1120,7 @@ lib.callback.register('gcphone:snap:getLiveAudioSession', function(source, data)
         return { enabled = false, reason = 'disabled' }
     end
 
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then
         return { enabled = false, reason = 'missing_identity' }
     end
@@ -1175,7 +1176,7 @@ lib.callback.register('gcphone:snap:getLiveAudioSession', function(source, data)
 end)
 
 lib.callback.register('gcphone:snap:follow', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false end
 
     if type(data) ~= 'table' then return false end
@@ -1279,7 +1280,7 @@ lib.callback.register('gcphone:snap:follow', function(source, data)
 end)
 
 lib.callback.register('gcphone:snap:getPendingFollowRequests', function(source)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return {} end
 
     return MySQL.query.await([[
@@ -1303,7 +1304,7 @@ lib.callback.register('gcphone:snap:getPendingFollowRequests', function(source)
 end)
 
 lib.callback.register('gcphone:snap:getSentFollowRequests', function(source)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return {} end
 
     return MySQL.query.await([[
@@ -1327,7 +1328,7 @@ lib.callback.register('gcphone:snap:getSentFollowRequests', function(source)
 end)
 
 lib.callback.register('gcphone:snap:respondFollowRequest', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false end
     if type(data) ~= 'table' then return false end
 
@@ -1381,7 +1382,7 @@ lib.callback.register('gcphone:snap:respondFollowRequest', function(source, data
 end)
 
 lib.callback.register('gcphone:snap:cancelFollowRequest', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false end
     if type(data) ~= 'table' then return false end
 
@@ -1412,7 +1413,7 @@ lib.callback.register('gcphone:snap:cancelFollowRequest', function(source, data)
 end)
 
 lib.callback.register('gcphone:snap:getProfile', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if type(data) ~= 'table' then return nil end
 
     local accountId = tonumber(data.accountId)
@@ -1486,3 +1487,5 @@ lib.callback.register('gcphone:snap:getProfile', function(source, data)
         }
     }
 end)
+
+return {}

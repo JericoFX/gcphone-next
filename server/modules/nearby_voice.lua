@@ -28,3 +28,5 @@ AddEventHandler('playerDropped', function()
     end
     state:set('gcphoneListeningPeerId', nil, true)
 end)
+
+return {}

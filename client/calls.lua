@@ -1,4 +1,6 @@
 -- Creado/Modificado por JericoFX
+local PhoneState = require 'client.state'
+local Anim = require 'client.phone_animation'
 
 local inCall = false
 local useRTC = false
@@ -19,7 +21,7 @@ local function IsPhoneOpenSafe()
         return exports[resource]:IsPhoneOpen()
     end)
     if ok then return open and true or false end
-    return PhoneState and PhoneState.isOpen or false
+    return PhoneState.isOpen or false
 end
 
 local function SetCallVoice(callId)
@@ -56,21 +58,21 @@ local function StopOutgoingSoundNative()
     pcall(function() exports[GetCurrentResourceName()]:StopPhoneNativeOutgoingTone() end)
 end
 
-function PlaySoundJS(sound, volume)
+local function PlaySoundJS(sound, volume)
     SendNUIMessage({
         action = 'playSound',
         data = { sound = sound, volume = volume or 1.0 }
     })
 end
 
-function StopSoundJS(sound)
+local function StopSoundJS(sound)
     SendNUIMessage({
         action = 'stopSound',
         data = { sound = sound }
     })
 end
 
-function SetSoundVolumeJS(sound, volume)
+local function SetSoundVolumeJS(sound, volume)
     SendNUIMessage({
         action = 'setSoundVolume',
         data = { sound = sound, volume = volume }
@@ -91,7 +93,7 @@ RegisterNetEvent('gcphone:incomingCall', function(callData)
     })
 
     if not IsPhoneOpenSafe() then
-        TogglePhone()
+        require('client.phone').TogglePhone()
     end
 end)
 
@@ -112,10 +114,10 @@ RegisterNetEvent('gcphone:callAccepted', function(callData)
     })
     
     if not IsPhoneOpenSafe() then
-        TogglePhone()
+        require('client.phone').TogglePhone()
     end
     
-    PlayPhoneAnimation('call')
+    Anim.PlayPhoneAnimation('call')
 end)
 
 RegisterNetEvent('gcphone:callRejected', function(callId)
@@ -134,7 +136,7 @@ RegisterNetEvent('gcphone:callRejected', function(callId)
         data = { callId = callId }
     })
     
-    PlayPhoneAnimation('text')
+    Anim.PlayPhoneAnimation('text')
 end)
 
 RegisterNetEvent('gcphone:callEnded', function(callId)
@@ -153,7 +155,7 @@ RegisterNetEvent('gcphone:callEnded', function(callId)
         data = { callId = callId }
     })
     
-    PlayPhoneAnimation('text')
+    Anim.PlayPhoneAnimation('text')
 end)
 
 RegisterNetEvent('gcphone:receiveIceCandidate', function(candidates)
@@ -167,8 +169,8 @@ RegisterNUICallback('startCall', function(data, cb)
     lib.callback('gcphone:startCall', false, function(callData)
         if callData then
             currentCallId = callData.id
-            PlayOutgoingSoundNative('calling_loop', PhoneState and PhoneState.volume or 0.5)
-            PlayPhoneAnimation('call')
+            PlayOutgoingSoundNative('calling_loop', PhoneState.volume or 0.5)
+            Anim.PlayPhoneAnimation('call')
         end
         cb(callData)
     end, data)
@@ -262,3 +264,5 @@ exports('IsInCall', function() return inCall end)
 ---Get the active phone call id for the local player.
 ---@return integer|nil
 exports('GetCurrentCallId', function() return currentCallId end)
+
+return {}

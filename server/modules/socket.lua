@@ -1,5 +1,8 @@
 -- Creado/Modificado por JericoFX
 
+local Bridge = require 'server.bridge'
+local Utils = require 'server.lib.utils'
+
 local PendingSocketTokenRequests = {}
 local LastSocketTokenRequestId = 0
 local REQUEST_TIMEOUT_MS = 7000
@@ -14,22 +17,8 @@ local function NextRequestId()
     return LastSocketTokenRequestId
 end
 
-local Utils = GcPhoneUtils
-
-local function SafeString(value, maxLen)
-    return Utils.SafeString(value, maxLen)
-end
-
-local function GetRateLimitWindow(key, fallback)
-    return Utils.GetRateLimitWindow(key, fallback)
-end
-
-local function HitRateLimit(source, key, windowMs, maxHits)
-    return Utils.HitRateLimit(source, key, windowMs, maxHits)
-end
-
 local function GetSocketHost()
-    local host = SafeString(GetConvar('gcphone_socket_host', ''), 240)
+    local host = Utils.SafeString(GetConvar('gcphone_socket_host', ''), 240)
     if not host then
         return nil, 'MISSING_SOCKET_HOST'
     end
@@ -127,17 +116,17 @@ lib.callback.register('gcphone:socket:getToken', function(source, data)
         return { success = false, error = 'SOCKET_DISABLED' }
     end
 
-    local socketMs = GetRateLimitWindow('socket_token', 2000)
-    if HitRateLimit(source, 'socket_token', socketMs, 2) then
+    local socketMs = Utils.GetRateLimitWindow('socket_token', 2000)
+    if Utils.HitRateLimit(source, 'socket_token', socketMs, 2) then
         return { success = false, error = 'RATE_LIMITED' }
     end
 
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then
         return { success = false, error = 'INVALID_SOURCE' }
     end
 
-    local phone = GetPhoneNumber(identifier)
+    local phone = Bridge.GetPhoneNumber(identifier)
     if not phone then
         return { success = false, error = 'PHONE_NOT_FOUND' }
     end
@@ -164,7 +153,7 @@ lib.callback.register('gcphone:socket:getToken', function(source, data)
         'gcphone:socket:requestToken',
         requestId,
         phone,
-        GetName(source) or phone,
+        Bridge.GetName(source) or phone,
         groupIds,
         identifier,
         snapContext and snapContext.liveId or '',
@@ -190,3 +179,5 @@ AddEventHandler('onResourceStop', function(resourceName)
     if resourceName ~= cache.resource or not CleanupTimer then return end
     CleanupTimer:forceEnd(false)
 end)
+
+return {}

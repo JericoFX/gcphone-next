@@ -1,24 +1,13 @@
 -- Creado/Modificado por JericoFX
 
+local Bridge = require 'server.bridge'
+local Utils = require 'server.lib.utils'
+
 local PendingTokenRequests = {}
 local LastTokenRequestId = 0
 local REQUEST_TIMEOUT_MS = 7000
 local CLEANUP_INTERVAL_MS = 30000
 local CleanupTimer = nil
-
-local Utils = GcPhoneUtils
-
-local function SafeString(value, maxLen)
-    return Utils.SafeString(value, maxLen)
-end
-
-local function GetRateLimitWindow(key, fallback)
-    return Utils.GetRateLimitWindow(key, fallback)
-end
-
-local function HitRateLimit(source, key, windowMs, maxHits)
-    return Utils.HitRateLimit(source, key, windowMs, maxHits)
-end
 
 local function NextRequestId()
     LastTokenRequestId = LastTokenRequestId + 1
@@ -39,7 +28,7 @@ local function IsParticipantOfCall(callId, source)
 end
 
 local function GetLiveKitHost()
-    local host = SafeString(GetConvar('livekit_host', ''), 240)
+    local host = Utils.SafeString(GetConvar('livekit_host', ''), 240)
     if not host then
         return nil, 'MISSING_HOST'
     end
@@ -53,7 +42,7 @@ local function GetLiveKitHost()
 end
 
 local function IsSnapLiveParticipant(liveId, source)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false, false end
 
     local stream = MySQL.single.await([[
@@ -108,17 +97,17 @@ lib.callback.register('gcphone:livekit:getToken', function(source, data)
         return { success = false, error = 'LIVEKIT_DISABLED' }
     end
 
-    local livekitMs = GetRateLimitWindow('livekit_token', 1500)
-    if HitRateLimit(source, 'livekit_token', livekitMs, 2) then
+    local livekitMs = Utils.GetRateLimitWindow('livekit_token', 1500)
+    if Utils.HitRateLimit(source, 'livekit_token', livekitMs, 2) then
         return { success = false, error = 'RATE_LIMITED' }
     end
 
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then
         return { success = false, error = 'INVALID_SOURCE' }
     end
 
-    local roomName = SafeString(type(data) == 'table' and data.roomName or nil, 80)
+    local roomName = Utils.SafeString(type(data) == 'table' and data.roomName or nil, 80)
     if not roomName then
         return { success = false, error = 'INVALID_ROOM' }
     end
@@ -171,8 +160,8 @@ lib.callback.register('gcphone:livekit:getToken', function(source, data)
         end
     end
 
-    local identity = SafeString('player:' .. tostring(identifier), 64)
-    local participantName = SafeString(GetName(source) or ('player-' .. tostring(source)), 64)
+    local identity = Utils.SafeString('player:' .. tostring(identifier), 64)
+    local participantName = Utils.SafeString(Bridge.GetName(source) or ('player-' .. tostring(source)), 64)
     local configuredDuration = tonumber(Config.LiveKit and Config.LiveKit.MaxCallDurationSeconds) or 300
     if configuredDuration < 30 then configuredDuration = 30 end
     if configuredDuration > 3600 then configuredDuration = 3600 end
@@ -215,3 +204,5 @@ AddEventHandler('onResourceStop', function(resourceName)
     if resourceName ~= cache.resource or not CleanupTimer then return end
     CleanupTimer:forceEnd(false)
 end)
+
+return {}

@@ -1,17 +1,10 @@
 -- Creado/Modificado por JericoFX
 
-local function SafeText(value, maxLen)
-    if type(value) ~= 'string' then return nil end
-    local text = value:gsub('[%z\1-\31\127]', ''):gsub('^%s+', ''):gsub('%s+$', '')
-    if text == '' then return nil end
-    if #text > maxLen then
-        text = text:sub(1, maxLen)
-    end
-    return text
-end
+local Bridge = require 'server.bridge'
+local Utils = require 'server.lib.utils'
 
 local function IsHttpUrl(value)
-    local url = SafeText(value, 500)
+    local url = Utils.SafeText(value, 500)
     if not url then return nil end
     if not url:match('^https?://') then return nil end
     return url
@@ -29,7 +22,7 @@ local function DetectMediaType(url)
 end
 
 local function NormalizeProvider(value)
-    local provider = SafeText(value, 32)
+    local provider = Utils.SafeText(value, 32)
     if not provider then return 'custom' end
     provider = provider:lower()
     if provider == 'direct' then provider = 'custom' end
@@ -44,7 +37,7 @@ local function JoinUrl(baseUrl, filePath)
 end
 
 local function CleanRelativePath(value)
-    local path = SafeText(value, 180)
+    local path = Utils.SafeText(value, 180)
     if not path then return nil end
     path = path:gsub('\\', '/')
     path = path:gsub('%.%./', '')
@@ -58,7 +51,7 @@ local function GetServerFolderConfig()
     local cfg = Config.Storage and Config.Storage.ServerFolder or {}
     local path = CleanRelativePath(GetConvar('gcphone_storage_server_folder_path', tostring(cfg.Path or 'cache/gcphone'))) or 'cache/gcphone'
     local publicBaseUrl = IsHttpUrl(GetConvar('gcphone_storage_server_folder_public_url', tostring(cfg.PublicBaseUrl or ''))) or ''
-    local encoding = SafeText(GetConvar('gcphone_storage_server_folder_encoding', tostring(cfg.Encoding or 'jpg')), 8)
+    local encoding = Utils.SafeText(GetConvar('gcphone_storage_server_folder_encoding', tostring(cfg.Encoding or 'jpg')), 8)
     if encoding ~= 'jpg' and encoding ~= 'png' and encoding ~= 'webp' then
         encoding = 'jpg'
     end
@@ -80,9 +73,9 @@ local function BuildKnownProviders()
     for _, entry in ipairs(configured) do
         if type(entry) == 'table' then
             local id = NormalizeProvider(entry.id)
-            local label = SafeText(entry.label, 48) or id
+            local label = Utils.SafeText(entry.label, 48) or id
             local uploadUrl = IsHttpUrl(entry.uploadUrl or '') or ''
-            local uploadField = SafeText(entry.uploadField or 'files[]', 32) or 'files[]'
+            local uploadField = Utils.SafeText(entry.uploadField or 'files[]', 32) or 'files[]'
 
             if id and id ~= '' then
                 providers[#providers + 1] = {
@@ -108,19 +101,19 @@ local function ResolveUploadTarget(provider)
     if selected == 'fivemanage' then
         local cfg = Config.Storage and Config.Storage.FiveManage or {}
         local endpoint = IsHttpUrl(GetConvar('gcphone_storage_fivemanage_url', tostring(cfg.Endpoint or '')))
-        local field = SafeText(GetConvar('gcphone_storage_fivemanage_field', tostring(cfg.UploadField or 'files[]')), 32) or 'files[]'
+        local field = Utils.SafeText(GetConvar('gcphone_storage_fivemanage_field', tostring(cfg.UploadField or 'files[]')), 32) or 'files[]'
         return selected, endpoint or '', field
     end
 
     if selected == 'local' then
         local known = IsHttpUrl(GetConvar('gcphone_storage_local_url', ''))
-        local field = SafeText(GetConvar('gcphone_storage_local_field', 'files[]'), 32) or 'files[]'
+        local field = Utils.SafeText(GetConvar('gcphone_storage_local_field', 'files[]'), 32) or 'files[]'
         return selected, known or '', field
     end
 
     local customCfg = Config.Storage and Config.Storage.Custom or {}
     local customUrl = IsHttpUrl(GetConvar('gcphone_storage_custom_url', tostring(customCfg.UploadUrl or '')))
-    local customField = SafeText(GetConvar('gcphone_storage_custom_field', tostring(customCfg.UploadField or 'files[]')), 32) or 'files[]'
+    local customField = Utils.SafeText(GetConvar('gcphone_storage_custom_field', tostring(customCfg.UploadField or 'files[]')), 32) or 'files[]'
     return 'custom', customUrl or '', customField
 end
 
@@ -164,7 +157,7 @@ local function CaptureScreenshotToServerFolder(source)
 end
 
 lib.callback.register('gcphone:getStorageConfig', function(source)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     local selectedProvider, uploadUrl, uploadField = ResolveUploadTarget()
     local knownProviders = BuildKnownProviders()
     local serverFolder = GetServerFolderConfig()
@@ -223,7 +216,7 @@ lib.callback.register('gcphone:wavechat:getStatusMediaConfig', function(source)
 end)
 
 lib.callback.register('gcphone:storeMediaUrl', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false, 'INVALID_SOURCE' end
     if type(data) ~= 'table' then return false, 'INVALID_DATA' end
 
@@ -242,7 +235,7 @@ lib.callback.register('gcphone:storeMediaUrl', function(source, data)
 end)
 
 lib.callback.register('gcphone:storage:capturePhoto', function(source)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false, 'INVALID_SOURCE' end
 
     local provider = NormalizeProvider((Config.Storage and Config.Storage.Provider) or 'custom')
@@ -262,3 +255,5 @@ lib.callback.register('gcphone:storage:capturePhoto', function(source)
 
     return true, { id = id, url = photoUrl, type = 'image' }
 end)
+
+return {}

@@ -1,5 +1,7 @@
 -- Creado/Modificado por JericoFX
 
+local Bridge = require 'server.bridge'
+
 local function ClampNumber(value, minValue, maxValue, fallback)
     local num = tonumber(value)
     if not num then return fallback end
@@ -9,7 +11,7 @@ local function ClampNumber(value, minValue, maxValue, fallback)
 end
 
 lib.callback.register('gcphone:social:getNotifications', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return {} end
 
     data = type(data) == 'table' and data or {}
@@ -81,7 +83,7 @@ lib.callback.register('gcphone:social:getNotifications', function(source, data)
 end)
 
 lib.callback.register('gcphone:social:markNotificationRead', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false end
     if type(data) ~= 'table' then return false end
 
@@ -97,7 +99,7 @@ lib.callback.register('gcphone:social:markNotificationRead', function(source, da
 end)
 
 lib.callback.register('gcphone:social:markAllNotificationsRead', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false end
 
     data = type(data) == 'table' and data or {}
@@ -119,7 +121,7 @@ lib.callback.register('gcphone:social:markAllNotificationsRead', function(source
 end)
 
 lib.callback.register('gcphone:social:deleteNotification', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false end
     if type(data) ~= 'table' then return false end
 
@@ -133,3 +135,5 @@ lib.callback.register('gcphone:social:deleteNotification', function(source, data
 
     return true
 end)
+
+return {}

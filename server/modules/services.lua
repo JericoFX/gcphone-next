@@ -1,8 +1,10 @@
 -- Creado/Modificado por JericoFX
 -- Services - Backend
 
-local Utils = GcPhoneUtils
-local function SafeString(v, m) return Utils.SafeString(v, m) end
+local Bridge = require 'server.bridge'
+local Phone = require 'server.modules.phone'
+local Utils = require 'server.lib.utils'
+
 local function SanitizeText(v, m) return Utils.SanitizeText(v, m, true) end
 local function SanitizeMediaUrl(v) return Utils.SanitizeMediaUrl(v, {'.png','.jpg','.jpeg','.webp','.gif'}, 500) end
 local function HitRateLimit(s, k, w, m) return Utils.HitRateLimit(s, k, w, m) end
@@ -84,7 +86,7 @@ end)
 
 -- Get my service
 lib.callback.register('gcphone:services:getMyService', function(source)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return nil end
 
     return MySQL.single.await([[
@@ -100,10 +102,10 @@ end)
 
 -- Register service
 lib.callback.register('gcphone:services:register', function(source, data)
-    if IsPhoneReadOnly(source) then return false, 'READ_ONLY' end
+    if Phone.IsPhoneReadOnly(source) then return false, 'READ_ONLY' end
     if HitRateLimit(source, 'svc_register', 5000, 1) then return false, 'RATE_LIMITED' end
 
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false, 'Not authenticated' end
     if type(data) ~= 'table' then return false, 'Invalid data' end
 
@@ -115,7 +117,7 @@ lib.callback.register('gcphone:services:register', function(source, data)
 
     local description = SanitizeText(data.description, 500)
     local avatar = SanitizeMediaUrl(data.avatar)
-    local phoneNumber = GetPhoneNumber(identifier) or ''
+    local phoneNumber = Bridge.GetPhoneNumber(identifier) or ''
 
     -- Check if already registered
     local existing = MySQL.single.await('SELECT id FROM phone_services WHERE identifier = ?', { identifier })
@@ -147,10 +149,10 @@ end)
 
 -- Update service
 lib.callback.register('gcphone:services:updateService', function(source, data)
-    if IsPhoneReadOnly(source) then return false, 'READ_ONLY' end
+    if Phone.IsPhoneReadOnly(source) then return false, 'READ_ONLY' end
     if HitRateLimit(source, 'svc_update', 3000, 2) then return false, 'RATE_LIMITED' end
 
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false, 'Not authenticated' end
     if type(data) ~= 'table' then return false, 'Invalid data' end
 
@@ -180,9 +182,9 @@ end)
 
 -- Set availability
 lib.callback.register('gcphone:services:setAvailability', function(source, data)
-    if IsPhoneReadOnly(source) then return false, 'READ_ONLY' end
+    if Phone.IsPhoneReadOnly(source) then return false, 'READ_ONLY' end
 
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false end
 
     local availability = type(data) == 'table' and data.availability or data
@@ -196,10 +198,10 @@ end)
 
 -- Delete service
 lib.callback.register('gcphone:services:deleteService', function(source)
-    if IsPhoneReadOnly(source) then return false end
+    if Phone.IsPhoneReadOnly(source) then return false end
     if HitRateLimit(source, 'svc_delete', 5000, 1) then return false end
 
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false end
 
     MySQL.execute.await('DELETE FROM phone_services WHERE identifier = ?', { identifier })
@@ -222,10 +224,10 @@ end)
 
 -- Rate worker
 lib.callback.register('gcphone:services:rateWorker', function(source, data)
-    if IsPhoneReadOnly(source) then return false, 'READ_ONLY' end
+    if Phone.IsPhoneReadOnly(source) then return false, 'READ_ONLY' end
     if HitRateLimit(source, 'svc_rate', 3000, 2) then return false, 'RATE_LIMITED' end
 
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false, 'Not authenticated' end
     if type(data) ~= 'table' then return false, 'Invalid data' end
 
@@ -242,13 +244,11 @@ lib.callback.register('gcphone:services:rateWorker', function(source, data)
     if service.identifier == identifier then return false, 'Cannot rate self' end
 
     -- Check blocked
-    local myNumber = GetPhoneNumber(identifier)
-    local targetNumber = GetPhoneNumber(service.identifier)
+    local myNumber = Bridge.GetPhoneNumber(identifier)
+    local targetNumber = Bridge.GetPhoneNumber(service.identifier)
     if myNumber and targetNumber then
-        local ok, blocked = pcall(function()
-            return exports[GetCurrentResourceName()]:IsBlockedEither(identifier, service.identifier, myNumber, targetNumber)
-        end)
-        if ok and blocked then return false, 'Blocked' end
+        local blocked = Utils.IsBlockedEither(identifier, service.identifier, myNumber, targetNumber)
+        if blocked then return false, 'Blocked' end
     end
 
     -- Check if already rated, get old score
@@ -290,3 +290,5 @@ lib.callback.register('gcphone:services:getWorkerRatings', function(source, data
         LIMIT ?
     ]], { serviceId, limit }) or {}
 end)
+
+return {}

@@ -1,5 +1,3 @@
-if Config.Framework ~= 'qbcore' and Config.Framework ~= 'qbox' then return end
-
 local Core = nil
 local Framework = nil
 
@@ -47,16 +45,16 @@ local function GetQBPhoneFromPlayer(player)
     return nil
 end
 
-function GetFramework()
+local function GetFramework()
     return Framework
 end
 
-function GetPlayer(source)
+local function GetPlayer(source)
     if not Core then return nil end
     return Core.Functions.GetPlayer(source)
 end
 
-function IsPlayerActionAllowed(source)
+local function IsPlayerActionAllowed(source)
     local player = GetPlayer(source)
     if not player then return false, 'PLAYER_NOT_FOUND' end
 
@@ -72,7 +70,7 @@ function IsPlayerActionAllowed(source)
     return true, nil
 end
 
-function GetIdentifier(source)
+local function GetIdentifier(source)
     local allowed = IsPlayerActionAllowed(source)
     if not allowed then return nil end
 
@@ -81,21 +79,21 @@ function GetIdentifier(source)
     return player.PlayerData.citizenid
 end
 
-function GetName(source)
+local function GetName(source)
     local player = GetPlayer(source)
     if not player then return nil end
     local charinfo = player.PlayerData.charinfo
     return charinfo.firstname .. ' ' .. charinfo.lastname
 end
 
-function GetMoney(source, accountType)
+local function GetMoney(source, accountType)
     local player = GetPlayer(source)
     if not player then return 0 end
     accountType = accountType or 'bank'
     return player.Functions.GetMoney(accountType) or 0
 end
 
-function AddMoney(source, amount, accountType, reason)
+local function AddMoney(source, amount, accountType, reason)
     local player = GetPlayer(source)
     if not player then return false end
     accountType = accountType or 'bank'
@@ -103,7 +101,7 @@ function AddMoney(source, amount, accountType, reason)
     return player.Functions.AddMoney(accountType, amount, reason)
 end
 
-function RemoveMoney(source, amount, accountType, reason)
+local function RemoveMoney(source, amount, accountType, reason)
     local player = GetPlayer(source)
     if not player then return false end
     accountType = accountType or 'bank'
@@ -111,13 +109,13 @@ function RemoveMoney(source, amount, accountType, reason)
     return player.Functions.RemoveMoney(accountType, amount, reason)
 end
 
-function GetJob(source)
+local function GetJob(source)
     local player = GetPlayer(source)
     if not player then return nil end
     return player.PlayerData.job
 end
 
-function GetSourceFromIdentifier(identifier)
+local function GetSourceFromIdentifier(identifier)
     if not Core or not identifier then return nil end
 
     local players = Core.Functions.GetPlayers()
@@ -131,7 +129,7 @@ function GetSourceFromIdentifier(identifier)
     return nil
 end
 
-function GetFrameworkPhoneNumber(source, identifier)
+local function GetFrameworkPhoneNumber(source, identifier)
     local player = source and GetPlayer(source) or nil
     if not player and identifier then
         local onlineSource = GetSourceFromIdentifier(identifier)
@@ -142,7 +140,7 @@ function GetFrameworkPhoneNumber(source, identifier)
     return GetQBPhoneFromPlayer(player)
 end
 
-function GetPhoneNumber(identifier)
+local function GetPhoneNumber(identifier)
     if not identifier then return nil end
 
     local frameworkPhone = GetFrameworkPhoneNumber(nil, identifier)
@@ -154,7 +152,7 @@ function GetPhoneNumber(identifier)
     )
 end
 
-function GetIdentifierByPhone(phoneNumber)
+local function GetIdentifierByPhone(phoneNumber)
     if not phoneNumber then return nil end
 
     if Core then
@@ -179,3 +177,19 @@ function GetIdentifierByPhone(phoneNumber)
         { phoneNumber }
     )
 end
+
+return {
+    GetFramework = GetFramework,
+    GetPlayer = GetPlayer,
+    IsPlayerActionAllowed = IsPlayerActionAllowed,
+    GetIdentifier = GetIdentifier,
+    GetName = GetName,
+    GetMoney = GetMoney,
+    AddMoney = AddMoney,
+    RemoveMoney = RemoveMoney,
+    GetJob = GetJob,
+    GetSourceFromIdentifier = GetSourceFromIdentifier,
+    GetFrameworkPhoneNumber = GetFrameworkPhoneNumber,
+    GetPhoneNumber = GetPhoneNumber,
+    GetIdentifierByPhone = GetIdentifierByPhone,
+}

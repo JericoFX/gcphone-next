@@ -1,4 +1,5 @@
-local Utils = GcPhoneUtils
+local Bridge = require 'server.bridge'
+local Utils = require 'server.lib.utils'
 
 local function SanitizeText(value, maxLength)
     return Utils.SanitizeText(value, maxLength or 500, true)
@@ -27,7 +28,7 @@ local function IsPublishJobAllowed(source)
         return true
     end
 
-    local job = GetJob(source)
+    local job = Bridge.GetJob(source)
     local jobName = type(job) == 'table' and tostring(job.name or ''):lower() or ''
     if jobName == '' then
         return false
@@ -46,18 +47,15 @@ local function RequirePlayerIdentifier(source)
     local src = tonumber(source)
     if not src or src <= 0 then return nil end
 
-    if type(GetPlayer) == 'function' and not GetPlayer(src) then
+    if not Bridge.GetPlayer(src) then
         return nil
     end
 
-    if type(IsPlayerActionAllowed) == 'function' then
-        local allowed = IsPlayerActionAllowed(src)
-        if not allowed then
-            return nil
-        end
+    if not Bridge.IsPlayerActionAllowed(src) then
+        return nil
     end
 
-    return GetIdentifier(src)
+    return Bridge.GetIdentifier(src)
 end
 
 local function HitRateLimit(source, key, windowMs, maxHits)
@@ -67,6 +65,7 @@ end
 local function GetRateLimitWindow(key, fallback)
     return Utils.GetRateLimitWindow(key, fallback)
 end
+
 
 local function IsClipStorageReady()
     local provider = tostring(GetConvar('gcphone_storage_provider', tostring(Config.Storage and Config.Storage.Provider or 'custom'))):lower()
@@ -316,3 +315,5 @@ lib.callback.register('gcphone:clips:deleteComment', function(source, data)
 
     return true
 end)
+
+return {}

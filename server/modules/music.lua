@@ -1,5 +1,8 @@
 -- Creado/Modificado por JericoFX
 
+local Bridge = require 'server.bridge'
+local Phone = require 'server.modules.phone'
+
 local ActiveMusicBySource = {}
 local LastMusicActionBySource = {}
 local LastSearchBySource = {}
@@ -102,7 +105,7 @@ local function BuildSoundName(source)
 end
 
 local function MuteForStreamerPlayers(soundName)
-    local streamers = GCPhone and GCPhone.StreamerModePlayers
+    local streamers = Phone.StreamerModePlayers
     if not streamers then return end
     for src in pairs(streamers) do
         exports['olisound']:Destroy(src, soundName)
@@ -202,7 +205,7 @@ local function PlayForSource(source, data)
 end
 
 local function SearchCatalog(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then
         return {
             success = false,
@@ -266,7 +269,7 @@ end)
 
 RegisterNetEvent('gcphone:music:play', function(data)
     local source = source
-    if not GetIdentifier(source) then return end
+    if not Bridge.GetIdentifier(source) then return end
     if not CanRunMusicAction(source) then return end
     if type(data) ~= 'table' then
         NotifyState(source, { success = false, error = 'INVALID_PAYLOAD' })
@@ -277,7 +280,7 @@ end)
 
 RegisterNetEvent('gcphone:music:pause', function()
     local source = source
-    if not GetIdentifier(source) then return end
+    if not Bridge.GetIdentifier(source) then return end
     if not CanRunMusicAction(source) then return end
     local current = ActiveMusicBySource[source]
     if not current or not EnsureOliSoundReady() then return end
@@ -289,7 +292,7 @@ end)
 
 RegisterNetEvent('gcphone:music:resume', function()
     local source = source
-    if not GetIdentifier(source) then return end
+    if not Bridge.GetIdentifier(source) then return end
     if not CanRunMusicAction(source) then return end
     local current = ActiveMusicBySource[source]
     if not current or not EnsureOliSoundReady() then return end
@@ -301,7 +304,7 @@ end)
 
 RegisterNetEvent('gcphone:music:stop', function()
     local source = source
-    if not GetIdentifier(source) then return end
+    if not Bridge.GetIdentifier(source) then return end
     if not CanRunMusicAction(source) then return end
     DestroyForSource(source)
     NotifyState(source, { success = true, isPlaying = false, isPaused = false })
@@ -309,7 +312,7 @@ end)
 
 RegisterNetEvent('gcphone:music:setVolume', function(data)
     local source = source
-    if not GetIdentifier(source) then return end
+    if not Bridge.GetIdentifier(source) then return end
     if not CanRunMusicAction(source) then return end
     local current = ActiveMusicBySource[source]
     if not current or not EnsureOliSoundReady() then return end
@@ -374,3 +377,5 @@ AddEventHandler('onResourceStop', function(resourceName)
     if resourceName ~= cache.resource or not MusicPositionTimer then return end
     MusicPositionTimer:forceEnd(false)
 end)
+
+return {}

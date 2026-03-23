@@ -1,5 +1,7 @@
 -- Creado/Modificado por JericoFX
 
+local Bridge = require 'server.bridge'
+
 local LastRoomActionBySource = {}
 
 local ROOM_ICON_ALLOWLIST = {
@@ -114,7 +116,7 @@ CreateThread(function()
 end)
 
 lib.callback.register('gcphone:darkrooms:getRooms', function(source)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return {} end
 
     return MySQL.query.await(
@@ -136,7 +138,7 @@ lib.callback.register('gcphone:darkrooms:getRooms', function(source)
 end)
 
 lib.callback.register('gcphone:darkrooms:createRoom', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return { success = false, error = 'INVALID_SOURCE' } end
     if not CanPerformAction(source) then return { success = false, error = 'RATE_LIMIT' } end
     if type(data) ~= 'table' then return { success = false, error = 'INVALID_DATA' } end
@@ -175,7 +177,7 @@ lib.callback.register('gcphone:darkrooms:createRoom', function(source, data)
 end)
 
 lib.callback.register('gcphone:darkrooms:joinRoom', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return { success = false, error = 'INVALID_SOURCE' } end
     if not CanPerformAction(source) then return { success = false, error = 'RATE_LIMIT' } end
 
@@ -217,7 +219,7 @@ lib.callback.register('gcphone:darkrooms:joinRoom', function(source, data)
 end)
 
 lib.callback.register('gcphone:darkrooms:getPosts', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return {} end
 
     local roomId = ToPositiveInt(type(data) == 'table' and data.roomId or nil)
@@ -250,7 +252,7 @@ lib.callback.register('gcphone:darkrooms:getPosts', function(source, data)
 end)
 
 lib.callback.register('gcphone:darkrooms:createPost', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return { success = false, error = 'INVALID_SOURCE' } end
     if not CanPerformAction(source) then return { success = false, error = 'RATE_LIMIT' } end
 
@@ -277,7 +279,7 @@ lib.callback.register('gcphone:darkrooms:createPost', function(source, data)
         )
     end
 
-    local authorName = anonymous and 'Anonimo' or SanitizeText(GetName(source) or 'Anonimo', 64)
+    local authorName = anonymous and 'Anonimo' or SanitizeText(Bridge.GetName(source) or 'Anonimo', 64)
     local postId = MySQL.insert.await(
         'INSERT INTO phone_darkrooms_posts (room_id, author_identifier, author_name, title, content, media_url, is_anonymous) VALUES (?, ?, ?, ?, ?, ?, ?)',
         { roomId, identifier, authorName ~= '' and authorName or 'Anonimo', title, content, mediaUrl, anonymous and 1 or 0 }
@@ -292,7 +294,7 @@ lib.callback.register('gcphone:darkrooms:createPost', function(source, data)
 end)
 
 lib.callback.register('gcphone:darkrooms:votePost', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return { success = false } end
     if not CanPerformAction(source) then return { success = false } end
 
@@ -326,7 +328,7 @@ lib.callback.register('gcphone:darkrooms:votePost', function(source, data)
 end)
 
 lib.callback.register('gcphone:darkrooms:getComments', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return {} end
 
     local postId = ToPositiveInt(type(data) == 'table' and data.postId or nil)
@@ -339,7 +341,7 @@ lib.callback.register('gcphone:darkrooms:getComments', function(source, data)
 end)
 
 lib.callback.register('gcphone:darkrooms:createComment', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return { success = false, error = 'INVALID_SOURCE' } end
     if not CanPerformAction(source) then return { success = false, error = 'RATE_LIMIT' } end
 
@@ -353,7 +355,7 @@ lib.callback.register('gcphone:darkrooms:createComment', function(source, data)
     local exists = MySQL.single.await('SELECT id FROM phone_darkrooms_posts WHERE id = ? LIMIT 1', { postId })
     if not exists then return { success = false, error = 'POST_NOT_FOUND' } end
 
-    local authorName = anonymous and 'Anonimo' or SanitizeText(GetName(source) or 'Anonimo', 64)
+    local authorName = anonymous and 'Anonimo' or SanitizeText(Bridge.GetName(source) or 'Anonimo', 64)
     local commentId = MySQL.insert.await(
         'INSERT INTO phone_darkrooms_comments (post_id, author_identifier, author_name, content, media_url, is_anonymous) VALUES (?, ?, ?, ?, ?, ?)',
         { postId, identifier, authorName ~= '' and authorName or 'Anonimo', content, mediaUrl, anonymous and 1 or 0 }
@@ -371,3 +373,5 @@ end)
 AddEventHandler('playerDropped', function()
     LastRoomActionBySource[source] = nil
 end)
+
+return {}

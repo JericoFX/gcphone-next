@@ -41,3 +41,5 @@ AddEventHandler('txAdmin:events:serverShuttingDown', function()
         }
     })
 end)
+
+return {}

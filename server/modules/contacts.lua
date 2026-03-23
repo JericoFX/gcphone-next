@@ -1,141 +1,106 @@
 -- Creado/Modificado por JericoFX
 
-local SecurityResource = GetCurrentResourceName()
-local function HitRateLimit(source, key, windowMs, maxHits)
-    local ok, blocked = pcall(function()
-        return exports[SecurityResource]:HitRateLimit(source, key, windowMs, maxHits)
-    end)
-    if not ok then return false end
-    return blocked == true
-end
+local Bridge = require 'server.bridge'
+local Phone = require 'server.modules.phone'
+local Utils = require 'server.lib.utils'
+local Hooks = require 'server.modules.hooks'
 
 local function GetContacts(identifier)
     if not identifier then return {} end
-    
+
     return MySQL.query.await(
         'SELECT id, number, display, avatar, favorite FROM phone_contacts WHERE identifier = ? ORDER BY favorite DESC, display ASC',
         { identifier }
     ) or {}
 end
 
-local function CanAccessIdentifierExport(identifier, requestSource)
-    local src = tonumber(requestSource)
-    if not src or src <= 0 or not identifier then
-        return false
-    end
-
-    local ownerIdentifier = GetPhoneOwnerIdentifier and GetPhoneOwnerIdentifier(src, true) or GetIdentifier(src)
-    return ownerIdentifier ~= nil and ownerIdentifier == identifier
-end
-
-local function SafeText(value, maxLength)
-    if type(value) ~= 'string' then return nil end
-    local text = value:gsub('[%z\1-\31\127]', '')
-    text = text:gsub('<.->', '')
-    text = text:gsub('^%s+', ''):gsub('%s+$', '')
-    if text == '' then return nil end
-    return text:sub(1, maxLength or 80)
-end
-
-local function SafePhone(value)
-    if type(value) ~= 'string' then return nil end
-    local number = value:gsub('[^%d%+%-%(%s%)]', '')
-    number = number:gsub('^%s+', ''):gsub('%s+$', '')
-    if number == '' then return nil end
-    return number:sub(1, 20)
-end
-
 lib.callback.register('gcphone:getContacts', function(source)
-    local identifier = GetPhoneOwnerIdentifier(source, true)
+    local identifier = Phone.GetPhoneOwnerIdentifier(source, true)
     return GetContacts(identifier)
 end)
 
 lib.callback.register('gcphone:addContact', function(source, data)
-    if IsPhoneReadOnly(source) then return false, 'READ_ONLY' end
-    local identifier = GetIdentifier(source)
+    if Phone.IsPhoneReadOnly(source) then return false, 'READ_ONLY' end
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false end
 
-    local display = type(data) == 'table' and SafeText(data.display, 60) or nil
-    local number = type(data) == 'table' and SafePhone(data.number) or nil
-    local avatar = type(data) == 'table' and SafeText(data.avatar, 500) or nil
+    local display = type(data) == 'table' and Utils.SafeText(data.display, 60) or nil
+    local number = type(data) == 'table' and Utils.SafePhone(data.number) or nil
+    local avatar = type(data) == 'table' and Utils.SafeText(data.avatar, 500) or nil
 
     if not display or not number then
         return false, 'Invalid data'
     end
-    
+
     local existing = MySQL.scalar.await(
         'SELECT id FROM phone_contacts WHERE identifier = ? AND number = ?',
         { identifier, number }
     )
-    
+
     if existing then
         return false, 'Contact already exists'
     end
-    
+
     local id = MySQL.insert.await(
         'INSERT INTO phone_contacts (identifier, number, display, avatar) VALUES (?, ?, ?, ?)',
         { identifier, number, display, avatar }
     )
 
-    if type(TriggerPhoneHook) == 'function' then
-        TriggerPhoneHook('contactAdded', {
-            source = source,
-            identifier = identifier,
-            contactId = id,
-            name = display,
-            number = number,
-            avatar = avatar,
-        })
-    end
-    
+    Hooks.triggerHook('contactAdded', {
+        source = source,
+        identifier = identifier,
+        contactId = id,
+        name = display,
+        number = number,
+        avatar = avatar,
+    })
+
     TriggerClientEvent('gcphone:contactsUpdated', source, GetContacts(identifier))
-    
+
     return true, id
 end)
 
 lib.callback.register('gcphone:updateContact', function(source, data)
-    if IsPhoneReadOnly(source) then return false, 'READ_ONLY' end
-    local identifier = GetIdentifier(source)
+    if Phone.IsPhoneReadOnly(source) then return false, 'READ_ONLY' end
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false end
 
     local contactId = type(data) == 'table' and tonumber(data.id) or nil
-    local display = type(data) == 'table' and SafeText(data.display, 60) or nil
-    local number = type(data) == 'table' and SafePhone(data.number) or nil
-    local avatar = type(data) == 'table' and SafeText(data.avatar, 500) or nil
+    local display = type(data) == 'table' and Utils.SafeText(data.display, 60) or nil
+    local number = type(data) == 'table' and Utils.SafePhone(data.number) or nil
+    local avatar = type(data) == 'table' and Utils.SafeText(data.avatar, 500) or nil
 
     if not contactId or not display or not number then
         return false, 'Invalid data'
     end
-    
+
     MySQL.update.await(
         'UPDATE phone_contacts SET number = ?, display = ?, avatar = ? WHERE id = ? AND identifier = ?',
         { number, display, avatar, contactId, identifier }
     )
 
-    if type(TriggerPhoneHook) == 'function' then
-        TriggerPhoneHook('contactUpdated', {
-            source = source,
-            identifier = identifier,
-            contactId = contactId,
-            name = display,
-            number = number,
-            avatar = avatar,
-        })
-    end
-    
+    Hooks.triggerHook('contactUpdated', {
+        source = source,
+        identifier = identifier,
+        contactId = contactId,
+        name = display,
+        number = number,
+        avatar = avatar,
+    })
+
     TriggerClientEvent('gcphone:contactsUpdated', source, GetContacts(identifier))
-    
+
     return true
 end)
 
 lib.callback.register('gcphone:deleteContact', function(source, contactId)
-    if IsPhoneReadOnly(source) then return false end
-    local identifier = GetIdentifier(source)
+    if Phone.IsPhoneReadOnly(source) then return false end
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false end
 
     local id = tonumber(contactId)
     if not id then return false end
-    
+
     local deleted = MySQL.single.await(
         'SELECT display, number, avatar FROM phone_contacts WHERE id = ? AND identifier = ? LIMIT 1',
         { id, identifier }
@@ -146,8 +111,8 @@ lib.callback.register('gcphone:deleteContact', function(source, contactId)
         { id, identifier }
     )
 
-    if deleted and type(TriggerPhoneHook) == 'function' then
-        TriggerPhoneHook('contactDeleted', {
+    if deleted then
+        Hooks.triggerHook('contactDeleted', {
             source = source,
             identifier = identifier,
             contactId = id,
@@ -156,41 +121,41 @@ lib.callback.register('gcphone:deleteContact', function(source, contactId)
             avatar = deleted.avatar,
         })
     end
-    
+
     TriggerClientEvent('gcphone:contactsUpdated', source, GetContacts(identifier))
-    
+
     return true
 end)
 
 lib.callback.register('gcphone:toggleFavorite', function(source, contactId)
-    if IsPhoneReadOnly(source) then return false end
-    local identifier = GetIdentifier(source)
+    if Phone.IsPhoneReadOnly(source) then return false end
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false end
 
     local id = tonumber(contactId)
     if not id then return false end
-    
+
     local current = MySQL.scalar.await(
         'SELECT favorite FROM phone_contacts WHERE id = ? AND identifier = ?',
         { id, identifier }
     )
-    
+
     if current == nil then return false end
-    
+
     MySQL.update.await(
         'UPDATE phone_contacts SET favorite = ? WHERE id = ? AND identifier = ?',
         { current == 1 and 0 or 1, id, identifier }
     )
-    
+
     TriggerClientEvent('gcphone:contactsUpdated', source, GetContacts(identifier))
-    
+
     return true
 end)
 
 lib.callback.register('gcphone:shareContact', function(source, data)
-    if IsPhoneReadOnly(source) then return false, 'READ_ONLY' end
-    if HitRateLimit(source, 'share_contact', 2000, 3) then return false, 'RATE_LIMITED' end
-    local identifier = GetIdentifier(source)
+    if Phone.IsPhoneReadOnly(source) then return false, 'READ_ONLY' end
+    if Utils.HitRateLimit(source, 'share_contact', 2000, 3) then return false, 'RATE_LIMITED' end
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false, 'Invalid source' end
 
     if type(data) ~= 'table' then
@@ -204,21 +169,21 @@ lib.callback.register('gcphone:shareContact', function(source, data)
         return false, 'Invalid data'
     end
 
-    local contactDisplay = SafeText(contact.display, 60)
-    local contactNumber = SafePhone(contact.number)
-    local contactAvatar = SafeText(contact.avatar, 500)
+    local contactDisplay = Utils.SafeText(contact.display, 60)
+    local contactNumber = Utils.SafePhone(contact.number)
+    local contactAvatar = Utils.SafeText(contact.avatar, 500)
 
     if not contactDisplay or not contactNumber then
         return false, 'Invalid data'
     end
-    
-    local targetIdentifier = GetIdentifier(targetSource)
+
+    local targetIdentifier = Bridge.GetIdentifier(targetSource)
     if not targetIdentifier then
         return false, 'Target not found'
     end
-    
-    local name = GetName(source)
-    
+
+    local name = Bridge.GetName(source)
+
     TriggerClientEvent('gcphone:receiveContactRequest', targetSource, {
         fromPlayer = name,
         fromServerId = source,
@@ -228,50 +193,48 @@ lib.callback.register('gcphone:shareContact', function(source, data)
             avatar = contactAvatar
         }
     })
-    
+
     return true
 end)
 
 lib.callback.register('gcphone:acceptSharedContact', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false end
 
-    local display = type(data) == 'table' and SafeText(data.display, 60) or nil
-    local number = type(data) == 'table' and SafePhone(data.number) or nil
-    local avatar = type(data) == 'table' and SafeText(data.avatar, 500) or nil
+    local display = type(data) == 'table' and Utils.SafeText(data.display, 60) or nil
+    local number = type(data) == 'table' and Utils.SafePhone(data.number) or nil
+    local avatar = type(data) == 'table' and Utils.SafeText(data.avatar, 500) or nil
 
     if not display or not number then
         return false, 'Invalid data'
     end
-    
+
     local existing = MySQL.scalar.await(
         'SELECT id FROM phone_contacts WHERE identifier = ? AND number = ?',
         { identifier, number }
     )
-    
+
     if existing then
         return false, 'Contact already exists'
     end
-    
+
     local insertedId = MySQL.insert.await(
         'INSERT INTO phone_contacts (identifier, number, display, avatar) VALUES (?, ?, ?, ?)',
         { identifier, number, display, avatar }
     )
 
-    if type(TriggerPhoneHook) == 'function' then
-        TriggerPhoneHook('contactAdded', {
-            source = source,
-            identifier = identifier,
-            contactId = insertedId,
-            name = display,
-            number = number,
-            avatar = avatar,
-            shared = true,
-        })
-    end
-    
+    Hooks.triggerHook('contactAdded', {
+        source = source,
+        identifier = identifier,
+        contactId = insertedId,
+        name = display,
+        number = number,
+        avatar = avatar,
+        shared = true,
+    })
+
     TriggerClientEvent('gcphone:contactsUpdated', source, GetContacts(identifier))
-    
+
     return true
 end)
 
@@ -280,9 +243,11 @@ end)
 ---@param requestSource integer
 ---@return table[]
 exports('GetContacts', function(identifier, requestSource)
-    if not CanAccessIdentifierExport(identifier, requestSource) then
+    if not Utils.CanAccessIdentifierExport(identifier, requestSource, Phone.GetPhoneOwnerIdentifier, Bridge.GetIdentifier) then
         return {}
     end
 
     return GetContacts(identifier)
 end)
+
+return {}

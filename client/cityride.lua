@@ -44,3 +44,5 @@ RegisterNetEvent('gcphone:cityride:setWaypoint', function(coords)
         SetNewWaypoint(coords.x + 0.0, coords.y + 0.0)
     end
 end)
+
+return {}

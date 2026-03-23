@@ -1522,3 +1522,5 @@ exports('GetDatabaseVersion', function()
     end
     return 0
 end)
+
+return {}

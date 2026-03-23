@@ -1,16 +1,5 @@
-local SecurityResource = GetCurrentResourceName()
-
-local function HitRateLimit(source, key, windowMs, maxHits)
-    local ok, limited = pcall(function()
-        return exports[SecurityResource]:HitRateLimit(source, key, windowMs, maxHits)
-    end)
-
-    if ok then
-        return limited == true
-    end
-
-    return false
-end
+local Bridge = require 'server.bridge'
+local Utils = require 'server.lib.utils'
 
 local function SafeText(value, maxLen)
     if type(value) ~= 'string' then return nil end
@@ -283,7 +272,7 @@ lib.callback.register('gcphone:mail:getState', function(source, data)
         return { success = false, error = 'MAIL_DISABLED' }
     end
 
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then
         return { success = false, error = 'MISSING_IDENTIFIER' }
     end
@@ -330,11 +319,11 @@ lib.callback.register('gcphone:mail:createAccount', function(source, data)
         return { success = false, error = 'MAIL_DISABLED' }
     end
 
-    if HitRateLimit(source, 'mail_create_account', 20000, 4) then
+    if Utils.HitRateLimit(source, 'mail_create_account', 20000, 4) then
         return { success = false, error = 'RATE_LIMITED' }
     end
 
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then
         return { success = false, error = 'MISSING_IDENTIFIER' }
     end
@@ -377,11 +366,11 @@ lib.callback.register('gcphone:mail:send', function(source, data)
         return { success = false, error = 'MAIL_DISABLED' }
     end
 
-    if HitRateLimit(source, 'mail_send', 3000, 6) then
+    if Utils.HitRateLimit(source, 'mail_send', 3000, 6) then
         return { success = false, error = 'RATE_LIMITED' }
     end
 
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then
         return { success = false, error = 'MISSING_IDENTIFIER' }
     end
@@ -395,11 +384,11 @@ lib.callback.register('gcphone:mail:send', function(source, data)
 end)
 
 lib.callback.register('gcphone:mail:markRead', function(source, data)
-    if HitRateLimit(source, 'mail_mark_read', 1500, 12) then
+    if Utils.HitRateLimit(source, 'mail_mark_read', 1500, 12) then
         return { success = false, error = 'RATE_LIMITED' }
     end
 
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then
         return { success = false, error = 'MISSING_IDENTIFIER' }
     end
@@ -434,11 +423,11 @@ lib.callback.register('gcphone:mail:getMessages', function(source, data)
         return { success = false, error = 'MAIL_DISABLED' }
     end
 
-    if HitRateLimit(source, 'mail_get_messages', 500, 8) then
+    if Utils.HitRateLimit(source, 'mail_get_messages', 500, 8) then
         return { success = false, error = 'RATE_LIMITED' }
     end
 
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then
         return { success = false, error = 'MISSING_IDENTIFIER' }
     end
@@ -472,11 +461,11 @@ lib.callback.register('gcphone:mail:delete', function(source, data)
         return { success = false, error = 'MAIL_DISABLED' }
     end
 
-    if HitRateLimit(source, 'mail_delete', 1500, 12) then
+    if Utils.HitRateLimit(source, 'mail_delete', 1500, 12) then
         return { success = false, error = 'RATE_LIMITED' }
     end
 
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then
         return { success = false, error = 'MISSING_IDENTIFIER' }
     end
@@ -543,3 +532,5 @@ exports('SendInGameMail', function(fromIdentifier, payload)
 
     return SendMailFromAccount(account, payload)
 end)
+
+return {}

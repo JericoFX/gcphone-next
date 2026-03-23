@@ -1,6 +1,9 @@
 -- Creado/Modificado por JericoFX
 -- Bank module with transaction history
 
+local Bridge = require 'server.bridge'
+local Phone = require 'server.modules.phone'
+
 local function RecordTransaction(identifier, amount, txType, title, targetPhone)
     MySQL.insert.await('INSERT INTO phone_wallet_transactions (identifier, amount, type, title, target_phone) VALUES (?, ?, ?, ?, ?)',
         { identifier, amount, txType, title, targetPhone }
@@ -8,15 +11,15 @@ local function RecordTransaction(identifier, amount, txType, title, targetPhone)
 end
 
 lib.callback.register('gcphone:getBankBalance', function(source)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return 0 end
 
-    local balance = GetMoney(source, 'bank')
+    local balance = Bridge.GetMoney(source, 'bank')
     return balance or 0
 end)
 
 lib.callback.register('gcphone:getBankTransactions', function(source)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return {} end
 
     local rows = MySQL.query.await([[
@@ -43,8 +46,8 @@ lib.callback.register('gcphone:getBankTransactions', function(source)
 end)
 
 lib.callback.register('gcphone:transferMoney', function(source, data)
-    if IsPhoneReadOnly(source) then return false, 'READ_ONLY' end
-    local identifier = GetIdentifier(source)
+    if Phone.IsPhoneReadOnly(source) then return false, 'READ_ONLY' end
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false, 'Invalid source' end
     if type(data) ~= 'table' then return false, 'Invalid data' end
 
@@ -68,35 +71,35 @@ lib.callback.register('gcphone:transferMoney', function(source, data)
         totalDebit = amount + (amount * fee)
     end
 
-    local myBalance = GetMoney(source, 'bank')
+    local myBalance = Bridge.GetMoney(source, 'bank')
     if myBalance < totalDebit then
         return false, 'Insufficient funds'
     end
 
-    local targetIdentifier = GetIdentifierByPhone(data.targetNumber)
+    local targetIdentifier = Bridge.GetIdentifierByPhone(data.targetNumber)
     if not targetIdentifier then
         return false, 'Target not found'
     end
 
-    local targetSource = GetSourceFromIdentifier(targetIdentifier)
+    local targetSource = Bridge.GetSourceFromIdentifier(targetIdentifier)
     if not targetSource then
         return false, 'Target unavailable'
     end
 
-    local success = RemoveMoney(source, totalDebit, 'bank', 'phone-transfer')
+    local success = Bridge.RemoveMoney(source, totalDebit, 'bank', 'phone-transfer')
     if not success then
         return false, 'Transfer failed'
     end
 
-    local addOk = AddMoney(targetSource, amount, 'bank', 'phone-transfer')
+    local addOk = Bridge.AddMoney(targetSource, amount, 'bank', 'phone-transfer')
     if not addOk then
-        AddMoney(source, totalDebit, 'bank', 'phone-transfer-revert')
+        Bridge.AddMoney(source, totalDebit, 'bank', 'phone-transfer-revert')
         return false, 'Transfer failed'
     end
 
-    local name = GetName(source)
-    local targetName = GetName(targetSource)
-    local myPhone = GetPhoneNumber(identifier)
+    local name = Bridge.GetName(source)
+    local targetName = Bridge.GetName(targetSource)
+    local myPhone = Bridge.GetPhoneNumber(identifier)
 
     -- Record sender transaction
     local feeLabel = fee > 0 and (' (fee: ' .. math.floor(fee * 100) .. '%)') or ''
@@ -116,7 +119,7 @@ lib.callback.register('gcphone:transferMoney', function(source, data)
 end)
 
 lib.callback.register('gcphone:getContactsForTransfer', function(source)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return {} end
 
     local contacts = MySQL.query.await(
@@ -126,7 +129,7 @@ lib.callback.register('gcphone:getContactsForTransfer', function(source)
 
     local result = {}
     for _, contact in ipairs(contacts) do
-        local contactIdentifier = GetIdentifierByPhone(contact.number)
+        local contactIdentifier = Bridge.GetIdentifierByPhone(contact.number)
         if contactIdentifier then
             result[#result + 1] = contact
         end
@@ -134,3 +137,5 @@ lib.callback.register('gcphone:getContactsForTransfer', function(source)
 
     return result
 end)
+
+return {}

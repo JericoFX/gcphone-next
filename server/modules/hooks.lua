@@ -108,11 +108,8 @@ exports('triggerHook', function(event, payload)
     return triggerHook(event, payload)
 end)
 
-GCPhone = GCPhone or {}
-GCPhone.RegisterHook = registerHook
-GCPhone.TriggerHook = triggerHook
-GCPhone.RemoveHooks = removeResourceHooks
-
-RegisterPhoneHook = registerHook
-TriggerPhoneHook = triggerHook
-RemovePhoneHooks = removeResourceHooks
+return {
+    registerHook = registerHook,
+    triggerHook = triggerHook,
+    removeResourceHooks = removeResourceHooks,
+}

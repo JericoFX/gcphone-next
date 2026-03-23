@@ -147,7 +147,7 @@ local function HandlePhoneInteraction(phoneId)
                 if result.payload then
                     ShowPhonePayload(result.payload)
                 else
-                    OpenPhoneUsingServerData()
+                    require('client.phone').OpenPhoneUsingServerData()
                 end
                 lib.notify({
                     title = 'Telefono desbloqueado',
@@ -308,3 +308,5 @@ AddEventHandler('onResourceStop', function(resourceName)
         lib.hideTextUI()
     end
 end)
+
+return {}

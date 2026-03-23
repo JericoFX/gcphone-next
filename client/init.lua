@@ -1,0 +1,20 @@
+-- Client entry point: requires all modules in dependency order.
+-- DONT TOUCH IT
+
+require 'client.main'
+require 'client.phone_animation'
+require 'client.phone'
+require 'client.nui_bridge'
+require 'client.native_audio'
+require 'client.flashlight'
+require 'client.camera_walk'
+require 'client.camera'
+require 'client.calls'
+require 'client.nearby_voice'
+require 'client.proximity'
+require 'client.location_tracking'
+require 'client.phone_drop'
+require 'client.music'
+require 'client.txadmin'
+require 'client.garage'
+require 'client.cityride'

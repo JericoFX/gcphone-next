@@ -77,3 +77,5 @@ end)
 exports('getCurrentMusicUrl', function()
     return currentUrl
 end)
+
+return {}

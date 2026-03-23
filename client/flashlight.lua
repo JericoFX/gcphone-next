@@ -1,3 +1,6 @@
+local PhoneState = require 'client.state'
+local CameraWalk = require 'client.camera_walk'
+
 local flashlightState = {
     enabled = false,
     threadActive = false,
@@ -8,11 +11,11 @@ local flashlightState = {
 local remoteFlashlights = {}
 
 local function IsPhoneRenderable()
-    if type(IsAdvancedPhoneCameraActive) == 'function' and IsAdvancedPhoneCameraActive() then
+    if type(CameraWalk.IsAdvancedPhoneCameraActive) == 'function' and CameraWalk.IsAdvancedPhoneCameraActive() then
         return true
     end
 
-    return PhoneState and PhoneState.isOpen == true
+    return PhoneState.isOpen == true
 end
 
 local function Clamp(value, minValue, maxValue)
@@ -206,15 +209,15 @@ local function SetFlashlightEnabled(enabled)
     return flashlightState.enabled
 end
 
-function SetPhoneFlashlightEnabled(enabled)
+local function SetPhoneFlashlightEnabled(enabled)
     return SetFlashlightEnabled(enabled)
 end
 
-function IsPhoneFlashlightEnabled()
+local function IsPhoneFlashlightEnabled()
     return flashlightState.enabled == true
 end
 
-function GetPhoneFlashlightProfile()
+local function GetPhoneFlashlightProfile()
     return GetFlashlightProfilePayload()
 end
 
@@ -331,3 +334,9 @@ do
     flashlightState.kelvin = defaultKelvin
     flashlightState.lumens = defaultLumens
 end
+
+return {
+    SetPhoneFlashlightEnabled = SetPhoneFlashlightEnabled,
+    IsPhoneFlashlightEnabled = IsPhoneFlashlightEnabled,
+    GetPhoneFlashlightProfile = GetPhoneFlashlightProfile,
+}

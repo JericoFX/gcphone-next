@@ -1,6 +1,8 @@
 -- Creado/Modificado por JericoFX
 
-local Utils = GcPhoneUtils
+local Bridge = require 'server.bridge'
+local Phone = require 'server.modules.phone'
+local Utils = require 'server.lib.utils'
 local LiveNewsDefaults = {
     es = { title = 'Transmision en vivo', content = 'Cobertura en vivo' },
     en = { title = 'Live broadcast', content = 'Live coverage' },
@@ -27,7 +29,7 @@ local function IsPublishJobAllowed(source)
         return true
     end
 
-    local job = GetJob(source)
+    local job = Bridge.GetJob(source)
     local jobName = type(job) == 'table' and tostring(job.name or ''):lower() or ''
     if jobName == '' then
         return false
@@ -56,7 +58,7 @@ local function SanitizeScaleform(data)
 end
 
 local function ResolveAuthorProfile(identifier, source)
-    local fallback = GetName(source) or 'Unknown'
+    local fallback = Bridge.GetName(source) or 'Unknown'
     local account = MySQL.single.await(
         'SELECT username, display_name, avatar FROM phone_snap_accounts WHERE identifier = ? LIMIT 1',
         { identifier }
@@ -138,7 +140,7 @@ local function RemoveViewerFromLive(articleId, source, identifier)
         return false
     end
 
-    local key = identifier or GetIdentifier(source)
+    local key = identifier or Bridge.GetIdentifier(source)
     if not key or key == '' then return false end
     if not liveData.viewers[key] then return false end
 
@@ -275,7 +277,7 @@ lib.callback.register('gcphone:news:getLiveNews', function(source)
 end)
 
 lib.callback.register('gcphone:news:publishArticle', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false end
 
     if type(data) ~= 'table' then return false end
@@ -292,7 +294,7 @@ lib.callback.register('gcphone:news:publishArticle', function(source, data)
     end
 
     local verified = false
-    local job = GetJob(source)
+    local job = Bridge.GetJob(source)
     if job and (job.name == 'police' or job.name == 'news') then
         verified = true
     end
@@ -324,7 +326,7 @@ lib.callback.register('gcphone:news:publishArticle', function(source, data)
 end)
 
 lib.callback.register('gcphone:news:startLive', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false end
 
     data = type(data) == 'table' and data or {}
@@ -341,7 +343,7 @@ lib.callback.register('gcphone:news:startLive', function(source, data)
     end
 
     local verified = false
-    local job = GetJob(source)
+    local job = Bridge.GetJob(source)
     if job and (job.name == 'police' or job.name == 'news') then
         verified = true
     end
@@ -349,7 +351,7 @@ lib.callback.register('gcphone:news:startLive', function(source, data)
     local title = SanitizeText(data.title, 200)
     local content = SanitizeText(data.content, 3000)
     local category = SanitizeText(data.category, 30)
-    local lang = type(GetPhoneLanguageForSource) == 'function' and GetPhoneLanguageForSource(source, true) or 'es'
+    local lang = Phone.GetPhoneLanguageForSource(source, true) or 'es'
     local defaults = LiveNewsDefaults[lang] or LiveNewsDefaults.es
     if title == '' then title = defaults.title end
     if content == '' then content = defaults.content end
@@ -385,7 +387,7 @@ lib.callback.register('gcphone:news:startLive', function(source, data)
 end)
 
 lib.callback.register('gcphone:news:joinLive', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false, 'MISSING_IDENTIFIER' end
     if type(data) ~= 'table' then return false, 'INVALID_PAYLOAD' end
     if HitRateLimit(source, 'news_live_join', 1000, 4) then return false, 'RATE_LIMITED' end
@@ -434,7 +436,7 @@ lib.callback.register('gcphone:news:leaveLive', function(source, data)
 end)
 
 lib.callback.register('gcphone:news:sendLiveMessage', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false, 'MISSING_IDENTIFIER' end
     if type(data) ~= 'table' then return false, 'INVALID_PAYLOAD' end
     if HitRateLimit(source, 'news_live_message', 1200, 6) then return false, 'RATE_LIMITED' end
@@ -469,7 +471,7 @@ lib.callback.register('gcphone:news:sendLiveMessage', function(source, data)
 end)
 
 lib.callback.register('gcphone:news:sendLiveReaction', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false, 'MISSING_IDENTIFIER' end
     if type(data) ~= 'table' then return false, 'INVALID_PAYLOAD' end
     if HitRateLimit(source, 'news_live_reaction', 900, 8) then return false, 'RATE_LIMITED' end
@@ -498,7 +500,7 @@ lib.callback.register('gcphone:news:sendLiveReaction', function(source, data)
 end)
 
 lib.callback.register('gcphone:news:removeLiveMessage', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false, 'MISSING_IDENTIFIER' end
     if type(data) ~= 'table' then return false, 'INVALID_PAYLOAD' end
     if HitRateLimit(source, 'news_live_moderation', 1000, 5) then return false, 'RATE_LIMITED' end
@@ -524,7 +526,7 @@ lib.callback.register('gcphone:news:removeLiveMessage', function(source, data)
 end)
 
 lib.callback.register('gcphone:news:muteLiveUser', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false, 'MISSING_IDENTIFIER' end
     if type(data) ~= 'table' then return false, 'INVALID_PAYLOAD' end
     if HitRateLimit(source, 'news_live_moderation', 1000, 5) then return false, 'RATE_LIMITED' end
@@ -549,7 +551,7 @@ lib.callback.register('gcphone:news:muteLiveUser', function(source, data)
 end)
 
 lib.callback.register('gcphone:news:setScaleform', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false end
     if type(data) ~= 'table' then return false end
 
@@ -580,7 +582,7 @@ lib.callback.register('gcphone:news:getScaleform', function(source, articleId)
 end)
 
 lib.callback.register('gcphone:news:endLive', function(source, articleId)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false end
     if HitRateLimit(source, 'news_live_end', 1000, 3) then return false end
 
@@ -591,7 +593,7 @@ lib.callback.register('gcphone:news:endLive', function(source, articleId)
 end)
 
 lib.callback.register('gcphone:news:deleteArticle', function(source, articleId)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false end
     if HitRateLimit(source, 'news_delete', 1000, 3) then return false end
 
@@ -608,7 +610,7 @@ end)
 
 AddEventHandler('playerDropped', function()
     local src = source
-    local identifier = GetIdentifier(src)
+    local identifier = Bridge.GetIdentifier(src)
 
     for articleId, liveData in pairs(ActiveLiveNews) do
         if type(liveData) == 'table' and liveData.source == src then
@@ -649,3 +651,5 @@ CreateThread(function()
         end
     end)
 end)
+
+return {}

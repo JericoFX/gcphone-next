@@ -106,3 +106,5 @@ AddEventHandler('onResourceStop', function(resourceName)
     if resourceName ~= cache.resource or not RetentionTimer then return end
     RetentionTimer:forceEnd(false)
 end)
+
+return {}

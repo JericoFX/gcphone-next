@@ -1,4 +1,5 @@
 -- Creado/Modificado por JericoFX
+local PhoneState = require 'client.state'
 
 local ox_target = exports.ox_target
 
@@ -8,7 +9,7 @@ local function IsPhoneOpenSafe()
         return exports[resource]:IsPhoneOpen()
     end)
     if ok then return open and true or false end
-    return PhoneState and PhoneState.isOpen or false
+    return PhoneState.isOpen or false
 end
 
 local function GetNearbyPlayers(maxDistance)
@@ -694,3 +695,5 @@ exports('GetSnapLiveAudioStatus', GetLiveAudioStatus)
 ---@param maxDistance number
 ---@return GCNearbyPlayerEntry[]
 exports('GetNearbyPlayers', GetNearbyPlayers)
+
+return {}
