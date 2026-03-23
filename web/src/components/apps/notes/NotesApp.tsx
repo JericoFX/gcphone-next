@@ -8,6 +8,7 @@ import { AppScaffold } from '../../shared/layout';
 import { ScreenState } from '../../shared/ui/ScreenState';
 import { getStoredLanguage, t } from '../../../i18n';
 import { ActionSheet } from '../../shared/ui/ActionSheet';
+import { ShareSheet, type SharePayload } from '../../shared/ui/ShareSheet';
 import styles from './NotesApp.module.scss';
 
 interface NoteItem {
@@ -88,8 +89,13 @@ export function NotesApp() {
     if (active()?.id === id) closeComposer();
   };
 
-  const shareNoteByMail = (note: Pick<NoteItem, 'title' | 'content'>) => {
-    router.navigate('mail', { compose: '1', subject: note.title || t('notes.shared_note', language()) || 'Nota compartida', body: note.content || '' });
+  const [sharePayload, setSharePayload] = createSignal<SharePayload | null>(null);
+
+  const shareNote = (note: Pick<NoteItem, 'title' | 'content'>) => {
+    setSharePayload({
+      text: note.content || '',
+      subject: note.title || t('notes.shared_note', language()) || 'Nota compartida',
+    });
   };
 
   const notePreview = (note: Pick<NoteItem, 'content'>) => {
@@ -119,8 +125,8 @@ export function NotesApp() {
                   <span class={styles.eyebrow}>{active() ? (t('notes.editing', language()) || 'EDITANDO') : (t('notes.new_note', language()) || 'NUEVA NOTA')}</span>
                   <h3>{active() ? (t('notes.adjust', language()) || 'Ajusta tu nota') : (t('notes.write_quick', language()) || 'Escribe algo rapido')}</h3>
                 </div>
-                <button class={`ios-btn ${styles.mailButton}`} onClick={() => shareNoteByMail({ title: title(), content: content() })}>
-                  Mail
+                <button class={`ios-btn ${styles.mailButton}`} onClick={() => shareNote({ title: title(), content: content() })}>
+                  Compartir
                 </button>
               </div>
 
@@ -160,7 +166,7 @@ export function NotesApp() {
                       </div>
                       <p>{notePreview(note)}</p>
                       <div class={styles.actions}>
-                        <button class="ios-btn" onClick={() => shareNoteByMail(note)}>Mail</button>
+                        <button class="ios-btn" onClick={() => shareNote(note)}>Compartir</button>
                         <button class="ios-btn" onClick={() => openComposer(note)}>{t('action.edit', language()) || 'Editar'}</button>
                         <button class="ios-btn ios-btn-danger" onClick={() => void remove(note.id)}>{t('action.delete', language()) || 'Eliminar'}</button>
                       </div>
@@ -187,10 +193,10 @@ export function NotesApp() {
             },
           },
           {
-            label: 'Mail',
+            label: 'Compartir',
             onClick: () => {
               const note = ctxMenu.item();
-              if (note) shareNoteByMail(note);
+              if (note) shareNote(note);
               ctxMenu.close();
             },
           },
@@ -204,6 +210,12 @@ export function NotesApp() {
             },
           },
         ]}
+      />
+      <ShareSheet
+        open={sharePayload() !== null}
+        payload={sharePayload() || { text: '' }}
+        destinations={['messages', 'wavechat', 'mail']}
+        onClose={() => setSharePayload(null)}
       />
     </AppScaffold>
   );

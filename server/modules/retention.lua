@@ -76,6 +76,10 @@ local function PurgeOldRows()
     MySQL.query_async('DELETE FROM phone_darkrooms_posts WHERE created_at < (NOW() - INTERVAL ? DAY)', { days })
     MySQL.query_async('DELETE FROM phone_darkrooms_comments WHERE created_at < (NOW() - INTERVAL ? DAY)', { days })
     MySQL.query_async('DELETE FROM phone_social_notifications WHERE created_at < (NOW() - INTERVAL ? DAY)', { days })
+
+    -- Clear voice message audio_data after 3 days to prevent DB bloat (keep message row, just null the blob)
+    MySQL.query_async('UPDATE phone_messages SET audio_data = NULL WHERE message_type = ? AND audio_data IS NOT NULL AND `time` < (NOW() - INTERVAL 3 DAY)', { 'audio' })
+    MySQL.query_async('UPDATE phone_chat_group_messages SET audio_data = NULL WHERE message_type = ? AND audio_data IS NOT NULL AND created_at < (NOW() - INTERVAL 3 DAY)', { 'audio' })
 end
 
 local function ScheduleRetentionPurge()

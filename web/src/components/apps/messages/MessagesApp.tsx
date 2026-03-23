@@ -20,6 +20,7 @@ import { MediaLightbox } from '../../shared/ui/MediaLightbox';
 import { SkeletonList } from '../../shared/ui/SkeletonList';
 import { VirtualList } from '../../shared/ui/VirtualList';
 import { EmojiPickerButton } from '../../shared/ui/EmojiPicker';
+import { ShareSheet, type SharePayload } from '../../shared/ui/ShareSheet';
 import { AppFAB, AppScaffold } from '../../shared/layout';
 import { getStoredLanguage, t } from '../../../i18n';
 import styles from './MessagesApp.module.scss';
@@ -49,6 +50,7 @@ export function MessagesApp() {
   const ctxMenu = useContextMenu<any>();
   const [routeConversationName, setRouteConversationName] = createSignal('');
   const [replyTo, setReplyTo] = createSignal<{ id: number; snippet: string; sender: string } | null>(null);
+  const [forwardPayload, setForwardPayload] = createSignal<SharePayload | null>(null);
   const language = () => phoneState.settings.language || 'es';
 
   const getMediaUrl = (msg: any): string | undefined => sanitizeMediaUrl(msg.mediaUrl || msg.media_url) || undefined;
@@ -230,6 +232,14 @@ export function MessagesApp() {
     await messagesActions.react(messageId, emoji);
   };
 
+  const handleForward = (msg: any) => {
+    const mediaUrl = sanitizeMediaUrl(msg.mediaUrl || msg.media_url) || undefined;
+    setForwardPayload({
+      text: msg.message_type === 'audio' ? '' : sanitizeText(msg.message || '', 800),
+      mediaUrl,
+    });
+  };
+
   const media = useMediaAttachment({ onAttached: (url) => setAttachmentUrl(url) });
   
   const getContactName = (number: string) => {
@@ -289,6 +299,7 @@ export function MessagesApp() {
           replyTo={replyTo}
           onCancelReply={() => setReplyTo(null)}
           onReact={handleReact}
+          onForward={handleForward}
           onAttachGallery={media.attachFromGallery}
           onAttachCamera={media.attachFromCamera}
           onAttachUrl={media.attachByUrl}
@@ -361,6 +372,12 @@ export function MessagesApp() {
         </AppScaffold>
       </Show>
       <MediaLightbox url={viewerUrl()} onClose={() => setViewerUrl(null)} />
+      <ShareSheet
+        open={forwardPayload() !== null}
+        payload={forwardPayload() || { text: '' }}
+        destinations={['messages', 'wavechat', 'mail']}
+        onClose={() => setForwardPayload(null)}
+      />
 
       <ActionSheet
         open={ctxMenu.isOpen()}
@@ -464,6 +481,7 @@ function ConversationView(props: {
   replyTo: () => { id: number; snippet: string; sender: string } | null;
   onCancelReply: () => void;
   onReact: (messageId: number, emoji: string) => void;
+  onForward: (msg: any) => void;
   onAttachGallery: () => void;
   onAttachCamera: () => void;
   onAttachUrl: () => void;
@@ -688,16 +706,28 @@ function ConversationView(props: {
         title={t('messages.action_title', language())}
         onClose={() => setSelectedMessage(null)}
         actions={[
-          ...(!props.readOnly ? [{
-            label: 'Responder',
-            tone: 'primary' as const,
-            onClick: () => {
-              const msg = selectedMessage();
-              if (!msg) return;
-              props.onReply(msg.id);
-              setSelectedMessage(null);
+          ...(!props.readOnly ? [
+            {
+              label: 'Responder',
+              tone: 'primary' as const,
+              onClick: () => {
+                const msg = selectedMessage();
+                if (!msg) return;
+                props.onReply(msg.id);
+                setSelectedMessage(null);
+              },
             },
-          }] : []),
+            {
+              label: 'Reenviar',
+              tone: 'default' as const,
+              onClick: () => {
+                const msg = selectedMessage();
+                if (!msg) return;
+                props.onForward(msg);
+                setSelectedMessage(null);
+              },
+            },
+          ] : []),
           {
             label: t('messages.save_to_notes', language()),
             onClick: () => {
