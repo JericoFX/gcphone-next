@@ -15,7 +15,8 @@ This guide covers installing gcphone-next, configuring your server, and verifyin
 - **gcphone_sounds** resource (native audio bank)
 - A supported framework: **QBCore** (`qb-core`), **QBox** (`qbx_core`), or **ESX** (`es_extended`)
 - **Bun** (or Node.js) to build the web frontend
-- **Docker + Docker Compose** if you plan to self-host LiveKit for video calls
+- **Node.js** (or Bun) to run the Socket.IO server
+- **Docker + Docker Compose** *(optional)* if you plan to self-host LiveKit for video calls
 
 ## Installation
 
@@ -98,9 +99,9 @@ See the [LiveKit Setup Guide](/guides/livekit-setup) for manual setup and advanc
 
 ## server.cfg Convars
 
-### LiveKit (video calls)
+### LiveKit (optional — video calls)
 
-If you ran the setup wizard, it already printed these values for you. Otherwise, add them manually:
+LiveKit is **optional**. Only needed if you want video calls. If you ran the setup wizard, it already printed these values for you. Otherwise, add them manually:
 
 ```cfg
 setr livekit_host "ws://YOUR_SERVER_IP:7880"
@@ -113,16 +114,15 @@ setr livekit_max_call_duration "300"
 - `livekit_host` must start with `ws://` or `wss://`.
 - `livekit_api_key` and `livekit_api_secret` are **server-side only** -- never expose them in client or web code.
 
-### Socket.IO (optional real-time chat)
+### Socket.IO (required)
 
-If you want real-time chat via Socket.IO:
+The Socket.IO server handles real-time chat (Snap live, MatchMyLove, group messages). It is included in the main release zip under `socket-server/` and must be running for the phone to work properly.
 
 ```cfg
 setr gcphone_socket_host "ws://YOUR_SERVER_IP:3001"
 setr gcphone_socket_jwt_secret "YOUR_JWT_SECRET"
 ```
 
-- Socket.IO is **optional**. Only enable it if you actually use it.
 - The JWT secret must match the one configured on your Socket.IO server.
 - See the [Socket.IO Setup Guide](/guides/socket-setup) for details.
 
