@@ -2,10 +2,7 @@
 
 local Bridge = require 'server.bridge'
 
-local USE_SQL_CLEANUP_EVENTS = GetConvar('gcphone_sql_cleanup_events', '0') == '1'
 local ActiveLocationRecipients = {}
-local LastLiveLocationCleanupAt = 0
-local LIVE_LOCATION_CLEANUP_MS = 60000
 local LastLocationUpdateAt = {}
 
 local function RebuildRecipientCache()
@@ -84,33 +81,11 @@ local function GetPlayerByPhone(phoneNumber)
     return nil
 end
 
-local function CleanExpiredLocations()
-    MySQL.query.await('DELETE FROM phone_live_locations WHERE expires_at < NOW()')
-    RebuildRecipientCache()
-    LastLiveLocationCleanupAt = GetGameTimer()
-end
-
-local function CleanupExpiredLocationsIfNeeded()
-    if USE_SQL_CLEANUP_EVENTS then
-        return
-    end
-
-    local now = GetGameTimer()
-    if now - LastLiveLocationCleanupAt < LIVE_LOCATION_CLEANUP_MS then
-        return
-    end
-
-    CleanExpiredLocations()
-end
-
 RebuildRecipientCache()
 
-if not USE_SQL_CLEANUP_EVENTS then
-    -- Verified: CommunityOX ox_lib Cron/Server supports recurring minutely cleanup jobs
-    lib.cron.new('* * * * *', function()
-        CleanExpiredLocations()
-    end)
-end
+lib.cron.new('* * * * *', function()
+    RebuildRecipientCache()
+end)
 
 lib.callback.register('gcphone:liveLocation:start', function(source, data)
     local identifier = Bridge.GetIdentifier(source)
@@ -208,8 +183,6 @@ lib.callback.register('gcphone:liveLocation:getActive', function(source)
     if not myPhone then
         return { success = false, locations = {} }
     end
-
-    CleanupExpiredLocationsIfNeeded()
 
     local locations = MySQL.query.await(
         'SELECT sender_phone, sender_name, x, y, expires_at FROM phone_live_locations WHERE recipient_phone = ? AND expires_at > NOW()',

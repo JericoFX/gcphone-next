@@ -4,7 +4,6 @@ local Bridge = require 'server.bridge'
 local Phone = require 'server.modules.phone'
 local Utils = require 'server.lib.utils'
 
-local USE_SQL_CLEANUP_EVENTS = GetConvar('gcphone_sql_cleanup_events', '0') == '1'
 local SharedLocationLabels = {
     es = 'Ubicacion compartida',
     en = 'Shared location',
@@ -339,14 +338,5 @@ lib.callback.register('gcphone:proximity:sharePost', function(source, data)
 
     return true
 end)
-
-if not USE_SQL_CLEANUP_EVENTS then
-    -- Verified: CommunityOX ox_lib Cron/Server runs cron expressions with minute precision
-    lib.cron.new('* * * * *', function()
-        MySQL.execute.await(
-            'DELETE FROM phone_shared_locations WHERE expires_at IS NOT NULL AND expires_at < NOW()'
-        )
-    end)
-end
 
 return {}

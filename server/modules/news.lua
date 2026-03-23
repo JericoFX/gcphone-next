@@ -95,7 +95,7 @@ local function DeleteLiveArticle(articleId, identifier)
             return false
         end
     else
-        MySQL.execute.await(
+        MySQL.update.await(
             'DELETE FROM phone_news WHERE id = ? AND is_live = 1',
             { id }
         )
@@ -600,7 +600,7 @@ lib.callback.register('gcphone:news:deleteArticle', function(source, articleId)
     local id = tonumber(articleId)
     if not id or id < 1 then return false end
     
-    MySQL.execute.await(
+    MySQL.update.await(
         'DELETE FROM phone_news WHERE id = ? AND identifier = ?',
         { id, identifier }
     )
@@ -639,7 +639,7 @@ lib.callback.register('gcphone:news:getCategories', function(source)
 end)
 
 CreateThread(function()
-    MySQL.execute.await('DELETE FROM phone_news WHERE is_live = 1')
+    MySQL.update.await('DELETE FROM phone_news WHERE is_live = 1')
 
     -- Verified: CommunityOX ox_lib Cron/Server exposes lib.cron.new(expression, job, options)
     lib.cron.new('* * * * *', function()

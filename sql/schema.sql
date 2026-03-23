@@ -1176,6 +1176,10 @@ BEGIN
     -- Retention-based cleanup (90 days)
     CALL sp_gcphone_cleanup_add_rule('retention_mail_messages', 'delete', 'phone_mail_messages', NULL, 'created_at < (NOW() - INTERVAL 90 DAY)', 60);
     CALL sp_gcphone_cleanup_add_rule('retention_services_ratings', 'delete', 'phone_services_ratings', NULL, 'created_at < (NOW() - INTERVAL 90 DAY)', 120);
+
+    -- Voice audio_data cleanup (3 days) — null the blob, keep the message row
+    CALL sp_gcphone_cleanup_add_rule('retention_audio_messages', 'update', 'phone_messages', 'audio_data = NULL', 'message_type = ''audio'' AND audio_data IS NOT NULL AND `time` < (NOW() - INTERVAL 3 DAY)', 30);
+    CALL sp_gcphone_cleanup_add_rule('retention_audio_group_messages', 'update', 'phone_chat_group_messages', 'audio_data = NULL', 'message_type = ''audio'' AND audio_data IS NOT NULL AND created_at < (NOW() - INTERVAL 3 DAY)', 30);
 END$$
 
 -- Cleanup runner — iterates due rules, builds and executes SQL (V4)
@@ -1584,6 +1588,66 @@ CREATE TRIGGER `trg_services_ratings_ad`
     WHERE `id` = OLD.`service_id`$$
 
 DELIMITER ;
+
+-- ============================================================
+-- MIGRATIONS — safe to re-run
+-- ============================================================
+
+-- Helper: adds a column only if it doesn't already exist.
+DROP PROCEDURE IF EXISTS `sp_gcphone_add_column`;
+
+DELIMITER $$
+CREATE PROCEDURE `sp_gcphone_add_column`(
+    IN p_table VARCHAR(64),
+    IN p_column VARCHAR(64),
+    IN p_definition VARCHAR(500)
+)
+BEGIN
+    DECLARE col_exists INT DEFAULT 0;
+    SELECT COUNT(*) INTO col_exists
+    FROM information_schema.columns
+    WHERE table_schema = DATABASE()
+      AND table_name = p_table
+      AND column_name = p_column;
+    IF col_exists = 0 THEN
+        SET @ddl = CONCAT('ALTER TABLE `', p_table, '` ADD COLUMN `', p_column, '` ', p_definition);
+        PREPARE stmt FROM @ddl;
+        EXECUTE stmt;
+        DEALLOCATE PREPARE stmt;
+    END IF;
+END$$
+DELIMITER ;
+
+-- phone_numbers
+CALL sp_gcphone_add_column('phone_numbers', 'imei',              "VARCHAR(20) NULL DEFAULT NULL AFTER `phone_number`");
+CALL sp_gcphone_add_column('phone_numbers', 'call_ringtone',     "VARCHAR(64) DEFAULT 'call_1' AFTER `ringtone`");
+CALL sp_gcphone_add_column('phone_numbers', 'notification_tone', "VARCHAR(64) DEFAULT 'notif_1' AFTER `call_ringtone`");
+CALL sp_gcphone_add_column('phone_numbers', 'message_tone',      "VARCHAR(64) DEFAULT 'msg_1' AFTER `notification_tone`");
+CALL sp_gcphone_add_column('phone_numbers', 'pin_hash',          "CHAR(64) NULL AFTER `lock_code`");
+CALL sp_gcphone_add_column('phone_numbers', 'audio_profile',     "VARCHAR(16) DEFAULT 'normal' AFTER `language`");
+CALL sp_gcphone_add_column('phone_numbers', 'streamer_mode',     "TINYINT(1) NOT NULL DEFAULT 0 AFTER `audio_profile`");
+CALL sp_gcphone_add_column('phone_numbers', 'is_stolen',         "TINYINT(1) NOT NULL DEFAULT 0");
+CALL sp_gcphone_add_column('phone_numbers', 'stolen_at',         "TIMESTAMP NULL DEFAULT NULL AFTER `is_stolen`");
+CALL sp_gcphone_add_column('phone_numbers', 'stolen_reason',     "VARCHAR(255) DEFAULT NULL AFTER `stolen_at`");
+CALL sp_gcphone_add_column('phone_numbers', 'stolen_reporter',   "VARCHAR(80) DEFAULT NULL AFTER `stolen_reason`");
+CALL sp_gcphone_add_column('phone_numbers', 'clips_username',    "VARCHAR(32) NULL");
+
+-- phone_messages
+CALL sp_gcphone_add_column('phone_messages', 'time',             "TIMESTAMP DEFAULT CURRENT_TIMESTAMP");
+CALL sp_gcphone_add_column('phone_messages', 'media_url',        "VARCHAR(500) DEFAULT NULL");
+CALL sp_gcphone_add_column('phone_messages', 'reply_to_id',      "INT DEFAULT NULL");
+CALL sp_gcphone_add_column('phone_messages', 'message_type',     "VARCHAR(10) NOT NULL DEFAULT 'text'");
+CALL sp_gcphone_add_column('phone_messages', 'audio_data',       "MEDIUMTEXT DEFAULT NULL");
+CALL sp_gcphone_add_column('phone_messages', 'audio_duration',   "SMALLINT DEFAULT NULL");
+CALL sp_gcphone_add_column('phone_messages', 'status',           "VARCHAR(10) NOT NULL DEFAULT 'sent'");
+CALL sp_gcphone_add_column('phone_messages', 'delivered_at',     "TIMESTAMP NULL DEFAULT NULL");
+CALL sp_gcphone_add_column('phone_messages', 'read_at',          "TIMESTAMP NULL DEFAULT NULL");
+
+-- phone_calls
+CALL sp_gcphone_add_column('phone_calls', 'time',               "TIMESTAMP DEFAULT CURRENT_TIMESTAMP");
+
+-- Cleanup helper
+DROP PROCEDURE IF EXISTS `sp_gcphone_add_column`;
 
 -- ============================================================
 -- END OF SCHEMA

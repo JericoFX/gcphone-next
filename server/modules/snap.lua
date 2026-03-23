@@ -96,7 +96,7 @@ AddEventHandler('playerDropped', function()
 
     for liveId, stream in pairs(ActiveStreams) do
         if type(stream) == 'table' and stream.source == src then
-            MySQL.execute.await(
+            MySQL.update.await(
                 'DELETE FROM phone_snap_posts WHERE id = ? AND is_live = 1',
                 { liveId }
             )
@@ -797,7 +797,7 @@ lib.callback.register('gcphone:snap:toggleLike', function(source, data)
 
     local liked = false
     if existing then
-        MySQL.execute.await(
+        MySQL.update.await(
             'DELETE FROM phone_snap_likes WHERE post_id = ? AND account_id = ?',
             { postId, account.id }
         )
@@ -834,7 +834,7 @@ lib.callback.register('gcphone:snap:deletePost', function(source, postId)
     local account = GetAccount(identifier)
     if not account then return false end
     
-    MySQL.execute.await(
+    MySQL.update.await(
         'DELETE FROM phone_snap_posts WHERE id = ? AND account_id = ?',
         { postId, account.id }
     )
@@ -857,7 +857,7 @@ lib.callback.register('gcphone:snap:deleteStory', function(source, storyId)
     local id = tonumber(storyId)
     if not id then return false end
 
-    MySQL.execute.await(
+    MySQL.update.await(
         'DELETE FROM phone_snap_stories WHERE id = ? AND account_id = ?',
         { id, account.id }
     )
@@ -917,7 +917,7 @@ lib.callback.register('gcphone:snap:endLive', function(source, postId)
         return false
     end
     
-    MySQL.execute.await(
+    MySQL.update.await(
         'DELETE FROM phone_snap_posts WHERE id = ? AND is_live = 1',
         { id }
     )
@@ -1213,7 +1213,7 @@ lib.callback.register('gcphone:snap:follow', function(source, data)
     )
     
     if existing then
-        MySQL.execute.await(
+        MySQL.update.await(
             'DELETE FROM phone_snap_following WHERE follower_id = ? AND following_id = ?',
             { account.id, targetAccountId }
         )

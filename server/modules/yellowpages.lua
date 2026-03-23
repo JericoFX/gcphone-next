@@ -157,7 +157,7 @@ lib.callback.register('gcphone:yellowpages:deleteListing', function(source, list
     local id = tonumber(listingId)
     if not id then return false end
 
-    MySQL.execute.await('DELETE FROM phone_market WHERE id = ? AND identifier = ?', { id, identifier })
+    MySQL.update.await('DELETE FROM phone_market WHERE id = ? AND identifier = ?', { id, identifier })
     return true
 end)
 

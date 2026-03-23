@@ -60,7 +60,7 @@ lib.callback.register('gcphone:notes:delete', function(source, data)
     local noteId = tonumber(data.id)
     if not noteId then return false end
 
-    MySQL.execute.await('DELETE FROM phone_notes WHERE id = ? AND identifier = ?', { noteId, identifier })
+    MySQL.update.await('DELETE FROM phone_notes WHERE id = ? AND identifier = ?', { noteId, identifier })
     return true
 end)
 

@@ -216,19 +216,19 @@ lib.callback.register('gcphone:matchmylove:deleteProfile', function(source)
     ]], { identifier, identifier })
 
     -- Delete matches
-    MySQL.execute.await(
+    MySQL.update.await(
         'DELETE FROM phone_matchmylove_matches WHERE profile_a_id = ? OR profile_b_id = ?',
         { identifier, identifier }
     )
 
     -- Delete swipes
-    MySQL.execute.await(
+    MySQL.update.await(
         'DELETE FROM phone_matchmylove_swipes WHERE swiper_id = ? OR target_id = ?',
         { identifier, identifier }
     )
 
     -- Delete profile
-    MySQL.execute.await(
+    MySQL.update.await(
         'DELETE FROM phone_matchmylove_profiles WHERE identifier = ?',
         { identifier }
     )
@@ -501,13 +501,13 @@ lib.callback.register('gcphone:matchmylove:unmatch', function(source, data)
     if not match then return false, 'NOT_PARTICIPANT' end
 
     -- Delete messages first
-    MySQL.execute.await(
+    MySQL.update.await(
         'DELETE FROM phone_matchmylove_messages WHERE match_id = ?',
         { matchId }
     )
 
     -- Delete the match
-    MySQL.execute.await(
+    MySQL.update.await(
         'DELETE FROM phone_matchmylove_matches WHERE id = ?',
         { matchId }
     )

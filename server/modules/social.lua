@@ -128,7 +128,7 @@ lib.callback.register('gcphone:social:deleteNotification', function(source, data
     local notificationId = tonumber(data.notificationId)
     if not notificationId or notificationId < 1 then return false end
 
-    MySQL.execute.await(
+    MySQL.update.await(
         'DELETE FROM phone_social_notifications WHERE id = ? AND account_identifier = ?',
         { notificationId, identifier }
     )

@@ -209,7 +209,7 @@ lib.callback.register('gcphone:clips:deletePost', function(source, postId)
     local id = tonumber(postId)
     if not id then return false end
 
-    MySQL.execute.await('DELETE FROM phone_clips_posts WHERE id = ? AND account_id = ?', { id, account.id })
+    MySQL.update.await('DELETE FROM phone_clips_posts WHERE id = ? AND account_id = ?', { id, account.id })
     return true
 end)
 
@@ -308,7 +308,7 @@ lib.callback.register('gcphone:clips:deleteComment', function(source, data)
     local account = GetSnapAccount(identifier)
     if not account then return false end
 
-    MySQL.execute.await(
+    MySQL.update.await(
         'DELETE FROM phone_clips_comments WHERE id = ? AND account_id = ?',
         { commentId, account.id }
     )

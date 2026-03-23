@@ -163,7 +163,7 @@ lib.callback.register('gcphone:market:deleteListing', function(source, listingId
     local identifier = GetIdentifier(source)
     if not identifier then return false end
     
-    MySQL.execute.await(
+    MySQL.update.await(
         'DELETE FROM phone_market WHERE id = ? AND identifier = ?',
         { listingId, identifier }
     )

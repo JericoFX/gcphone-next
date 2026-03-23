@@ -215,7 +215,7 @@ lib.callback.register('gcphone:deleteCallHistory', function(source, phoneNumber)
     local myNumber = Bridge.GetPhoneNumber(identifier)
     if not myNumber then return false end
 
-    MySQL.execute.await(
+    MySQL.update.await(
         'DELETE FROM phone_calls WHERE owner = ? AND num = ?',
         { myNumber, phoneNumber }
     )
@@ -231,7 +231,7 @@ lib.callback.register('gcphone:clearCallHistory', function(source)
     local myNumber = Bridge.GetPhoneNumber(identifier)
     if not myNumber then return false end
 
-    MySQL.execute.await(
+    MySQL.update.await(
         'DELETE FROM phone_calls WHERE owner = ?',
         { myNumber }
     )

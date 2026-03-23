@@ -301,7 +301,7 @@ lib.callback.register('gcphone:wallet:removeCard', function(source, data)
     local cardId = tonumber(type(data) == 'table' and data.cardId or nil)
     if not cardId then return { success = false, error = 'INVALID_CARD' } end
 
-    MySQL.execute.await('DELETE FROM phone_wallet_cards WHERE id = ? AND identifier = ?', { cardId, identifier })
+    MySQL.update.await('DELETE FROM phone_wallet_cards WHERE id = ? AND identifier = ?', { cardId, identifier })
     return { success = true }
 end)
 

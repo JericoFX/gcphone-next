@@ -204,7 +204,7 @@ lib.callback.register('gcphone:services:deleteService', function(source)
     local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false end
 
-    MySQL.execute.await('DELETE FROM phone_services WHERE identifier = ?', { identifier })
+    MySQL.update.await('DELETE FROM phone_services WHERE identifier = ?', { identifier })
     return true
 end)
 
@@ -258,7 +258,7 @@ lib.callback.register('gcphone:services:rateWorker', function(source, data)
     )
 
     if existing then
-        MySQL.execute.await(
+        MySQL.update.await(
             'UPDATE phone_services_ratings SET score = ? WHERE service_id = ? AND rater_identifier = ?',
             { score, serviceId, identifier }
         )

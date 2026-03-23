@@ -36,7 +36,7 @@ lib.callback.register('gcphone:deletePhoto', function(source, photoId)
     local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false end
 
-    MySQL.execute.await(
+    MySQL.update.await(
         'DELETE FROM phone_gallery WHERE id = ? AND identifier = ?',
         { photoId, identifier }
     )

@@ -1,28 +1,6 @@
 -- Creado/Modificado por JericoFX
-
-local USE_SQL_CLEANUP_EVENTS = GetConvar('gcphone_sql_cleanup_events', '0') == '1'
-local RetentionTimer = nil
-
-local function ClampNumber(value, minValue, maxValue, fallback)
-    local num = tonumber(value)
-    if not num then return fallback end
-    if num < minValue then num = minValue end
-    if num > maxValue then num = maxValue end
-    return math.floor(num)
-end
-
-local function GetRetentionDays()
-    local defaultDays = 7
-    local configured = GetConvar('gcphone_retention_days', tostring(defaultDays))
-    return ClampNumber(configured, 1, 90, defaultDays)
-end
-
-local function GetIntervalMs()
-    local defaultMinutes = 30
-    local configured = GetConvar('gcphone_retention_interval_minutes', tostring(defaultMinutes))
-    local minutes = ClampNumber(configured, 5, 240, defaultMinutes)
-    return minutes * 60 * 1000
-end
+-- Retention cleanup is handled by the SQL event scheduler (ev_gcphone_cleanup_runner).
+-- This module only ensures required indexes exist on startup.
 
 local function EnsureIndex(tableName, indexName, ddl)
     local exists = MySQL.scalar.await(
@@ -53,62 +31,14 @@ local function EnsureRetentionIndexes()
     EnsureIndex('phone_clips_posts', 'idx_clips_posts_created', 'ALTER TABLE phone_clips_posts ADD INDEX idx_clips_posts_created (`created_at`)')
     EnsureIndex('phone_news', 'idx_phone_news_created', 'ALTER TABLE phone_news ADD INDEX idx_phone_news_created (`created_at`)')
     EnsureIndex('phone_news', 'idx_news_live_created', 'ALTER TABLE phone_news ADD INDEX idx_news_live_created (`is_live`, `created_at`)')
-
     EnsureIndex('phone_darkrooms_posts', 'idx_darkrooms_posts_created', 'ALTER TABLE phone_darkrooms_posts ADD INDEX idx_darkrooms_posts_created (`created_at`)')
     EnsureIndex('phone_darkrooms_comments', 'idx_darkrooms_comments_created', 'ALTER TABLE phone_darkrooms_comments ADD INDEX idx_darkrooms_comments_created (`created_at`)')
     EnsureIndex('phone_social_notifications', 'idx_social_notifications_created', 'ALTER TABLE phone_social_notifications ADD INDEX idx_social_notifications_created (`created_at`)')
 end
 
-local function PurgeOldRows()
-    local days = GetRetentionDays()
-
-    MySQL.query_async('DELETE FROM phone_messages WHERE `time` < (NOW() - INTERVAL ? DAY)', { days })
-    MySQL.query_async('DELETE FROM phone_chat_group_messages WHERE created_at < (NOW() - INTERVAL ? DAY)', { days })
-    MySQL.query_async("DELETE FROM phone_chat_group_invites WHERE (status != 'pending' AND created_at < (NOW() - INTERVAL 14 DAY)) OR created_at < (NOW() - INTERVAL 30 DAY)", {})
-    MySQL.query_async('DELETE FROM phone_wavechat_statuses WHERE expires_at < NOW()', {})
-    MySQL.query_async('DELETE FROM phone_calls WHERE `time` < (NOW() - INTERVAL ? DAY)', { days })
-    MySQL.query_async('DELETE FROM phone_chirp_tweets WHERE created_at < (NOW() - INTERVAL ? DAY)', { days })
-    MySQL.query_async('DELETE FROM phone_snap_posts WHERE created_at < (NOW() - INTERVAL ? DAY)', { days })
-    MySQL.query_async('DELETE FROM phone_snap_stories WHERE expires_at < NOW() OR created_at < (NOW() - INTERVAL ? DAY)', { days })
-    MySQL.query_async('DELETE FROM phone_clips_posts WHERE created_at < (NOW() - INTERVAL ? DAY)', { days })
-    MySQL.query_async('DELETE FROM phone_news WHERE is_live = 0 AND created_at < (NOW() - INTERVAL 10 DAY)', {})
-
-    MySQL.query_async('DELETE FROM phone_darkrooms_posts WHERE created_at < (NOW() - INTERVAL ? DAY)', { days })
-    MySQL.query_async('DELETE FROM phone_darkrooms_comments WHERE created_at < (NOW() - INTERVAL ? DAY)', { days })
-    MySQL.query_async('DELETE FROM phone_social_notifications WHERE created_at < (NOW() - INTERVAL ? DAY)', { days })
-
-    -- Clear voice message audio_data after 3 days to prevent DB bloat (keep message row, just null the blob)
-    MySQL.query_async('UPDATE phone_messages SET audio_data = NULL WHERE message_type = ? AND audio_data IS NOT NULL AND `time` < (NOW() - INTERVAL 3 DAY)', { 'audio' })
-    MySQL.query_async('UPDATE phone_chat_group_messages SET audio_data = NULL WHERE message_type = ? AND audio_data IS NOT NULL AND created_at < (NOW() - INTERVAL 3 DAY)', { 'audio' })
-end
-
-local function ScheduleRetentionPurge()
-    if USE_SQL_CLEANUP_EVENTS then
-        return
-    end
-
-    -- Verified: CommunityOX ox_lib Timer/Shared exposes lib.timer(time, onEnd, async)
-    RetentionTimer = lib.timer(GetIntervalMs(), function()
-        PurgeOldRows()
-        ScheduleRetentionPurge()
-    end, true)
-end
-
 CreateThread(function()
     Wait(3000)
     EnsureRetentionIndexes()
-
-    if USE_SQL_CLEANUP_EVENTS then
-        return
-    end
-
-    PurgeOldRows()
-    ScheduleRetentionPurge()
-end)
-
-AddEventHandler('onResourceStop', function(resourceName)
-    if resourceName ~= cache.resource or not RetentionTimer then return end
-    RetentionTimer:forceEnd(false)
 end)
 
 return {}

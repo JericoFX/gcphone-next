@@ -313,7 +313,7 @@ lib.callback.register('gcphone:darkrooms:votePost', function(source, data)
     local nextValue = vote
 
     if previousValue == vote then
-        MySQL.execute.await('DELETE FROM phone_darkrooms_votes WHERE post_id = ? AND identifier = ?', { postId, identifier })
+        MySQL.update.await('DELETE FROM phone_darkrooms_votes WHERE post_id = ? AND identifier = ?', { postId, identifier })
         nextValue = 0
     else
         MySQL.insert.await(

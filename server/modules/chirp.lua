@@ -455,7 +455,7 @@ lib.callback.register('gcphone:chirp:toggleLike', function(source, data)
     )
     
     if existing then
-        MySQL.execute.await(
+        MySQL.update.await(
             'DELETE FROM phone_chirp_likes WHERE tweet_id = ? AND account_id = ?',
             { tweetId, account.id }
         )
@@ -498,7 +498,7 @@ lib.callback.register('gcphone:chirp:toggleRechirp', function(source, data)
     
     if existing then
         -- Remove rechirp
-        MySQL.execute.await(
+        MySQL.update.await(
             'DELETE FROM phone_chirp_rechirps WHERE original_tweet_id = ? AND account_id = ?',
             { tweetId, account.id }
         )
@@ -603,7 +603,7 @@ lib.callback.register('gcphone:chirp:deleteComment', function(source, data)
     
     if not comment then return false end
     
-    MySQL.execute.await(
+    MySQL.update.await(
         'DELETE FROM phone_chirp_comments WHERE id = ? AND account_id = ?',
         { commentId, account.id }
     )
@@ -623,7 +623,7 @@ lib.callback.register('gcphone:chirp:deleteTweet', function(source, tweetId)
     local account = GetAccount(identifier)
     if not account then return false end
     
-    MySQL.execute.await(
+    MySQL.update.await(
         'DELETE FROM phone_chirp_tweets WHERE id = ? AND account_id = ?',
         { tweetId, account.id }
     )
@@ -669,7 +669,7 @@ lib.callback.register('gcphone:chirp:follow', function(source, data)
     )
     
     if existing then
-        MySQL.execute.await(
+        MySQL.update.await(
             'DELETE FROM phone_chirp_following WHERE follower_id = ? AND following_id = ?',
             { account.id, targetAccountId }
         )

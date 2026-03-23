@@ -385,7 +385,7 @@ lib.callback.register('gcphone:deleteMessage', function(source, messageId)
     local id = ToPositiveInt(messageId)
     if not id then return false end
 
-    MySQL.execute.await(
+    MySQL.update.await(
         'DELETE FROM phone_messages WHERE id = ? AND (receiver = ? OR transmitter = ?)',
         { id, myNumber, myNumber }
     )
@@ -404,7 +404,7 @@ lib.callback.register('gcphone:deleteConversation', function(source, phoneNumber
     local targetPhone = SanitizePhoneNumber(phoneNumber)
     if targetPhone == '' then return false end
 
-    MySQL.execute.await(
+    MySQL.update.await(
         'DELETE FROM phone_messages WHERE (receiver = ? AND transmitter = ?) OR (receiver = ? AND transmitter = ?)',
         { myNumber, targetPhone, targetPhone, myNumber }
     )
@@ -869,7 +869,7 @@ lib.callback.register('gcphone:removeReaction', function(source, data)
     local messageId = ToPositiveInt(data.messageId)
     if not messageId then return false end
 
-    MySQL.execute.await(
+    MySQL.update.await(
         'DELETE FROM phone_message_reactions WHERE message_id = ? AND sender_phone = ?',
         { messageId, myNumber }
     )

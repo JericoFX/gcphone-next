@@ -106,7 +106,7 @@ lib.callback.register('gcphone:deleteContact', function(source, contactId)
         { id, identifier }
     )
 
-    MySQL.execute.await(
+    MySQL.update.await(
         'DELETE FROM phone_contacts WHERE id = ? AND identifier = ?',
         { id, identifier }
     )
