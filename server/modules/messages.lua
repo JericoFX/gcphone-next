@@ -219,7 +219,13 @@ local function GetConversation(identifier, phoneNumber)
     if not myNumber then return {} end
 
     return MySQL.query.await(
-        'SELECT * FROM phone_messages WHERE (receiver = ? AND transmitter = ?) OR (receiver = ? AND transmitter = ?) ORDER BY time ASC',
+        [[SELECT m.id, m.transmitter, m.receiver, m.message, m.media_url, m.is_read, m.owner, m.time,
+                 m.status, m.delivered_at, m.read_at, m.message_type, m.audio_data, m.audio_duration, m.reply_to_id,
+                 r.message AS reply_snippet, r.transmitter AS reply_sender
+          FROM phone_messages m
+          LEFT JOIN phone_messages r ON r.id = m.reply_to_id
+          WHERE (m.receiver = ? AND m.transmitter = ?) OR (m.receiver = ? AND m.transmitter = ?)
+          ORDER BY m.time ASC]],
         { myNumber, phoneNumber, phoneNumber, myNumber }
     ) or {}
 end
@@ -255,6 +261,10 @@ lib.callback.register('gcphone:sendMessage', function(source, data)
     local targetPhone = SanitizePhoneNumber(data.phoneNumber)
     local message = SanitizeText(data.message, 800)
     local mediaUrl = SanitizeMediaUrl(data.mediaUrl)
+    local replyToId = ToPositiveInt(data.replyToId)
+    local messageType = (data.messageType == 'audio') and 'audio' or 'text'
+    local audioData = nil
+    local audioDuration = nil
 
     if targetPhone == '' then
         return false, 'Invalid number'
@@ -264,7 +274,21 @@ lib.callback.register('gcphone:sendMessage', function(source, data)
         return false, 'Invalid number'
     end
 
-    if message == '' and not mediaUrl then
+    -- Voice message validation
+    if messageType == 'audio' then
+        if type(data.audioData) ~= 'string' or #data.audioData < 100 or #data.audioData > 153600 then
+            return false, 'INVALID_AUDIO'
+        end
+        audioData = data.audioData
+        audioDuration = math.floor(math.max(1, math.min(tonumber(data.audioDuration) or 0, 30)))
+        message = '[Audio]'
+        -- Stricter rate limit for audio
+        if Utils.HitRateLimit(source, 'voice_msg', 3000, 1) then
+            return false, 'RATE_LIMITED'
+        end
+    end
+
+    if message == '' and not mediaUrl and not audioData then
         return false, 'Invalid data'
     end
 
@@ -274,18 +298,30 @@ lib.callback.register('gcphone:sendMessage', function(source, data)
         message = string.format('GPS: %.2f, %.2f', coords.x, coords.y)
     end
 
+    -- Validate replyToId belongs to this conversation
+    if replyToId then
+        local replyMsg = MySQL.single.await(
+            'SELECT id FROM phone_messages WHERE id = ? AND ((transmitter = ? AND receiver = ?) OR (transmitter = ? AND receiver = ?)) LIMIT 1',
+            { replyToId, myNumber, targetPhone, targetPhone, myNumber }
+        )
+        if not replyMsg then replyToId = nil end
+    end
+
     local targetIdentifier = Bridge.GetIdentifierByPhone(targetPhone)
     if targetIdentifier and Utils.IsBlockedEither(identifier, targetIdentifier, myNumber, targetPhone) then
         return false, 'BLOCKED_CONTACT'
     end
 
+    local targetSource = targetIdentifier and Bridge.GetSourceFromIdentifier(targetIdentifier) or nil
+    local initialStatus = targetSource and 'delivered' or 'sent'
+
     local messageId = MySQL.insert.await(
-        'INSERT INTO phone_messages (transmitter, receiver, message, media_url, owner) VALUES (?, ?, ?, ?, ?)',
-        { myNumber, targetPhone, message, mediaUrl, 1 }
+        'INSERT INTO phone_messages (transmitter, receiver, message, media_url, owner, status, delivered_at, message_type, audio_data, audio_duration, reply_to_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        { myNumber, targetPhone, message, mediaUrl, 1, initialStatus, targetSource and os.date('!%Y-%m-%d %H:%M:%S') or nil, messageType, audioData, audioDuration, replyToId }
     )
 
     local sentMessage = MySQL.single.await(
-        'SELECT * FROM phone_messages WHERE id = ?',
+        'SELECT id, transmitter, receiver, message, media_url, is_read, owner, time, status, delivered_at, read_at, message_type, audio_data, audio_duration, reply_to_id FROM phone_messages WHERE id = ?',
         { messageId }
     )
 
@@ -293,47 +329,43 @@ lib.callback.register('gcphone:sendMessage', function(source, data)
         TriggerClientEvent('gcphone:messageSent', source, sentMessage)
     end
 
-    if targetIdentifier then
-        local targetSource = Bridge.GetSourceFromIdentifier(targetIdentifier)
+    if targetIdentifier and targetSource then
+        local receivedId = MySQL.insert.await(
+            'INSERT INTO phone_messages (transmitter, receiver, message, media_url, owner, is_read, message_type, audio_data, audio_duration, reply_to_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            { myNumber, targetPhone, message, mediaUrl, 0, 0, messageType, audioData, audioDuration, replyToId }
+        )
 
-        if targetSource then
-            local receivedId = MySQL.insert.await(
-                'INSERT INTO phone_messages (transmitter, receiver, message, media_url, owner, is_read) VALUES (?, ?, ?, ?, ?, ?)',
-                { myNumber, targetPhone, message, mediaUrl, 0, 0 }
-            )
+        local receivedMessage = MySQL.single.await(
+            'SELECT id, transmitter, receiver, message, media_url, is_read, owner, time, message_type, audio_data, audio_duration, reply_to_id FROM phone_messages WHERE id = ?',
+            { receivedId }
+        )
 
-            local receivedMessage = MySQL.single.await(
-                'SELECT * FROM phone_messages WHERE id = ?',
-                { receivedId }
-            )
+        if receivedMessage then
+            TriggerClientEvent('gcphone:messageReceived', targetSource, receivedMessage)
+        end
 
-            if receivedMessage then
-                TriggerClientEvent('gcphone:messageReceived', targetSource, receivedMessage)
-            end
+        local autoReply = AutoReplyByIdentifier[targetIdentifier]
+        if autoReply and autoReply ~= '' and messageType ~= 'audio' then
+            local sentKey = targetIdentifier .. ':' .. identifier
+            local lastSent = AutoReplySentTo[sentKey] or 0
+            if GetGameTimer() - lastSent > 60000 then
+                AutoReplySentTo[sentKey] = GetGameTimer()
 
-            local autoReply = AutoReplyByIdentifier[targetIdentifier]
-            if autoReply and autoReply ~= '' then
-                local sentKey = targetIdentifier .. ':' .. identifier
-                local lastSent = AutoReplySentTo[sentKey] or 0
-                if GetGameTimer() - lastSent > 60000 then
-                    AutoReplySentTo[sentKey] = GetGameTimer()
+                local replyText = '[Auto] ' .. autoReply
 
-                    local replyText = '[Auto] ' .. autoReply
+                MySQL.insert.await(
+                    'INSERT INTO phone_messages (transmitter, receiver, message, media_url, owner, status, delivered_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                    { targetPhone, myNumber, replyText, nil, 1, 'delivered', os.date('!%Y-%m-%d %H:%M:%S') }
+                )
 
-                    MySQL.insert.await(
-                        'INSERT INTO phone_messages (transmitter, receiver, message, media_url, owner) VALUES (?, ?, ?, ?, ?)',
-                        { targetPhone, myNumber, replyText, nil, 1 }
-                    )
+                local replyForSender = MySQL.insert.await(
+                    'INSERT INTO phone_messages (transmitter, receiver, message, media_url, owner, is_read) VALUES (?, ?, ?, ?, ?, ?)',
+                    { targetPhone, myNumber, replyText, nil, 0, 0 }
+                )
 
-                    local replyForSender = MySQL.insert.await(
-                        'INSERT INTO phone_messages (transmitter, receiver, message, media_url, owner, is_read) VALUES (?, ?, ?, ?, ?, ?)',
-                        { targetPhone, myNumber, replyText, nil, 0, 0 }
-                    )
-
-                    local replyMsg = MySQL.single.await('SELECT * FROM phone_messages WHERE id = ?', { replyForSender })
-                    if replyMsg then
-                        TriggerClientEvent('gcphone:messageReceived', source, replyMsg)
-                    end
+                local replyMsg = MySQL.single.await('SELECT id, transmitter, receiver, message, media_url, is_read, owner, time, message_type, reply_to_id FROM phone_messages WHERE id = ?', { replyForSender })
+                if replyMsg then
+                    TriggerClientEvent('gcphone:messageReceived', source, replyMsg)
                 end
             end
         end
@@ -390,10 +422,27 @@ lib.callback.register('gcphone:markAsRead', function(source, phoneNumber)
     local targetPhone = SanitizePhoneNumber(phoneNumber)
     if targetPhone == '' then return false end
 
+    -- Mark receiver copies as read
     MySQL.update.await(
         'UPDATE phone_messages SET is_read = 1 WHERE receiver = ? AND transmitter = ? AND is_read = 0',
         { myNumber, targetPhone }
     )
+
+    -- Update sender copies with read status
+    local now = os.date('!%Y-%m-%d %H:%M:%S')
+    MySQL.update.await(
+        'UPDATE phone_messages SET status = ?, read_at = ? WHERE transmitter = ? AND receiver = ? AND owner = 1 AND status != ?',
+        { 'read', now, targetPhone, myNumber, 'read' }
+    )
+
+    -- Notify sender that messages were read
+    local senderIdentifier = Bridge.GetIdentifierByPhone(targetPhone)
+    if senderIdentifier then
+        local senderSource = Bridge.GetSourceFromIdentifier(senderIdentifier)
+        if senderSource then
+            TriggerClientEvent('gcphone:messageRead', senderSource, { phone = myNumber, readAt = now })
+        end
+    end
 
     return true
 end)
@@ -758,6 +807,111 @@ lib.callback.register('gcphone:getAutoReply', function(source)
     if not identifier then return { enabled = false, message = '' } end
     local msg = AutoReplyByIdentifier[identifier]
     return { enabled = msg ~= nil, message = msg or '' }
+end)
+
+local ALLOWED_REACTIONS = { ['👍'] = true, ['❤️'] = true, ['😂'] = true, ['😮'] = true, ['😢'] = true, ['🔥'] = true }
+
+lib.callback.register('gcphone:reactToMessage', function(source, data)
+    if Phone.IsPhoneReadOnly(source) then return false end
+    if type(data) ~= 'table' then return false end
+    if Utils.HitRateLimit(source, 'msg_react', 500, 3) then return false end
+
+    local identifier = Bridge.GetIdentifier(source)
+    if not identifier then return false end
+
+    local myNumber = Bridge.GetPhoneNumber(identifier)
+    if not myNumber then return false end
+
+    local messageId = ToPositiveInt(data.messageId)
+    local emoji = type(data.emoji) == 'string' and data.emoji or nil
+    if not messageId or not emoji or not ALLOWED_REACTIONS[emoji] then return false end
+
+    -- Verify message belongs to user's conversation
+    local msg = MySQL.single.await(
+        'SELECT transmitter, receiver FROM phone_messages WHERE id = ? AND (transmitter = ? OR receiver = ?) LIMIT 1',
+        { messageId, myNumber, myNumber }
+    )
+    if not msg then return false end
+
+    MySQL.query.await(
+        'INSERT INTO phone_message_reactions (message_id, sender_phone, emoji) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE emoji = VALUES(emoji), created_at = CURRENT_TIMESTAMP',
+        { messageId, myNumber, emoji }
+    )
+
+    -- Notify the other party
+    local otherPhone = msg.transmitter == myNumber and msg.receiver or msg.transmitter
+    local otherIdentifier = Bridge.GetIdentifierByPhone(otherPhone)
+    if otherIdentifier then
+        local otherSource = Bridge.GetSourceFromIdentifier(otherIdentifier)
+        if otherSource then
+            TriggerClientEvent('gcphone:messageReaction', otherSource, {
+                messageId = messageId,
+                senderPhone = myNumber,
+                emoji = emoji,
+            })
+        end
+    end
+
+    return true
+end)
+
+lib.callback.register('gcphone:removeReaction', function(source, data)
+    if Phone.IsPhoneReadOnly(source) then return false end
+    if type(data) ~= 'table' then return false end
+    if Utils.HitRateLimit(source, 'msg_react', 500, 3) then return false end
+
+    local identifier = Bridge.GetIdentifier(source)
+    if not identifier then return false end
+
+    local myNumber = Bridge.GetPhoneNumber(identifier)
+    if not myNumber then return false end
+
+    local messageId = ToPositiveInt(data.messageId)
+    if not messageId then return false end
+
+    MySQL.execute.await(
+        'DELETE FROM phone_message_reactions WHERE message_id = ? AND sender_phone = ?',
+        { messageId, myNumber }
+    )
+
+    -- Notify the other party
+    local msg = MySQL.single.await(
+        'SELECT transmitter, receiver FROM phone_messages WHERE id = ? LIMIT 1',
+        { messageId }
+    )
+    if msg then
+        local otherPhone = msg.transmitter == myNumber and msg.receiver or msg.transmitter
+        local otherIdentifier = Bridge.GetIdentifierByPhone(otherPhone)
+        if otherIdentifier then
+            local otherSource = Bridge.GetSourceFromIdentifier(otherIdentifier)
+            if otherSource then
+                TriggerClientEvent('gcphone:messageReaction', otherSource, {
+                    messageId = messageId,
+                    senderPhone = myNumber,
+                    emoji = nil,
+                })
+            end
+        end
+    end
+
+    return true
+end)
+
+lib.callback.register('gcphone:getMessageReactions', function(source, messageIds)
+    if type(messageIds) ~= 'table' or #messageIds == 0 or #messageIds > 50 then return {} end
+
+    local ids = {}
+    for _, id in ipairs(messageIds) do
+        local n = ToPositiveInt(id)
+        if n then ids[#ids + 1] = n end
+    end
+    if #ids == 0 then return {} end
+
+    local placeholders = string.rep('?,', #ids - 1) .. '?'
+    return MySQL.query.await(
+        'SELECT message_id, sender_phone, emoji FROM phone_message_reactions WHERE message_id IN (' .. placeholders .. ')',
+        ids
+    ) or {}
 end)
 
 AddEventHandler('playerDropped', function()

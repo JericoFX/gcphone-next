@@ -1389,6 +1389,51 @@ local MIGRATIONS = {
             [[ALTER TABLE `phone_numbers`
                 ADD COLUMN IF NOT EXISTS `streamer_mode` TINYINT(1) NOT NULL DEFAULT 0 AFTER `audio_profile`]]
         }
+    },
+    {
+        version = 20,
+        name = "messages_advanced_features",
+        description = "Add quote/reply, reactions, voice messages, and read receipts to messages",
+        statements = {
+            -- Quote/Reply support
+            [[ALTER TABLE `phone_messages`
+                ADD COLUMN IF NOT EXISTS `reply_to_id` INT DEFAULT NULL]],
+            [[ALTER TABLE `phone_chat_group_messages`
+                ADD COLUMN IF NOT EXISTS `reply_to_id` INT DEFAULT NULL]],
+
+            -- Voice messages (base64 in DB)
+            [[ALTER TABLE `phone_messages`
+                ADD COLUMN IF NOT EXISTS `message_type` VARCHAR(10) NOT NULL DEFAULT 'text']],
+            [[ALTER TABLE `phone_messages`
+                ADD COLUMN IF NOT EXISTS `audio_data` MEDIUMTEXT DEFAULT NULL]],
+            [[ALTER TABLE `phone_messages`
+                ADD COLUMN IF NOT EXISTS `audio_duration` SMALLINT DEFAULT NULL]],
+            [[ALTER TABLE `phone_chat_group_messages`
+                ADD COLUMN IF NOT EXISTS `message_type` VARCHAR(10) NOT NULL DEFAULT 'text']],
+            [[ALTER TABLE `phone_chat_group_messages`
+                ADD COLUMN IF NOT EXISTS `audio_data` MEDIUMTEXT DEFAULT NULL]],
+            [[ALTER TABLE `phone_chat_group_messages`
+                ADD COLUMN IF NOT EXISTS `audio_duration` SMALLINT DEFAULT NULL]],
+
+            -- Read receipts (delivered + read status)
+            [[ALTER TABLE `phone_messages`
+                ADD COLUMN IF NOT EXISTS `status` VARCHAR(10) NOT NULL DEFAULT 'sent']],
+            [[ALTER TABLE `phone_messages`
+                ADD COLUMN IF NOT EXISTS `delivered_at` TIMESTAMP NULL DEFAULT NULL]],
+            [[ALTER TABLE `phone_messages`
+                ADD COLUMN IF NOT EXISTS `read_at` TIMESTAMP NULL DEFAULT NULL]],
+
+            -- Reactions table
+            [[CREATE TABLE IF NOT EXISTS `phone_message_reactions` (
+                `id` INT AUTO_INCREMENT PRIMARY KEY,
+                `message_id` INT NOT NULL,
+                `sender_phone` VARCHAR(15) NOT NULL,
+                `emoji` VARCHAR(8) NOT NULL,
+                `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY `uk_reaction` (`message_id`, `sender_phone`),
+                KEY `idx_reaction_message` (`message_id`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci]],
+        }
     }
 }
 

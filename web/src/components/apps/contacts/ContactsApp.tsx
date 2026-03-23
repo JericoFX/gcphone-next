@@ -178,7 +178,7 @@ export function ContactsApp() {
     if (!target || !source) return;
     const payload = buildSharedContactMessage(source.display, source.number);
     if (!payload) return;
-    const sent = await messagesActions.send(target, payload);
+    const sent = await messagesActions.send({ phoneNumber: target, message: payload });
     if (!sent) return;
     setShareContact(null);
     setShareChannel(null);

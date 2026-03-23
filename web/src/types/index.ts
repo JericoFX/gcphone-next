@@ -8,6 +8,15 @@ export interface Contact {
   favorite?: boolean;
 }
 
+export type MessageType = 'text' | 'audio';
+export type MessageStatus = 'sent' | 'delivered' | 'read';
+
+export interface MessageReaction {
+  message_id: number;
+  sender_phone: string;
+  emoji: string;
+}
+
 export interface Message {
   id: number;
   transmitter: string;
@@ -17,6 +26,16 @@ export interface Message {
   isRead: boolean;
   owner: 0 | 1;
   time: string | Date;
+  status?: MessageStatus;
+  delivered_at?: string | null;
+  read_at?: string | null;
+  message_type?: MessageType;
+  audio_data?: string | null;
+  audio_duration?: number | null;
+  reply_to_id?: number | null;
+  reply_snippet?: string | null;
+  reply_sender?: string | null;
+  reactions?: MessageReaction[];
 }
 
 export interface Call {

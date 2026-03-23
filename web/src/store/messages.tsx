@@ -11,14 +11,26 @@ interface MessagesState {
   unreadCount: number;
 }
 
+interface SendOptions {
+  phoneNumber: string;
+  message: string;
+  mediaUrl?: string;
+  replyToId?: number;
+  messageType?: 'text' | 'audio';
+  audioData?: string;
+  audioDuration?: number;
+}
+
 interface MessagesActions {
   fetch: () => Promise<void>;
   getConversation: (phoneNumber: string) => Message[];
-  send: (phoneNumber: string, message: string, mediaUrl?: string) => Promise<boolean>;
+  send: (options: SendOptions) => Promise<boolean>;
   delete: (messageId: number) => Promise<boolean>;
   deleteConversation: (phoneNumber: string) => Promise<boolean>;
   markAsRead: (phoneNumber: string) => Promise<boolean>;
   getUnreadCount: () => number;
+  react: (messageId: number, emoji: string) => Promise<boolean>;
+  removeReaction: (messageId: number) => Promise<boolean>;
 }
 
 type MessagesStore = [MessagesState, MessagesActions];
@@ -78,17 +90,25 @@ export const MessagesProvider: ParentComponent = (props) => {
       return conversationMap().get(phoneNumber) || [];
     },
     
-    send: async (phoneNumber: string, message: string, mediaUrl?: string) => {
-      const nextPhone = sanitizePhone(phoneNumber);
-      const nextMessage = sanitizeText(message, 800);
-      const nextMediaUrl = sanitizeMediaUrl(mediaUrl);
-      if (!nextPhone || (!nextMessage && !nextMediaUrl)) return false;
+    send: async (options: SendOptions) => {
+      const nextPhone = sanitizePhone(options.phoneNumber);
+      const nextMessage = options.messageType === 'audio' ? '[Audio]' : sanitizeText(options.message, 800);
+      const nextMediaUrl = sanitizeMediaUrl(options.mediaUrl);
+      if (!nextPhone || (!nextMessage && !nextMediaUrl && !options.audioData)) return false;
 
       const result = await fetchNui<{ success: boolean }>(
         'sendMessage',
-        { phoneNumber: nextPhone, message: nextMessage, mediaUrl: nextMediaUrl || undefined }
+        {
+          phoneNumber: nextPhone,
+          message: nextMessage,
+          mediaUrl: nextMediaUrl || undefined,
+          replyToId: options.replyToId,
+          messageType: options.messageType,
+          audioData: options.audioData,
+          audioDuration: options.audioDuration,
+        }
       );
-      
+
       return result?.success ?? false;
     },
     
@@ -138,7 +158,17 @@ export const MessagesProvider: ParentComponent = (props) => {
       return false;
     },
     
-    getUnreadCount: () => state.unreadCount
+    getUnreadCount: () => state.unreadCount,
+
+    react: async (messageId: number, emoji: string) => {
+      const result = await fetchNui<{ success: boolean }>('reactToMessage', { messageId, emoji });
+      return result?.success ?? false;
+    },
+
+    removeReaction: async (messageId: number) => {
+      const result = await fetchNui<{ success: boolean }>('removeReaction', { messageId });
+      return result?.success ?? false;
+    },
   };
   
   useNuiCustomEvent<Message>('messageSent', (message) => {
@@ -157,6 +187,31 @@ export const MessagesProvider: ParentComponent = (props) => {
       setState('messages', messages);
       setState('unreadCount', countUnread(messages));
     });
+  });
+
+  useNuiCustomEvent<{ phone: string; readAt: string }>('messageRead', (data) => {
+    if (!data?.phone) return;
+    setState('messages', messages =>
+      messages.map(msg =>
+        msg.owner === 1 && msg.receiver === data.phone && msg.status !== 'read'
+          ? { ...msg, status: 'read' as const, read_at: data.readAt }
+          : msg
+      )
+    );
+  });
+
+  useNuiCustomEvent<{ messageId: number; senderPhone: string; emoji: string | null }>('messageReaction', (data) => {
+    if (!data?.messageId) return;
+    setState('messages', messages =>
+      messages.map(msg => {
+        if (msg.id !== data.messageId) return msg;
+        const reactions = (msg.reactions || []).filter(r => r.sender_phone !== data.senderPhone);
+        if (data.emoji) {
+          reactions.push({ message_id: data.messageId, sender_phone: data.senderPhone, emoji: data.emoji });
+        }
+        return { ...msg, reactions };
+      })
+    );
   });
   
   onMount(() => {

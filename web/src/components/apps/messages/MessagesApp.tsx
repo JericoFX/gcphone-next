@@ -48,6 +48,7 @@ export function MessagesApp() {
   const [showUnreadOnly, setShowUnreadOnly] = createSignal(false);
   const ctxMenu = useContextMenu<any>();
   const [routeConversationName, setRouteConversationName] = createSignal('');
+  const [replyTo, setReplyTo] = createSignal<{ id: number; snippet: string; sender: string } | null>(null);
   const language = () => phoneState.settings.language || 'es';
 
   const getMediaUrl = (msg: any): string | undefined => sanitizeMediaUrl(msg.mediaUrl || msg.media_url) || undefined;
@@ -189,9 +190,44 @@ export function MessagesApp() {
     const mediaFile = sanitizeMediaUrl(attachmentUrl());
     if (!number || (!content && !mediaFile)) return;
 
-    await messagesActions.send(number, content, mediaFile || undefined);
+    const reply = replyTo();
+    await messagesActions.send({
+      phoneNumber: number,
+      message: content,
+      mediaUrl: mediaFile || undefined,
+      replyToId: reply?.id,
+    });
     setMessageInput('');
     setAttachmentUrl(null);
+    setReplyTo(null);
+  };
+
+  const sendVoiceMessage = async (audioData: string, duration: number) => {
+    if (isReadOnly()) return;
+    const number = selectedConversation();
+    if (!number) return;
+    await messagesActions.send({
+      phoneNumber: number,
+      message: '[Audio]',
+      messageType: 'audio',
+      audioData,
+      audioDuration: duration,
+    });
+  };
+
+  const handleReply = (messageId: number) => {
+    const msgs = getConversationMessages();
+    const msg = msgs.find((m: any) => m.id === messageId);
+    if (!msg) return;
+    setReplyTo({
+      id: msg.id,
+      snippet: sanitizeText(msg.message || '', 80),
+      sender: msg.owner === 1 ? 'You' : getContactName(selectedConversation()!),
+    });
+  };
+
+  const handleReact = async (messageId: number, emoji: string) => {
+    await messagesActions.react(messageId, emoji);
   };
 
   const media = useMediaAttachment({ onAttached: (url) => setAttachmentUrl(url) });
@@ -234,7 +270,7 @@ export function MessagesApp() {
     if (!number) return;
     const coords = await getPlayerCoords();
     if (!coords) return;
-    await messagesActions.send(number, formatLocationMessage(coords, t('maps.share_location', language())));
+    await messagesActions.send({ phoneNumber: number, message: formatLocationMessage(coords, t('maps.share_location', language())) });
   };
   
   return (
@@ -243,30 +279,37 @@ export function MessagesApp() {
         <ConversationView
           phoneNumber={formatPhoneNumber(selectedConversation()!, phoneState.framework || 'unknown')}
           contactName={routeConversationName() || getContactName(selectedConversation()!)}
-        messages={getConversationMessages()}
-        messageInput={messageInput()}
-        attachmentUrl={attachmentUrl()}
-        onInput={setMessageInput}
-        onSend={sendMessage}
-        onAttachGallery={media.attachFromGallery}
-        onAttachCamera={media.attachFromCamera}
-        onAttachUrl={media.attachByUrl}
-        onSendLocation={sendLocationText}
-        onOpenCoords={(x, y) => router.navigate('maps', { x, y })}
-        onClearAttachment={() => setAttachmentUrl(null)}
-        onOpenViewer={setViewerUrl}
-        getMediaUrl={getMediaUrl}
-        isKnownContact={isKnownContact}
-        onAddContact={addContactFromMessage}
-        onBack={() => {
-          setSelectedConversation(null);
-          setRouteConversationName('');
-        }}
-        onDeleteConversation={() => void deleteConversation(selectedConversation()!)}
-        framework={phoneState.framework || 'unknown'}
-        readOnly={isReadOnly()}
-        readOnlyOwnerName={phoneState.accessOwnerName}
-      />
+          messages={getConversationMessages()}
+          messageInput={messageInput()}
+          attachmentUrl={attachmentUrl()}
+          onInput={setMessageInput}
+          onSend={sendMessage}
+          onSendVoice={sendVoiceMessage}
+          onReply={handleReply}
+          replyTo={replyTo}
+          onCancelReply={() => setReplyTo(null)}
+          onReact={handleReact}
+          onAttachGallery={media.attachFromGallery}
+          onAttachCamera={media.attachFromCamera}
+          onAttachUrl={media.attachByUrl}
+          onSendLocation={sendLocationText}
+          onOpenCoords={(x, y) => router.navigate('maps', { x, y })}
+          onClearAttachment={() => setAttachmentUrl(null)}
+          onOpenViewer={setViewerUrl}
+          getMediaUrl={getMediaUrl}
+          isKnownContact={isKnownContact}
+          onAddContact={addContactFromMessage}
+          onBack={() => {
+            setSelectedConversation(null);
+            setRouteConversationName('');
+            setReplyTo(null);
+          }}
+          onDeleteConversation={() => void deleteConversation(selectedConversation()!)}
+          framework={phoneState.framework || 'unknown'}
+          readOnly={isReadOnly()}
+          readOnlyOwnerName={phoneState.accessOwnerName}
+          myNumber={phoneState.settings.phoneNumber}
+        />
     }>
         <AppScaffold title={t('messages.title', language())} subtitle={t('messages.subtitle', language())} onBack={() => router.goBack()} bodyPadding="none">
           <div class={styles.messagesApp}>
@@ -359,6 +402,55 @@ export function MessagesApp() {
   );
 }
 
+const REACTION_EMOJIS = ['\u{1F44D}', '\u{2764}\u{FE0F}', '\u{1F602}', '\u{1F62E}', '\u{1F622}', '\u{1F525}'];
+
+function MessageStatusIcon(props: { status?: string; owner: number }) {
+  if (props.owner !== 1) return null;
+  const s = props.status || 'sent';
+  return (
+    <span class={styles.statusIcon} classList={{ [styles.statusRead]: s === 'read' }}>
+      {s === 'sent' ? '\u2713' : '\u2713\u2713'}
+    </span>
+  );
+}
+
+function AudioPlayerBubble(props: { audioData: string; duration?: number }) {
+  const [playing, setPlaying] = createSignal(false);
+  const [progress, setProgress] = createSignal(0);
+  let audioRef: HTMLAudioElement | undefined;
+
+  const play = () => {
+    if (!audioRef) {
+      const blob = new Blob(
+        [Uint8Array.from(atob(props.audioData), c => c.charCodeAt(0))],
+        { type: 'audio/webm' }
+      );
+      audioRef = new Audio(URL.createObjectURL(blob));
+      audioRef.addEventListener('timeupdate', () => {
+        if (audioRef && audioRef.duration > 0) setProgress(audioRef.currentTime / audioRef.duration);
+      });
+      audioRef.addEventListener('ended', () => { setPlaying(false); setProgress(0); });
+    }
+    if (playing()) {
+      audioRef.pause();
+      setPlaying(false);
+    } else {
+      void audioRef.play();
+      setPlaying(true);
+    }
+  };
+
+  return (
+    <div class={styles.audioBubble} onClick={play}>
+      <span class={styles.audioPlayBtn}>{playing() ? '\u23F8' : '\u25B6'}</span>
+      <div class={styles.audioProgress}>
+        <div class={styles.audioProgressBar} style={{ width: `${Math.round(progress() * 100)}%` }} />
+      </div>
+      <span class={styles.audioDuration}>{props.duration ? `${props.duration}s` : ''}</span>
+    </div>
+  );
+}
+
 function ConversationView(props: {
   phoneNumber: string;
   contactName: string;
@@ -367,6 +459,11 @@ function ConversationView(props: {
   attachmentUrl: string | null;
   onInput: (value: string) => void;
   onSend: () => void;
+  onSendVoice: (audioData: string, duration: number) => void;
+  onReply: (messageId: number) => void;
+  replyTo: () => { id: number; snippet: string; sender: string } | null;
+  onCancelReply: () => void;
+  onReact: (messageId: number, emoji: string) => void;
   onAttachGallery: () => void;
   onAttachCamera: () => void;
   onAttachUrl: () => void;
@@ -382,22 +479,28 @@ function ConversationView(props: {
   framework?: 'esx' | 'qbcore' | 'qbox' | 'unknown';
   readOnly?: boolean;
   readOnlyOwnerName?: string;
+  myNumber?: string;
 }) {
   const language = () => getStoredLanguage();
   let messagesEnd: HTMLDivElement | undefined;
   const [showAttachSheet, setShowAttachSheet] = createSignal(false);
-  const [selectedMessage, setSelectedMessage] = createSignal<string | null>(null);
+  const [selectedMessage, setSelectedMessage] = createSignal<any>(null);
+  const [reactionPickerMsg, setReactionPickerMsg] = createSignal<number | null>(null);
 
   onMount(() => {
     messagesEnd?.scrollIntoView({ behavior: 'auto' });
   });
-  
+
   createEffect(() => {
     if (props.messages.length > 0) {
       messagesEnd?.scrollIntoView({ behavior: 'smooth' });
     }
   });
-  
+
+  const openMessageActions = (msg: any) => {
+    setSelectedMessage(msg);
+  };
+
   return (
     <AppScaffold
       title={props.contactName}
@@ -419,40 +522,59 @@ function ConversationView(props: {
                 [styles.sent]: msg.owner === 1,
                 [styles.received]: msg.owner === 0
               }}
-              onClick={() => setSelectedMessage(sanitizeText(msg.message || '', 800))}
+              onClick={() => openMessageActions(msg)}
+              onDblClick={() => !props.readOnly && setReactionPickerMsg(msg.id)}
             >
-              <Show when={parseSharedContactMessage(msg.message)} fallback={
-                <>
-                  <span class={styles.messageText}>{sanitizeText(msg.message || '', 800)}</span>
-                  <Show when={extractCoords(msg.message)}>
-                    {(coords) => (
-                      <button class={styles.mapBtn} onClick={() => props.onOpenCoords(coords().x, coords().y)}>
-                        {t('messages.open_map', language())}
-                      </button>
-                    )}
-                  </Show>
-                </>
-              }>
-                {(shared) => (
-                  <div class={styles.contactCard}>
-                    <div class={styles.contactCardLabel}>{t('messages.shared_contact', language())}</div>
-                    <div class={styles.contactCardName}>{shared().display}</div>
-                    <div class={styles.contactCardNumber}>{formatPhoneNumber(shared().number, props.framework || 'unknown')}</div>
-                    <Show when={!props.readOnly}>
-                      <button
-                        class={styles.contactCardBtn}
-                        disabled={props.isKnownContact(shared().number)}
-                        onClick={() => props.onAddContact(shared().display, shared().number)}
-                      >
-                         {props.isKnownContact(shared().number) ? t('messages.already_added', language()) : t('messages.add_contact', language())}
-                      </button>
-                    </Show>
-                  </div>
-                )}
+              {/* Quote/Reply reference */}
+              <Show when={msg.reply_to_id && msg.reply_snippet}>
+                <div class={styles.replyQuote}>
+                  <span class={styles.replyQuoteSender}>
+                    {msg.reply_sender === props.myNumber ? props.contactName : 'You'}
+                  </span>
+                  <span class={styles.replyQuoteText}>
+                    {sanitizeText(msg.reply_snippet || '', 80)}
+                  </span>
+                </div>
               </Show>
+
+              {/* Voice message */}
+              <Show when={msg.message_type === 'audio' && msg.audio_data} fallback={
+                <Show when={parseSharedContactMessage(msg.message)} fallback={
+                  <>
+                    <span class={styles.messageText}>{sanitizeText(msg.message || '', 800)}</span>
+                    <Show when={extractCoords(msg.message)}>
+                      {(coords) => (
+                        <button class={styles.mapBtn} onClick={(e) => { e.stopPropagation(); props.onOpenCoords(coords().x, coords().y); }}>
+                          {t('messages.open_map', language())}
+                        </button>
+                      )}
+                    </Show>
+                  </>
+                }>
+                  {(shared) => (
+                    <div class={styles.contactCard}>
+                      <div class={styles.contactCardLabel}>{t('messages.shared_contact', language())}</div>
+                      <div class={styles.contactCardName}>{shared().display}</div>
+                      <div class={styles.contactCardNumber}>{formatPhoneNumber(shared().number, props.framework || 'unknown')}</div>
+                      <Show when={!props.readOnly}>
+                        <button
+                          class={styles.contactCardBtn}
+                          disabled={props.isKnownContact(shared().number)}
+                          onClick={(e) => { e.stopPropagation(); props.onAddContact(shared().display, shared().number); }}
+                        >
+                          {props.isKnownContact(shared().number) ? t('messages.already_added', language()) : t('messages.add_contact', language())}
+                        </button>
+                      </Show>
+                    </div>
+                  )}
+                </Show>
+              }>
+                <AudioPlayerBubble audioData={msg.audio_data!} duration={msg.audio_duration} />
+              </Show>
+
               <Show when={props.getMediaUrl(msg)}>
                 <Show when={resolveMediaType(props.getMediaUrl(msg)) === 'image'}>
-                  <img class={styles.messageImage} src={props.getMediaUrl(msg)!} alt={t('messages.attach', language())} onClick={() => props.onOpenViewer(props.getMediaUrl(msg) || null)} />
+                  <img class={styles.messageImage} src={props.getMediaUrl(msg)!} alt={t('messages.attach', language())} onClick={(e) => { e.stopPropagation(); props.onOpenViewer(props.getMediaUrl(msg) || null); }} />
                 </Show>
                 <Show when={resolveMediaType(props.getMediaUrl(msg)) === 'video'}>
                   <video class={styles.messageImage} src={props.getMediaUrl(msg)!} controls playsinline preload="metadata" />
@@ -461,12 +583,47 @@ function ConversationView(props: {
                   <audio class={styles.messageAudio} src={props.getMediaUrl(msg)!} controls preload="metadata" />
                 </Show>
               </Show>
-              <span class={styles.messageTime}>{timeAgo(msg.time)}</span>
+
+              {/* Reactions */}
+              <Show when={msg.reactions && msg.reactions.length > 0}>
+                <div class={styles.reactionPills}>
+                  <For each={msg.reactions}>
+                    {(r: any) => <span class={styles.reactionPill}>{r.emoji}</span>}
+                  </For>
+                </div>
+              </Show>
+
+              <div class={styles.messageFooter}>
+                <span class={styles.messageTime}>{timeAgo(msg.time)}</span>
+                <MessageStatusIcon status={msg.status} owner={msg.owner} />
+              </div>
             </div>
           )}
         </For>
         <div ref={messagesEnd} />
       </div>
+
+      {/* Reaction picker overlay */}
+      <Show when={reactionPickerMsg() !== null}>
+        <div class={styles.reactionOverlay} onClick={() => setReactionPickerMsg(null)}>
+          <div class={styles.reactionBar}>
+            <For each={REACTION_EMOJIS}>
+              {(emoji) => (
+                <button
+                  class={styles.reactionOption}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    props.onReact(reactionPickerMsg()!, emoji);
+                    setReactionPickerMsg(null);
+                  }}
+                >
+                  {emoji}
+                </button>
+              )}
+            </For>
+          </div>
+        </div>
+      </Show>
 
       <Show when={props.attachmentUrl && !props.readOnly}>
         <div class={styles.attachmentPreview}>
@@ -483,10 +640,23 @@ function ConversationView(props: {
         </div>
       </Show>
 
+      {/* Reply preview bar */}
+      <Show when={props.replyTo()}>
+        {(reply) => (
+          <div class={styles.replyPreview}>
+            <div class={styles.replyPreviewContent}>
+              <span class={styles.replyPreviewSender}>{reply().sender}</span>
+              <span class={styles.replyPreviewText}>{reply().snippet}</span>
+            </div>
+            <button class={styles.replyPreviewClose} onClick={props.onCancelReply}>&times;</button>
+          </div>
+        )}
+      </Show>
+
       <Show when={!props.readOnly}>
         <div class={styles.inputContainer}>
           <EmojiPickerButton value={props.messageInput} onChange={props.onInput} maxLength={800} />
-          <button class={styles.attachBtn} onClick={() => setShowAttachSheet(true)}>＋</button>
+          <button class={styles.attachBtn} onClick={() => setShowAttachSheet(true)}>+</button>
           <input
             type="text"
             placeholder={t('messages.message_placeholder', language())}
@@ -518,16 +688,25 @@ function ConversationView(props: {
         title={t('messages.action_title', language())}
         onClose={() => setSelectedMessage(null)}
         actions={[
+          ...(!props.readOnly ? [{
+            label: 'Responder',
+            tone: 'primary' as const,
+            onClick: () => {
+              const msg = selectedMessage();
+              if (!msg) return;
+              props.onReply(msg.id);
+              setSelectedMessage(null);
+            },
+          }] : []),
           {
             label: t('messages.save_to_notes', language()),
-            tone: 'primary',
             onClick: () => {
-              const text = selectedMessage();
-              if (!text) return;
+              const msg = selectedMessage();
+              if (!msg) return;
               try {
                 const raw = localStorage.getItem('gcphone:notes');
                 const notes: any[] = raw ? JSON.parse(raw) : [];
-                notes.push({ id: Date.now(), title: t('messages.saved_note_title', language()), content: text, color: '#007aff' });
+                notes.push({ id: Date.now(), title: t('messages.saved_note_title', language()), content: sanitizeText(msg.message || '', 800), color: '#007aff' });
                 localStorage.setItem('gcphone:notes', JSON.stringify(notes));
                 uiAlert(t('messages.saved_to_notes', language()));
               } catch {
@@ -539,8 +718,8 @@ function ConversationView(props: {
           {
             label: t('messages.copy_text', language()),
             onClick: () => {
-              const text = selectedMessage();
-              if (text) navigator.clipboard.writeText(text).catch(() => {});
+              const msg = selectedMessage();
+              if (msg) navigator.clipboard.writeText(sanitizeText(msg.message || '', 800)).catch(() => {});
               setSelectedMessage(null);
             },
           },

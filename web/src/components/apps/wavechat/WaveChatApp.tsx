@@ -419,7 +419,7 @@ export function WaveChatApp() {
     const media = sanitizeMediaUrl(attachmentUrl());
     if (!number || (!content && !media)) return;
 
-    await messagesActions.send(number, content, media || undefined);
+    await messagesActions.send({ phoneNumber: number, message: content, mediaUrl: media || undefined });
     setMessageInput('');
     setAttachmentUrl(null);
   };
@@ -570,7 +570,7 @@ export function WaveChatApp() {
     if (!number) return;
     const coords = await getPlayerCoords();
     if (!coords) return;
-    await messagesActions.send(number, formatLocationMessage(coords, t('maps.share_location', language())));
+    await messagesActions.send({ phoneNumber: number, message: formatLocationMessage(coords, t('maps.share_location', language())) });
   };
 
   const clearRecordingTimer = () => {
