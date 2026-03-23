@@ -25,6 +25,13 @@ import { AppFAB, AppScaffold } from '../../shared/layout';
 import { getStoredLanguage, t } from '../../../i18n';
 import styles from './MessagesApp.module.scss';
 
+function parseSocialPost(text?: string): { type: 'chirp' | 'snap'; id: number } | null {
+  if (!text) return null;
+  const match = text.match(/^(CHIRP|SNAP):(\d+)$/);
+  if (!match) return null;
+  return { type: match[1].toLowerCase() as 'chirp' | 'snap', id: Number(match[2]) };
+}
+
 function extractCoords(text?: string): { x: number; y: number } | null {
   if (!text) return null;
   const match = text.match(/LOC:([\-\d.]+),\s*([\-\d.]+)/i);
@@ -33,6 +40,57 @@ function extractCoords(text?: string): { x: number; y: number } | null {
   const y = Number(match[2]);
   if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
   return { x, y };
+}
+
+interface SocialPreview {
+  type: 'chirp' | 'snap';
+  id: number;
+  username?: string;
+  display_name?: string;
+  avatar?: string;
+  content?: string;
+  caption?: string;
+  media_url?: string;
+  verified?: boolean;
+}
+
+function SocialPostCard(props: { post: { type: 'chirp' | 'snap'; id: number }; onOpen: (type: string, id: number) => void }) {
+  const [preview, setPreview] = createSignal<SocialPreview | null>(null);
+  const [failed, setFailed] = createSignal(false);
+
+  onMount(async () => {
+    const result = await fetchNui<SocialPreview | null>('getPostPreview', { type: props.post.type, id: props.post.id }, null);
+    if (result) setPreview(result);
+    else setFailed(true);
+  });
+
+  return (
+    <Show when={!failed()} fallback={
+      <span class={styles.messageText}>{props.post.type === 'chirp' ? 'Tweet eliminado' : 'Post eliminado'}</span>
+    }>
+      <Show when={preview()} fallback={
+        <span class={styles.messageText}>{props.post.type === 'chirp' ? 'Cargando tweet...' : 'Cargando post...'}</span>
+      }>
+        {(p) => (
+          <div class={styles.socialCard} onClick={() => props.onOpen(p().type, p().id)}>
+            <div class={styles.socialCardHeader}>
+              <Show when={p().avatar}>
+                <img class={styles.socialCardAvatar} src={p().avatar!} alt="" />
+              </Show>
+              <span class={styles.socialCardUser}>{p().display_name || p().username}</span>
+              <span class={styles.socialCardApp}>{p().type === 'chirp' ? 'Chirp' : 'Snap'}</span>
+            </div>
+            <Show when={p().content || p().caption}>
+              <p class={styles.socialCardText}>{sanitizeText((p().content || p().caption) ?? '', 140)}</p>
+            </Show>
+            <Show when={p().media_url}>
+              <img class={styles.socialCardMedia} src={p().media_url!} alt="" />
+            </Show>
+          </div>
+        )}
+      </Show>
+    </Show>
+  );
 }
 
 export function MessagesApp() {
@@ -580,16 +638,25 @@ function ConversationView(props: {
               {/* Voice message */}
               <Show when={msg.message_type === 'audio' && msg.audio_data} fallback={
                 <Show when={parseSharedContactMessage(msg.message)} fallback={
-                  <>
-                    <span class={styles.messageText}>{sanitizeText(msg.message || '', 800)}</span>
-                    <Show when={extractCoords(msg.message)}>
-                      {(coords) => (
-                        <button class={styles.mapBtn} onClick={(e) => { e.stopPropagation(); props.onOpenCoords(coords().x, coords().y); }}>
-                          {t('messages.open_map', language())}
-                        </button>
-                      )}
-                    </Show>
-                  </>
+                  <Show when={parseSocialPost(msg.message)} fallback={
+                    <>
+                      <span class={styles.messageText}>{sanitizeText(msg.message || '', 800)}</span>
+                      <Show when={extractCoords(msg.message)}>
+                        {(coords) => (
+                          <button class={styles.mapBtn} onClick={(e) => { e.stopPropagation(); props.onOpenCoords(coords().x, coords().y); }}>
+                            {t('messages.open_map', language())}
+                          </button>
+                        )}
+                      </Show>
+                    </>
+                  }>
+                    {(social) => (
+                      <SocialPostCard
+                        post={social()}
+                        onOpen={(type, id) => router.navigate(type === 'chirp' ? 'chirp' : 'snap')}
+                      />
+                    )}
+                  </Show>
                 }>
                   {(shared) => (
                     <div class={styles.contactCard}>

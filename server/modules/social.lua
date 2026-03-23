@@ -136,4 +136,34 @@ lib.callback.register('gcphone:social:deleteNotification', function(source, data
     return true
 end)
 
+lib.callback.register('gcphone:social:getPostPreview', function(source, data)
+    local identifier = Bridge.GetIdentifier(source)
+    if not identifier then return nil end
+
+    if type(data) ~= 'table' then return nil end
+    local postType = data.type
+    local postId = tonumber(data.id)
+    if not postId or postId < 1 then return nil end
+
+    if postType == 'chirp' then
+        return MySQL.single.await([[
+            SELECT t.id, t.content, t.media_url, t.likes, t.created_at,
+                   a.username, a.display_name, a.avatar, a.verified
+            FROM phone_chirp_tweets t
+            JOIN phone_chirp_accounts a ON t.account_id = a.id
+            WHERE t.id = ?
+        ]], { postId })
+    elseif postType == 'snap' then
+        return MySQL.single.await([[
+            SELECT p.id, p.caption, p.media_url, p.media_type, p.likes, p.created_at,
+                   a.username, a.display_name, a.avatar
+            FROM phone_snap_posts p
+            JOIN phone_snap_accounts a ON p.account_id = a.id
+            WHERE p.id = ?
+        ]], { postId })
+    end
+
+    return nil
+end)
+
 return {}

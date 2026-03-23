@@ -225,8 +225,20 @@ CREATE TABLE IF NOT EXISTS `phone_gallery` (
     `identifier` VARCHAR(50) NOT NULL,
     `url` VARCHAR(500) NOT NULL,
     `type` ENUM('image', 'video') DEFAULT 'image',
+    `album_id` INT DEFAULT NULL,
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    KEY `idx_identifier` (`identifier`)
+    KEY `idx_identifier` (`identifier`),
+    KEY `idx_gallery_album` (`album_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Gallery albums (V21)
+CREATE TABLE IF NOT EXISTS `phone_gallery_albums` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `identifier` VARCHAR(50) NOT NULL,
+    `name` VARCHAR(64) NOT NULL,
+    `color` VARCHAR(7) DEFAULT '#007aff',
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    KEY `idx_albums_identifier` (`identifier`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================
@@ -1645,6 +1657,9 @@ CALL sp_gcphone_add_column('phone_messages', 'read_at',          "TIMESTAMP NULL
 
 -- phone_calls
 CALL sp_gcphone_add_column('phone_calls', 'time',               "TIMESTAMP DEFAULT CURRENT_TIMESTAMP");
+
+-- phone_gallery (V21)
+CALL sp_gcphone_add_column('phone_gallery', 'album_id',          "INT DEFAULT NULL");
 
 -- Cleanup helper
 DROP PROCEDURE IF EXISTS `sp_gcphone_add_column`;

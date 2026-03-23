@@ -17,6 +17,7 @@ import { MediaActionButtons } from '../../shared/ui/MediaActionButtons';
 import { SegmentedTabs } from '../../shared/ui/SegmentedTabs';
 import { SheetIntro } from '../../shared/ui/SheetIntro';
 import { ActionSheet } from '../../shared/ui/ActionSheet';
+import { ShareSheet, type SharePayload } from '../../shared/ui/ShareSheet';
 import { SocialOnboardingModal, type SocialOnboardingPayload } from '../../shared/ui/SocialOnboardingModal';
 import { getStoredLanguage, t } from '../../../i18n';
 import type { ChirpTweet, ChirpComment, ChirpFollowRequest, ChirpAccount, TabMode } from './ChirpTypes';
@@ -48,7 +49,11 @@ export function ChirpApp() {
   const [showComposer, setShowComposer] = createSignal(false);
   const [composerText, setComposerText] = createSignal('');
   const [composerMedia, setComposerMedia] = createSignal('');
+  const [crossPostSnap, setCrossPostSnap] = createSignal(false);
   const charCount = createMemo(() => composerText().length);
+
+  // Share
+  const [sharePayload, setSharePayload] = createSignal<SharePayload | null>(null);
 
   // Comments
   const [showComments, setShowComments] = createSignal(false);
@@ -358,14 +363,16 @@ export function ChirpApp() {
     if (!content) return;
     
     setLoading(true);
-    const result = await fetchNui<{ success?: boolean; tweet?: ChirpTweet }>('chirpPublishTweet', { 
-      content, 
-      mediaUrl: media 
+    const result = await fetchNui<{ success?: boolean; tweet?: ChirpTweet }>('chirpPublishTweet', {
+      content,
+      mediaUrl: media,
+      crossPostSnap: crossPostSnap() && !!media,
     });
-    
+
     if (result?.success) {
       setComposerText('');
       setComposerMedia('');
+      setCrossPostSnap(false);
       setShowComposer(false);
       cache.invalidate(`tweets:${currentTab()}`);
       await loadTweets();
@@ -584,6 +591,7 @@ export function ChirpApp() {
     tweet: ChirpTweet;
     onComment: (e: Event) => void;
     onDelete?: (e: Event, tweetId: number) => void;
+    onShare?: (e: Event, tweet: ChirpTweet) => void;
   }) => {
     const tweet = props.tweet;
     return (
@@ -609,6 +617,10 @@ export function ChirpApp() {
         <button class={styles.actionBtn} onClick={props.onComment}>
           <span class={styles.icon}><img src="./img/icons_ios/ui-chat.svg" alt="" draggable={false} /></span>
           <span class={styles.count}>{tweet.replies || 0}</span>
+        </button>
+
+        <button class={styles.actionBtn} onClick={(e) => props.onShare?.(e, tweet)}>
+          <span class={styles.icon}><img src="./img/icons_ios/ui-plane.svg" alt="" draggable={false} /></span>
         </button>
 
         <Show when={tweet.is_own && props.onDelete}>
@@ -717,6 +729,7 @@ export function ChirpApp() {
             void openTweetDetail(tweet);
           }}
           onDelete={deleteTweet}
+          onShare={(e, tw) => { e.stopPropagation(); setSharePayload({ text: `CHIRP:${tw.id}` }); }}
         />
       </article>
     );
@@ -883,6 +896,7 @@ export function ChirpApp() {
                 tweet={tweet}
                 onComment={(e) => e.stopPropagation()}
                 onDelete={deleteTweet}
+                onShare={(e, tw) => { e.stopPropagation(); setSharePayload({ text: `CHIRP:${tw.id}` }); }}
               />
             </div>
           </div>
@@ -984,6 +998,13 @@ export function ChirpApp() {
               variant="compact"
             />
           </div>
+
+          <Show when={composerMedia()}>
+            <label class={styles.crossPostToggle}>
+              <input type="checkbox" checked={crossPostSnap()} onChange={(e) => setCrossPostSnap(e.currentTarget.checked)} />
+              <span>{t('chirp.cross_post_snap', language()) || 'Publicar en Snap'}</span>
+            </label>
+          </Show>
         </div>
         
         <ModalActions>
@@ -1203,6 +1224,13 @@ export function ChirpApp() {
             },
           }] : []),
         ]}
+      />
+
+      <ShareSheet
+        open={sharePayload() !== null}
+        payload={sharePayload() || { text: '' }}
+        destinations={['messages']}
+        onClose={() => setSharePayload(null)}
       />
     </AppScaffold>
   );

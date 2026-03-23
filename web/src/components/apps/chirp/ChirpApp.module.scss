@@ -541,6 +541,22 @@
   align-items: center;
 }
 
+.cross-post-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  font-size: 13px;
+  color: var(--text-2, rgba(60, 60, 67, 0.6));
+  cursor: pointer;
+
+  input[type="checkbox"] {
+    accent-color: var(--tint, #007aff);
+    width: 16px;
+    height: 16px;
+  }
+}
+
 .emojiButton {
   margin-right: 8px;
 }

@@ -29,7 +29,6 @@ export function SettingsAppearance(props: SettingsAppearanceProps) {
 
   const setWallpaperWithFeedback = (url: string) => {
     props.phoneActions.setWallpaper(url);
-    props.onStatus?.(t('settings.wallpaper_changed', props.language()) || 'Fondo actualizado');
   };
 
   const randomWallpaper = () => {

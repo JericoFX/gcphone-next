@@ -25,7 +25,13 @@ export function SettingsApp() {
   const [phoneState, phoneActions] = usePhone();
   const [notifications, notificationsActions] = useNotifications();
 
-  const [section, setSection] = createSignal<SettingsSection>('main');
+  const [section, _setSection] = createSignal<SettingsSection>(
+    (sessionStorage.getItem('gcphone:settingsSection') as SettingsSection) || 'main'
+  );
+  const setSection = (s: SettingsSection) => {
+    sessionStorage.setItem('gcphone:settingsSection', s);
+    _setSection(s);
+  };
   const [urlInput, setUrlInput] = createSignal('');
   const toneCatalog = () => TONE_CATALOG;
   const [previewToneId, setPreviewToneId] = createSignal<string | null>(null);

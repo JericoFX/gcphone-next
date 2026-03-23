@@ -179,6 +179,7 @@ export const PhoneFrame: ParentComponent & { Router: () => JSX.Element } = (
   const [phoneState] = usePhone();
   const [notifications] = useNotifications();
   const browserMode = isEnvBrowser();
+
   const [history, setHistory] = createSignal<AppRoute[]>(['home']);
   const [openApps, setOpenApps] = createSignal<AppRoute[]>(['home']);
   const [params, setParams] = createSignal<Record<string, unknown>>({});
@@ -312,11 +313,7 @@ export const PhoneFrame: ParentComponent & { Router: () => JSX.Element } = (
   return (
     <div
       class={styles.phoneWrapper}
-      style={
-        browserMode
-          ? { transform: 'none', right: '20px', bottom: '20px' }
-          : undefined
-      }
+      style={browserMode ? { right: '20px', bottom: '20px' } : undefined}
     >
       <div
         class={styles.phoneScreen}

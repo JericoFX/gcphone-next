@@ -11,8 +11,15 @@ export interface LeafletPin {
   kind?: 'shared' | 'manual';
 }
 
+export interface LeafletLine {
+  id: string;
+  points: { x: number; y: number }[];
+  color?: string;
+}
+
 interface Props {
   pins: LeafletPin[];
+  lines?: LeafletLine[];
   onPickCoords?: (x: number, y: number) => void;
   onPinClick?: (pin: LeafletPin) => void;
 }
@@ -103,9 +110,34 @@ export function LeafletMap(props: Props) {
     map.setView(gtaToLatLng(first.x, first.y), 4)
   })
 
+  const polylines = new Map<string, L.Polyline>();
+
+  createEffect(() => {
+    if (!map) return;
+    const lines = props.lines || [];
+
+    for (const line of lines) {
+      if (polylines.has(line.id)) continue;
+      const latLngs = line.points.map((p) => gtaToLatLng(p.x, p.y) as [number, number]);
+      if (latLngs.length < 2) continue;
+      const poly = L.polyline(latLngs, { color: line.color || '#007aff', weight: 3, opacity: 0.7 });
+      poly.addTo(map);
+      polylines.set(line.id, poly);
+    }
+
+    const validIds = new Set(lines.map((l) => l.id));
+    polylines.forEach((poly, id) => {
+      if (validIds.has(id)) return;
+      poly.removeFrom(map!);
+      polylines.delete(id);
+    });
+  });
+
   onCleanup(() => {
     markers.forEach((marker) => marker.remove())
     markers.clear()
+    polylines.forEach((poly) => poly.remove())
+    polylines.clear()
     if (map) map.remove()
     map = null
   })

@@ -416,7 +416,7 @@ lib.callback.register('gcphone:chirp:publishTweet', function(source, data)
         'INSERT INTO phone_chirp_tweets (account_id, content, media_url) VALUES (?, ?, ?)',
         { account.id, content, mediaUrl }
     )
-    
+
     local tweet = MySQL.single.await([[
         SELECT t.*, a.username, a.display_name, a.avatar, a.verified,
                0 as comments_count, 0 as rechirps_count
@@ -424,12 +424,35 @@ lib.callback.register('gcphone:chirp:publishTweet', function(source, data)
         JOIN phone_chirp_accounts a ON t.account_id = a.id
         WHERE t.id = ?
     ]], { tweetId })
-    
+
     tweet.liked = false
     tweet.rechirped = false
-    
+
     TriggerClientEvent('gcphone:chirp:newTweet', -1, tweet)
-    
+
+    -- Cross-post to Snap if requested
+    if data.crossPostSnap then
+        local snapAccount = MySQL.single.await(
+            'SELECT * FROM phone_snap_accounts WHERE identifier = ?',
+            { identifier }
+        )
+        if snapAccount and mediaUrl then
+            local snapPostId = MySQL.insert.await(
+                'INSERT INTO phone_snap_posts (account_id, media_url, media_type, caption) VALUES (?, ?, ?, ?)',
+                { snapAccount.id, mediaUrl, 'image', content }
+            )
+            local snapPost = MySQL.single.await([[
+                SELECT p.*, a.username, a.display_name, a.avatar
+                FROM phone_snap_posts p
+                JOIN phone_snap_accounts a ON p.account_id = a.id
+                WHERE p.id = ?
+            ]], { snapPostId })
+            if snapPost then
+                TriggerClientEvent('gcphone:snap:newPost', -1, snapPost)
+            end
+        end
+    end
+
     return true, tweet
 end)
 

@@ -585,4 +585,19 @@ AddEventHandler('playerDropped', function()
     end
 end)
 
+lib.callback.register('gcphone:cityride:getRouteHistory', function(source)
+    local identifier = Bridge.GetIdentifier(source)
+    if not identifier then return {} end
+
+    return MySQL.query.await([[
+        SELECT id, pickup_x, pickup_y, dest_x, dest_y, distance, status, created_at
+        FROM phone_cityride_rides
+        WHERE (passenger_identifier = ? OR driver_identifier = ?)
+          AND status = 'completed'
+          AND pickup_x IS NOT NULL AND dest_x IS NOT NULL
+        ORDER BY created_at DESC
+        LIMIT 20
+    ]], { identifier, identifier }) or {}
+end)
+
 return {}

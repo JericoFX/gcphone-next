@@ -23,19 +23,18 @@ button {
   font-family: inherit;
   cursor: pointer;
   transition:
-    transform var(--transition-fast),
     box-shadow var(--transition-normal),
     background var(--transition-normal),
     border-color var(--transition-normal),
     color var(--transition-normal),
-    opacity var(--transition-normal);
+    opacity var(--transition-fast);
   
   &:focus {
     outline: none;
   }
 
   &:active {
-    transform: scale(0.985);
+    opacity: 0.7;
   }
 }
 

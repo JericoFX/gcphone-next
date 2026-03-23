@@ -9,10 +9,11 @@ import { useNfcShare } from '../../../hooks/useNfcShare';
 import { fetchNui } from '../../../utils/fetchNui';
 import { useAsyncData } from '../../../hooks/useAsyncData';
 import { useNuiEvent } from '../../../utils/useNui';
-import { sanitizeMediaUrl, sanitizePhone } from '../../../utils/sanitize';
+import { resolveMediaType, sanitizeMediaUrl, sanitizePhone } from '../../../utils/sanitize';
 import { uiPrompt } from '../../../utils/uiDialog';
 import { SearchInput } from '../../shared/ui/SearchInput';
 import { ActionSheet } from '../../shared/ui/ActionSheet';
+import { Modal, ModalActions, ModalButton } from '../../shared/ui/Modal';
 import { NfcShareSheet } from '../../shared/ui/NfcShareSheet';
 import { MediaLightbox } from '../../shared/ui/MediaLightbox';
 import { InlineNotice } from '../../shared/ui/InlineNotice';
@@ -60,6 +61,51 @@ export function GalleryApp() {
   const [receivedPhotoUrl, setReceivedPhotoUrl] = createSignal<string | null>(null);
   const [lastNfcRouteKey, setLastNfcRouteKey] = createSignal('');
 
+  // Albums
+  const [albums, setAlbums] = createSignal<{ id: number; name: string; color: string }[]>([]);
+  const [activeAlbum, setActiveAlbum] = createSignal<number | null>(null);
+  const [showAlbumCreate, setShowAlbumCreate] = createSignal(false);
+  const [albumName, setAlbumName] = createSignal('');
+  const [albumColor, setAlbumColor] = createSignal('#007aff');
+  const [showMoveToAlbum, setShowMoveToAlbum] = createSignal(false);
+
+  const loadAlbums = async () => {
+    const result = await fetchNui<{ id: number; name: string; color: string }[]>('galleryGetAlbums', undefined, []);
+    setAlbums(result || []);
+  };
+
+  const createAlbum = async () => {
+    const name = albumName().trim();
+    if (!name) return;
+    const result = await fetchNui<{ success?: boolean; id?: number; name?: string; color?: string }>(
+      'galleryCreateAlbum',
+      { name, color: albumColor() },
+      { success: true, id: Date.now(), name, color: albumColor() }
+    );
+    if (result?.success) {
+      setAlbumName('');
+      setAlbumColor('#007aff');
+      setShowAlbumCreate(false);
+      await loadAlbums();
+    }
+  };
+
+  const deleteAlbum = async (albumId: number) => {
+    await fetchNui('galleryDeleteAlbum', { albumId });
+    if (activeAlbum() === albumId) setActiveAlbum(null);
+    await loadAlbums();
+    await loadPhotos();
+  };
+
+  const movePhotoToAlbum = async (albumId: number | null) => {
+    const photo = selectedPhoto();
+    if (!photo) return;
+    await fetchNui('galleryMoveToAlbum', { photoId: photo.id, albumId }, { success: true });
+    setShowMoveToAlbum(false);
+    setSelectedPhoto(null);
+    await loadPhotos();
+  };
+
   const nfcShare = useNfcShare({
     onShare: async (targetServerId) => {
       const photo = selectedPhoto();
@@ -88,9 +134,16 @@ export function GalleryApp() {
   };
 
   const visiblePhotos = createMemo(() => {
+    let list = photos();
+    const album = activeAlbum();
+    if (album !== null) {
+      list = list.filter((item) => item.album_id === album);
+    }
     const q = query().trim().toLowerCase();
-    if (!q) return photos();
-    return photos().filter((item) => String(item?.url || '').toLowerCase().includes(q));
+    if (q) {
+      list = list.filter((item) => String(item?.url || '').toLowerCase().includes(q));
+    }
+    return list;
   });
 
   const shareContacts = createMemo(() =>
@@ -194,6 +247,20 @@ export function GalleryApp() {
     router.navigate('snap', { postMedia: mediaUrl, openComposer: '1' });
   };
 
+  const publishAsSnapStory = async () => {
+    if (isReadOnly()) return;
+    const mediaUrl = sanitizeMediaUrl(selectedPhoto()?.url);
+    if (!mediaUrl) return;
+    setShowShareSheet(false);
+    const result = await fetchNui<{ success?: boolean }>('snapPublishStory', {
+      mediaUrl,
+      mediaType: resolveMediaType(mediaUrl),
+    });
+    if (result?.success) {
+      setSelectedPhoto(null);
+    }
+  };
+
   const shareToMail = () => {
     if (isReadOnly()) return;
     const mediaUrl = sanitizeMediaUrl(selectedPhoto()?.url);
@@ -242,6 +309,8 @@ export function GalleryApp() {
     }
   });
 
+  void loadAlbums();
+
   useNuiEvent<{ url?: string; from?: string }>('receiveSharedPhoto', (payload) => {
     if (payload?.url) {
       setReceivedPhotoUrl(payload.url);
@@ -275,6 +344,29 @@ export function GalleryApp() {
           />
           <div class={styles.counterPill}>{visiblePhotos().length}</div>
         </div>
+        <Show when={albums().length > 0 || !isReadOnly()}>
+          <div class={styles.albumBar}>
+            <button class={styles.albumChip} classList={{ [styles.active]: activeAlbum() === null }} onClick={() => setActiveAlbum(null)}>
+              Todas
+            </button>
+            <For each={albums()}>
+              {(album) => (
+                <button
+                  class={styles.albumChip}
+                  classList={{ [styles.active]: activeAlbum() === album.id }}
+                  style={{ '--chip-color': album.color }}
+                  onClick={() => setActiveAlbum(activeAlbum() === album.id ? null : album.id)}
+                  onContextMenu={(e: MouseEvent) => { e.preventDefault(); void deleteAlbum(album.id); }}
+                >
+                  {album.name}
+                </button>
+              )}
+            </For>
+            <Show when={!isReadOnly()}>
+              <button class={styles.albumChipAdd} onClick={() => setShowAlbumCreate(true)}>+</button>
+            </Show>
+          </div>
+        </Show>
         <div class={styles.grid}>
           <Show when={loading()} fallback={<ScreenState loading={false} empty={visiblePhotos().length === 0} emptyTitle={t('gallery.empty_title', language())} emptyDescription={t('gallery.empty_desc', language())}>
             <For each={visiblePhotos()}>
@@ -326,6 +418,7 @@ export function GalleryApp() {
         onClose={() => setShowActions(false)}
         actions={[
           { label: t('garage.share', language()), tone: 'primary' as const, onClick: () => { setShowActions(false); setShowShareSheet(true); } },
+          ...(albums().length > 0 ? [{ label: t('gallery.move_album', language()) || 'Mover a album', onClick: () => { setShowActions(false); setShowMoveToAlbum(true); } }] : []),
           { label: t('gallery.use_wallpaper', language()), onClick: setAsWallpaper },
           { label: t('gallery.delete_photo', language()), tone: 'danger' as const, onClick: deletePhoto },
         ]}
@@ -342,6 +435,7 @@ export function GalleryApp() {
           { label: 'Mail', onClick: () => { setShowShareSheet(false); shareToMail(); } },
           { label: 'Chirp', onClick: () => { setShowShareSheet(false); shareToFeedApp('chirp'); } },
           { label: 'Snap', onClick: () => { setShowShareSheet(false); shareToFeedApp('snap'); } },
+          { label: 'Snap Story', onClick: () => void publishAsSnapStory() },
         ]}
       />
 
@@ -380,6 +474,56 @@ export function GalleryApp() {
           </button>
         </div>
       </Show>
+
+      {/* Move to album */}
+      <ActionSheet
+        open={showMoveToAlbum()}
+        title={t('gallery.move_album', language()) || 'Mover a album'}
+        onClose={() => setShowMoveToAlbum(false)}
+        actions={[
+          { label: t('gallery.no_album', language()) || 'Sin album', onClick: () => void movePhotoToAlbum(null) },
+          ...albums().map((album) => ({
+            label: album.name,
+            onClick: () => void movePhotoToAlbum(album.id),
+          })),
+        ]}
+      />
+
+      {/* Create album modal */}
+      <Modal
+        open={showAlbumCreate()}
+        title="Nuevo album"
+        onClose={() => { setShowAlbumCreate(false); setAlbumName(''); }}
+        size="sm"
+      >
+        <div class={styles.albumForm}>
+          <input
+            type="text"
+            class={styles.albumInput}
+            placeholder="Nombre del album"
+            value={albumName()}
+            onInput={(e) => setAlbumName(e.currentTarget.value)}
+            maxlength={64}
+            autofocus
+          />
+          <div class={styles.albumColors}>
+            <For each={['#007aff', '#ff3b30', '#30d158', '#ff9f0a', '#af52de', '#5856d6', '#ff2d55']}>
+              {(color) => (
+                <button
+                  class={styles.colorDot}
+                  classList={{ [styles.active]: albumColor() === color }}
+                  style={{ background: color }}
+                  onClick={() => setAlbumColor(color)}
+                />
+              )}
+            </For>
+          </div>
+        </div>
+        <ModalActions>
+          <ModalButton label="Cancelar" onClick={() => { setShowAlbumCreate(false); setAlbumName(''); }} />
+          <ModalButton label="Crear" tone="primary" onClick={() => void createAlbum()} disabled={!albumName().trim()} />
+        </ModalActions>
+      </Modal>
     </AppScaffold>
   );
 }

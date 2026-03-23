@@ -7,7 +7,7 @@ import { sanitizeText } from '../../../utils/sanitize';
 import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { usePollingTask, useWindowEvent } from '../../../hooks';
 import { getStoredLanguage, t } from '../../../i18n';
-import { LeafletMap } from './LeafletMap';
+import { LeafletMap, type LeafletLine } from './LeafletMap';
 import { getPlayerCoords } from '../../../utils/playerLocation';
 import styles from './MapsApp.module.scss';
 
@@ -59,6 +59,8 @@ export function MapsApp() {
 
   const [contacts, setContacts] = createSignal<ContactItem[]>([]);
   const [groups, setGroups] = createSignal<WaveGroup[]>([]);
+  const [rideRoutes, setRideRoutes] = createSignal<LeafletLine[]>([]);
+  const [showRoutes, setShowRoutes] = createSignal(false);
 
   const [showFabMenu, setShowFabMenu] = createSignal(false);
   const [showShareSheet, setShowShareSheet] = createSignal(false);
@@ -111,6 +113,15 @@ export function MapsApp() {
       y: Number(row.y) || 0,
       z: 0,
       message: t('maps.live_location', language()),
+    })));
+  };
+
+  const loadRouteHistory = async () => {
+    const routes = await fetchNui<Array<{ id: number; pickup_x: number; pickup_y: number; dest_x: number; dest_y: number }>>('cityrideGetRouteHistory', undefined, []);
+    setRideRoutes((routes || []).map((r) => ({
+      id: `route-${r.id}`,
+      points: [{ x: r.pickup_x, y: r.pickup_y }, { x: r.dest_x, y: r.dest_y }],
+      color: '#ff9f0a',
     })));
   };
 
@@ -295,6 +306,7 @@ export function MapsApp() {
         <div class={styles.mapContainer}>
           <LeafletMap
             pins={pins()}
+            lines={showRoutes() ? rideRoutes() : []}
             onPickCoords={(x, y) => {
               addManualMarker(x, y);
               setShowMarkerSheet(true);
@@ -368,6 +380,15 @@ export function MapsApp() {
             }}>
               <span class={styles.fabMenuIcon}><img src="./img/icons_ios/ui-trash.svg" alt="" draggable={false} /></span>
               <span>{t('maps.clear_markers', language())}</span>
+            </button>
+            <button class={styles.fabMenuItem} onClick={() => {
+              setShowFabMenu(false);
+              const next = !showRoutes();
+              setShowRoutes(next);
+              if (next) void loadRouteHistory();
+            }}>
+              <span class={styles.fabMenuIcon}>🚗</span>
+              <span>{showRoutes() ? 'Ocultar rutas' : 'Rutas CityRide'}</span>
             </button>
           </div>
         </Show>

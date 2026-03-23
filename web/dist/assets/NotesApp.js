@@ -1,1 +1,0 @@
-import"./app-appstore.js";import"./app-contacts.js";import"./app-calls.js";import"./app-messages.js";import{t as e}from"./app-notes.js";export{e as NotesApp};

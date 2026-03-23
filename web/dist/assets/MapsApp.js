@@ -1,1 +1,1 @@
-import"./app-appstore.js";import"./app-calls.js";import"./app-cityride.js";import{t as e}from"./app-maps.js";export{e as MapsApp};
+import{t as e}from"./app-maps.js";export{e as MapsApp};

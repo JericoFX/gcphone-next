@@ -47,8 +47,10 @@
   flex: 1;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 4px;
-  padding: 6px;
+  grid-auto-rows: min-content;
+  align-content: start;
+  gap: 3px;
+  padding: 4px;
   overflow-y: auto;
   border-radius: 18px;
   background: var(--surface);
@@ -208,4 +210,96 @@
   font-size: var(--fs-footnote);
   font-weight: 600;
   cursor: pointer;
+}
+
+/* Albums */
+.album-bar {
+  display: flex;
+  gap: 6px;
+  padding: 0 12px 8px;
+  overflow-x: auto;
+  flex-shrink: 0;
+
+  &::-webkit-scrollbar { display: none; }
+}
+
+.album-chip {
+  flex-shrink: 0;
+  padding: 5px 12px;
+  border-radius: 16px;
+  border: 1.5px solid var(--border, rgba(0, 0, 0, 0.1));
+  background: transparent;
+  color: var(--text, #111);
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+
+  &.active {
+    background: var(--chip-color, var(--tint, #007aff));
+    border-color: var(--chip-color, var(--tint, #007aff));
+    color: #fff;
+  }
+}
+
+.album-chip-add {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1.5px dashed var(--border, rgba(0, 0, 0, 0.15));
+  background: transparent;
+  color: var(--tint, #007aff);
+  font-size: 16px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.album-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 16px;
+}
+
+.album-input {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border, rgba(0, 0, 0, 0.1));
+  background: var(--surface, #fff);
+  color: var(--text, #111);
+  font-size: 14px;
+
+  &:focus { border-color: var(--tint, #007aff); outline: none; }
+}
+
+.album-colors {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+.color-dot {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+
+  &.active {
+    border-color: var(--text, #111);
+    box-shadow: 0 0 0 2px var(--surface, #fff);
+  }
+}
+
+.album-create-btn {
+  padding: 10px;
+  border-radius: 10px;
+  border: none;
+  background: var(--tint, #007aff);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+
+  &:disabled { opacity: 0.4; }
 }

@@ -440,6 +440,7 @@
     "chirp.remove": "Quitar",
     "chirp.publishing": "Publicando...",
     "chirp.publish": "Chirpear",
+    "chirp.cross_post_snap": "Publicar tambien en Snap",
     "chirp.rechirp": "ReChirp",
     "chirp.rechirp_desc": "Puedes compartirlo tal cual o agregar una opinion corta como cita.",
     "chirp.optional_comment": "Comentario opcional",

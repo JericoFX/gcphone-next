@@ -50,7 +50,8 @@ interface BrowserMockState {
   contacts: Contact[];
   messages: Message[];
   calls: Call[];
-  gallery: Array<{ id: number; url: string; type: 'image' | 'video'; created_at: string }>;
+  gallery: Array<{ id: number; url: string; type: 'image' | 'video'; album_id: number | null; created_at: string }>;
+  galleryAlbums: Array<{ id: number; name: string; color: string; created_at: string }>;
   balance: number;
   transactions: Array<{ id: number; description: string; amount: number; time: string }>;
   appLayout: { home: string[]; menu: string[] };
@@ -630,9 +631,14 @@ const state: BrowserMockState = {
     },
   ],
   gallery: [
-    { id: 1, url: './img/background/back001.jpg', type: 'image', created_at: nowIso() },
-    { id: 2, url: './img/background/neon.jpg', type: 'image', created_at: nowIso() },
+    { id: 1, url: './img/background/back001.jpg', type: 'image', album_id: null, created_at: nowIso() },
+    { id: 2, url: './img/background/neon.jpg', type: 'image', album_id: null, created_at: nowIso() },
+    { id: 3, url: 'https://picsum.photos/seed/a1/400/600', type: 'image', album_id: null, created_at: nowIso() },
+    { id: 4, url: 'https://picsum.photos/seed/a2/400/600', type: 'image', album_id: null, created_at: nowIso() },
+    { id: 5, url: 'https://picsum.photos/seed/a3/400/600', type: 'image', album_id: null, created_at: nowIso() },
+    { id: 6, url: 'https://picsum.photos/seed/a4/400/600', type: 'image', album_id: null, created_at: nowIso() },
   ],
+  galleryAlbums: [],
   balance: 24500,
   transactions: [
     { id: 1, description: 'Pago recibido', amount: 3500, time: nowIso() },
@@ -1903,6 +1909,37 @@ export async function handleBrowserNui<T = unknown>(eventName: string, data?: un
 
   if (eventName === 'getGallery') {
     return [...state.gallery] as T;
+  }
+
+  if (eventName === 'galleryGetAlbums') {
+    return [...state.galleryAlbums] as T;
+  }
+
+  if (eventName === 'galleryCreateAlbum') {
+    const d = data as { name?: string; color?: string } | undefined;
+    if (!d?.name) return { success: false } as T;
+    const id = Date.now();
+    const album = { id, name: d.name, color: d.color || '#007aff', created_at: new Date().toISOString() };
+    state.galleryAlbums.push(album);
+    return { success: true, id, name: album.name, color: album.color } as T;
+  }
+
+  if (eventName === 'galleryDeleteAlbum') {
+    const d = data as { albumId?: number } | undefined;
+    if (d?.albumId) {
+      state.galleryAlbums = state.galleryAlbums.filter((a) => a.id !== d.albumId);
+      state.gallery.forEach((p) => { if (p.album_id === d.albumId) p.album_id = null; });
+    }
+    return { success: true } as T;
+  }
+
+  if (eventName === 'galleryMoveToAlbum') {
+    const d = data as { photoId?: number; albumId?: number | null } | undefined;
+    if (d?.photoId) {
+      const photo = state.gallery.find((p) => p.id === d.photoId);
+      if (photo) photo.album_id = d.albumId ?? null;
+    }
+    return { success: true } as T;
   }
 
   if (eventName === 'getUploadConfig') {

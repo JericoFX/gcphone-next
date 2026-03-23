@@ -83,11 +83,11 @@
   --phone-screen-height: 752px;
   --phone-screen-left: 45px;
   --phone-screen-bottom: 154px;
-  --phone-screen-radius: 38px;
-  --phone-frame-width: 360px;
-  --phone-frame-height: 778px;
-  --phone-frame-left: 34px;
-  --phone-frame-top: 80px;
+  --phone-screen-radius: 34px;
+  --phone-frame-width: 350px;
+  --phone-frame-height: 766px;
+  --phone-frame-left: 38px;
+  --phone-frame-top: 87px;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -119,7 +119,6 @@
 }
 
 .gcphone-app.theme-light {
-  color-scheme: light;
   --bg: #f2f2f7;
   --surface: #ffffff;
   --surface-2: #f7f7fa;
@@ -170,7 +169,6 @@
 }
 
 .gcphone-app.theme-dark {
-  color-scheme: dark;
   --bg: #000000;
   --surface: #1c1c1e;
   --surface-2: #2c2c2e;
@@ -224,8 +222,6 @@
   --shadow-3: 0 14px 34px rgba(0, 0, 0, 0.42);
   --shadow-sm: 0 0.5px 1px rgba(0, 0, 0, 0.2);
 
-  /* Force dark backgrounds on common patterns */
-  background-color: var(--bg);
   color: var(--text);
 
   /* Fix gradient backgrounds in apps */

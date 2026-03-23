@@ -4,6 +4,7 @@
 local Bridge = require 'server.bridge'
 local Phone = require 'server.modules.phone'
 local Utils = require 'server.lib.utils'
+local RESOURCE_NAME = GetCurrentResourceName()
 
 local VehicleLocationMessages = {
     es = 'Ubicacion del vehiculo',
@@ -493,6 +494,18 @@ exports('SyncVehicle', function(identifier, plate, model, modelName, garageName,
         )
     end
 
+    -- Notify player when vehicle is impounded
+    if impounded then
+        pcall(function()
+            exports[RESOURCE_NAME]:AddPersistentNotification(identifier, {
+                appId = 'garage',
+                title = 'Vehiculo incautado',
+                content = string.format('Tu vehiculo %s (%s) fue incautado', modelName or 'Desconocido', plate or '???'),
+                meta = { plate = plate, model = modelName },
+            })
+        end)
+    end
+
     -- Update location if coords provided
     if coords and coords.x and coords.y and coords.z then
         local locationExists = MySQL.single.await(
@@ -512,6 +525,19 @@ exports('SyncVehicle', function(identifier, plate, model, modelName, garageName,
             )
         end
     end
+end)
+
+exports('NotifyImpound', function(identifier, plate, modelName, reason)
+    if not identifier or not plate then return false end
+    pcall(function()
+        exports[RESOURCE_NAME]:AddPersistentNotification(identifier, {
+            appId = 'garage',
+            title = 'Vehiculo incautado',
+            content = string.format('Tu vehiculo %s (%s) fue incautado%s', modelName or 'Desconocido', plate, reason and (': ' .. reason) or ''),
+            meta = { plate = plate, model = modelName, reason = reason },
+        })
+    end)
+    return true
 end)
 
 return {}

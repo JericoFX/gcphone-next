@@ -276,6 +276,30 @@ RegisterNUICallback('getGallery', function(_, cb)
     end)
 end)
 
+RegisterNUICallback('galleryGetAlbums', function(_, cb)
+    lib.callback('gcphone:gallery:getAlbums', false, function(albums)
+        cb(albums or {})
+    end)
+end)
+
+RegisterNUICallback('galleryCreateAlbum', function(data, cb)
+    lib.callback('gcphone:gallery:createAlbum', false, function(success, album)
+        cb(cbSuccess(success, nil, album))
+    end, data)
+end)
+
+RegisterNUICallback('galleryDeleteAlbum', function(data, cb)
+    lib.callback('gcphone:gallery:deleteAlbum', false, function(success)
+        cb(cbSuccess(success))
+    end, data and data.albumId)
+end)
+
+RegisterNUICallback('galleryMoveToAlbum', function(data, cb)
+    lib.callback('gcphone:gallery:moveToAlbum', false, function(success)
+        cb(cbSuccess(success))
+    end, data)
+end)
+
 RegisterNUICallback('getUploadConfig', function(_, cb)
     cb({
         uploadUrl = (Config.Gallery and Config.Gallery.UploadUrl) or '',
@@ -706,6 +730,12 @@ RegisterNUICallback('socialGetNotifications', function(data, cb)
     lib.callback('gcphone:social:getNotifications', false, function(items)
         cb(items or {})
     end, data or {})
+end)
+
+RegisterNUICallback('getPostPreview', function(data, cb)
+    lib.callback('gcphone:social:getPostPreview', false, function(preview)
+        cb(preview)
+    end, data)
 end)
 
 RegisterNUICallback('socialMarkNotificationRead', function(data, cb)
@@ -1778,6 +1808,12 @@ end)
 RegisterNUICallback('cityrideGetRideHistory', function(_, cb)
     lib.callback('gcphone:cityride:getRideHistory', false, function(payload)
         cb(payload or {})
+    end)
+end)
+
+RegisterNUICallback('cityrideGetRouteHistory', function(_, cb)
+    lib.callback('gcphone:cityride:getRouteHistory', false, function(routes)
+        cb(routes or {})
     end)
 end)
 

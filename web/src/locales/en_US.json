@@ -440,6 +440,7 @@
     "chirp.remove": "Remove",
     "chirp.publishing": "Publishing...",
     "chirp.publish": "Chirp",
+    "chirp.cross_post_snap": "Also post on Snap",
     "chirp.rechirp": "ReChirp",
     "chirp.rechirp_desc": "You can share it as-is or add a short opinion as a quote.",
     "chirp.optional_comment": "Optional comment",

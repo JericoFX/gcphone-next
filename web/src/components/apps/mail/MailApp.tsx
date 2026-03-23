@@ -300,6 +300,32 @@ export function MailApp() {
     setShowAttachmentComposer(false);
   };
 
+  const attachFromDocuments = async () => {
+    const docs = await fetchNui<Array<{ id: number; title: string; verification_code: string; doc_type: string }>>('documentsGetList', undefined, []);
+    if (!docs || docs.length === 0) {
+      uiAlert(t('mail.error.no_documents', language()) || 'No tienes documentos');
+      return;
+    }
+    const docNames = docs.map((d) => `${d.title} (${d.doc_type})`).join('\n');
+    const selected = await uiPrompt(
+      t('mail.prompt.select_document', language()) || 'Escribe el nombre del documento a adjuntar:\n\n' + docNames,
+      { title: t('mail.prompt.attach_document_title', language()) || 'Adjuntar documento' }
+    );
+    if (!selected) return;
+    const doc = docs.find((d) => d.title.toLowerCase().includes(String(selected).toLowerCase()));
+    if (!doc) return;
+    setAttachments((prev) => [
+      ...prev,
+      {
+        type: 'document',
+        url: `DOC:${doc.id}:${doc.verification_code}`,
+        name: doc.title,
+      },
+    ]);
+    setError('');
+    setShowAttachmentComposer(false);
+  };
+
   const attachLinkByPrompt = async () => {
     const result = await uiPrompt(t('mail.prompt.attach_link_message', language()), { title: t('mail.prompt.attach_link_title', language()) });
     const url = (result || '').trim();
@@ -593,6 +619,16 @@ export function MailApp() {
                                   >
                                     {attachment.name || attachment.url}
                                   </a>
+                                  <Show when={attachment.type === 'image' || attachment.type === 'video'}>
+                                    <button
+                                      class={styles.attachmentSave}
+                                      onClick={async () => {
+                                        await fetchNui('storeMediaUrl', { url: attachment.url, type: attachment.type }, { success: true });
+                                      }}
+                                    >
+                                      {t('gallery.save', language()) || 'Guardar'}
+                                    </button>
+                                  </Show>
                                 </div>
                               )}
                             </For>
@@ -692,6 +728,7 @@ export function MailApp() {
                             { icon: MAIL_ICONS.gallery, label: t('mail.gallery', language()), onClick: attachFromGallery },
                             { icon: MAIL_ICONS.camera, label: t('mail.camera', language()), onClick: attachFromCamera },
                             { icon: MAIL_ICONS.link, label: t('mail.link', language()), onClick: () => void attachLinkByPrompt() },
+                            { icon: './img/icons_ios/documents.svg', label: t('mail.documents', language()) || 'Docs', onClick: () => void attachFromDocuments() },
                           ]}
                           variant='compact'
                           class={styles.composeMediaButtons}

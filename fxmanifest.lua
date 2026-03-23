@@ -3,7 +3,7 @@ game 'gta5'
 
 author 'JericoFX'
 description 'Modern FiveM Phone - SolidJS + ox_lib + oxmysql'
-version '2.7.2'
+version '2.7.3'
 
 lua54 'yes'
 

@@ -652,3 +652,63 @@
   opacity: 0.6;
   flex-shrink: 0;
 }
+
+/* Social post preview card */
+.social-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border-radius: 10px;
+  background: var(--surface-2, rgba(0, 0, 0, 0.05));
+  cursor: pointer;
+  max-width: 220px;
+}
+
+.social-card-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.social-card-avatar {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.social-card-user {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text, #111);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.social-card-app {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--tint, #007aff);
+  opacity: 0.8;
+}
+
+.social-card-text {
+  font-size: 12px;
+  line-height: 1.3;
+  color: var(--text, #111);
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.social-card-media {
+  width: 100%;
+  max-height: 120px;
+  object-fit: cover;
+  border-radius: 6px;
+}

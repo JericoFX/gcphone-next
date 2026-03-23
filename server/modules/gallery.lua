@@ -9,7 +9,7 @@ lib.callback.register('gcphone:getGallery', function(source)
     if not identifier then return {} end
 
     return MySQL.query.await(
-        'SELECT id, url, type, created_at FROM phone_gallery WHERE identifier = ? ORDER BY created_at DESC',
+        'SELECT id, url, type, album_id, created_at FROM phone_gallery WHERE identifier = ? ORDER BY created_at DESC',
         { identifier }
     ) or {}
 end)
@@ -112,6 +112,65 @@ lib.callback.register('gcphone:gallery:shareNfc', function(source, data)
     })
 
     return { success = true }
+end)
+
+-- Albums
+
+lib.callback.register('gcphone:gallery:getAlbums', function(source)
+    local identifier = Phone.GetPhoneOwnerIdentifier(source, true)
+    if not identifier then return {} end
+    return MySQL.query.await(
+        'SELECT id, name, color, created_at FROM phone_gallery_albums WHERE identifier = ? ORDER BY name ASC',
+        { identifier }
+    ) or {}
+end)
+
+lib.callback.register('gcphone:gallery:createAlbum', function(source, data)
+    if Phone.IsPhoneReadOnly(source) then return false end
+    local identifier = Bridge.GetIdentifier(source)
+    if not identifier then return false end
+    if type(data) ~= 'table' then return false end
+
+    local name = Utils.SafeString(data.name, 64)
+    if not name then return false end
+    local color = Utils.SafeString(data.color, 7) or '#007aff'
+
+    local id = MySQL.insert.await(
+        'INSERT INTO phone_gallery_albums (identifier, name, color) VALUES (?, ?, ?)',
+        { identifier, name, color }
+    )
+    return true, { id = id, name = name, color = color }
+end)
+
+lib.callback.register('gcphone:gallery:deleteAlbum', function(source, albumId)
+    if Phone.IsPhoneReadOnly(source) then return false end
+    local identifier = Bridge.GetIdentifier(source)
+    if not identifier then return false end
+    local id = tonumber(albumId)
+    if not id or id < 1 then return false end
+
+    MySQL.update.await('UPDATE phone_gallery SET album_id = NULL WHERE album_id = ? AND identifier = ?', { id, identifier })
+    MySQL.update.await('DELETE FROM phone_gallery_albums WHERE id = ? AND identifier = ?', { id, identifier })
+    return true
+end)
+
+lib.callback.register('gcphone:gallery:moveToAlbum', function(source, data)
+    if Phone.IsPhoneReadOnly(source) then return false end
+    local identifier = Bridge.GetIdentifier(source)
+    if not identifier then return false end
+    if type(data) ~= 'table' then return false end
+
+    local photoId = tonumber(data.photoId)
+    local albumId = data.albumId == nil and 'NULL' or tonumber(data.albumId)
+    if not photoId or photoId < 1 then return false end
+
+    if albumId == 'NULL' then
+        MySQL.update.await('UPDATE phone_gallery SET album_id = NULL WHERE id = ? AND identifier = ?', { photoId, identifier })
+    else
+        if not albumId or albumId < 1 then return false end
+        MySQL.update.await('UPDATE phone_gallery SET album_id = ? WHERE id = ? AND identifier = ?', { albumId, photoId, identifier })
+    end
+    return true
 end)
 
 ---Get gallery media for a phone owner identifier.

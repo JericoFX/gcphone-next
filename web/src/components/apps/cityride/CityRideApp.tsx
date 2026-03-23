@@ -11,6 +11,7 @@ import { SegmentedTabs } from '../../shared/ui/SegmentedTabs';
 import { LeafletMap, type LeafletPin } from '../maps/LeafletMap';
 import { t } from '../../../i18n';
 import { usePhone } from '../../../store/phone';
+import { ShareSheet, type SharePayload } from '../../shared/ui/ShareSheet';
 import styles from './CityRideApp.module.scss';
 
 interface Coords {
@@ -83,6 +84,7 @@ export function CityRideApp() {
 
   const [activeTab, setActiveTab] = createSignal<TabId>('passenger');
   const [loading, setLoading] = createSignal(false);
+  const [etaShare, setEtaShare] = createSignal<SharePayload | null>(null);
 
   // Passenger state
   const [activeRide, setActiveRide] = createSignal<RideData | null>(null);
@@ -507,6 +509,14 @@ export function CityRideApp() {
           <button class={styles.actionBtn} onClick={() => setWaypoint(props.ride.dest)} type="button">
             {t('cityride.gps_dest', language())}
           </button>
+          <button class={styles.actionBtn} onClick={() => {
+            const dist = props.ride.distance || 0;
+            const eta = Math.max(1, Math.round(dist / 80));
+            const msg = `CityRide ETA: ~${eta} min (${dist.toFixed(0)}m) LOC:${props.ride.dest?.x?.toFixed(1) || 0},${props.ride.dest?.y?.toFixed(1) || 0}`;
+            setEtaShare({ text: msg });
+          }} type="button">
+            ETA
+          </button>
         </div>
 
         <Show when={props.ride.status !== 'in_progress'}>
@@ -902,6 +912,13 @@ export function CityRideApp() {
           </Show>
         </Show>
       </div>
+
+      <ShareSheet
+        open={etaShare() !== null}
+        payload={etaShare() || { text: '' }}
+        destinations={['messages', 'wavechat']}
+        onClose={() => setEtaShare(null)}
+      />
     </AppScaffold>
   );
 }

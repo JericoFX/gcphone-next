@@ -32,6 +32,7 @@ import { SearchInput } from '../../shared/ui/SearchInput';
 import { SegmentedTabs } from '../../shared/ui/SegmentedTabs';
 import { SheetIntro } from '../../shared/ui/SheetIntro';
 import { SocialOnboardingModal, type SocialOnboardingPayload } from '../../shared/ui/SocialOnboardingModal';
+import { ShareSheet, type SharePayload } from '../../shared/ui/ShareSheet';
 import { VirtualList } from '../../shared/ui/VirtualList';
 import { useLiveFlashlight } from '../../../hooks/useLiveFlashlight';
 import { getStoredLanguage, t } from '../../../i18n';
@@ -68,6 +69,7 @@ export function SnapApp() {
 
   // UI State
   const [loading, setLoading] = createSignal(false);
+  const [sharePayload, setSharePayload] = createSignal<SharePayload | null>(null);
   const [fabTooltipVisible, setFabTooltipVisible] = createSignal(false);
   const [activeStoryIndex, setActiveStoryIndex] = createSignal<number | null>(null);
   const [storyProgressPct, setStoryProgressPct] = createSignal(0);
@@ -1509,6 +1511,10 @@ export function SnapApp() {
                             <span class={styles.count}>{post.likes || 0}</span>
                           </button>
 
+                          <button class={styles.actionBtn} onClick={(e) => { e.stopPropagation(); setSharePayload({ text: `SNAP:${post.id}` }); }}>
+                            <span><img src="./img/icons_ios/ui-plane.svg" alt="" draggable={false} /></span>
+                          </button>
+
                           <Show when={post.is_own}>
                             <button class={styles.actionBtn} onClick={(e) => deletePost(e, post.id)}>
                               <span><img src="./img/icons_ios/ui-trash.svg" alt="" draggable={false} /></span>
@@ -2012,6 +2018,13 @@ export function SnapApp() {
       </Modal>
 
       <MediaLightbox url={viewerUrl()} onClose={() => setViewerUrl(null)} />
+
+      <ShareSheet
+        open={sharePayload() !== null}
+        payload={sharePayload() || { text: '' }}
+        destinations={['messages']}
+        onClose={() => setSharePayload(null)}
+      />
     </AppScaffold>
   );
 }
