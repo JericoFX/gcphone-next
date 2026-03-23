@@ -242,6 +242,24 @@ AddEventHandler('gcphone:live:end', function(clipId)
 end)
 
 -- Cleanup on resource stop
+AddEventHandler('playerDropped', function()
+    local src = source
+    MutedUsers[src] = nil
+
+    for clipId, live in pairs(ActiveLives) do
+        if live.owner == src then
+            for userSource in pairs(live.users or {}) do
+                TriggerClientEvent('gcphone:live:ended', userSource, clipId)
+            end
+            ActiveLives[clipId] = nil
+        else
+            if live.users then
+                live.users[src] = nil
+            end
+        end
+    end
+end)
+
 AddEventHandler('onResourceStop', function(resourceName)
     if resourceName == GetCurrentResourceName() then
         for clipId, live in pairs(ActiveLives) do

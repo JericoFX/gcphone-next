@@ -764,12 +764,21 @@ AddEventHandler('playerDropped', function()
     local src = source
     LastMessageSentBySource[src] = nil
     local identifier = Bridge.GetIdentifier(src)
-    if identifier then
-        AutoReplyByIdentifier[identifier] = nil
-        for key, _ in pairs(AutoReplySentTo) do
-            if key:find(identifier, 1, true) then
-                AutoReplySentTo[key] = nil
-            end
+    if not identifier then return end
+
+    AutoReplyByIdentifier[identifier] = nil
+
+    local prefix = identifier .. ':'
+    local suffix = ':' .. identifier
+    for key in pairs(AutoReplySentTo) do
+        if key:sub(1, #prefix) == prefix or key:sub(-#suffix) == suffix then
+            AutoReplySentTo[key] = nil
+        end
+    end
+
+    for key in pairs(LastStatusViewByIdentifier) do
+        if key:sub(1, #prefix) == prefix then
+            LastStatusViewByIdentifier[key] = nil
         end
     end
 end)
