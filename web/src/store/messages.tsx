@@ -77,7 +77,7 @@ export const MessagesProvider: ParentComponent = (props) => {
     fetch: async () => {
       setState('loading', true);
       const messages = await fetchNui<Message[]>('getMessages', undefined, []);
-      const list = messages || [];
+      const list = Array.isArray(messages) ? messages : [];
       const unread = countUnread(list);
       batch(() => {
         setState('messages', list);

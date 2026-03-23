@@ -2,7 +2,6 @@
 
 local Bridge = require 'server.bridge'
 
-local MySQL = exports.oxmysql
 local USE_SQL_CLEANUP_EVENTS = GetConvar('gcphone_sql_cleanup_events', '0') == '1'
 local ActiveLocationRecipients = {}
 local LastLiveLocationCleanupAt = 0

@@ -157,10 +157,6 @@ end
 CreateThread(function()
     print(('^2[gcphone-next]^7 %s'):format(L('server_initialized')))
 
-    -- Check database version
-    local dbVersion = exports['gcphone-next'].GetDatabaseVersion and exports['gcphone-next'].GetDatabaseVersion() or 0
-    print(string.format('^2[gcphone-next]^7 %s', L('database_version', dbVersion)))
-
     CheckRemoteVersion()
 end)
 

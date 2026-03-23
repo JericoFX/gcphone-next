@@ -34,7 +34,7 @@ export const ContactsProvider: ParentComponent = (props) => {
       setState('loading', true);
       const contacts = await fetchNui<Contact[]>('getContacts', undefined, []);
       batch(() => {
-        setState('contacts', contacts || []);
+        setState('contacts', Array.isArray(contacts) ? contacts : []);
         setState('loading', false);
       });
     },
@@ -97,7 +97,7 @@ export const ContactsProvider: ParentComponent = (props) => {
   };
   
   useNuiCustomEvent<Contact[]>('contactsUpdated', (contacts) => {
-    setState('contacts', contacts);
+    setState('contacts', Array.isArray(contacts) ? contacts : []);
   });
   
   useNuiCustomEvent<Contact>('contactAdded', (contact) => {

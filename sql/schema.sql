@@ -1,32 +1,18 @@
 -- ============================================================
--- gcphone-next — COMPLETE DATABASE SCHEMA REFERENCE (post-V20)
+-- gcphone-next — COMPLETE DATABASE SCHEMA
 -- Compatible with MariaDB 10.5+ / MySQL 8.0+
 -- ============================================================
 --
--- REFERENCE ONLY — This file is NOT executed by the migration
--- system.  All schema changes are applied automatically by the
--- Lua auto-migration runner in server/modules/database.lua.
+-- This is the AUTHORITATIVE schema file.
+-- Run this SQL manually in your database BEFORE starting
+-- gcphone-next for the first time.
 --
--- This file reflects the FINAL state of every table, trigger,
--- stored procedure, event, and generated column after all
--- migrations (V1 through V20) have been applied.
+-- All tables use CREATE TABLE IF NOT EXISTS so it is safe
+-- to re-run on an existing database (new tables will be
+-- created, existing ones will be left untouched).
 --
--- Generated: 2026-03-19
+-- Generated: 2026-03-23
 -- ============================================================
-
--- ============================================================
--- MIGRATION TRACKING
--- ============================================================
-
-CREATE TABLE IF NOT EXISTS `phone_migrations` (
-    `id` INT AUTO_INCREMENT PRIMARY KEY,
-    `version` INT NOT NULL UNIQUE,
-    `name` VARCHAR(64) NOT NULL,
-    `description` VARCHAR(255) DEFAULT NULL,
-    `applied_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    `execution_time_ms` INT DEFAULT 0,
-    KEY `idx_version` (`version`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================
 -- CORE TABLES
@@ -50,6 +36,7 @@ CREATE TABLE IF NOT EXISTS `phone_numbers` (
     `theme` VARCHAR(10) DEFAULT 'light',
     `language` VARCHAR(8) DEFAULT 'es',
     `audio_profile` VARCHAR(16) DEFAULT 'normal',
+    `streamer_mode` TINYINT(1) NOT NULL DEFAULT 0,
     `is_stolen` TINYINT(1) NOT NULL DEFAULT 0,
     `stolen_at` TIMESTAMP NULL DEFAULT NULL,
     `stolen_reason` VARCHAR(255) DEFAULT NULL,
@@ -99,7 +86,7 @@ CREATE TABLE IF NOT EXISTS `phone_contacts` (
 -- MESSAGING (WaveChat)
 -- ============================================================
 
--- Direct messages (V1)
+-- Direct messages (V1 + V20)
 CREATE TABLE IF NOT EXISTS `phone_messages` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,
     `transmitter` VARCHAR(15) NOT NULL,
@@ -109,6 +96,13 @@ CREATE TABLE IF NOT EXISTS `phone_messages` (
     `is_read` TINYINT(1) DEFAULT 0,
     `owner` TINYINT(1) DEFAULT 0,
     `time` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    `reply_to_id` INT DEFAULT NULL,
+    `message_type` VARCHAR(10) NOT NULL DEFAULT 'text',
+    `audio_data` MEDIUMTEXT DEFAULT NULL,
+    `audio_duration` SMALLINT DEFAULT NULL,
+    `status` VARCHAR(10) NOT NULL DEFAULT 'sent',
+    `delivered_at` TIMESTAMP NULL DEFAULT NULL,
+    `read_at` TIMESTAMP NULL DEFAULT NULL,
     KEY `idx_transmitter` (`transmitter`),
     KEY `idx_receiver` (`receiver`),
     KEY `idx_time` (`time`),
@@ -153,7 +147,7 @@ CREATE TABLE IF NOT EXISTS `phone_chat_group_invites` (
     KEY `idx_group_invites_group` (`group_id`, `status`, `created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Chat group messages (V1)
+-- Chat group messages (V1 + V20)
 CREATE TABLE IF NOT EXISTS `phone_chat_group_messages` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,
     `group_id` INT NOT NULL,
@@ -162,10 +156,25 @@ CREATE TABLE IF NOT EXISTS `phone_chat_group_messages` (
     `message` TEXT NOT NULL,
     `media_url` VARCHAR(500) DEFAULT NULL,
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    `reply_to_id` INT DEFAULT NULL,
+    `message_type` VARCHAR(10) NOT NULL DEFAULT 'text',
+    `audio_data` MEDIUMTEXT DEFAULT NULL,
+    `audio_duration` SMALLINT DEFAULT NULL,
     FOREIGN KEY (`group_id`) REFERENCES `phone_chat_groups`(`id`) ON DELETE CASCADE,
     KEY `idx_group_created` (`group_id`, `created_at`),
     KEY `idx_created_at` (`created_at`),
     KEY `idx_group_messages_created` (`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Message reactions (V20)
+CREATE TABLE IF NOT EXISTS `phone_message_reactions` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `message_id` INT NOT NULL,
+    `sender_phone` VARCHAR(15) NOT NULL,
+    `emoji` VARCHAR(8) NOT NULL,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY `uk_reaction` (`message_id`, `sender_phone`),
+    KEY `idx_reaction_message` (`message_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- WaveChat statuses (V1)
@@ -1577,5 +1586,5 @@ CREATE TRIGGER `trg_services_ratings_ad`
 DELIMITER ;
 
 -- ============================================================
--- END OF SCHEMA REFERENCE
+-- END OF SCHEMA
 -- ============================================================
