@@ -154,7 +154,7 @@ local function ResolveOwnerName(ownerIdentifier)
     return ownerName
 end
 
-lib.callback.register('gcphone:dropPhone', function(source)
+local function PerformPhoneDrop(source)
     local identifier = Bridge.GetIdentifier(source)
     if not identifier then
         return { success = false, error = 'INVALID_SOURCE' }
@@ -199,7 +199,30 @@ lib.callback.register('gcphone:dropPhone', function(source)
         phoneId = phoneId,
         coords = payload.coords,
     }
+end
+
+lib.callback.register('gcphone:dropPhone', function(source)
+    return PerformPhoneDrop(source)
 end)
+
+-- Verified: ox_inventory docs — swapItems hook with itemFilter and toType == 'drop'
+if Config.Phone.RequireItem and GetResourceState('ox_inventory') == 'started' then
+    exports.ox_inventory:registerHook('swapItems', function(payload)
+        if payload.toType ~= 'drop' then return true end
+
+        local src = payload.source
+        if not src then return true end
+
+        local result = PerformPhoneDrop(src)
+        if result and result.success then
+            return false
+        end
+
+        return true
+    end, {
+        itemFilter = { [Config.Phone.ItemName or 'phone'] = true },
+    })
+end
 
 lib.callback.register('gcphone:getDroppedPhones', function(source)
     local list = {}

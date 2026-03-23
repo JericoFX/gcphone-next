@@ -227,23 +227,6 @@ local function CreatePhonePoint(phoneId, coords)
     phonePoints[phoneId] = point
 end
 
-RegisterCommand('tiratelefono', function()
-    lib.callback('gcphone:dropPhone', false, function(result)
-        if result and result.success then
-            lib.notify({
-                title = 'Telefono',
-                description = 'Has tirado tu telefono al suelo',
-                type = 'success'
-            })
-        else
-            lib.notify({
-                title = 'Error',
-                description = 'No se pudo tirar el telefono: ' .. (result and result.error or 'Unknown error'),
-                type = 'error'
-            })
-        end
-    end)
-end, false)
 
 RegisterNetEvent('gcphone:phoneDropped', function(data)
     if not data or not data.phoneId or not data.coords then return end
