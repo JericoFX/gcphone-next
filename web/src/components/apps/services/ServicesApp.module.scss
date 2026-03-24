@@ -72,14 +72,9 @@
 // Category Filter
 .categoryFilter {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--s-2);
-  overflow-x: auto;
   padding-bottom: 2px;
-  scrollbar-width: none;
-
-  &::-webkit-scrollbar {
-    display: none;
-  }
 }
 
 .categoryChip {

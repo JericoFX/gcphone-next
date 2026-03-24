@@ -133,16 +133,34 @@ export function SettingsApp() {
       </Show>
       <Switch>
         <Match when={section() === 'main'}>
-          <SettingsMain language={language} notifications={notifications} notificationsActions={notificationsActions} autoReplyEnabled={autoReplyEnabled} setAutoReplyEnabled={setAutoReplyEnabled} autoReplyMessage={autoReplyMessage} setAutoReplyMessage={setAutoReplyMessage} liveLocationEnabled={liveLocationEnabled} onNavigate={(s) => setSection(s as SettingsSection)} />
+          <SettingsMain
+            language={language}
+            notifications={notifications}
+            notificationsActions={notificationsActions}
+            liveLocationEnabled={liveLocationEnabled}
+            phoneVersion={phoneState.resourceVersion}
+            onNavigate={(s) => setSection(s as SettingsSection)}
+          />
         </Match>
         <Match when={section() === 'appearance'}>
           <SettingsAppearance language={language} phoneState={phoneState} phoneActions={phoneActions} urlInput={urlInput} setUrlInput={setUrlInput} onStatus={showToast} />
         </Match>
         <Match when={section() === 'sound'}>
-          <SettingsSound language={language} phoneState={phoneState} phoneActions={phoneActions} toneCatalog={toneCatalog} previewToneId={previewToneId} onPreview={playRingtonePreview} />
+          <SettingsSound
+            language={language}
+            phoneState={phoneState}
+            phoneActions={phoneActions}
+            toneCatalog={toneCatalog}
+            previewToneId={previewToneId}
+            onPreview={playRingtonePreview}
+            autoReplyEnabled={autoReplyEnabled}
+            setAutoReplyEnabled={setAutoReplyEnabled}
+            autoReplyMessage={autoReplyMessage}
+            setAutoReplyMessage={setAutoReplyMessage}
+          />
         </Match>
         <Match when={section() === 'security'}>
-          <SettingsSecurity language={language} phoneActions={phoneActions} screenLockEnabled={screenLockEnabled} />
+          <SettingsSecurity language={language} phoneActions={phoneActions} phoneState={phoneState} screenLockEnabled={screenLockEnabled} />
         </Match>
         <Match when={section() === 'notifications'}>
           <SettingsNotifications language={language} phoneState={phoneState} notificationsActions={notificationsActions} />
@@ -151,7 +169,7 @@ export function SettingsApp() {
           <SettingsSystem language={language} phoneActions={phoneActions} liveLocationEnabled={liveLocationEnabled} setLiveLocationEnabled={setLiveLocationEnabled} liveLocationStatus={liveLocationStatus} setLiveLocationStatus={setLiveLocationStatus} toggleLiveLocation={() => void toggleLiveLocation()} liveLocationInterval={liveLocationInterval} updateLiveLocationInterval={(s) => void updateLiveLocationInterval(s)} />
         </Match>
         <Match when={section() === 'about'}>
-          <SettingsAbout language={language} phoneState={phoneState} />
+          <SettingsAbout language={language} phoneState={phoneState} onStatus={showToast} />
         </Match>
       </Switch>
     </AppScaffold>

@@ -471,6 +471,12 @@ Config.Snap = {
 Config.Garage = {
     MaxVehicles = 20,
 
+    BailPrice = 500,
+    ValetPrice = 1000,
+    ValetEnabled = true,
+    BailEnabled = true,
+    RequestEnabled = true,
+
     Impounds = {
         { label = 'Deposito LSPD', x = 409.09, y = -1622.65, z = 29.29 },
         { label = 'Deposito Sandy', x = 1649.67, y = 3789.61, z = 34.79 },
@@ -599,6 +605,8 @@ Config.CityRide = {
     MinPrice = 50,
     MaxPrice = 50000,
     RequestTimeoutSeconds = 120,
+    RequireLicense = true,
+    LicenseDocType = 'license',
 }
 
 Config.Framework = 'qbcore'

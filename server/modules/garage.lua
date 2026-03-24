@@ -540,4 +540,160 @@ exports('NotifyImpound', function(identifier, plate, modelName, reason)
     return true
 end)
 
+-- Pay bail to release an impounded vehicle
+lib.callback.register('gcphone:garage:payBail', function(source, data)
+    if Utils.HitRateLimit(source, 'garage_bail', 4000, 2) then
+        return { success = false, error = 'RATE_LIMIT' }
+    end
+
+    local cfg = Config.Garage or {}
+    if not cfg.BailEnabled then
+        return { success = false, error = 'DISABLED' }
+    end
+
+    local identifier = Bridge.GetIdentifier(source)
+    if not identifier or type(data) ~= 'table' then
+        return { success = false, error = 'INVALID_REQUEST' }
+    end
+
+    local plate = data.plate
+    if not plate then
+        return { success = false, error = 'MISSING_PLATE' }
+    end
+
+    local vehicle = MySQL.single.await(
+        'SELECT * FROM phone_garage WHERE identifier = ? AND plate = ?',
+        { identifier, plate }
+    )
+
+    if not vehicle then
+        return { success = false, error = 'VEHICLE_NOT_FOUND' }
+    end
+
+    if vehicle.impounded ~= 1 then
+        return { success = false, error = 'NOT_IMPOUNDED' }
+    end
+
+    local bailAmount = tonumber(cfg.BailPrice) or 500
+    local balance = Bridge.GetMoney(source, 'bank')
+
+    if balance < bailAmount then
+        return { success = false, error = 'INSUFFICIENT_FUNDS' }
+    end
+
+    local removed = Bridge.RemoveMoney(source, bailAmount, 'bank', 'garage_bail')
+    if not removed then
+        return { success = false, error = 'PAYMENT_FAILED' }
+    end
+
+    MySQL.update.await(
+        'UPDATE phone_garage SET impounded = 0 WHERE identifier = ? AND plate = ?',
+        { identifier, plate }
+    )
+
+    return { success = true, paid = bailAmount }
+end)
+
+-- Valet service: spawn vehicle near the player's location
+lib.callback.register('gcphone:garage:requestValet', function(source, data)
+    if Utils.HitRateLimit(source, 'garage_valet', 10000, 2) then
+        return { success = false, error = 'RATE_LIMIT' }
+    end
+
+    local cfg = Config.Garage or {}
+    if not cfg.ValetEnabled then
+        return { success = false, error = 'DISABLED' }
+    end
+
+    local identifier = Bridge.GetIdentifier(source)
+    if not identifier or type(data) ~= 'table' then
+        return { success = false, error = 'INVALID_REQUEST' }
+    end
+
+    local plate = data.plate
+    if not plate then
+        return { success = false, error = 'MISSING_PLATE' }
+    end
+
+    local vehicle = MySQL.single.await(
+        'SELECT * FROM phone_garage WHERE identifier = ? AND plate = ?',
+        { identifier, plate }
+    )
+
+    if not vehicle then
+        return { success = false, error = 'VEHICLE_NOT_FOUND' }
+    end
+
+    if vehicle.impounded == 1 then
+        return { success = false, error = 'VEHICLE_IMPOUNDED' }
+    end
+
+    local valetAmount = tonumber(cfg.ValetPrice) or 1000
+    local balance = Bridge.GetMoney(source, 'bank')
+
+    if balance < valetAmount then
+        return { success = false, error = 'INSUFFICIENT_FUNDS' }
+    end
+
+    local removed = Bridge.RemoveMoney(source, valetAmount, 'bank', 'garage_valet')
+    if not removed then
+        return { success = false, error = 'PAYMENT_FAILED' }
+    end
+
+    TriggerClientEvent('gcphone:garage:spawnVehicle', source, vehicle)
+
+    return { success = true, paid = valetAmount }
+end)
+
+-- Set GPS waypoint to vehicle location or nearest garage spawn point
+lib.callback.register('gcphone:garage:setWaypoint', function(source, data)
+    if Utils.HitRateLimit(source, 'garage_waypoint', 2000, 5) then
+        return { success = false, error = 'RATE_LIMIT' }
+    end
+
+    if type(data) ~= 'table' then
+        return { success = false, error = 'INVALID_REQUEST' }
+    end
+
+    local x, y
+
+    -- If explicit coords are provided (e.g. from vehicle location), use them
+    if data.x and data.y then
+        x = tonumber(data.x)
+        y = tonumber(data.y)
+    elseif data.plate then
+        -- Look up last known vehicle location
+        local identifier = Bridge.GetIdentifier(source)
+        if identifier then
+            local location = MySQL.single.await([[
+                SELECT location_x, location_y
+                FROM phone_garage_locations
+                WHERE identifier = ? AND plate = ?
+            ]], { identifier, data.plate })
+
+            if location and location.location_x and location.location_y then
+                x = tonumber(location.location_x)
+                y = tonumber(location.location_y)
+            end
+        end
+    end
+
+    -- Fallback: nearest garage spawn point
+    if not x or not y then
+        local nearest = FindNearestInMap(source, ResolveSpawnPoints(source))
+        if nearest then
+            x = nearest.x
+            y = nearest.y
+        end
+    end
+
+    if not x or not y then
+        return { success = false, error = 'NO_LOCATION' }
+    end
+
+    TriggerClientEvent('gcphone:garage:setWaypoint', source, { x = x, y = y })
+
+    return { success = true }
+end)
+
 return {}

@@ -1,6 +1,6 @@
 import { For, Show, createSignal } from 'solid-js';
 import { t } from '../../../i18n';
-import { Group, IconImage, ICONS, PIN_LENGTH } from './settingsShared';
+import { Cell, Group, IconImage, ICONS, InlineExpander, PIN_LENGTH } from './settingsShared';
 import styles from './SettingsApp.module.scss';
 
 type SecurityFlow = 'idle' | 'disable-lock' | 'change-verify' | 'change-new' | 'change-confirm';
@@ -8,6 +8,7 @@ type SecurityFlow = 'idle' | 'disable-lock' | 'change-verify' | 'change-new' | '
 interface SettingsSecurityProps {
   language: () => string;
   phoneActions: any;
+  phoneState: any;
   screenLockEnabled: () => boolean;
 }
 
@@ -20,6 +21,11 @@ export function SettingsSecurity(props: SettingsSecurityProps) {
   const resetSecurityFlow = () => { setSecurityFlow('idle'); setPinCode(''); setPinConfirm(''); };
 
   const getCurrentPin = () => securityFlow() === 'change-confirm' ? pinConfirm() : pinCode();
+
+  const hasPinSet = () => {
+    const code = props.phoneState.settings.lockCode;
+    return code && code !== '0000';
+  };
 
   const validateAndSavePin = () => {
     if (pinCode() !== pinConfirm()) {
@@ -70,78 +76,86 @@ export function SettingsSecurity(props: SettingsSecurityProps) {
   const securityTitle = () => {
     switch (securityFlow()) {
       case 'disable-lock': return t('settings.pin.confirm_current', props.language());
-      case 'change-verify': return t('settings.pin.enter_current', props.language());
+      case 'change-verify': return t('settings.pin_verify_current', props.language()) || t('settings.pin.enter_current', props.language());
       case 'change-new': return t('settings.pin.enter_new', props.language());
       case 'change-confirm': return t('settings.pin.confirm_new', props.language());
-      default: return t('settings.tab.security', props.language());
-    }
-  };
-
-  const securitySubtitle = () => {
-    switch (securityFlow()) {
-      case 'disable-lock': return 'Necesitamos validar el PIN antes de quitar el bloqueo de pantalla.';
-      case 'change-verify': return 'Verifica el PIN actual antes de cambiarlo.';
-      case 'change-new': return 'El PIN debe tener 4 digitos.';
-      case 'change-confirm': return 'Vuelve a introducir el nuevo PIN.';
-      default: return 'Configura el bloqueo de pantalla y administra el PIN del dispositivo.';
+      default: return '';
     }
   };
 
   return (
     <div class={styles.content}>
       <Group>
-        <div class={styles.locationRow}>
-          <div class={styles.locationLeft}>
-            <div class={`${styles.cellIcon} ${styles.iconGreen}`}><IconImage src={ICONS.security} class={styles.cellIconImage} /></div>
-            <div>
-              <div class={styles.cellTitle}>Bloqueo de pantalla</div>
-              <div class={styles.cellSubtitle}>{props.screenLockEnabled() ? 'El telefono pide PIN al abrirse.' : 'El telefono abre directo sin lock screen.'}</div>
-            </div>
-          </div>
-          <div class={`${styles.switch} ${props.screenLockEnabled() ? styles.switchActive : ''}`} onClick={() => {
+        <Cell
+          icon={ICONS.security} iconBg="iconBlue"
+          title={t('settings.screen_lock', props.language()) || 'Bloqueo de pantalla'}
+          right="switch"
+          switchValue={props.screenLockEnabled()}
+          onSwitch={() => {
             setStatus(null);
-            if (props.screenLockEnabled()) { resetSecurityFlow(); setSecurityFlow('disable-lock'); return; }
+            if (props.screenLockEnabled()) {
+              resetSecurityFlow();
+              setSecurityFlow('disable-lock');
+              return;
+            }
             props.phoneActions.setScreenLockEnabled(true);
-            setStatus({ type: 'ok', text: 'Bloqueo de pantalla activado' });
-          }} role="switch" aria-checked={props.screenLockEnabled()}>
-            <div class={styles.switchThumb} />
-          </div>
-        </div>
-
-        <div class={styles.locationRow}>
-          <div class={styles.locationLeft}>
-            <div class={`${styles.cellIcon} ${styles.iconRed}`}><IconImage src={ICONS.security} class={styles.cellIconImage} /></div>
-            <div>
-              <div class={styles.cellTitle}>Cambiar PIN</div>
-              <div class={styles.cellSubtitle}>Verifica tu PIN actual y despues introduce el nuevo.</div>
-            </div>
-          </div>
-          <button class={styles.clearBtn} style={{ width: 'auto', margin: '0', padding: '10px 14px' }} onClick={() => { setStatus(null); resetSecurityFlow(); setSecurityFlow('change-verify'); }}>
-            Cambiar
-          </button>
-        </div>
+          }}
+        />
+        {/* Swipe to Unlock: only when screen lock ON and NO PIN set */}
+        <Show when={props.screenLockEnabled() && !hasPinSet()}>
+          <Cell
+            icon={ICONS.security} iconBg="iconGray"
+            title={t('settings.swipe_unlock', props.language()) || 'Deslizar para desbloquear'}
+            right="switch"
+            switchValue={props.phoneState.settings.swipeUnlock ?? false}
+            onSwitch={() => props.phoneActions.setSwipeUnlock(!(props.phoneState.settings.swipeUnlock ?? false))}
+          />
+        </Show>
       </Group>
 
-      <Show when={securityFlow() !== 'idle'}>
-        <div class={styles.pinContainer}>
-          <div class={styles.pinTitle}>{securityTitle()}</div>
-          <div class={styles.cellSubtitle} style={{ 'text-align': 'center', 'margin-bottom': '12px' }}>{securitySubtitle()}</div>
-          <div class={styles.pinDots}>
-            <For each={[0, 1, 2, 3]}>{(i) => <div class={styles.pinDot} classList={{ [styles.filled]: getCurrentPin().length > i }} />}</For>
+      <Group>
+        <Cell
+          icon={ICONS.security} iconBg="iconRed"
+          title={t('settings.pin_lock', props.language()) || 'PIN Lock'}
+          right="value+chevron"
+          value={hasPinSet() ? (t('settings.pin_active', props.language()) || 'Activo') : (t('settings.pin_inactive', props.language()) || 'Inactivo')}
+          onClick={() => {
+            setStatus(null);
+            resetSecurityFlow();
+            if (hasPinSet()) {
+              setSecurityFlow('change-verify');
+            } else {
+              setSecurityFlow('change-new');
+            }
+          }}
+        />
+        <InlineExpander open={() => securityFlow() !== 'idle'}>
+          <div class={styles.pinContainer}>
+            <div class={styles.pinTitle}>{securityTitle()}</div>
+            <div class={styles.pinDots}>
+              <For each={[0, 1, 2, 3]}>
+                {(i) => <div class={styles.pinDot} classList={{ [styles.filled]: getCurrentPin().length > i }} />}
+              </For>
+            </div>
+            <div class={styles.pinKeypad}>
+              <For each={['1','2','3','4','5','6','7','8','9']}>
+                {(d) => <button class={styles.pinKey} onClick={() => handlePinDigit(d)}>{d}</button>}
+              </For>
+              <div />
+              <button class={styles.pinKey} onClick={() => handlePinDigit('0')}>0</button>
+              <button class={styles.pinBackspace} onClick={handlePinBackspace}>
+                <IconImage src={ICONS.backspace} class={styles.keypadIcon} />
+              </button>
+            </div>
+            <button class={styles.pinCancel} onClick={resetSecurityFlow}>
+              {t('action.cancel', props.language())}
+            </button>
+            <Show when={status()}>
+              {(msg) => <div class={`${styles.pinMessage} ${styles[msg().type]}`}>{msg().text}</div>}
+            </Show>
           </div>
-          <div class={styles.pinKeypad}>
-            <For each={['1','2','3','4','5','6','7','8','9']}>{(d) => <button class={styles.pinKey} onClick={() => handlePinDigit(d)}>{d}</button>}</For>
-            <div />
-            <button class={styles.pinKey} onClick={() => handlePinDigit('0')}>0</button>
-            <button class={styles.pinBackspace} onClick={handlePinBackspace}><IconImage src={ICONS.backspace} class={styles.keypadIcon} /></button>
-          </div>
-          <button class={styles.clearBtn} onClick={resetSecurityFlow}>Cancelar</button>
-        </div>
-      </Show>
-
-      <Show when={status()}>
-        {(msg) => <div class={`${styles.pinMessage} ${styles[msg().type]}`}>{msg().text}</div>}
-      </Show>
+        </InlineExpander>
+      </Group>
     </div>
   );
 }

@@ -8,6 +8,14 @@ local function SafeString(value, maxLen)
     return Utils.SafeString(value, maxLen)
 end
 
+local function RequirePlayerIdentifier(source)
+    local src = tonumber(source)
+    if not src or src <= 0 then return nil end
+    if not Bridge.GetPlayer(src) then return nil end
+    if not Bridge.IsPlayerActionAllowed(src) then return nil end
+    return Bridge.GetIdentifier(src)
+end
+
 local function SanitizeText(value, maxLen)
     return Utils.SanitizeText(value, maxLen, true)
 end
@@ -541,6 +549,107 @@ end)
 AddEventHandler('onResourceStop', function(resourceName)
     if resourceName ~= cache.resource or not RadioMusicPositionTimer then return end
     RadioMusicPositionTimer:forceEnd(false)
+end)
+
+-- ── Playlist callbacks ──
+
+lib.callback.register('gcphone:radio:savePlaylist', function(source, data)
+    local identifier = RequirePlayerIdentifier(source)
+    if not identifier then return { success = false, error = 'INVALID_SOURCE' } end
+    if type(data) ~= 'table' then return { success = false, error = 'INVALID_DATA' } end
+
+    local name = Utils.SafeString(data.name, 64)
+    if not name or name == '' then return { success = false, error = 'MISSING_NAME' } end
+
+    local songs = data.songs
+    if type(songs) ~= 'table' or #songs == 0 then return { success = false, error = 'EMPTY_PLAYLIST' } end
+    if #songs > 10 then return { success = false, error = 'MAX_10_SONGS' } end
+
+    -- Validate and sanitize each song
+    local sanitized = {}
+    for i, song in ipairs(songs) do
+        if type(song) == 'table' and type(song.videoId) == 'string' and song.videoId ~= '' then
+            sanitized[#sanitized + 1] = {
+                videoId = Utils.SafeString(song.videoId, 32),
+                title = Utils.SafeString(song.title, 120) or 'Untitled',
+                channel = Utils.SafeString(song.channel, 60) or '',
+                thumbnail = Utils.SafeString(song.thumbnail, 300) or '',
+            }
+        end
+    end
+
+    if #sanitized == 0 then return { success = false, error = 'INVALID_SONGS' } end
+
+    local songsJson = json.encode(sanitized)
+    local expiresAt = os.date('%Y-%m-%d %H:%M:%S', os.time() + (10 * 24 * 3600)) -- 10 days
+
+    -- Check if playlist with same name exists for this user, update it
+    local existing = MySQL.single.await(
+        'SELECT id FROM phone_radio_playlists WHERE identifier = ? AND name = ?',
+        { identifier, name }
+    )
+
+    if existing then
+        MySQL.update.await(
+            'UPDATE phone_radio_playlists SET songs = ?, expires_at = ? WHERE id = ?',
+            { songsJson, expiresAt, existing.id }
+        )
+        return { success = true, id = existing.id }
+    end
+
+    local id = MySQL.insert.await(
+        'INSERT INTO phone_radio_playlists (identifier, name, songs, expires_at) VALUES (?, ?, ?, ?)',
+        { identifier, name, songsJson, expiresAt }
+    )
+
+    return { success = true, id = id }
+end)
+
+lib.callback.register('gcphone:radio:getPlaylists', function(source)
+    local identifier = RequirePlayerIdentifier(source)
+    if not identifier then return {} end
+
+    -- Clean expired
+    MySQL.update.await('DELETE FROM phone_radio_playlists WHERE expires_at < NOW()')
+
+    local rows = MySQL.query.await(
+        'SELECT id, name, songs, created_at, expires_at FROM phone_radio_playlists WHERE identifier = ? ORDER BY created_at DESC',
+        { identifier }
+    ) or {}
+
+    -- Parse songs JSON
+    for _, row in ipairs(rows) do
+        local ok, parsed = pcall(json.decode, row.songs)
+        row.songs = ok and parsed or {}
+    end
+
+    return rows
+end)
+
+lib.callback.register('gcphone:radio:deletePlaylist', function(source, data)
+    local identifier = RequirePlayerIdentifier(source)
+    if not identifier then return { success = false, error = 'INVALID_SOURCE' } end
+    local id = tonumber(type(data) == 'table' and data.id or nil)
+    if not id then return { success = false, error = 'INVALID_ID' } end
+
+    MySQL.update.await('DELETE FROM phone_radio_playlists WHERE id = ? AND identifier = ?', { id, identifier })
+    return { success = true }
+end)
+
+-- ── Music duck/unduck callbacks ──
+
+lib.callback.register('gcphone:radio:musicDuck', function(source, data)
+    local stationId = tonumber(type(data) == 'table' and data.stationId or nil)
+    if not stationId then return { success = false } end
+    TriggerClientEvent('gcphone:radio:musicDucked', -1, { stationId = stationId, ducked = true })
+    return { success = true }
+end)
+
+lib.callback.register('gcphone:radio:musicUnduck', function(source, data)
+    local stationId = tonumber(type(data) == 'table' and data.stationId or nil)
+    if not stationId then return { success = false } end
+    TriggerClientEvent('gcphone:radio:musicDucked', -1, { stationId = stationId, ducked = false })
+    return { success = true }
 end)
 
 return {}

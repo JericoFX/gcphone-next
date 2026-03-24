@@ -39,31 +39,20 @@ export function GarageApp() {
   const cache = useAppCache('garage');
   const language = () => getStoredLanguage();
 
-  // Data
   const [vehicles, setVehicles] = createSignal<Vehicle[]>([]);
-  const [selectedVehicle, setSelectedVehicle] = createSignal<Vehicle | null>(
-    null,
-  );
-  const [locationHistory, setLocationHistory] = createSignal<LocationHistory[]>(
-    [],
-  );
-
-  // Filters
-  const [filter, setFilter] = createSignal<'all' | 'garage' | 'impounded'>(
-    'all',
-  );
+  const [selectedVehicle, setSelectedVehicle] = createSignal<Vehicle | null>(null);
+  const [locationHistory, setLocationHistory] = createSignal<LocationHistory[]>([]);
+  const [filter, setFilter] = createSignal<'all' | 'garage' | 'impounded'>('all');
   const [searchQuery, setSearchQuery] = createSignal('');
-
-  // UI State
   const [loading, setLoading] = createSignal(false);
   const [showShareModal, setShowShareModal] = createSignal(false);
   const [sharePhone, setSharePhone] = createSignal('');
+  const [showHistory, setShowHistory] = createSignal(false);
 
   const loadVehicles = async () => {
     setLoading(true);
     const cached = cache.get<Vehicle[]>('garage:vehicles');
-    const list =
-      cached ?? (await fetchNui<Vehicle[]>('garageGetVehicles', {}, []));
+    const list = cached ?? (await fetchNui<Vehicle[]>('garageGetVehicles', {}, []));
     if (!cached) cache.set('garage:vehicles', list || [], 60000);
     setVehicles(list || []);
     setLoading(false);
@@ -82,6 +71,7 @@ export function GarageApp() {
       if (selectedVehicle()) {
         setSelectedVehicle(null);
         setLocationHistory([]);
+        setShowHistory(false);
         return;
       }
       router.goBack();
@@ -111,6 +101,7 @@ export function GarageApp() {
 
   const openVehicle = async (vehicle: Vehicle) => {
     setSelectedVehicle(vehicle);
+    setShowHistory(false);
 
     if (vehicle.has_location) {
       const history = await fetchNui<LocationHistory[]>(
@@ -122,30 +113,60 @@ export function GarageApp() {
     }
   };
 
-  const requestVehicle = async (plate: string) => {
+  const handleRequestVehicle = async (plate: string) => {
     const result = await fetchNui<{ success?: boolean; error?: string }>(
       'garageRequestVehicle',
-      plate,
+      { plate },
+      { success: false },
     );
-    if (!result?.success) {
-      uiAlert(result?.error || t('garage.request_error', language()) || 'No se pudo solicitar el vehiculo');
-    } else {
+    if (result?.success) {
       uiAlert(t('garage.vehicle_on_way', language()) || 'Tu vehiculo te espera, sigue el GPS.');
+      cache.set('garage:vehicles', null as any, 0);
+      void loadVehicles();
+    } else {
+      uiAlert(result?.error || t('garage.request_error', language()) || 'No se pudo solicitar el vehiculo');
     }
   };
 
-  const goToImpound = async () => {
-    const loc = await fetchNui<{ x?: number; y?: number; z?: number; label?: string }>('garageGetImpoundLocation', {}, {});
-    if (loc?.x && loc?.y) {
-      await fetchNui('garageSetGps', { x: loc.x, y: loc.y });
-      uiAlert(`${t('garage.gps_set', language()) || 'GPS marcado'}: ${loc.label || t('garage.impound', language()) || 'Deposito'}`);
+  const handlePayBail = async (plate: string) => {
+    const result = await fetchNui<{ success?: boolean; paid?: number; error?: string }>(
+      'garagePayBail',
+      { plate },
+      { success: false },
+    );
+    if (result?.success) {
+      const msg = (t('garage.bail_paid', language()) || 'Fianza pagada') + (result.paid ? ` ($${result.paid})` : '');
+      uiAlert(msg);
+      cache.set('garage:vehicles', null as any, 0);
+      void loadVehicles();
+      setSelectedVehicle(null);
+    } else {
+      uiAlert(result?.error || t('garage.error', language()) || 'Error');
     }
   };
 
-  const goToVehicleLocation = async () => {
-    const vehicle = selectedVehicle();
-    if (!vehicle?.location_x || !vehicle?.location_y) return;
-    await fetchNui('garageSetGps', { x: vehicle.location_x, y: vehicle.location_y });
+  const handleValet = async (plate: string) => {
+    const result = await fetchNui<{ success?: boolean; paid?: number; error?: string }>(
+      'garageRequestValet',
+      { plate },
+      { success: false },
+    );
+    if (result?.success) {
+      const msg = (t('garage.valet_requested', language()) || 'Valet solicitado') + (result.paid ? ` ($${result.paid})` : '');
+      uiAlert(msg);
+      cache.set('garage:vehicles', null as any, 0);
+      void loadVehicles();
+    } else {
+      uiAlert(result?.error || t('garage.error', language()) || 'Error');
+    }
+  };
+
+  const handleSetWaypoint = async (vehicle: Vehicle) => {
+    await fetchNui('garageSetWaypoint', {
+      plate: vehicle.plate,
+      x: vehicle.location_x,
+      y: vehicle.location_y,
+    }, { success: false });
     uiAlert(t('garage.gps_set', language()) || 'GPS marcado');
   };
 
@@ -163,22 +184,20 @@ export function GarageApp() {
 
     setSharePhone('');
     setShowShareModal(false);
-    uiAlert('Ubicacion compartida');
-  };
-
-  const viewOnMap = () => {
-    const vehicle = selectedVehicle();
-    if (!vehicle || !vehicle.location_x) return;
-
-    router.navigate('maps', {
-      x: vehicle.location_x,
-      y: vehicle.location_y,
-      z: vehicle.location_z,
-      label: vehicle.model_name || vehicle.plate,
-    });
+    uiAlert(t('garage.share_location', language()) || 'Ubicacion compartida');
   };
 
   const getVehicleIcon = () => './img/icons_ios/garage.svg';
+
+  const getStatusInfo = (vehicle: Vehicle) => {
+    if (vehicle.impounded) {
+      return { label: t('garage.in_depot', language()) || 'Incautado', cls: styles.statusImpounded };
+    }
+    if (vehicle.has_location && vehicle.location_x) {
+      return { label: t('garage.on_street', language()) || 'En calle', cls: styles.statusStreet };
+    }
+    return { label: t('garage.in_garage', language()) || 'En Garage', cls: styles.statusGarage };
+  };
 
   return (
     <AppScaffold
@@ -228,42 +247,45 @@ export function GarageApp() {
           </Show>
 
           <For each={filteredVehicles()}>
-            {(vehicle) => (
-              <div
-                class={styles.vehicleCard}
-                onClick={() => openVehicle(vehicle)}
-              >
-                <div class={styles.vehicleIcon}>
-                  <img src={getVehicleIcon()} alt='' />
-                </div>
+            {(vehicle) => {
+              const status = getStatusInfo(vehicle);
+              return (
+                <div
+                  class={styles.vehicleCard}
+                  onClick={() => openVehicle(vehicle)}
+                >
+                  <div class={styles.vehicleIcon}>
+                    <img src={getVehicleIcon()} alt="" />
+                  </div>
 
-                <div class={styles.vehicleInfo}>
-                  <h3 class={styles.vehicleName}>
-                    {vehicle.model_name || t('garage.vehicle', language())}
-                  </h3>
-                  <span class={styles.vehiclePlate}>{vehicle.plate}</span>
+                  <div class={styles.vehicleInfo}>
+                    <h3 class={styles.vehicleName}>
+                      {vehicle.model_name || t('garage.vehicle', language())}
+                    </h3>
+                    <span class={styles.vehiclePlate}>{vehicle.plate}</span>
 
-                  <div class={styles.vehicleStatus}>
-                    <Show when={vehicle.impounded}>
-                      <span class={styles.impoundedBadge}>{t('garage.in_depot', language())}</span>
-                    </Show>
-                    <Show when={!vehicle.impounded}>
-                      <span class={styles.garageBadge}>
-                        {vehicle.garage_name || 'Garage'}
+                    <div class={styles.vehicleMeta}>
+                      <span class={`${styles.statusBadge} ${status.cls}`}>
+                        {status.label}
                       </span>
+                      <Show when={vehicle.garage_name && !vehicle.impounded}>
+                        <span class={styles.garageName}>{vehicle.garage_name}</span>
+                      </Show>
+                    </div>
+
+                    <Show when={vehicle.location_updated}>
+                      <p class={styles.locationTime}>
+                        {timeAgo(vehicle.location_updated)}
+                      </p>
                     </Show>
                   </div>
 
-                  <Show when={vehicle.has_location}>
-                    <span class={styles.locationBadge}>{t('garage.saved_location', language())}</span>
-                  </Show>
+                  <div class={styles.vehicleArrow}>
+                    <img src="./img/icons_ios/ui-chevron-right.svg" alt="" />
+                  </div>
                 </div>
-
-                <div class={styles.vehicleArrow}>
-                  <img src='./img/icons_ios/ui-chevron-right.svg' alt='' />
-                </div>
-              </div>
-            )}
+              );
+            }}
           </For>
 
           <Show when={!loading() && filteredVehicles().length === 0}>
@@ -274,135 +296,222 @@ export function GarageApp() {
           </Show>
         </div>
 
+        {/* ── Detail overlay ── */}
         <Show when={selectedVehicle()}>
-          <div class={styles.detailModal}>
-            <button
-              class={styles.closeBtn}
-              onClick={() => {
-                setSelectedVehicle(null);
-                setLocationHistory([]);
-              }}
-            >
-              <img src='./img/icons_ios/ui-close.svg' alt='' />
-            </button>
+          <div class={styles.detailOverlay}>
+            <div class={styles.detailTopBar}>
+              <div />
+              <button
+                class={styles.closeBtn}
+                onClick={() => {
+                  setSelectedVehicle(null);
+                  setLocationHistory([]);
+                  setShowHistory(false);
+                }}
+              >
+                <img src="./img/icons_ios/ui-close.svg" alt="" />
+              </button>
+            </div>
 
             <div class={styles.detailContent}>
-              {/* Vehicle Header */}
+              {/* Header */}
               <div class={styles.detailHeader}>
                 <div class={styles.detailIcon}>
-                  <img src={getVehicleIcon()} alt='' />
+                  <img src={getVehicleIcon()} alt="" />
                 </div>
                 <div class={styles.detailTitle}>
-                  <h2>{selectedVehicle().model_name || t('garage.vehicle', language())}</h2>
-                  <span class={styles.detailPlate}>
-                    {selectedVehicle().plate}
-                  </span>
+                  <h2>{selectedVehicle()!.model_name || t('garage.vehicle', language())}</h2>
+                  <span class={styles.detailPlate}>{selectedVehicle()!.plate}</span>
                 </div>
               </div>
 
               {/* Status */}
               <div class={styles.statusCard}>
-                <Show when={selectedVehicle().impounded}>
-                  <div class={styles.statusImpounded}>
-                    <span class={styles.statusIcon}>
-                      <img src='./img/icons_ios/ui-warning.svg' alt='' />
+                <Show when={selectedVehicle()!.impounded}>
+                  <div class={styles.statusRow}>
+                    <span class={`${styles.statusDot} ${styles.dotImpounded}`}>
+                      <img src="./img/icons_ios/ui-warning.svg" alt="" />
                     </span>
-                    <div>
+                    <div class={`${styles.statusText} ${styles.textImpounded}`}>
                       <strong>{t('garage.vehicle_impounded', language())}</strong>
                       <p>{t('garage.vehicle_impounded_desc', language())}</p>
                     </div>
                   </div>
                 </Show>
-                <Show when={!selectedVehicle().impounded}>
-                  <div class={styles.statusGarage}>
-                    <span class={styles.statusIcon}>
-                      <img src='./img/icons_ios/ui-check.svg' alt='' />
+                <Show when={!selectedVehicle()!.impounded}>
+                  <div class={styles.statusRow}>
+                    <span class={`${styles.statusDot} ${styles.dotGarage}`}>
+                      <img src="./img/icons_ios/ui-check.svg" alt="" />
                     </span>
-                    <div>
+                    <div class={`${styles.statusText} ${styles.textGarage}`}>
                       <strong>
-                         {t('garage.in_label', language(), { garage: selectedVehicle().garage_name || 'Garage' })}
+                        {t('garage.in_label', language(), { garage: selectedVehicle()!.garage_name || 'Garage' })}
                       </strong>
-                       <p>{t('garage.vehicle_available', language())}</p>
+                      <p>{t('garage.vehicle_available', language())}</p>
                     </div>
                   </div>
                 </Show>
               </div>
 
-              {/* Location Info */}
-              <Show when={selectedVehicle().has_location}>
+              {/* Location info */}
+              <Show when={selectedVehicle()!.has_location}>
                 <div class={styles.locationCard}>
-                   <h4>{t('garage.last_location', language())}</h4>
-                  <Show when={selectedVehicle().location_updated}>
-                    <p class={styles.locationTime}>
-                       {t('garage.saved_at', language(), { time: timeAgo(selectedVehicle().location_updated) })}
+                  <h4>{t('garage.last_location', language())}</h4>
+                  <Show when={selectedVehicle()!.location_updated}>
+                    <p class={styles.locationTimestamp}>
+                      {t('garage.saved_at', language(), { time: timeAgo(selectedVehicle()!.location_updated) })}
                     </p>
                   </Show>
-
-                  <div class={styles.locationActions}>
-                    <button class={styles.mapBtn} onClick={viewOnMap}>
-                       {t('garage.view_map', language())}
-                    </button>
-                    <button
-                      class={styles.shareBtn}
-                      onClick={() => setShowShareModal(true)}
-                    >
-                       {t('garage.share', language())}
-                    </button>
-                  </div>
                 </div>
-
-                {/* Location History */}
-                <Show when={locationHistory().length > 0}>
-                  <div class={styles.historySection}>
-                     <h4>{t('garage.location_history', language())}</h4>
-                    <div class={styles.historyList}>
-                      <For each={locationHistory().slice(0, 5)}>
-                        {(loc) => (
-                          <div class={styles.historyItem}>
-                            <span class={styles.historyDot}>
-                              <img
-                                src='./img/icons_ios/ui-location.svg'
-                                alt=''
-                              />
-                            </span>
-                            <span class={styles.historyTime}>
-                              {timeAgo(loc.created_at)}
-                            </span>
-                          </div>
-                        )}
-                      </For>
-                    </div>
-                  </div>
-                </Show>
               </Show>
 
-              {/* Actions */}
-              <div class={styles.detailActions}>
-                <Show when={!selectedVehicle().impounded}>
+              {/* Action buttons (iOS settings style) */}
+              <div class={styles.actionsCard}>
+                {/* Pedir Vehiculo */}
+                <Show when={!selectedVehicle()!.impounded}>
                   <button
-                    class={styles.requestBtn}
-                    onClick={() => requestVehicle(selectedVehicle().plate)}
+                    class={styles.actionRow}
+                    onClick={() => handleRequestVehicle(selectedVehicle()!.plate)}
                   >
-                     {t('garage.request_vehicle', language())}
+                    <span class={styles.actionIcon}>&#128663;</span>
+                    <div class={styles.actionBody}>
+                      <span class={styles.actionLabel}>
+                        {t('garage.request_vehicle', language()) || 'Pedir Vehiculo'}
+                      </span>
+                      <span class={styles.actionSub}>
+                        {t('garage.request_vehicle_desc', language()) || 'Solicitar desde el garage'}
+                      </span>
+                    </div>
+                    <span class={styles.actionChevron}>
+                      <img src="./img/icons_ios/ui-chevron-right.svg" alt="" />
+                    </span>
                   </button>
                 </Show>
-                <Show when={selectedVehicle().impounded}>
+
+                {/* Servicio Valet */}
+                <Show when={!selectedVehicle()!.impounded}>
                   <button
-                    class={styles.mapBtn}
-                    onClick={() => void goToImpound()}
+                    class={styles.actionRow}
+                    onClick={() => handleValet(selectedVehicle()!.plate)}
                   >
-                    {t('garage.go_to_impound', language()) || 'GPS al deposito'}
+                    <span class={styles.actionIcon}>&#128718;</span>
+                    <div class={styles.actionBody}>
+                      <span class={styles.actionLabel}>
+                        {t('garage.valet_service', language()) || 'Servicio Valet'}
+                      </span>
+                      <span class={styles.actionSub}>
+                        {t('garage.valet_service_desc', language()) || 'Entrega a domicilio'}
+                      </span>
+                    </div>
+                    <span class={styles.actionChevron}>
+                      <img src="./img/icons_ios/ui-chevron-right.svg" alt="" />
+                    </span>
                   </button>
                 </Show>
-                <Show when={selectedVehicle().has_location && !selectedVehicle().impounded}>
+
+                {/* Pagar Fianza */}
+                <Show when={!!selectedVehicle()!.impounded}>
                   <button
-                    class={styles.mapBtn}
-                    onClick={() => void goToVehicleLocation()}
+                    class={`${styles.actionRow} ${styles.actionDanger}`}
+                    onClick={() => handlePayBail(selectedVehicle()!.plate)}
                   >
-                    {t('garage.gps_to_vehicle', language()) || 'GPS al vehiculo'}
+                    <span class={styles.actionIcon}>&#128176;</span>
+                    <div class={styles.actionBody}>
+                      <span class={styles.actionLabel}>
+                        {t('garage.pay_bail', language()) || 'Pagar Fianza'}
+                      </span>
+                      <span class={styles.actionSub}>
+                        {t('garage.pay_bail_desc', language()) || 'Pagar para recuperar el vehiculo'}
+                      </span>
+                    </div>
+                    <span class={styles.actionChevron}>
+                      <img src="./img/icons_ios/ui-chevron-right.svg" alt="" />
+                    </span>
+                  </button>
+                </Show>
+
+                {/* Marcar GPS */}
+                <button
+                  class={styles.actionRow}
+                  onClick={() => handleSetWaypoint(selectedVehicle()!)}
+                >
+                  <span class={styles.actionIcon}>&#128205;</span>
+                  <div class={styles.actionBody}>
+                    <span class={styles.actionLabel}>
+                      {t('garage.set_waypoint', language()) || 'Marcar GPS'}
+                    </span>
+                    <span class={styles.actionSub}>
+                      {t('garage.set_waypoint_desc', language()) || 'Marcar ubicacion en el mapa'}
+                    </span>
+                  </div>
+                  <span class={styles.actionChevron}>
+                    <img src="./img/icons_ios/ui-chevron-right.svg" alt="" />
+                  </span>
+                </button>
+
+                {/* Compartir Ubicacion */}
+                <Show when={selectedVehicle()!.has_location}>
+                  <button
+                    class={styles.actionRow}
+                    onClick={() => setShowShareModal(true)}
+                  >
+                    <span class={styles.actionIcon}>&#128228;</span>
+                    <div class={styles.actionBody}>
+                      <span class={styles.actionLabel}>
+                        {t('garage.share', language()) || 'Compartir Ubicacion'}
+                      </span>
+                      <span class={styles.actionSub}>
+                        {t('garage.share_vehicle_to', language()) || 'Enviar ubicacion a un contacto'}
+                      </span>
+                    </div>
+                    <span class={styles.actionChevron}>
+                      <img src="./img/icons_ios/ui-chevron-right.svg" alt="" />
+                    </span>
+                  </button>
+                </Show>
+
+                {/* Historial */}
+                <Show when={locationHistory().length > 0}>
+                  <button
+                    class={styles.actionRow}
+                    onClick={() => setShowHistory(!showHistory())}
+                  >
+                    <span class={styles.actionIcon}>&#128337;</span>
+                    <div class={styles.actionBody}>
+                      <span class={styles.actionLabel}>
+                        {t('garage.location_history', language()) || 'Historial'}
+                      </span>
+                      <span class={styles.actionSub}>
+                        {locationHistory().length} {t('garage.entries', language()) || 'registros'}
+                      </span>
+                    </div>
+                    <span class={styles.actionChevron}>
+                      <img src="./img/icons_ios/ui-chevron-right.svg" alt="" />
+                    </span>
                   </button>
                 </Show>
               </div>
+
+              {/* Location History (toggled) */}
+              <Show when={showHistory() && locationHistory().length > 0}>
+                <div class={styles.historySection}>
+                  <h4>{t('garage.location_history', language())}</h4>
+                  <div class={styles.historyList}>
+                    <For each={locationHistory().slice(0, 5)}>
+                      {(loc) => (
+                        <div class={styles.historyItem}>
+                          <span class={styles.historyDot}>
+                            <img src="./img/icons_ios/ui-location.svg" alt="" />
+                          </span>
+                          <span class={styles.historyTime}>
+                            {timeAgo(loc.created_at)}
+                          </span>
+                        </div>
+                      )}
+                    </For>
+                  </div>
+                </div>
+              </Show>
             </div>
           </div>
         </Show>
@@ -412,12 +521,12 @@ export function GarageApp() {
           open={showShareModal()}
           title={t('garage.share_location', language())}
           onClose={() => setShowShareModal(false)}
-          size='sm'
+          size="sm"
         >
           <div class={styles.shareContent}>
             <p>{t('garage.share_vehicle_to', language())}</p>
             <input
-              type='text'
+              type="text"
               placeholder={t('wallet.phone_number_placeholder', language())}
               value={sharePhone()}
               onInput={(e) => setSharePhone(e.currentTarget.value)}
@@ -432,7 +541,7 @@ export function GarageApp() {
             <ModalButton
               label={t('garage.share', language())}
               onClick={() => void shareLocation()}
-              tone='primary'
+              tone="primary"
               disabled={!sharePhone().trim()}
             />
           </ModalActions>

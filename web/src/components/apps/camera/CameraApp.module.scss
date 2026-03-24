@@ -528,7 +528,6 @@
   color: rgba(0, 0, 0, 0.6);
 }
 
-.shutterVideo .shutterIcon,
 .shutterRecording .shutterIcon {
   color: #fff;
 }
@@ -604,33 +603,64 @@
   left: 0;
   right: 0;
   z-index: 90;
-  max-height: 240px;
-  overflow-y: auto;
   background: rgba(0, 0, 0, 0.78);
   backdrop-filter: blur(12px);
   border-radius: 16px 16px 0 0;
-  padding: 12px 14px;
+  padding: 8px 12px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 6px;
+}
+
+.controlsBody {
+  max-height: 220px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 .controlsHeader {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  cursor: pointer;
+  user-select: none;
+  padding: 2px 0;
+}
+
+.controlsHeaderLeft {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .controlsTitle {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   color: rgba(255, 255, 255, 0.85);
   letter-spacing: 0.5px;
   text-transform: uppercase;
 }
 
+.controlsChevron {
+  width: 14px;
+  height: 14px;
+  color: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+
+  &:active {
+    opacity: 0.6;
+  }
+}
+
 .controlsResetBtn {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
   color: var(--warning);
   background: none;
@@ -645,7 +675,7 @@
 
 .controlsFilterStrip {
   display: flex;
-  gap: 6px;
+  gap: 4px;
   overflow-x: auto;
   padding: 2px 0;
 
@@ -657,23 +687,22 @@
 .sliderRow {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+  height: 22px;
 }
 
-.sliderRowLabel {
-  font-size: 10px;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.6);
-  min-width: 52px;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
+.sliderRowIcon {
+  width: 14px;
+  height: 14px;
+  color: rgba(255, 255, 255, 0.5);
+  flex-shrink: 0;
 }
 
 .sliderRowValue {
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 700;
-  color: rgba(255, 255, 255, 0.85);
-  min-width: 28px;
+  color: rgba(255, 255, 255, 0.75);
+  min-width: 24px;
   text-align: right;
 }
 
@@ -724,7 +753,7 @@
 // ── Video mode shutter ──────────────────────────────
 
 .shutterVideo .shutterInner {
-  background: #ff3b30;
+  background: #fff;
 }
 
 .shutterRecording {

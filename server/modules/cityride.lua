@@ -153,6 +153,27 @@ lib.callback.register('gcphone:cityride:registerDriver', function(source, data)
 
     local phoneNumber = Bridge.GetPhoneNumber(identifier)
     if not phoneNumber then return { success = false, error = 'NO_PHONE' } end
+
+    if Config.CityRide and Config.CityRide.RequireLicense then
+        local docType = Config.CityRide.LicenseDocType or 'license'
+        local license = MySQL.single.await(
+            'SELECT id, expires_at FROM phone_documents WHERE identifier = ? AND doc_type = ? LIMIT 1',
+            { identifier, docType }
+        )
+        if not license then
+            return { success = false, error = 'NO_LICENSE' }
+        end
+        if license.expires_at and license.expires_at ~= '' then
+            local y, m, d = license.expires_at:match('(%d+)-(%d+)-(%d+)')
+            if y and m and d then
+                local expiresTime = os.time({ year = tonumber(y), month = tonumber(m), day = tonumber(d) })
+                if os.time() > expiresTime then
+                    return { success = false, error = 'LICENSE_EXPIRED' }
+                end
+            end
+        end
+    end
+
     local displayName = Bridge.GetName(source) or 'Conductor'
 
     local vehicleName = SanitizeText(data.vehicle_name, 50)
@@ -227,6 +248,26 @@ lib.callback.register('gcphone:cityride:setDriverAvailability', function(source,
     if type(data) ~= 'table' then return { success = false, error = 'INVALID_DATA' } end
 
     local available = data.available == true and 1 or 0
+
+    if available == 1 and Config.CityRide and Config.CityRide.RequireLicense then
+        local docType = Config.CityRide.LicenseDocType or 'license'
+        local license = MySQL.single.await(
+            'SELECT id, expires_at FROM phone_documents WHERE identifier = ? AND doc_type = ? LIMIT 1',
+            { identifier, docType }
+        )
+        if not license then
+            return { success = false, error = 'NO_LICENSE' }
+        end
+        if license.expires_at and license.expires_at ~= '' then
+            local y, m, d = license.expires_at:match('(%d+)-(%d+)-(%d+)')
+            if y and m and d then
+                local expiresTime = os.time({ year = tonumber(y), month = tonumber(m), day = tonumber(d) })
+                if os.time() > expiresTime then
+                    return { success = false, error = 'LICENSE_EXPIRED' }
+                end
+            end
+        end
+    end
 
     MySQL.update.await(
         'UPDATE phone_cityride_drivers SET is_available = ? WHERE identifier = ?',

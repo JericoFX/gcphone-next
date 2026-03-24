@@ -1,18 +1,19 @@
-import { For, Show, createEffect, createMemo, createSelector, createSignal, onMount } from 'solid-js';
-import { AppFAB } from '../../shared/layout/AppLayout';
-import { AppScaffold } from '../../shared/layout/AppScaffold';
-import { MediaActionButtons } from '../../shared/ui/MediaActionButtons';
-import { MediaAttachmentPreview } from '../../shared/ui/MediaAttachmentPreview';
-import { ActionSheet } from '../../shared/ui/ActionSheet';
+import { For, Show, createEffect, createMemo, createSignal, onMount, batch } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
-import { useContextMenu } from '../../../hooks/useContextMenu';
 import { fetchNui } from '../../../utils/fetchNui';
 import { t } from '../../../i18n';
 import { usePhoneState } from '../../../store/phone';
+import { useContactsState } from '../../../store/contacts';
 import { resolveMediaType, sanitizeMediaUrl } from '../../../utils/sanitize';
-import { uiAlert } from '../../../utils/uiAlert';
+import { generateColorForString } from '../../../utils/misc';
 import { uiPrompt } from '../../../utils/uiDialog';
+import { AppScaffold } from '../../shared/layout';
+import { LetterAvatar } from '../../shared/ui/LetterAvatar';
+import { ActionSheet } from '../../shared/ui/ActionSheet';
+import { SearchInput } from '../../shared/ui/SearchInput';
 import styles from './MailApp.module.scss';
+
+/* ─── Interfaces ─── */
 
 interface MailAccount {
   id: number;
@@ -58,21 +59,47 @@ interface MailActionResponse {
   error?: string;
 }
 
-const MAIL_ICONS = {
-  trash: './img/icons_ios/ui-trash.svg',
-  gallery: './img/icons_ios/gallery.svg',
-  camera: './img/icons_ios/camera.svg',
-  link: './img/icons_ios/ui-link.svg',
-  compose: './img/icons_ios/mail.svg',
-} as const;
+/* ─── Swipe threshold (px) ─── */
+
+/* ─── Helpers ─── */
+
+function formatDate(ts: number, lang: string): string {
+  const d = new Date(ts || Date.now());
+  const now = new Date();
+  const diffMs = now.getTime() - d.getTime();
+  const diffDays = Math.floor(diffMs / 86_400_000);
+
+  if (diffDays === 0) {
+    return d.toLocaleTimeString(lang, { hour: '2-digit', minute: '2-digit' });
+  }
+  if (diffDays === 1) return 'Yesterday';
+  if (diffDays < 7) {
+    return d.toLocaleDateString(lang, { weekday: 'short' });
+  }
+  return d.toLocaleDateString(lang, { month: 'short', day: 'numeric' });
+}
+
+function attachmentIcon(type: string): string {
+  switch (type) {
+    case 'image': return '\uD83D\uDDBC';
+    case 'video': return '\uD83C\uDFA5';
+    case 'document': return '\uD83D\uDCC4';
+    case 'link': return '\uD83D\uDD17';
+    default: return '\uD83D\uDCCE';
+  }
+}
+
+/* ─── Component ─── */
 
 export function MailApp() {
   const router = useRouter();
   const phoneState = usePhoneState();
+  const contactsState = useContactsState();
   const language = () => phoneState.settings.language || 'es';
+
+  /* State */
   const [loading, setLoading] = createSignal(false);
   const [error, setError] = createSignal('');
-
   const [domain, setDomain] = createSignal('noimotors.gg');
   const [account, setAccount] = createSignal<MailAccount | null>(null);
   const [unread, setUnread] = createSignal(0);
@@ -80,37 +107,65 @@ export function MailApp() {
   const [sent, setSent] = createSignal<MailMessage[]>([]);
 
   const [folder, setFolder] = createSignal<'inbox' | 'sent'>('inbox');
-  const [selectedId, setSelectedId] = createSignal<number | null>(null);
   const [view, setView] = createSignal<'list' | 'detail' | 'compose'>('list');
+  const [selectedId, setSelectedId] = createSignal<number | null>(null);
+  const [search, setSearch] = createSignal('');
 
+  /* Compose state */
   const [toInput, setToInput] = createSignal('');
   const [subjectInput, setSubjectInput] = createSignal('');
   const [bodyInput, setBodyInput] = createSignal('');
   const [attachments, setAttachments] = createSignal<MailAttachment[]>([]);
-  const [attachmentType, setAttachmentType] =
-    createSignal<MailAttachment['type']>('document');
-  const [attachmentUrl, setAttachmentUrl] = createSignal('');
-  const [attachmentName, setAttachmentName] = createSignal('');
   const [lastComposeRouteKey, setLastComposeRouteKey] = createSignal('');
-  const [showAttachmentComposer, setShowAttachmentComposer] = createSignal(false);
-  const ctxMenu = useContextMenu<MailMessage>();
+  const [showAttachSheet, setShowAttachSheet] = createSignal(false);
 
-  let toFieldRef: HTMLInputElement | undefined;
+  /* Setup state */
+  const [aliasInput, setAliasInput] = createSignal('');
+
   let bodyFieldRef: HTMLTextAreaElement | undefined;
 
+  /* ─── Avatar resolution ─── */
+  // Only show contact avatar if sender's number matches a contact in OUR list
+  const resolveAvatar = (email?: string, alias?: string) => {
+    const name = alias || email?.split('@')[0] || '?';
+    const contact = contactsState.contacts.find(
+      (c) => c.number === name,
+    );
+    return {
+      imageUrl: contact?.avatar || undefined,
+      label: contact?.display || name,
+      color: generateColorForString(email || name),
+    };
+  };
+
+  /* ─── Derived ─── */
   const selectedMessage = createMemo(() => {
     const id = selectedId();
-    if (!id) return null;
+    if (id == null) return null;
     const source = folder() === 'inbox' ? inbox() : sent();
-    return source.find((entry) => Number(entry.id) === Number(id)) || null;
+    return source.find((m) => Number(m.id) === Number(id)) || null;
   });
 
-  const visibleMessages = createMemo(() =>
-    folder() === 'inbox' ? inbox() : sent(),
-  );
-  const isSelectedMessage = createSelector(selectedId);
-  const hasComposeError = createMemo(() => view() === 'compose' && !!error());
+  const filteredMessages = createMemo(() => {
+    const all = folder() === 'inbox' ? inbox() : sent();
+    const q = search().toLowerCase().trim();
+    if (!q) return all;
+    return all.filter(
+      (m) =>
+        (m.subject || '').toLowerCase().includes(q) ||
+        (m.body || '').toLowerCase().includes(q) ||
+        (m.sender_alias || '').toLowerCase().includes(q) ||
+        (m.sender_email || '').toLowerCase().includes(q) ||
+        (m.recipient_alias || '').toLowerCase().includes(q) ||
+        (m.recipient_email || '').toLowerCase().includes(q),
+    );
+  });
 
+  const canSend = createMemo(() => {
+    return toInput().trim().length > 0 && bodyInput().trim().length > 0 && !loading();
+  });
+
+  /* ─── Route-param compose (external apps) ─── */
   createEffect(() => {
     const params = router.params();
     const routeKey = JSON.stringify(params || {});
@@ -122,9 +177,13 @@ export function MailApp() {
     const body = typeof params.body === 'string' ? params.body : '';
     const to = typeof params.to === 'string' ? params.to : '';
     const url = typeof params.attachmentUrl === 'string' ? params.attachmentUrl : '';
-    const type = params.attachmentType === 'image' || params.attachmentType === 'video' || params.attachmentType === 'document' || params.attachmentType === 'link'
-      ? params.attachmentType
-      : null;
+    const type =
+      params.attachmentType === 'image' ||
+      params.attachmentType === 'video' ||
+      params.attachmentType === 'document' ||
+      params.attachmentType === 'link'
+        ? params.attachmentType
+        : null;
     const name = typeof params.attachmentName === 'string' ? params.attachmentName : '';
 
     if (!compose && !subject && !body && !to && !url) return;
@@ -136,12 +195,13 @@ export function MailApp() {
 
     if (url && type) {
       setAttachments((prev) => {
-        if (prev.some((entry) => entry.url === url && entry.type === type)) return prev;
+        if (prev.some((e) => e.url === url && e.type === type)) return prev;
         return [...prev, { type, url, name: name || undefined }];
       });
     }
   });
 
+  /* ─── NUI actions ─── */
   const loadState = async () => {
     setLoading(true);
     setError('');
@@ -169,36 +229,48 @@ export function MailApp() {
     }
 
     if (payload.hasAccount !== true || !payload.account) {
-      setAccount(null);
-      setInbox([]);
-      setSent([]);
-      setUnread(0);
-      setSelectedId(null);
+      batch(() => {
+        setAccount(null);
+        setInbox([]);
+        setSent([]);
+        setUnread(0);
+        setSelectedId(null);
+      });
       return;
     }
 
-    setAccount(payload.account);
-    setInbox(payload.inbox || []);
-    setSent(payload.sent || []);
-    setUnread(Number(payload.unread) || 0);
+    batch(() => {
+      setAccount(payload.account!);
+      setInbox(payload.inbox || []);
+      setSent(payload.sent || []);
+      setUnread(Number(payload.unread) || 0);
+    });
+  };
 
-    const first = (payload.inbox && payload.inbox[0]) || null;
-    setSelectedId(first ? Number(first.id) : null);
+  const createAccount = async () => {
+    const alias = aliasInput().trim();
+    if (!alias) return;
+    setLoading(true);
+    setError('');
+    const res = await fetchNui<MailActionResponse>('mailCreateAccount', { alias }, { success: false });
+    setLoading(false);
+    if (res?.success) {
+      await loadState();
+    } else {
+      setError(res?.error || t('mail.error.create_account', language()));
+    }
   };
 
   const sendMail = async () => {
     if (!account()) return;
-
     const to = toInput().trim().toLowerCase();
     const subject = subjectInput().trim();
     const body = bodyInput().trim();
 
     if (!to) {
       setError(t('mail.error.compose_required', language()));
-      toFieldRef?.focus();
       return;
     }
-
     if (!body) {
       setError(t('mail.error.compose_required', language()));
       bodyFieldRef?.focus();
@@ -210,12 +282,7 @@ export function MailApp() {
 
     const payload = await fetchNui<MailActionResponse>(
       'mailSend',
-      {
-        to,
-        subject,
-        body,
-        attachments: attachments(),
-      },
+      { to, subject, body, attachments: attachments() },
       { success: false },
     );
 
@@ -225,59 +292,85 @@ export function MailApp() {
       return;
     }
 
-    setToInput('');
-    setSubjectInput('');
-    setBodyInput('');
-    setAttachments([]);
-    setAttachmentType('document');
-    setAttachmentUrl('');
-    setAttachmentName('');
-    setShowAttachmentComposer(false);
+    cancelCompose();
     await loadState();
     setFolder('sent');
-    setView('list');
   };
 
-  const addAttachment = () => {
-    const url = attachmentType() === 'document' ? attachmentUrl().trim() : sanitizeMediaUrl(attachmentUrl().trim()) || attachmentUrl().trim();
-    if (!url) {
-      setError(t('mail.error.attachment_url', language()));
-      return;
+  const openMessage = async (message: MailMessage) => {
+    setSelectedId(Number(message.id));
+    setView('detail');
+
+    if (folder() === 'inbox' && Number(message.is_read) !== 1) {
+      await fetchNui<MailActionResponse>('mailMarkRead', { messageId: message.id }, { success: false });
+      setInbox((prev) =>
+        prev.map((e) => (Number(e.id) === Number(message.id) ? { ...e, is_read: 1 } : e)),
+      );
+      setUnread((prev) => Math.max(0, prev - 1));
     }
-
-    setAttachments((prev) => [
-      ...prev,
-      {
-        type: attachmentType(),
-        url,
-        name: attachmentName().trim() || undefined,
-      },
-    ]);
-    setAttachmentUrl('');
-    setAttachmentName('');
-    setError('');
-    setShowAttachmentComposer(false);
   };
 
+
+  const deleteMessage = async (msg?: MailMessage | null) => {
+    const target = msg || selectedMessage();
+    if (!target) return;
+
+    const res = await fetchNui<MailActionResponse>(
+      'mailDelete',
+      { messageId: target.id, folder: folder() },
+      { success: true },
+    );
+
+    if (res?.success) {
+      if (folder() === 'inbox') {
+        setInbox((prev) => prev.filter((m) => Number(m.id) !== Number(target.id)));
+      } else {
+        setSent((prev) => prev.filter((m) => Number(m.id) !== Number(target.id)));
+      }
+      if (view() === 'detail') {
+        setView('list');
+        setSelectedId(null);
+      }
+    } else {
+      setError(res?.error || t('mail.error.delete', language()));
+    }
+  };
+
+  const cancelCompose = () => {
+    batch(() => {
+      setView('list');
+      setToInput('');
+      setSubjectInput('');
+      setBodyInput('');
+      setAttachments([]);
+      setShowAttachSheet(false);
+      setError('');
+    });
+  };
+
+  const replyTo = (msg: MailMessage) => {
+    batch(() => {
+      setToInput(msg.sender_email || '');
+      setSubjectInput(`Re: ${msg.subject || ''}`);
+      setBodyInput('');
+      setAttachments([]);
+      setView('compose');
+    });
+  };
+
+  /* ─── Attachment helpers ─── */
   const attachFromGallery = async () => {
     const gallery = await fetchNui<Array<{ url?: string }>>('getGallery', undefined, []);
-    const media = gallery?.find((entry) => entry?.url && ['image', 'video'].includes(resolveMediaType(entry.url)));
+    const media = gallery?.find(
+      (e) => e?.url && ['image', 'video'].includes(resolveMediaType(e.url)),
+    );
     const url = sanitizeMediaUrl(media?.url || '');
-    if (!url) {
-      uiAlert(t('mail.error.gallery_attachment', language()));
-      return;
-    }
-
+    if (!url) return;
     setAttachments((prev) => [
       ...prev,
-      {
-        type: resolveMediaType(url) === 'video' ? 'video' : 'image',
-        url,
-        name: 'Adjunto de galeria',
-      },
+      { type: resolveMediaType(url) === 'video' ? 'video' : 'image', url, name: 'Gallery' },
     ]);
-    setError('');
-    setShowAttachmentComposer(false);
+    setShowAttachSheet(false);
   };
 
   const attachFromCamera = async () => {
@@ -287,575 +380,468 @@ export function MailApp() {
       await attachFromGallery();
       return;
     }
-
     setAttachments((prev) => [
       ...prev,
-      {
-        type: resolveMediaType(url) === 'video' ? 'video' : 'image',
-        url,
-        name: 'Captura de camara',
-      },
+      { type: resolveMediaType(url) === 'video' ? 'video' : 'image', url, name: 'Camera' },
     ]);
-    setError('');
-    setShowAttachmentComposer(false);
+    setShowAttachSheet(false);
   };
 
   const attachFromDocuments = async () => {
-    const docs = await fetchNui<Array<{ id: number; title: string; verification_code: string; doc_type: string }>>('documentsGetList', undefined, []);
-    if (!docs || docs.length === 0) {
-      uiAlert(t('mail.error.no_documents', language()) || 'No tienes documentos');
-      return;
-    }
+    const docs = await fetchNui<
+      Array<{ id: number; title: string; verification_code: string; doc_type: string }>
+    >('documentsGetList', undefined, []);
+    if (!docs || docs.length === 0) return;
     const docNames = docs.map((d) => `${d.title} (${d.doc_type})`).join('\n');
     const selected = await uiPrompt(
-      t('mail.prompt.select_document', language()) || 'Escribe el nombre del documento a adjuntar:\n\n' + docNames,
-      { title: t('mail.prompt.attach_document_title', language()) || 'Adjuntar documento' }
+      (t('mail.prompt.select_document', language()) || 'Select document:') + '\n\n' + docNames,
+      { title: t('mail.prompt.attach_document_title', language()) || 'Attach document' },
     );
     if (!selected) return;
     const doc = docs.find((d) => d.title.toLowerCase().includes(String(selected).toLowerCase()));
     if (!doc) return;
     setAttachments((prev) => [
       ...prev,
-      {
-        type: 'document',
-        url: `DOC:${doc.id}:${doc.verification_code}`,
-        name: doc.title,
-      },
+      { type: 'document', url: `DOC:${doc.id}:${doc.verification_code}`, name: doc.title },
     ]);
-    setError('');
-    setShowAttachmentComposer(false);
-  };
-
-  const attachLinkByPrompt = async () => {
-    const result = await uiPrompt(t('mail.prompt.attach_link_message', language()), { title: t('mail.prompt.attach_link_title', language()) });
-    const url = (result || '').trim();
-    if (!url) return;
-    setAttachments((prev) => [
-      ...prev,
-      {
-        type: 'link',
-        url,
-        name: 'Enlace',
-      },
-    ]);
-    setError('');
-    setShowAttachmentComposer(false);
+    setShowAttachSheet(false);
   };
 
   const removeAttachment = (index: number) => {
-    setAttachments((prev) => prev.filter((_, current) => current !== index));
+    setAttachments((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const openMessage = async (message: MailMessage) => {
-    setSelectedId(Number(message.id));
-    setView('detail');
-
-    if (folder() !== 'inbox') return;
-    if (Number(message.is_read) === 1) return;
-
-    await fetchNui<MailActionResponse>(
-      'mailMarkRead',
-      { messageId: message.id },
-      { success: false },
-    );
-    setInbox((prev) =>
-      prev.map((entry) =>
-        Number(entry.id) === Number(message.id)
-          ? { ...entry, is_read: 1 }
-          : entry,
-      ),
-    );
-    setUnread((prev) => Math.max(0, prev - 1));
-  };
-
-  const backToList = () => {
-    setView('list');
-    setSelectedId(null);
-  };
-
-  const deleteMessage = async () => {
-    const msg = selectedMessage();
-    if (!msg) return;
-
-    const res = await fetchNui<MailActionResponse>(
-      'mailDelete',
-      {
-        messageId: msg.id,
-        folder: folder(),
-      },
-      { success: true },
-    );
-
-    if (res?.success) {
-      if (folder() === 'inbox') {
-        setInbox((prev) => prev.filter((m) => Number(m.id) !== Number(msg.id)));
-      } else {
-        setSent((prev) => prev.filter((m) => Number(m.id) !== Number(msg.id)));
-      }
-      backToList();
-    } else {
-      setError(res?.error || t('mail.error.delete', language()));
-    }
-  };
-
-  const cancelCompose = () => {
-    setView('list');
-    setToInput('');
-    setSubjectInput('');
-    setBodyInput('');
-    setAttachments([]);
-    setAttachmentType('document');
-    setAttachmentUrl('');
-    setAttachmentName('');
-    setShowAttachmentComposer(false);
-    setError('');
-  };
+  /* ─── Contact suggestions for To field ─── */
+  const contactSuggestions = createMemo(() => {
+    const q = toInput().toLowerCase().trim();
+    if (!q || q.length < 2) return [];
+    return contactsState.contacts
+      .filter(
+        (c) =>
+          c.display.toLowerCase().includes(q) ||
+          (c.number || '').toLowerCase().includes(q),
+      )
+      .slice(0, 5);
+  });
 
   onMount(() => {
     void loadState();
   });
 
+  /* ─── Render ─── */
   return (
-    <AppScaffold title='Mail' subtitle={t('mail.subtitle', language())} onBack={() => router.goBack()} bodyPadding='none'>
+    <AppScaffold
+      title="Mail"
+      subtitle={account()?.email || t('mail.subtitle', language())}
+      onBack={() => router.goBack()}
+      bodyPadding="none"
+    >
       <div class={styles.root}>
-        <Show when={!!error() && view() !== 'compose'}>
+        {/* Global error (list view only) */}
+        <Show when={!!error() && view() === 'list'}>
           <div class={styles.error}>{error()}</div>
         </Show>
 
         <Show
-          when={!account()}
+          when={account()}
           fallback={
-            <>
-              {/* Vista de Lista (Inbox/Sent) */}
-              <Show when={view() === 'list'}>
-                <div class={styles.accountBar}>
-                  <div>
-                    <p class={styles.label}>{t('mail.account', language())}</p>
-                    <strong>{account()?.email}</strong>
+            /* ─── Account Setup ─── */
+            <div class={styles.setupCard}>
+              <h3>{t('mail.setup_title', language())}</h3>
+              <p class={styles.setupHint}>{t('mail.setup_hint', language())}</p>
+              <input
+                class={styles.setupInput}
+                value={aliasInput()}
+                onInput={(e) => setAliasInput(e.currentTarget.value)}
+                placeholder={t('mail.placeholder.alias', language()) || 'Alias'}
+              />
+              <Show when={aliasInput().trim()}>
+                <p class={styles.setupDomainPreview}>
+                  <strong>{aliasInput().trim()}</strong>@{domain()}
+                </p>
+              </Show>
+              <button
+                class={styles.setupBtn}
+                disabled={!aliasInput().trim() || loading()}
+                onClick={() => void createAccount()}
+              >
+                {t('mail.create_account', language())}
+              </button>
+            </div>
+          }
+        >
+          {/* ─── Mail List View ─── */}
+          <Show when={view() === 'list'}>
+            {/* Tabs */}
+            <div class={styles.folderTabs}>
+              <button
+                class={styles.tab}
+                classList={{ [styles.tabActive]: folder() === 'inbox' }}
+                onClick={() => setFolder('inbox')}
+              >
+                {t('mail.inbox', language()) || 'Inbox'}
+                <Show when={folder() === 'inbox' && unread() > 0}>
+                  {' '}({unread()})
+                </Show>
+              </button>
+              <button
+                class={styles.tab}
+                classList={{ [styles.tabActive]: folder() === 'sent' }}
+                onClick={() => setFolder('sent')}
+              >
+                {t('mail.sent', language())}
+              </button>
+            </div>
+
+            {/* Search */}
+            <div class={styles.searchWrap}>
+              <SearchInput
+                value={search()}
+                onInput={setSearch}
+                placeholder={t('mail.search', language()) || 'Search'}
+              />
+            </div>
+
+            {/* Message list */}
+            <div class={styles.list}>
+              <Show
+                when={filteredMessages().length > 0}
+                fallback={
+                  <div class={styles.emptyState}>
+                    <p>
+                      {folder() === 'inbox'
+                        ? t('mail.empty_inbox', language()) || 'No messages'
+                        : t('mail.empty_sent', language()) || 'No sent messages'}
+                    </p>
                   </div>
-                  <div class={styles.unreadBadge}>{t('mail.unread', language())}: {unread()}</div>
-                </div>
+                }
+              >
+                <For each={filteredMessages()}>
+                  {(message) => {
+                    const isUnread = () =>
+                      folder() === 'inbox' && Number(message.is_read) === 0;
+                    const avatar = () => {
+                      if (folder() === 'inbox') {
+                        return resolveAvatar(message.sender_email, message.sender_alias);
+                      }
+                      return resolveAvatar(message.recipient_email, message.recipient_alias);
+                    };
+                    const senderDisplay = () =>
+                      folder() === 'inbox'
+                        ? message.sender_alias || message.sender_email || t('mail.unknown', language())
+                        : message.recipient_alias || message.recipient_email;
+                    return (
+                      <div
+                        class={styles.mailRow}
+                        classList={{ [styles.rowUnread]: isUnread() }}
+                        onClick={() => void openMessage(message)}
+                      >
+                          {/* Unread dot */}
+                          <Show when={isUnread()}>
+                            <div class={styles.unreadDot} />
+                          </Show>
 
-                <div class={styles.folderTabs}>
-                  <button
-                    class={styles.tab}
-                    classList={{ [styles.tabActive]: folder() === 'inbox' }}
-                    onClick={() => setFolder('inbox')}
-                  >
-                    Inbox
-                  </button>
-                  <button
-                    class={styles.tab}
-                    classList={{ [styles.tabActive]: folder() === 'sent' }}
-                    onClick={() => setFolder('sent')}
-                  >
-                    {t('mail.sent', language())}
-                  </button>
-                </div>
-
-                <div class={styles.contentGrid}>
-                  <div class={styles.list}>
-                    <For each={visibleMessages()}>
-                      {(entry) => (
-                        <button
-                          class={styles.item}
-                          classList={{
-                            [styles.itemActive]: isSelectedMessage(Number(entry.id)),
-                            [styles.itemUnread]:
-                              folder() === 'inbox' && Number(entry.is_read) === 0,
-                          }}
-                          onClick={() => void openMessage(entry)}
-                          onContextMenu={ctxMenu.onContextMenu(entry)}
-                        >
-                          <div class={styles.itemTop}>
-                            <strong>
-                              {folder() === 'inbox'
-                                ? entry.sender_alias ||
-                                  entry.sender_email ||
-                                  t('mail.sender', language())
-                                : entry.recipient_alias || entry.recipient_email}
-                            </strong>
-                            <span>
-                              {new Date(
-                                Number(entry.created_at) || Date.now(),
-                              ).toLocaleDateString()}
-                            </span>
+                          {/* Avatar */}
+                          <div class={styles.rowAvatar}>
+                            <LetterAvatar
+                              label={avatar().label}
+                              color={avatar().color}
+                              imageUrl={avatar().imageUrl}
+                              size={40}
+                              gradient
+                            />
                           </div>
-                          <p>{entry.subject || t('mail.no_subject', language())}</p>
-                        </button>
+
+                          {/* Content */}
+                          <div class={styles.rowContent}>
+                            <div class={styles.rowTopLine}>
+                              <span class={styles.rowSender}>{senderDisplay()}</span>
+                              <span class={styles.rowDate}>
+                                {formatDate(Number(message.created_at), language())}
+                              </span>
+                              <span class={styles.rowChevron}>{'\u203A'}</span>
+                            </div>
+                            <p class={styles.rowSubject}>
+                              {message.subject || t('mail.no_subject', language())}
+                            </p>
+                            <p class={styles.rowPreview}>
+                              {message.body.slice(0, 80)}
+                            </p>
+                          </div>
+                        </div>
+                    );
+                  }}
+                </For>
+              </Show>
+            </div>
+
+            {/* FAB */}
+            <button
+              class={styles.fab}
+              onClick={() => setView('compose')}
+              title={t('mail.compose', language())}
+            >
+              <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75l11.06-11.06-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" /></svg>
+            </button>
+          </Show>
+
+          {/* ─── Reading View ─── */}
+          <Show when={view() === 'detail' && selectedMessage()}>
+            {(message) => {
+              const senderAvatar = () =>
+                resolveAvatar(message().sender_email, message().sender_alias);
+              return (
+                <div class={styles.readingView}>
+                  {/* Header */}
+                  <div class={styles.readingHeader}>
+                    <button
+                      class={styles.readingHeaderBtn}
+                      onClick={() => { setView('list'); setSelectedId(null); }}
+                    >
+                      {'\u2039'} {t('mail.back', language())}
+                    </button>
+                    <div class={styles.readingActions}>
+                      <button
+                        class={styles.readingHeaderBtn}
+                        onClick={() => replyTo(message())}
+                      >
+                        {t('mail.reply', language()) || 'Reply'}
+                      </button>
+                      <button
+                        class={`${styles.readingHeaderBtn} ${styles.readingHeaderBtnDanger}`}
+                        onClick={() => void deleteMessage(message())}
+                      >
+                        {t('mail.delete', language())}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Body */}
+                  <div class={styles.readingBody}>
+                    {/* Sender row */}
+                    <div class={styles.readingSenderRow}>
+                      <LetterAvatar
+                        label={senderAvatar().label}
+                        color={senderAvatar().color}
+                        imageUrl={senderAvatar().imageUrl}
+                        size={48}
+                        gradient
+                      />
+                      <div class={styles.readingSenderInfo}>
+                        <p class={styles.readingSenderName}>
+                          {message().sender_alias || message().sender_email || t('mail.unknown', language())}
+                        </p>
+                        <p class={styles.readingSenderEmail}>
+                          {message().sender_email || ''}
+                        </p>
+                      </div>
+                      <span class={styles.readingDate}>
+                        {new Date(Number(message().created_at)).toLocaleString(language())}
+                      </span>
+                    </div>
+
+                    {/* Subject */}
+                    <h2 class={styles.readingSubject}>
+                      {message().subject || t('mail.no_subject', language())}
+                    </h2>
+
+                    {/* Meta */}
+                    <p class={styles.readingMeta}>
+                      {t('mail.to', language())}: {message().recipient_alias || message().recipient_email}
+                    </p>
+
+                    {/* Message body */}
+                    <p class={styles.readingText}>{message().body}</p>
+
+                    {/* Attachments */}
+                    <Show when={(message().attachments || []).length > 0}>
+                      <div class={styles.readingAttachments}>
+                        <h5>{t('mail.attachments', language())} ({(message().attachments || []).length})</h5>
+                        <For each={message().attachments || []}>
+                          {(att) => (
+                            <>
+                              <Show when={att.type === 'image'}>
+                                <img
+                                  src={att.url}
+                                  alt={att.name || ''}
+                                  class={styles.readingAttachThumb}
+                                  loading="lazy"
+                                />
+                              </Show>
+                              <div class={styles.attachChip}>
+                                <span class={styles.attachChipIcon}>{attachmentIcon(att.type)}</span>
+                                <a href={att.url} target="_blank" rel="noreferrer">
+                                  {att.name || att.url}
+                                </a>
+                                <Show when={att.type === 'image' || att.type === 'video'}>
+                                  <button
+                                    class={styles.attachChipSave}
+                                    onClick={() => {
+                                      void fetchNui('storeMediaUrl', { url: att.url, type: att.type }, { success: true });
+                                    }}
+                                  >
+                                    {t('gallery.save', language()) || 'Save'}
+                                  </button>
+                                </Show>
+                              </div>
+                            </>
+                          )}
+                        </For>
+                      </div>
+                    </Show>
+                  </div>
+                </div>
+              );
+            }}
+          </Show>
+
+          {/* ─── Compose View ─── */}
+          <Show when={view() === 'compose'}>
+            <div class={styles.composeView}>
+              {/* Header */}
+              <div class={styles.composeHeader}>
+                <button class={styles.composeHeaderBtn} onClick={cancelCompose}>
+                  {t('mail.cancel', language())}
+                </button>
+                <h4 class={styles.composeTitle}>{t('mail.new_message', language())}</h4>
+                <button
+                  class={`${styles.composeHeaderBtn} ${styles.composeHeaderBtnSend}`}
+                  disabled={!canSend()}
+                  onClick={() => void sendMail()}
+                >
+                  {t('mail.send', language())}
+                </button>
+              </div>
+
+              {/* Error */}
+              <Show when={!!error()}>
+                <div class={styles.composeError}>{error()}</div>
+              </Show>
+
+              <div class={styles.composeScroll}>
+                {/* To field */}
+                <div class={styles.composeField}>
+                  <span class={styles.composeFieldLabel}>{t('mail.compose.to', language()) || 'To:'}</span>
+                  <input
+                    class={styles.composeFieldInput}
+                    value={toInput()}
+                    onInput={(e) => {
+                      setToInput(e.currentTarget.value);
+                      if (error()) setError('');
+                    }}
+                    placeholder={t('mail.placeholder.to', language())}
+                  />
+                </div>
+
+                {/* Contact suggestions */}
+                <Show when={contactSuggestions().length > 0}>
+                  <div class={styles.contactSuggestions}>
+                    <For each={contactSuggestions()}>
+                      {(contact) => {
+                        const cAvatar = () => resolveAvatar(contact.number, contact.display);
+                        return (
+                          <button
+                            class={styles.contactSuggestion}
+                            onClick={() => {
+                              setToInput(contact.number || contact.display);
+                            }}
+                          >
+                            <LetterAvatar
+                              label={cAvatar().label}
+                              color={cAvatar().color}
+                              imageUrl={contact.avatar}
+                              size={28}
+                              gradient
+                            />
+                            <div>
+                              <div class={styles.contactSuggestionName}>{contact.display}</div>
+                              <Show when={contact.number}>
+                                <div class={styles.contactSuggestionEmail}>{contact.number}</div>
+                              </Show>
+                            </div>
+                          </button>
+                        );
+                      }}
+                    </For>
+                  </div>
+                </Show>
+
+                {/* Subject field */}
+                <div class={styles.composeField}>
+                  <span class={styles.composeFieldLabel}>{t('mail.compose.subject', language()) || 'Subject:'}</span>
+                  <input
+                    class={styles.composeFieldInput}
+                    value={subjectInput()}
+                    onInput={(e) => setSubjectInput(e.currentTarget.value)}
+                    placeholder={t('mail.placeholder.subject', language())}
+                  />
+                </div>
+
+                {/* Body */}
+                <textarea
+                  ref={bodyFieldRef}
+                  class={styles.composeBody}
+                  value={bodyInput()}
+                  onInput={(e) => {
+                    setBodyInput(e.currentTarget.value);
+                    if (error()) setError('');
+                  }}
+                  placeholder={t('mail.placeholder.body', language())}
+                />
+
+                {/* Inline attachment chips */}
+                <Show when={attachments().length > 0}>
+                  <div class={styles.composeAttachments}>
+                    <For each={attachments()}>
+                      {(att, idx) => (
+                        <div class={styles.composeAttachChip}>
+                          <span class={styles.composeAttachChipIcon}>{attachmentIcon(att.type)}</span>
+                          <span class={styles.composeAttachChipName}>{att.name || att.url}</span>
+                          <button
+                            class={styles.composeAttachChipRemove}
+                            onClick={() => removeAttachment(idx())}
+                          >
+                            {'\u00D7'}
+                          </button>
+                        </div>
                       )}
                     </For>
                   </div>
-
-                  <div class={styles.preview}>
-                    <Show
-                      when={selectedMessage()}
-                      fallback={<p class={styles.empty}>{t('mail.select_message', language())}</p>}
-                    >
-                      {(message) => (
-                        <>
-                          <h4>{message().subject || t('mail.no_subject', language())}</h4>
-                          <p class={styles.previewMeta}>
-                            {folder() === 'inbox'
-                              ? `${t('mail.from', language())}: ${message().sender_email || t('mail.unknown', language())}`
-                              : `${t('mail.to', language())}: ${message().recipient_email}`}
-                          </p>
-                          <pre class={styles.previewBody}>
-                            {message().body}
-                          </pre>
-                          <Show
-                            when={(message().attachments || []).length > 0}
-                          >
-                            <div class={styles.previewAttachments}>
-                              <h5>{t('mail.attachments', language())}</h5>
-                              <For each={message().attachments || []}>
-                                {(entry) => (
-                                  <div class={styles.previewAttachmentItem}>
-                                    <span>{entry.type}</span>
-                                    <a
-                                      href={entry.url}
-                                      target='_blank'
-                                      rel='noreferrer'
-                                    >
-                                      {entry.name || entry.url}
-                                    </a>
-                                  </div>
-                                )}
-                              </For>
-                            </div>
-                          </Show>
-                        </>
-                      )}
-                    </Show>
-                  </div>
-                </div>
-
-                {/* Boton flotante de nuevo mensaje */}
-                <button
-                  class={styles.fab}
-                  onClick={() => setView('compose')}
-                  title={t('mail.new_message', language())}
-                >
-                  <img src={MAIL_ICONS.compose} alt='' draggable={false} />
-                </button>
-              </Show>
-
-              {/* Vista de Detail */}
-              <Show when={view() === 'detail'}>
-                <Show when={selectedMessage()}>
-                  {(message) => (
-                    <div class={styles.detailView}>
-                      <div class={styles.detailHeader}>
-                        <button
-                          class={styles.backButton}
-                          onClick={() => backToList()}
-                        >
-                          ← {t('mail.back', language())}
-                        </button>
-                        <h4 class={styles.detailTitle}>
-                          {message().subject || t('mail.no_subject', language())}
-                        </h4>
-                        <div class={styles.detailActions}>
-                          <button
-                            class={styles.deleteButton}
-                            onClick={() => void deleteMessage()}
-                          >
-                            <img src={MAIL_ICONS.trash} alt='' draggable={false} />
-                            <span>{t('mail.delete', language())}</span>
-                          </button>
-                        </div>
-                      </div>
-
-                      <div class={styles.detailContent}>
-                        <div class={styles.detailMeta}>
-                          <div class={styles.metaRow}>
-                              <span class={styles.metaLabel}>{t('mail.from', language())}:</span>
-                            <span class={styles.metaValue}>
-                              {message().sender_alias ||
-                                message().sender_email ||
-                                t('mail.unknown', language())}
-                            </span>
-                          </div>
-                          <div class={styles.metaRow}>
-                              <span class={styles.metaLabel}>{t('mail.to', language())}:</span>
-                            <span class={styles.metaValue}>
-                              {message().recipient_alias ||
-                                message().recipient_email}
-                            </span>
-                          </div>
-                          <div class={styles.metaRow}>
-                              <span class={styles.metaLabel}>{t('mail.date', language())}:</span>
-                            <span class={styles.metaValue}>
-                              {new Date(
-                                Number(message().created_at),
-                              ).toLocaleString()}
-                            </span>
-                          </div>
-                        </div>
-
-                        <div class={styles.detailBody}>
-                          {message().body}
-                        </div>
-
-                        <Show
-                          when={(message().attachments || []).length > 0}
-                        >
-                          <div class={styles.detailAttachments}>
-                            <h5>
-                              {t('mail.attachments', language())} ({(message().attachments || [])
-                                .length})
-                            </h5>
-                            <For each={message().attachments || []}>
-                              {(attachment) => (
-                                <div class={styles.attachmentItem}>
-                                  <span class={styles.attachmentType}>
-                                    {attachment.type}
-                                  </span>
-                                  <a
-                                    href={attachment.url}
-                                    target='_blank'
-                                    rel='noreferrer'
-                                    class={styles.attachmentLink}
-                                  >
-                                    {attachment.name || attachment.url}
-                                  </a>
-                                  <Show when={attachment.type === 'image' || attachment.type === 'video'}>
-                                    <button
-                                      class={styles.attachmentSave}
-                                      onClick={async () => {
-                                        await fetchNui('storeMediaUrl', { url: attachment.url, type: attachment.type }, { success: true });
-                                      }}
-                                    >
-                                      {t('gallery.save', language()) || 'Guardar'}
-                                    </button>
-                                  </Show>
-                                </div>
-                              )}
-                            </For>
-                          </div>
-                        </Show>
-                      </div>
-                    </div>
-                  )}
                 </Show>
-              </Show>
+              </div>
 
-              {/* Vista de Compose */}
-              <Show when={view() === 'compose'}>
-                <div class={styles.composeView}>
-                  <div class={styles.composeHeader}>
-                    <button
-                      class={styles.backButton}
-                      onClick={() => cancelCompose()}
-                    >
-                      {t('mail.cancel', language())}
-                    </button>
-                    <h4 class={styles.composeTitle}>{t('mail.new_message', language())}</h4>
-                    <div class={styles.composeHeaderSpacer}></div>
-                  </div>
-
-                  <div class={styles.composeScroll}>
-                    <div class={styles.composeCard}>
-                      <Show when={hasComposeError()}>
-                        <div class={styles.composeError}>{error()}</div>
-                      </Show>
-
-                      <input
-                        ref={toFieldRef}
-                        class={styles.input}
-                        value={toInput()}
-                        onInput={(e) => {
-                          setToInput(e.currentTarget.value);
-                          if (error()) setError('');
-                        }}
-                        placeholder={t('mail.placeholder.to', language())}
-                      />
-                      <input
-                        class={styles.input}
-                        value={subjectInput()}
-                        onInput={(e) => setSubjectInput(e.currentTarget.value)}
-                        placeholder={t('mail.placeholder.subject', language())}
-                      />
-                      <textarea
-                        ref={bodyFieldRef}
-                        class={styles.textarea}
-                        value={bodyInput()}
-                        onInput={(e) => {
-                          setBodyInput(e.currentTarget.value);
-                          if (error()) setError('');
-                        }}
-                        placeholder={t('mail.placeholder.body', language())}
-                      />
-
-                      <div class={styles.attachmentsSummary}>
-                        <div>
-                          <p class={styles.attachmentsLabel}>{t('mail.attachments_optional', language())}</p>
-                          <strong class={styles.attachmentsCount}>
-                            {attachments().length === 0 ? '0' : attachments().length}
-                          </strong>
-                        </div>
-                        <button
-                          class={styles.attachmentsToggle}
-                          onClick={() => setShowAttachmentComposer((prev) => !prev)}
-                        >
-                          {showAttachmentComposer() ? t('mail.cancel', language()) : t('mail.add', language())}
-                        </button>
-                      </div>
-
-                      <Show when={attachments().length > 0}>
-                        <div class={styles.attachList}>
-                          <For each={attachments()}>
-                            {(entry, index) => (
-                              <div class={styles.attachItem}>
-                                <span>
-                                  {entry.type}: {entry.name || entry.url}
-                                </span>
-                                <button onClick={() => removeAttachment(index())}>
-                                  {t('mail.remove', language())}
-                                </button>
-                              </div>
-                            )}
-                          </For>
-                        </div>
-                      </Show>
-                    </div>
-
-                    <Show when={showAttachmentComposer()}>
-                      <div class={styles.attachmentsBox}>
-                        <h5>{t('mail.attachments_optional', language())}</h5>
-                        <MediaActionButtons
-                          actions={[
-                            { icon: MAIL_ICONS.gallery, label: t('mail.gallery', language()), onClick: attachFromGallery },
-                            { icon: MAIL_ICONS.camera, label: t('mail.camera', language()), onClick: attachFromCamera },
-                            { icon: MAIL_ICONS.link, label: t('mail.link', language()), onClick: () => void attachLinkByPrompt() },
-                            { icon: './img/icons_ios/documents.svg', label: t('mail.documents', language()) || 'Docs', onClick: () => void attachFromDocuments() },
-                          ]}
-                          variant='compact'
-                          class={styles.composeMediaButtons}
-                        />
-                        <div class={styles.attachRow}>
-                          <select
-                            class={styles.select}
-                            value={attachmentType()}
-                            onChange={(e) =>
-                              setAttachmentType(
-                                e.currentTarget.value as MailAttachment['type'],
-                              )
-                            }
-                          >
-                            <option value='image'>{t('mail.attachment.image', language())}</option>
-                            <option value='video'>{t('mail.attachment.video', language())}</option>
-                            <option value='document'>{t('mail.attachment.document', language())}</option>
-                            <option value='link'>Link</option>
-                          </select>
-                          <input
-                            class={styles.inputInline}
-                            value={attachmentUrl()}
-                            onInput={(e) => setAttachmentUrl(e.currentTarget.value)}
-                            placeholder={t('mail.placeholder.url', language())}
-                          />
-                        </div>
-                        <MediaAttachmentPreview
-                          url={attachmentUrl()}
-                          mediaClass={styles.composePreviewMedia}
-                        />
-                        <div class={styles.attachRow}>
-                          <input
-                            class={styles.inputInline}
-                            value={attachmentName()}
-                            onInput={(e) => setAttachmentName(e.currentTarget.value)}
-                            placeholder={t('mail.placeholder.name', language())}
-                          />
-                          <button class={styles.attachButton} onClick={addAttachment}>
-                            {t('mail.add', language())}
-                          </button>
-                        </div>
-                      </div>
-                    </Show>
-                  </div>
-
-                  <div class={styles.composeFooter}>
-                    <button
-                      class={styles.composeFooterSecondary}
-                      onClick={() => cancelCompose()}
-                      disabled={loading()}
-                    >
-                      {t('mail.cancel', language())}
-                    </button>
-                    <button
-                      class={styles.composeFooterPrimary}
-                      onClick={() => void sendMail()}
-                      disabled={loading()}
-                    >
-                      {t('mail.send', language())}
-                    </button>
-                  </div>
-
-                  <AppFAB
-                    class={styles.composeFab}
-                    title={t('mail.attachments_optional', language())}
-                    tooltip={attachments().length > 0 ? `${attachments().length} ${t('mail.attachments_optional', language())}` : t('mail.attachments_optional', language())}
-                    tooltipVisible={showAttachmentComposer()}
-                    icon={<img src={MAIL_ICONS.gallery} alt='' draggable={false} />}
-                    onClick={() => setShowAttachmentComposer((prev) => !prev)}
-                  />
-
-                  <Show when={attachments().length > 0}>
-                    <div class={styles.composeFabBadge}>{attachments().length}</div>
-                  </Show>
-                </div>
-              </Show>
-            </>
-          }
-        >
-          <div class={styles.setupCard}>
-            <h3>{t('mail.setup_title', language())}</h3>
-            <p class={styles.setupHint}>
-              {t('mail.no_account_hint', language())}
-            </p>
-          </div>
+              {/* Footer with attach button */}
+              <div class={styles.composeFooter}>
+                <button
+                  class={styles.composeAttachBtn}
+                  onClick={() => setShowAttachSheet(true)}
+                  title={t('mail.compose.attach', language()) || 'Attach'}
+                >
+                  +
+                </button>
+              </div>
+            </div>
+          </Show>
         </Show>
       </div>
 
+      {/* Attachment action sheet */}
       <ActionSheet
-        open={ctxMenu.isOpen()}
-        title={ctxMenu.item()?.subject || t('mail.no_subject', language())}
-        onClose={ctxMenu.close}
+        open={showAttachSheet()}
+        title={t('mail.compose.attach', language()) || 'Add attachment'}
+        onClose={() => setShowAttachSheet(false)}
         actions={[
           {
-            label: t('mail.open', language()) || 'Abrir',
-            onClick: () => {
-              const msg = ctxMenu.item();
-              if (msg) void openMessage(msg);
-              ctxMenu.close();
-            },
+            label: t('mail.compose.attach_gallery', language()) || t('mail.gallery', language()) || 'Gallery',
+            onClick: () => void attachFromGallery(),
           },
           {
-            label: t('mail.reply', language()) || 'Responder',
-            tone: 'primary',
-            onClick: () => {
-              const msg = ctxMenu.item();
-              if (msg) {
-                setToInput(msg.sender_email || '');
-                setSubjectInput(`Re: ${msg.subject || ''}`);
-                setBodyInput('');
-                setView('compose');
-              }
-              ctxMenu.close();
-            },
+            label: t('mail.compose.attach_document', language()) || 'Document',
+            onClick: () => void attachFromDocuments(),
           },
           {
-            label: t('action.delete', language()),
-            tone: 'danger',
-            onClick: async () => {
-              const msg = ctxMenu.item();
-              if (msg) {
-                setSelectedId(Number(msg.id));
-                setFolder(folder());
-                await deleteMessage();
-              }
-              ctxMenu.close();
-            },
+            label: t('mail.compose.attach_camera', language()) || t('mail.camera', language()) || 'Camera',
+            onClick: () => void attachFromCamera(),
           },
         ]}
       />

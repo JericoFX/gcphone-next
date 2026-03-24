@@ -658,6 +658,7 @@ CREATE TABLE IF NOT EXISTS `phone_documents` (
     `title` VARCHAR(64) NOT NULL,
     `holder_name` VARCHAR(64) NOT NULL,
     `holder_number` VARCHAR(20) DEFAULT NULL,
+    `photo` MEDIUMTEXT DEFAULT NULL,
     `expires_at` VARCHAR(24) DEFAULT NULL,
     `verification_code` VARCHAR(20) NOT NULL,
     `nfc_enabled` TINYINT(1) DEFAULT 0,
@@ -1120,6 +1121,17 @@ CREATE TABLE IF NOT EXISTS `phone_cleanup_rules` (
     `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     UNIQUE KEY `uniq_rule_key` (`rule_key`),
     KEY `idx_enabled_schedule` (`enabled`, `run_every_minutes`, `last_run_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `phone_radio_playlists` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `identifier` VARCHAR(50) NOT NULL,
+    `name` VARCHAR(64) NOT NULL,
+    `songs` LONGTEXT NOT NULL,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    `expires_at` TIMESTAMP NOT NULL,
+    KEY `idx_radio_playlists_identifier` (`identifier`),
+    KEY `idx_radio_playlists_expires` (`expires_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================

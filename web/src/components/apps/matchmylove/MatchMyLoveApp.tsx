@@ -8,7 +8,6 @@ import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { usePhone } from '../../../store/phone';
 import { AppScaffold } from '../../shared/layout';
 import { EmptyState } from '../../shared/ui/EmptyState';
-import { FormSection, Modal, ModalActions, ModalButton } from '../../shared/ui/Modal';
 import { SegmentedTabs } from '../../shared/ui/SegmentedTabs';
 import { timeAgo } from '../../../utils/misc';
 import { fetchSocketToken } from '../../../utils/realtimeAuth';
@@ -422,22 +421,6 @@ export function MatchMyLoveApp() {
     return () => window.removeEventListener('message', handler);
   });
 
-  // Setup view (no profile)
-  function SetupView() {
-    return (
-      <div class={styles.profileView}>
-        <div class={styles.setupHeader}>
-          <div class={styles.setupIcon}>
-            <img src="./img/icons_ios/matchmylove.svg" alt="" />
-          </div>
-          <h2 class={styles.setupTitle}>MatchMyLove</h2>
-          <p class={styles.setupSubtitle}>Crea tu perfil para empezar</p>
-        </div>
-        {ProfileForm(handleCreateProfile, 'Crear Perfil')}
-      </div>
-    );
-  }
-
   async function attachAvatarFromGallery() {
     const gallery = await fetchNui<any[]>('getGallery', undefined, []);
     const images = (gallery || []).filter((item: any) => {
@@ -510,7 +493,7 @@ export function MatchMyLoveApp() {
             value={formBio()}
             onInput={(e) => setFormBio(e.currentTarget.value)}
             placeholder="Algo sobre ti..."
-            rows={3}
+            rows={2}
             maxLength={500}
           />
         </div>
@@ -577,7 +560,7 @@ export function MatchMyLoveApp() {
             value={formPhotos()}
             onInput={(e) => setFormPhotos(e.currentTarget.value)}
             placeholder="https://foto1.jpg&#10;https://foto2.jpg"
-            rows={3}
+            rows={2}
           />
           <button class={styles.galleryBtn} onClick={attachPhotoFromGallery} type="button">
             Agregar desde galeria
@@ -609,6 +592,22 @@ export function MatchMyLoveApp() {
     );
   }
 
+  // Setup view (no profile)
+  function SetupView() {
+    return (
+      <div class={styles.profileView}>
+        <div class={styles.setupHeader}>
+          <div class={styles.setupIcon}>
+            <img src="./img/icons_ios/matchmylove.svg" alt="" />
+          </div>
+          <h2 class={styles.setupTitle}>MatchMyLove</h2>
+          <p class={styles.setupSubtitle}>Crea tu perfil para empezar</p>
+        </div>
+        {ProfileForm(handleCreateProfile, 'Crear Perfil')}
+      </div>
+    );
+  }
+
   // Swipe view
   function SwipeView() {
     const currentCard = () => cards()[currentCardIndex()];
@@ -630,11 +629,14 @@ export function MatchMyLoveApp() {
                   }>
                     <img src={photo()!} alt="" loading="lazy" />
                   </Show>
-                </div>
-                <div class={styles.cardInfo}>
-                  <div class={styles.cardName}>
-                    {card().display_name}, {card().age}
+                  <div class={styles.cardPhotoGradient} />
+                  <div class={styles.cardOverlayInfo}>
+                    <div class={styles.cardName}>
+                      {card().display_name}, {card().age}
+                    </div>
                   </div>
+                </div>
+                <div class={styles.cardBottom}>
                   <Show when={card().bio}>
                     <p class={styles.cardBio}>{card().bio}</p>
                   </Show>
@@ -688,12 +690,42 @@ export function MatchMyLoveApp() {
 
   // Matches list view
   function MatchesView() {
+    const newMatches = () => matches().filter(m => !m.last_message);
+    const messageMatches = () => matches().filter(m => !!m.last_message);
+
     return (
       <div class={styles.matchesView}>
         <Show when={matches().length > 0} fallback={
           <EmptyState title="Sin matches" description="Sigue deslizando para encontrar tu match" />
         }>
-          <For each={matches()}>
+          <Show when={newMatches().length > 0}>
+            <div class={styles.newMatchesSection}>
+              <div class={styles.newMatchesLabel}>Nuevos matches</div>
+              <div class={styles.newMatchesRow}>
+                <For each={newMatches()}>
+                  {(match) => (
+                    <button class={styles.newMatchItem} onClick={() => openChat(match)}>
+                      <div class={styles.newMatchAvatar}>
+                        <Show when={match.avatar} fallback={
+                          <div class={styles.newMatchAvatarFallback}>
+                            {match.display_name.charAt(0).toUpperCase()}
+                          </div>
+                        }>
+                          <img src={match.avatar!} alt="" />
+                        </Show>
+                      </div>
+                      <span class={styles.newMatchName}>{match.display_name}</span>
+                    </button>
+                  )}
+                </For>
+              </div>
+            </div>
+          </Show>
+
+          <Show when={messageMatches().length > 0}>
+            <div class={styles.messagesLabel}>Mensajes</div>
+          </Show>
+          <For each={messageMatches()}>
             {(match) => (
               <button class={styles.matchCard} onClick={() => openChat(match)}>
                 <div class={styles.matchAvatar}>
@@ -707,12 +739,7 @@ export function MatchMyLoveApp() {
                 </div>
                 <div class={styles.matchInfo}>
                   <span class={styles.matchName}>{match.display_name}, {match.age}</span>
-                  <Show when={match.last_message}>
-                    <span class={styles.matchLastMsg}>{match.last_message}</span>
-                  </Show>
-                  <Show when={!match.last_message}>
-                    <span class={styles.matchLastMsg}>Nuevo match!</span>
-                  </Show>
+                  <span class={styles.matchLastMsg}>{match.last_message}</span>
                 </div>
                 <Show when={match.last_message_at}>
                   <span class={styles.matchTime}>{timeAgo(match.last_message_at!, language())}</span>
@@ -720,6 +747,29 @@ export function MatchMyLoveApp() {
               </button>
             )}
           </For>
+
+          {/* Show matches with no messages in the list too if there are no new matches section items */}
+          <Show when={newMatches().length === 0}>
+            <For each={matches().filter(m => !m.last_message)}>
+              {(match) => (
+                <button class={styles.matchCard} onClick={() => openChat(match)}>
+                  <div class={styles.matchAvatar}>
+                    <Show when={match.avatar} fallback={
+                      <div class={styles.matchAvatarFallback}>
+                        {match.display_name.charAt(0).toUpperCase()}
+                      </div>
+                    }>
+                      <img src={match.avatar!} alt="" />
+                    </Show>
+                  </div>
+                  <div class={styles.matchInfo}>
+                    <span class={styles.matchName}>{match.display_name}, {match.age}</span>
+                    <span class={styles.matchLastMsg}>Nuevo match!</span>
+                  </div>
+                </button>
+              )}
+            </For>
+          </Show>
         </Show>
       </div>
     );
@@ -820,6 +870,12 @@ export function MatchMyLoveApp() {
             }>
               <img src={profile()!.avatar!} alt="" />
             </Show>
+            <div class={styles.avatarEditOverlay}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+              </svg>
+            </div>
           </div>
           <h3>{profile()?.display_name}, {profile()?.age}</h3>
         </div>

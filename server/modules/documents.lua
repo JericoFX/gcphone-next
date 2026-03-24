@@ -1,6 +1,7 @@
 local Bridge = require 'server.bridge'
 local Phone = require 'server.modules.phone'
 local Utils = require 'server.lib.utils'
+local Hooks = require 'server.modules.hooks'
 
 local GetIdentifierFromPlayer
 
@@ -69,7 +70,7 @@ lib.callback.register('gcphone:documents:getList', function(source)
     if not identifier then return {} end
 
     return MySQL.query.await(
-        'SELECT id, doc_type, title, holder_name, holder_number, expires_at, verification_code, created_at, nfc_enabled FROM phone_documents WHERE identifier = ? ORDER BY id DESC',
+        'SELECT id, doc_type, title, holder_name, holder_number, photo, expires_at, verification_code, created_at, nfc_enabled FROM phone_documents WHERE identifier = ? ORDER BY id DESC',
         { identifier }
     ) or {}
 end)
@@ -85,6 +86,7 @@ lib.callback.register('gcphone:documents:create', function(source, data)
     local title = Utils.SafeString(data.title, 64) or 'Documento'
     local holderName = Utils.SafeString(data.holderName, 64) or (Bridge.GetName(source) or 'Ciudadano')
     local holderNumber = Utils.SafeString(data.holderNumber, 20)
+    local photo = Utils.SafeString(data.photo, 50000)
     local expiresAt = Utils.SafeString(data.expiresAt, 24)
     local nfcEnabled = data.nfcEnabled and 1 or 0
 
@@ -92,12 +94,12 @@ lib.callback.register('gcphone:documents:create', function(source, data)
 
     local code = BuildDocCode(identifier, docType)
     local id = MySQL.insert.await(
-        'INSERT INTO phone_documents (identifier, doc_type, title, holder_name, holder_number, expires_at, verification_code, nfc_enabled) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-        { identifier, docType, title, holderName, holderNumber, expiresAt, code, nfcEnabled }
+        'INSERT INTO phone_documents (identifier, doc_type, title, holder_name, holder_number, photo, expires_at, verification_code, nfc_enabled) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        { identifier, docType, title, holderName, holderNumber, photo, expiresAt, code, nfcEnabled }
     )
 
     local doc = MySQL.single.await(
-        'SELECT id, doc_type, title, holder_name, holder_number, expires_at, verification_code, created_at, nfc_enabled FROM phone_documents WHERE id = ?',
+        'SELECT id, doc_type, title, holder_name, holder_number, photo, expires_at, verification_code, created_at, nfc_enabled FROM phone_documents WHERE id = ?',
         { id }
     )
 
@@ -255,5 +257,71 @@ lib.callback.register('gcphone:documents:getTypes', function(source)
         { id = 'receipt', name = 'Recibo', icon = 'REC', color = '#8e8e93' }
     }
 end)
+
+lib.callback.register('gcphone:documents:updatePhoto', function(source, data)
+    if Phone.IsPhoneReadOnly(source) then return { success = false, error = 'READ_ONLY' } end
+    local identifier = RequirePlayerIdentifier(source)
+    if not identifier then return { success = false, error = 'INVALID_SOURCE' } end
+    local id = tonumber(type(data) == 'table' and data.documentId or nil)
+    local photo = type(data) == 'table' and Utils.SafeString(data.photo, 50000) or nil
+    if not id then return { success = false, error = 'INVALID_DOCUMENT' } end
+    MySQL.update.await('UPDATE phone_documents SET photo = ? WHERE id = ? AND identifier = ?', { photo, id, identifier })
+    return { success = true }
+end)
+
+local function IssueDocument(targetIdentifier, payload)
+    if type(targetIdentifier) ~= 'string' or targetIdentifier == '' then
+        return { success = false, error = 'INVALID_IDENTIFIER' }
+    end
+    if type(payload) ~= 'table' then
+        return { success = false, error = 'INVALID_PAYLOAD' }
+    end
+
+    local docType = SafeType(payload.docType)
+    if not docType then return { success = false, error = 'INVALID_TYPE' } end
+
+    local title = Utils.SafeString(payload.title, 64)
+    if not title or title == '' then return { success = false, error = 'MISSING_TITLE' } end
+
+    local holderName = Utils.SafeString(payload.holderName, 64) or 'Ciudadano'
+    local holderNumber = Utils.SafeString(payload.holderNumber, 20)
+    local expiresAt = Utils.SafeString(payload.expiresAt, 24)
+    local nfcEnabled = payload.nfcEnabled and 1 or 0
+    local code = BuildDocCode(targetIdentifier, docType)
+
+    local id = MySQL.insert.await(
+        'INSERT INTO phone_documents (identifier, doc_type, title, holder_name, holder_number, expires_at, verification_code, nfc_enabled) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        { targetIdentifier, docType, title, holderName, holderNumber, expiresAt, code, nfcEnabled }
+    )
+
+    if not id then return { success = false, error = 'INSERT_FAILED' } end
+
+    local doc = MySQL.single.await(
+        'SELECT id, doc_type, title, holder_name, holder_number, photo, expires_at, verification_code, created_at, nfc_enabled FROM phone_documents WHERE id = ?',
+        { id }
+    )
+
+    Hooks.triggerHook('documentIssued', {
+        identifier = targetIdentifier,
+        documentId = id,
+        docType = docType,
+        title = title,
+    })
+
+    for _, playerId in ipairs(GetPlayers()) do
+        local src = tonumber(playerId)
+        if src and src > 0 then
+            local ident = Phone.GetPhoneOwnerIdentifier(src, true)
+            if ident == targetIdentifier then
+                TriggerClientEvent('gcphone:documentIssued', src, doc)
+                break
+            end
+        end
+    end
+
+    return { success = true, document = doc }
+end
+
+exports('IssueDocument', IssueDocument)
 
 return {}

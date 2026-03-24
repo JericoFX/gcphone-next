@@ -36,6 +36,7 @@ files {
     'client/txadmin.lua',
     'client/garage.lua',
     'client/cityride.lua',
+    'client/mugshot.lua',
 }
 
 shared_scripts {

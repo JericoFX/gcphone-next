@@ -16,6 +16,7 @@ local AllowedHooks = {
     phoneSetupCompleted = true,
     deviceUnlocked = true,
     imeiViewed = true,
+    documentIssued = true,
 }
 
 local function isAllowedHook(event)

@@ -22,6 +22,10 @@ Socket.IO is **disabled by default** and is entirely optional. Enable it only if
 
 If you do not need real-time chat, leave it disabled. The standard message system works without it.
 
+## Dependencies
+
+The Socket.IO server dependencies (`socket.io`, `jsonwebtoken`, `sql.js`) are included in `socket-server/node_modules/`. No additional installation is required.
+
 ## Config.lua
 
 Socket.IO is controlled in `shared/config.lua`:

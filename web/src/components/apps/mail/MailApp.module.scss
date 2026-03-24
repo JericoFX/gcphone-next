@@ -1,18 +1,15 @@
-/* MailApp — uses global design tokens directly. No local aliases. */
+/* MailApp — iOS Mail redesign. Uses global design tokens directly. */
 
-/* Root container */
+/* ─── Root ─── */
 .root {
   display: flex;
   flex-direction: column;
   height: 100%;
-  background:
-    radial-gradient(120% 90% at 50% -10%, color-mix(in srgb, var(--tint) 8%, transparent), transparent 55%),
-    var(--bg);
+  background: var(--bg);
   overflow: hidden;
-  padding-bottom: calc(10px + var(--phone-bottom-ui-gap, 0px));
 }
 
-/* Error alert */
+/* ─── Error banner ─── */
 .error {
   background: color-mix(in srgb, var(--danger) 12%, transparent);
   border: 1px solid color-mix(in srgb, var(--danger) 35%, transparent);
@@ -22,32 +19,689 @@
   margin: var(--s-3) var(--s-4) 0;
   font-size: 13px;
   font-weight: 500;
-  animation: slideDown var(--dur-2) var(--ease-standard);
+  animation: mailSlideDown 0.2s ease;
 }
 
-@keyframes slideDown {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+@keyframes mailSlideDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
-/* Setup Card */
+/* ─── Folder Tabs (segmented control) ─── */
+.folderTabs {
+  display: flex;
+  gap: var(--s-1);
+  padding: 3px;
+  margin: var(--s-2) var(--s-4);
+  background: var(--fill-tertiary);
+  border-radius: var(--r-sm);
+  flex-shrink: 0;
+}
+
+.tab {
+  flex: 1;
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--text-2);
+  padding: 7px 0;
+  border-radius: 7px;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.15s ease, box-shadow 0.2s ease;
+  text-align: center;
+}
+
+.tabActive {
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+/* ─── Search wrapper ─── */
+.searchWrap {
+  padding: 0 var(--s-4);
+  margin-bottom: var(--s-2);
+  flex-shrink: 0;
+}
+
+/* ─── Message list ─── */
+.list {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 0;
+}
+
+.list::-webkit-scrollbar { width: 0; }
+
+/* ─── Mail row ─── */
+.mailRow {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-3);
+  padding: var(--s-3) var(--s-4);
+  background: var(--surface);
+  cursor: pointer;
+  position: relative;
+  transition: background 0.15s ease;
+  border-bottom: 0.5px solid var(--separator);
+}
+
+.mailRow:active {
+  background: var(--fill-tertiary);
+}
+
+/* Avatar column */
+.rowAvatar {
+  flex-shrink: 0;
+  padding-top: 2px;
+}
+
+/* Content column */
+.rowContent {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.rowTopLine {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+
+.rowSender {
+  flex: 1;
+  font-size: 15px;
+  font-weight: 400;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.rowDate {
+  flex-shrink: 0;
+  font-size: 13px;
+  color: var(--text-3);
+}
+
+.rowChevron {
+  flex-shrink: 0;
+  font-size: 14px;
+  color: var(--text-3);
+  opacity: 0.5;
+  margin-left: 2px;
+}
+
+.rowSubject {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin: 0;
+}
+
+.rowPreview {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--text-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin: 0;
+  line-height: 1.3;
+}
+
+/* Unread state */
+.rowUnread .rowSender {
+  font-weight: 600;
+}
+
+.rowUnread .rowSubject {
+  font-weight: 500;
+}
+
+/* Unread dot */
+.unreadDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--tint);
+  flex-shrink: 0;
+}
+
+/* ─── Empty state ─── */
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--s-6) var(--s-4);
+  gap: var(--s-2);
+  flex: 1;
+}
+
+.emptyState p {
+  margin: 0;
+  font-size: 15px;
+  color: var(--text-3);
+  text-align: center;
+}
+
+/* ─── FAB (compose) ─── */
+.fab {
+  position: absolute;
+  bottom: calc(var(--s-4) + var(--phone-bottom-ui-gap, 0px));
+  right: var(--s-4);
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--tint);
+  border: none;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--tint) 35%, transparent);
+  z-index: 20;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.fab:active {
+  transform: scale(0.92);
+}
+
+.fab svg {
+  width: 22px;
+  height: 22px;
+  fill: currentColor;
+}
+
+/* ─── Reading View (full-screen slide-up) ─── */
+.readingView {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  z-index: 30;
+  animation: mailSlideUp 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+@keyframes mailSlideUp {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+
+.readingHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--s-2) var(--s-3);
+  background: var(--surface);
+  border-bottom: 0.5px solid var(--separator);
+  flex-shrink: 0;
+  gap: var(--s-2);
+}
+
+.readingHeaderBtn {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--tint);
+  font-size: 15px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  padding: var(--s-2);
+  border-radius: var(--r-xs);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: background 0.15s ease;
+}
+
+.readingHeaderBtn:active {
+  background: var(--fill-tertiary);
+}
+
+.readingHeaderBtnDanger {
+  color: var(--danger);
+}
+
+.readingActions {
+  display: flex;
+  gap: var(--s-1);
+}
+
+.readingBody {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--s-4);
+}
+
+.readingBody::-webkit-scrollbar { width: 0; }
+
+.readingSenderRow {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-3);
+  margin-bottom: var(--s-4);
+}
+
+.readingSenderInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.readingSenderName {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0;
+}
+
+.readingSenderEmail {
+  font-size: 13px;
+  color: var(--text-3);
+  margin: 2px 0 0;
+}
+
+.readingDate {
+  font-size: 12px;
+  color: var(--text-3);
+  flex-shrink: 0;
+  padding-top: 3px;
+}
+
+.readingSubject {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0 0 var(--s-4);
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+}
+
+.readingMeta {
+  font-size: 13px;
+  color: var(--text-3);
+  margin: 0 0 var(--s-4);
+  padding-bottom: var(--s-3);
+  border-bottom: 0.5px solid var(--separator);
+}
+
+.readingText {
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 0;
+}
+
+/* Reading — attachments */
+.readingAttachments {
+  margin-top: var(--s-4);
+  padding-top: var(--s-3);
+  border-top: 0.5px solid var(--separator);
+}
+
+.readingAttachments h5 {
+  margin: 0 0 var(--s-3);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-2);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.readingAttachThumb {
+  width: 100%;
+  max-height: 200px;
+  object-fit: cover;
+  border-radius: var(--r-sm);
+  margin-bottom: var(--s-2);
+}
+
+.attachChip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-2) var(--s-3);
+  background: var(--fill-tertiary);
+  border-radius: var(--r-xs);
+  font-size: 13px;
+  color: var(--text);
+  margin-bottom: var(--s-2);
+  margin-right: var(--s-2);
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.attachChip a {
+  color: var(--tint);
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.attachChipIcon {
+  font-size: 14px;
+  flex-shrink: 0;
+  opacity: 0.6;
+}
+
+.attachChipSave {
+  appearance: none;
+  border: none;
+  background: var(--tint);
+  color: #fff;
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+/* ─── Compose View (slide-up sheet) ─── */
+.composeView {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  z-index: 30;
+  animation: mailSlideUp 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.composeHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--s-2) var(--s-3);
+  background: var(--surface);
+  border-bottom: 0.5px solid var(--separator);
+  flex-shrink: 0;
+}
+
+.composeHeaderBtn {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--tint);
+  font-size: 15px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  padding: var(--s-2);
+  border-radius: var(--r-xs);
+  min-width: 56px;
+  text-align: center;
+}
+
+.composeHeaderBtnSend {
+  font-weight: 700;
+}
+
+.composeHeaderBtnSend:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.composeTitle {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.composeScroll {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.composeScroll::-webkit-scrollbar { width: 0; }
+
+.composeError {
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--danger) 25%, transparent);
+  color: color-mix(in srgb, var(--danger) 85%, black);
+  padding: var(--s-2) var(--s-4);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* Compose fields — iOS Mail style separators */
+.composeField {
+  display: flex;
+  align-items: center;
+  padding: var(--s-3) var(--s-4);
+  border-bottom: 0.5px solid var(--separator);
+  background: var(--surface);
+  gap: var(--s-2);
+}
+
+.composeFieldLabel {
+  font-size: 15px;
+  color: var(--text-3);
+  flex-shrink: 0;
+  min-width: 52px;
+}
+
+.composeFieldInput {
+  flex: 1;
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-size: 15px;
+  font-family: inherit;
+  outline: none;
+  padding: 0;
+  min-width: 0;
+}
+
+.composeFieldInput::placeholder {
+  color: var(--text-3);
+}
+
+/* To-field chips */
+.toChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-1);
+  flex: 1;
+  align-items: center;
+}
+
+.toChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  background: color-mix(in srgb, var(--tint) 12%, transparent);
+  color: var(--tint);
+  border-radius: var(--r-xs);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.toChipRemove {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--tint);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0;
+  line-height: 1;
+  opacity: 0.7;
+}
+
+/* Contact autocomplete */
+.contactSuggestions {
+  background: var(--surface);
+  border-bottom: 0.5px solid var(--separator);
+  max-height: 140px;
+  overflow-y: auto;
+}
+
+.contactSuggestion {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-2) var(--s-4);
+  width: 100%;
+  appearance: none;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  color: var(--text);
+  font-size: 14px;
+}
+
+.contactSuggestion:active {
+  background: var(--fill-tertiary);
+}
+
+.contactSuggestionName {
+  font-weight: 500;
+}
+
+.contactSuggestionEmail {
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+/* Body textarea */
+.composeBody {
+  flex: 1;
+  min-height: 140px;
+  padding: var(--s-3) var(--s-4);
+  background: var(--surface);
+  border: none;
+  outline: none;
+  color: var(--text);
+  font-size: 15px;
+  font-family: inherit;
+  line-height: 1.5;
+  resize: none;
+}
+
+.composeBody::placeholder {
+  color: var(--text-3);
+}
+
+/* Inline attachment chips in compose */
+.composeAttachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  padding: var(--s-3) var(--s-4);
+  background: var(--surface);
+  border-top: 0.5px solid var(--separator);
+}
+
+.composeAttachChip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-1) var(--s-3);
+  background: var(--fill-tertiary);
+  border-radius: var(--r-xs);
+  font-size: 13px;
+  color: var(--text);
+  max-width: 200px;
+}
+
+.composeAttachChipName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.composeAttachChipIcon {
+  font-size: 14px;
+  flex-shrink: 0;
+  opacity: 0.6;
+}
+
+.composeAttachChipRemove {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--text-3);
+  cursor: pointer;
+  font-size: 15px;
+  padding: 0;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.composeAttachChipRemove:active {
+  color: var(--danger);
+}
+
+/* Compose footer — attach button */
+.composeFooter {
+  display: flex;
+  align-items: center;
+  padding: var(--s-2) var(--s-4) calc(var(--s-2) + var(--phone-bottom-ui-gap, 0px));
+  background: var(--surface);
+  border-top: 0.5px solid var(--separator);
+  flex-shrink: 0;
+}
+
+.composeAttachBtn {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--tint);
+  font-size: 22px;
+  cursor: pointer;
+  padding: var(--s-2);
+  border-radius: var(--r-xs);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.composeAttachBtn:active {
+  background: var(--fill-tertiary);
+}
+
+/* ─── Setup Card (no account) ─── */
 .setupCard {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--r-xl);
-  box-shadow: var(--shadow-2);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-1);
   padding: var(--s-6);
   margin: auto var(--s-4);
   max-width: 320px;
   width: 100%;
   align-self: center;
-  animation: fadeInUp var(--dur-3) var(--ease-standard);
+  animation: mailFadeInUp 0.3s ease;
 }
 
 .setupCard h3 {
@@ -60,7 +714,7 @@
 }
 
 .setupHint {
-  margin: 0 0 var(--s-5);
+  margin: 0 0 var(--s-4);
   font-size: 14px;
   color: var(--text-2);
   text-align: center;
@@ -72,1048 +726,62 @@
   font-weight: 600;
 }
 
-/* Form Elements */
-.input,
-.textarea {
+.setupInput {
   width: 100%;
-  min-height: 48px;
-  border-radius: var(--r-md);
+  min-height: 44px;
+  border-radius: var(--r-sm);
   border: 1px solid var(--border);
-  background: var(--surface);
+  background: var(--bg);
   color: var(--text);
-  padding: 12px 16px;
+  padding: 10px 14px;
   font-size: 16px;
   font-family: inherit;
   outline: none;
-  transition: background-color var(--dur-2) var(--ease-standard), color var(--dur-2) var(--ease-standard), border-color var(--dur-2) var(--ease-standard), opacity var(--dur-2) var(--ease-standard), transform var(--dur-2) var(--ease-standard), box-shadow var(--dur-2) var(--ease-standard);
   margin-bottom: var(--s-3);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.input::placeholder,
-.textarea::placeholder {
-  color: var(--text-3);
-}
-
-.input:focus,
-.textarea:focus {
+.setupInput:focus {
   border-color: var(--tint);
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--tint) 35%, transparent);
-  background: var(--surface);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--tint) 20%, transparent);
 }
 
-.textarea {
-  min-height: 120px;
-  resize: vertical;
-  line-height: 1.5;
+.setupDomainPreview {
+  font-size: 13px;
+  color: var(--text-3);
+  text-align: center;
+  margin-bottom: var(--s-4);
 }
 
-/* Buttons */
-.button {
+.setupDomainPreview strong {
+  color: var(--text);
+}
+
+.setupBtn {
   appearance: none;
   border: none;
+  width: 100%;
+  min-height: 44px;
+  border-radius: var(--r-sm);
   background: var(--tint);
-  color: white;
-  border-radius: var(--r-pill);
-  padding: 14px 24px;
-  min-height: 48px;
+  color: #fff;
   font-size: 16px;
   font-weight: 600;
   font-family: inherit;
   cursor: pointer;
-  width: 100%;
-  transition: background-color var(--dur-2) var(--ease-standard), color var(--dur-2) var(--ease-standard), border-color var(--dur-2) var(--ease-standard), opacity var(--dur-2) var(--ease-standard), transform var(--dur-2) var(--ease-standard), box-shadow var(--dur-2) var(--ease-standard);
-  box-shadow: 0 2px 8px color-mix(in srgb, var(--tint) 25%, transparent);
+  transition: background 0.15s ease;
 }
 
-.button:hover {
-  background: color-mix(in srgb, var(--tint) 85%, black);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px color-mix(in srgb, var(--tint) 35%, transparent);
-}
-
-.button:active {
-  transform: scale(0.98) translateY(0);
-  box-shadow: 0 2px 4px color-mix(in srgb, var(--tint) 25%, transparent);
-}
-
-.button:disabled {
+.setupBtn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
 }
 
-/* Account Bar */
-.accountBar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--s-3) var(--s-4);
-  background: var(--surface);
-  border-bottom: 1px solid var(--separator);
-  position: sticky;
-  top: 0;
-  z-index: 10;
-}
-
-.accountBar > div:first-child {
-  display: flex;
-  flex-direction: column;
-  gap: var(--s-1);
-}
-
-.label {
-  margin: 0;
-  font-size: 12px;
-  color: var(--text-3);
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.accountBar strong {
-  font-size: 15px;
-  color: var(--text);
-  font-weight: 600;
-}
-
-.unreadBadge {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--s-1);
-  min-height: 28px;
-  padding: 4px 12px;
-  border-radius: var(--r-pill);
-  background: color-mix(in srgb, var(--tint) 12%, transparent);
-  color: var(--tint);
-  font-size: 13px;
-  font-weight: 600;
-  border: 1px solid color-mix(in srgb, var(--tint) 20%, transparent);
-}
-
-/* Compose Card */
-.composeCard {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--r-xl);
-  box-shadow: var(--shadow-1);
-  padding: var(--s-4);
-   margin: var(--s-3) var(--s-4) var(--s-4);
-  animation: fadeInUp var(--dur-2) var(--ease-standard);
-}
-
-.composeCard h4 {
-  margin: 0 0 var(--s-3);
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--text);
-}
-
-/* Attachments Box */
-.attachmentsBox {
-  position: absolute;
-  right: var(--s-4);
-  bottom: calc(92px + var(--phone-bottom-ui-gap, 0px));
-  width: min(280px, calc(100% - (var(--s-4) * 2)));
-  padding: var(--s-4);
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  border-radius: var(--r-lg);
-  box-shadow: var(--shadow-2);
-  z-index: 25;
-}
-
-.attachmentsBox h5 {
-  margin: 0 0 var(--s-3);
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-2);
-}
-
-.composeMediaButtons {
-  margin-bottom: var(--s-3);
-}
-
-.composeMediaButtons :global(.action) {
-  background: var(--surface);
-}
-
-.composePreviewMedia {
-  max-height: 160px;
-  border-radius: var(--r-md);
-  margin-bottom: var(--s-3);
-}
-
-.attachRow {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--s-2);
-  margin-bottom: var(--s-2);
-}
-
-.select,
-.inputInline {
-  width: 100%;
-  min-height: 40px;
-  border-radius: var(--r-sm);
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--text);
-  padding: 8px 12px;
-  font-size: 14px;
-  font-family: inherit;
-  outline: none;
-  transition: background-color var(--dur-1) var(--ease-standard), color var(--dur-1) var(--ease-standard), border-color var(--dur-1) var(--ease-standard), opacity var(--dur-1) var(--ease-standard), transform var(--dur-1) var(--ease-standard), box-shadow var(--dur-1) var(--ease-standard);
-}
-
-.select:focus,
-.inputInline:focus {
-  border-color: var(--tint);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--tint) 35%, transparent);
-}
-
-.select {
-  cursor: pointer;
-  appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 12px center;
-  padding-right: 32px;
-}
-
-.attachButton {
-  appearance: none;
-  border: 1px solid var(--tint);
-  background: transparent;
-  color: var(--tint);
-  border-radius: var(--r-sm);
-  padding: 8px 16px;
-  font-size: 14px;
-  font-weight: 600;
-  font-family: inherit;
-  cursor: pointer;
-  transition: background-color var(--dur-1) var(--ease-standard), color var(--dur-1) var(--ease-standard), border-color var(--dur-1) var(--ease-standard), opacity var(--dur-1) var(--ease-standard), transform var(--dur-1) var(--ease-standard), box-shadow var(--dur-1) var(--ease-standard);
-  min-height: 40px;
-}
-
-.attachButton:hover {
-  background: color-mix(in srgb, var(--tint) 8%, transparent);
-}
-
-.attachButton:active {
-  background: color-mix(in srgb, var(--tint) 15%, transparent);
-  transform: scale(0.98);
-}
-
-/* Attach List */
-.attachList {
-  display: flex;
-  flex-direction: column;
-  gap: var(--s-2);
-  margin-top: var(--s-3);
-}
-
-.attachItem {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--s-2);
-  padding: var(--s-2) var(--s-3);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--r-sm);
-  font-size: 13px;
-  color: var(--text-2);
-  animation: slideIn var(--dur-1) var(--ease-standard);
-}
-
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateX(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-.attachItem span {
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.attachItem button {
-  appearance: none;
-  border: none;
-  background: color-mix(in srgb, var(--danger) 10%, transparent);
-  color: var(--danger);
-  border-radius: var(--r-xs);
-  padding: 4px 10px;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background-color var(--dur-1) var(--ease-standard), color var(--dur-1) var(--ease-standard), border-color var(--dur-1) var(--ease-standard), opacity var(--dur-1) var(--ease-standard), transform var(--dur-1) var(--ease-standard), box-shadow var(--dur-1) var(--ease-standard);
-}
-
-.attachItem button:hover {
-  background: color-mix(in srgb, var(--danger) 20%, transparent);
-}
-
-/* Folder Tabs - Segmented Control */
-.folderTabs {
-  display: flex;
-  gap: var(--s-1);
-  padding: var(--s-2);
-  margin: 0 var(--s-4);
-  background: var(--fill-tertiary);
-  border: 1px solid var(--border);
-  border-radius: var(--r-pill);
-  min-height: 38px;
-}
-
-.tab {
-  flex: 1;
-  appearance: none;
-  border: none;
-  background: transparent;
-  color: var(--text-2);
-  padding: 8px 16px;
-  border-radius: var(--r-pill);
-  font-size: 14px;
-  font-weight: 500;
-  font-family: inherit;
-  cursor: pointer;
-  transition: background-color var(--dur-2) var(--ease-standard), color var(--dur-2) var(--ease-standard), border-color var(--dur-2) var(--ease-standard), opacity var(--dur-2) var(--ease-standard), transform var(--dur-2) var(--ease-standard), box-shadow var(--dur-2) var(--ease-standard);
-  position: relative;
-  overflow: hidden;
-}
-
-.tab:hover {
-  color: var(--text);
-}
-
-.tabActive {
-  background: var(--surface);
-  color: var(--text);
-  box-shadow: var(--shadow-1);
-  font-weight: 600;
-}
-
-/* Content Grid */
-.contentGrid {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  gap: var(--s-2);
-  padding: var(--s-3) var(--s-4) var(--s-4);
-  overflow: hidden;
-  min-height: 0;
-}
-
-/* Message List */
-.list {
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
-  display: flex;
-  flex-direction: column;
-  gap: var(--s-2);
-  padding-right: var(--s-1);
-  scrollbar-width: thin;
-  scrollbar-color: var(--fill-secondary) transparent;
-}
-
-.list::-webkit-scrollbar {
-  width: 6px;
-}
-
-.list::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.list::-webkit-scrollbar-thumb {
-  background: var(--fill-secondary);
-  border-radius: var(--r-pill);
-}
-
-.item {
-  width: 100%;
-  text-align: left;
-  border: 1px solid var(--border);
-  border-radius: var(--r-md);
-  background: var(--surface);
-  padding: var(--s-3);
-  cursor: pointer;
-  transition: background-color var(--dur-1) var(--ease-standard), color var(--dur-1) var(--ease-standard), border-color var(--dur-1) var(--ease-standard), opacity var(--dur-1) var(--ease-standard), transform var(--dur-1) var(--ease-standard), box-shadow var(--dur-1) var(--ease-standard);
-  position: relative;
-  overflow: hidden;
-  animation: mail-card-in var(--dur-3) var(--ease-standard) both;
-}
-
-@keyframes mail-card-in {
-  from {
-    opacity: 0;
-    transform: translateY(4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.item::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 3px;
-  background: transparent;
-  transition: background var(--dur-1) var(--ease-standard);
-}
-
-.item:hover {
-  background: var(--surface-2);
-  border-color: color-mix(in srgb, var(--tint) 30%, var(--border));
-}
-
-.item:active {
-  transform: scale(0.985);
-}
-
-.itemActive {
-  background: var(--surface-2);
-  border-color: var(--tint);
-  box-shadow: 0 0 0 1px var(--tint);
-}
-
-.itemActive::before {
-  background: var(--tint);
-}
-
-.itemUnread {
-  background: color-mix(in srgb, var(--tint) 8%, transparent);
-  border-color: color-mix(in srgb, var(--tint) 35%, var(--border));
-}
-
-.itemUnread::after {
-  content: '';
-  position: absolute;
-  top: var(--s-3);
-  right: var(--s-3);
-  width: 8px;
-  height: 8px;
-  background: var(--tint);
-  border-radius: var(--r-pill);
-  box-shadow: 0 0 0 2px var(--surface);
-}
-
-.itemTop {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: var(--s-2);
-  margin-bottom: var(--s-1);
-}
-
-.itemTop strong {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--text);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  flex: 1;
-}
-
-.itemTop span {
-  font-size: 12px;
-  color: var(--text-3);
-  flex-shrink: 0;
-}
-
-.item > p {
-  margin: 0;
-  font-size: 14px;
-  color: var(--text-2);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.itemUnread > p {
-  color: var(--text);
-  font-weight: 500;
-}
-
-/* Preview Panel */
-.preview {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--r-lg);
-  box-shadow: var(--shadow-1);
-  padding: var(--s-4);
-  min-height: 200px;
-  display: flex;
-  flex-direction: column;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.preview h4 {
-  margin: 0 0 var(--s-2);
-  font-size: 20px;
-  font-weight: 700;
-  color: var(--text);
-  line-height: 1.3;
-  letter-spacing: -0.01em;
-}
-
-.previewMeta {
-  margin: 0 0 var(--s-4);
-  font-size: 14px;
-  color: var(--text-3);
-  padding-bottom: var(--s-3);
-  border-bottom: 1px solid var(--separator);
-}
-
-.previewBody {
-  margin: 0;
-  font-family: inherit;
-  font-size: 15px;
-  line-height: 1.6;
-  color: var(--text-2);
-  white-space: pre-wrap;
-  word-wrap: break-word;
-  overflow-y: auto;
-  flex: 1;
-}
-
-/* Preview Attachments */
-.previewAttachments {
-  margin-top: var(--s-4);
-  padding-top: var(--s-4);
-  border-top: 1px dashed var(--border);
-}
-
-.previewAttachments h5 {
-  margin: 0 0 var(--s-3);
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-2);
-}
-
-.previewAttachmentItem {
-  display: flex;
-  align-items: center;
-  gap: var(--s-3);
-  padding: var(--s-2) 0;
-  font-size: 14px;
-}
-
-.previewAttachmentItem span {
-  text-transform: uppercase;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--text-3);
-  background: var(--surface-2);
-  padding: 2px 8px;
-  border-radius: var(--r-xs);
-  border: 1px solid var(--border);
-  flex-shrink: 0;
-}
-
-.previewAttachmentItem a {
-  color: var(--tint);
-  text-decoration: none;
-  font-weight: 500;
-  word-break: break-all;
-  transition: opacity var(--dur-1) var(--ease-standard);
-}
-
-.previewAttachmentItem a:hover {
-  opacity: 0.7;
-  text-decoration: underline;
-}
-
-/* Empty State */
-.empty {
-  text-align: center;
-  padding: var(--s-6);
-  color: var(--text-3);
-  font-size: 15px;
-  margin: auto;
-}
-
-.empty::before {
-  content: '';
-  display: block;
-  width: 44px;
-  height: 44px;
-  margin-bottom: var(--s-3);
-  opacity: 0.5;
-  background: center / contain no-repeat url('/img/icons_ios/mail.svg');
-  margin-inline: auto;
-}
-
-/* Scrollable content areas */
-.scrollable {
-  overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: var(--fill-secondary) transparent;
-}
-
-.scrollable::-webkit-scrollbar {
-  width: 6px;
-}
-
-.scrollable::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.scrollable::-webkit-scrollbar-thumb {
-  background: var(--fill-secondary);
-  border-radius: var(--r-pill);
-}
-
-/* Compose View */
-.composeView {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  overflow: hidden;
-  position: relative;
-}
-
-.composeScroll {
-  flex: 1;
-  overflow-y: auto;
-  padding-bottom: calc(116px + var(--phone-bottom-ui-gap, 0px));
-}
-
-.composeHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--s-3) var(--s-4);
-  background: var(--surface);
-  border-bottom: 1px solid var(--separator);
-  position: sticky;
-  top: 0;
-  z-index: 10;
-}
-
-.composeTitle {
-  margin: 0;
-  font-size: 17px;
-  font-weight: 600;
-  color: var(--text);
-}
-
-.composeHeaderSpacer {
-  width: 70px;
-}
-
-.backButton {
-  appearance: none;
-  border: none;
-  background: transparent;
-  color: var(--tint);
-  font-size: 16px;
-  font-weight: 500;
-  font-family: inherit;
-  cursor: pointer;
-  padding: var(--s-2) var(--s-3);
-  border-radius: var(--r-sm);
-  transition: background-color var(--dur-1) var(--ease-standard), color var(--dur-1) var(--ease-standard), border-color var(--dur-1) var(--ease-standard), opacity var(--dur-1) var(--ease-standard), transform var(--dur-1) var(--ease-standard), box-shadow var(--dur-1) var(--ease-standard);
-  min-width: 70px;
-}
-
-.composeError {
-  margin-bottom: var(--s-3);
-  background: color-mix(in srgb, var(--danger) 12%, transparent);
-  border: 1px solid color-mix(in srgb, var(--danger) 28%, transparent);
-  color: color-mix(in srgb, var(--danger) 85%, black);
-  border-radius: var(--r-md);
-  padding: var(--s-3);
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.attachmentsSummary {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--s-3);
-  margin-top: var(--s-2);
-  padding: var(--s-3);
-  border-radius: var(--r-lg);
-  background: linear-gradient(135deg, color-mix(in srgb, var(--tint) 8%, transparent), color-mix(in srgb, var(--tint) 18%, transparent));
-  border: 1px solid color-mix(in srgb, var(--tint) 12%, transparent);
-}
-
-.attachmentsLabel {
-  margin: 0 0 4px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-2);
-}
-
-.attachmentsCount {
-  display: block;
-  font-size: 24px;
-  line-height: 1;
-  color: var(--text);
-}
-
-.attachmentsToggle {
-  appearance: none;
-  border: none;
-  min-height: 40px;
-  padding: 0 16px;
-  border-radius: var(--r-pill);
-  background: var(--surface);
-  color: var(--tint);
-  font-size: 13px;
-  font-weight: 700;
-  font-family: inherit;
-  cursor: pointer;
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tint) 12%, transparent);
-}
-
-.composeFooter {
-  display: grid;
-  grid-template-columns: 1fr 1.3fr;
-  gap: var(--s-2);
-  padding: var(--s-3) var(--s-4) calc(var(--s-3) + var(--phone-bottom-ui-gap, 0px));
-  background: color-mix(in srgb, var(--surface) 92%, transparent);
-  border-top: 1px solid var(--separator);
-  z-index: 20;
-}
-
-.composeFooterSecondary,
-.composeFooterPrimary {
-  appearance: none;
-  border: none;
-  min-height: 48px;
-  border-radius: var(--r-pill);
-  font-size: 15px;
-  font-weight: 700;
-  font-family: inherit;
-  cursor: pointer;
-  transition: background-color var(--dur-1) var(--ease-standard), color var(--dur-1) var(--ease-standard), opacity var(--dur-1) var(--ease-standard), transform var(--dur-1) var(--ease-standard), box-shadow var(--dur-1) var(--ease-standard);
-}
-
-.composeFooterSecondary {
-  background: color-mix(in srgb, var(--tint) 8%, transparent);
-  color: var(--tint);
-}
-
-.composeFooterPrimary {
-  background: var(--tint);
-  color: #fff;
-  box-shadow: 0 8px 18px color-mix(in srgb, var(--tint) 25%, transparent);
-}
-
-.composeFooterSecondary:disabled,
-.composeFooterPrimary:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-  box-shadow: none;
-}
-
-.composeFab {
-  right: var(--s-4);
-  bottom: calc(84px + var(--phone-bottom-ui-gap, 0px));
-  width: 54px;
-  height: 54px;
-  background: linear-gradient(135deg, var(--tint), color-mix(in srgb, var(--tint) 65%, #fff));
-  border: none;
-  box-shadow: 0 16px 30px color-mix(in srgb, var(--tint) 30%, transparent);
-}
-
-.composeFab img {
-  width: 24px;
-  height: 24px;
-  object-fit: contain;
-}
-
-.composeFabBadge {
-  position: absolute;
-  right: calc(var(--s-4) - 2px);
-  bottom: calc(132px + var(--phone-bottom-ui-gap, 0px));
-  min-width: 22px;
-  height: 22px;
-  padding: 0 6px;
-  border-radius: 999px;
-  background: var(--danger);
-  color: #fff;
-  font-size: 11px;
-  font-weight: 700;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 26;
-  box-shadow: 0 8px 18px color-mix(in srgb, var(--danger) 32%, transparent);
-}
-
-@media (max-width: 380px) {
-  .attachRow {
-    grid-template-columns: 1fr;
-  }
-
-  .attachmentsBox {
-    left: var(--s-4);
-    right: var(--s-4);
-    width: auto;
-  }
-
-  .composeFooter {
-    grid-template-columns: 1fr;
-  }
-}
-
-.backButton:hover {
-  background: color-mix(in srgb, var(--tint) 8%, transparent);
-}
-
-/* Floating Action Button */
-.fab {
-  position: fixed;
-  bottom: calc(var(--s-5) + var(--phone-bottom-ui-gap, 0px));
-  right: var(--s-5);
-  width: 56px;
-  height: 56px;
-  border-radius: var(--r-pill);
-  background: var(--tint);
-  border: none;
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  box-shadow: var(--shadow-1);
-  transition: background-color var(--dur-2) var(--ease-standard), color var(--dur-2) var(--ease-standard), border-color var(--dur-2) var(--ease-standard), opacity var(--dur-2) var(--ease-standard), transform var(--dur-2) var(--ease-standard), box-shadow var(--dur-2) var(--ease-standard);
-  z-index: 100;
-}
-
-.fab:hover {
+.setupBtn:active:not(:disabled) {
   background: color-mix(in srgb, var(--tint) 85%, black);
-  transform: scale(1.02);
-  box-shadow: var(--shadow-2);
 }
 
-.fab:active {
-  transform: scale(0.95);
-}
-
-.fab img {
-  width: 26px;
-  height: 26px;
-  object-fit: contain;
-}
-
-/* Detail View */
-.detailView {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  background: var(--bg);
-  overflow: hidden;
-}
-
-.detailHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--s-3) var(--s-4);
-  background: var(--surface);
-  border-bottom: 1px solid var(--separator);
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  gap: var(--s-2);
-}
-
-.detailTitle {
-  margin: 0;
-  font-size: 17px;
-  font-weight: 600;
-  color: var(--text);
-  flex: 1;
-  text-align: center;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  padding: 0 var(--s-2);
-}
-
-.detailActions {
-  display: flex;
-  gap: var(--s-2);
-  flex-shrink: 0;
-}
-
-.deleteButton {
-  appearance: none;
-  border: 1px solid var(--danger);
-  background: transparent;
-  color: var(--danger);
-  border-radius: var(--r-sm);
-  padding: 8px 14px;
-  font-size: 14px;
-  font-weight: 600;
-  font-family: inherit;
-  cursor: pointer;
-  transition: background-color var(--dur-1) var(--ease-standard), color var(--dur-1) var(--ease-standard), border-color var(--dur-1) var(--ease-standard), opacity var(--dur-1) var(--ease-standard), transform var(--dur-1) var(--ease-standard), box-shadow var(--dur-1) var(--ease-standard);
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.deleteButton img {
-  width: 15px;
-  height: 15px;
-  object-fit: contain;
-}
-
-.deleteButton:hover {
-  background: color-mix(in srgb, var(--danger) 12%, transparent);
-}
-
-.detailContent {
-  flex: 1;
-  overflow-y: auto;
-  padding: var(--s-4);
-  display: flex;
-  flex-direction: column;
-  gap: var(--s-4);
-}
-
-.detailMeta {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--r-md);
-  padding: var(--s-4);
-}
-
-.metaRow {
-  display: flex;
-  gap: var(--s-3);
-  padding: var(--s-2) 0;
-  border-bottom: 1px solid var(--separator);
-}
-
-.metaRow:last-child {
-  border-bottom: none;
-}
-
-.metaLabel {
-  color: var(--text-3);
-  font-size: 13px;
-  font-weight: 600;
-  min-width: 60px;
-  flex-shrink: 0;
-}
-
-.metaValue {
-  color: var(--text);
-  font-size: 14px;
-  word-break: break-word;
-}
-
-.detailBody {
-  font-size: 15px;
-  line-height: 1.6;
-  color: var(--text);
-  white-space: pre-wrap;
-  word-break: break-word;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--r-md);
-  padding: var(--s-4);
-}
-
-.detailAttachments {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--r-md);
-  padding: var(--s-4);
-}
-
-.detailAttachments h5 {
-  margin: 0 0 var(--s-3) 0;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text);
-}
-
-.attachmentItem {
-  display: flex;
-  align-items: center;
-  gap: var(--s-3);
-  padding: var(--s-3);
-  background: var(--bg);
-  border-radius: var(--r-sm);
-  margin-bottom: var(--s-2);
-}
-
-.attachmentItem:last-child {
-  margin-bottom: 0;
-}
-
-.attachmentType {
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: var(--tint);
-  background: color-mix(in srgb, var(--tint) 8%, transparent);
-  padding: 2px 8px;
-  border-radius: 4px;
-}
-
-.attachmentLink {
-  color: var(--tint);
-  font-size: 14px;
-  text-decoration: none;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.attachmentLink:hover {
-  text-decoration: underline;
-}
-
-.attachmentSave {
-  flex-shrink: 0;
-  padding: 3px 8px;
-  border-radius: 6px;
-  border: none;
-  background: var(--tint, #007aff);
-  color: #fff;
-  font-size: 11px;
-  font-weight: 600;
+@keyframes mailFadeInUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
 }

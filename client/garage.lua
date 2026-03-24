@@ -129,4 +129,10 @@ RegisterNetEvent('gcphone:garage:spawnVehicle', function(vehicle)
     end
 end)
 
+RegisterNetEvent('gcphone:garage:setWaypoint', function(data)
+    if type(data) == 'table' and data.x and data.y then
+        SetNewWaypoint(tonumber(data.x) + 0.0, tonumber(data.y) + 0.0)
+    end
+end)
+
 return {}

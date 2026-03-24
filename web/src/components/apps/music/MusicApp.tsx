@@ -58,6 +58,8 @@ export function MusicApp() {
   const [disclaimerDismissed, setDisclaimerDismissed] = createSignal(
     window.localStorage.getItem('gcphone:music:disclaimerDismissed') === 'true'
   );
+  const [showUrlSection, setShowUrlSection] = createSignal(false);
+  const [currentThumb, setCurrentThumb] = createSignal('');
 
   const stateLabel = createMemo(() => {
     if (isPaused()) return 'Pausado';
@@ -179,6 +181,7 @@ export function MusicApp() {
 
     setNowPlaying(track.title || 'YouTube');
     persistNowPlaying(track.title || 'YouTube');
+    setCurrentThumb(track.thumbnail || '');
     setIsPlaying(true);
     setIsPaused(false);
     setStatus('Transmitiendo para jugadores cercanos.');
@@ -202,6 +205,7 @@ export function MusicApp() {
 
     setNowPlaying('URL manual');
     persistNowPlaying('URL manual');
+    setCurrentThumb('');
     setIsPlaying(true);
     setIsPaused(false);
     setStatus('Transmitiendo para jugadores cercanos.');
@@ -231,6 +235,7 @@ export function MusicApp() {
     setIsPaused(false);
     setNowPlaying(t('music.no_playback', language()));
     persistNowPlaying(t('music.no_music', language()));
+    setCurrentThumb('');
     setStatus('Detenido.');
     setBusyAction(false);
   };
@@ -254,116 +259,90 @@ export function MusicApp() {
     return baseVolume;
   };
 
+  const handlePlayPause = () => {
+    if (!isPlaying()) return;
+    if (isPaused()) {
+      void resume();
+    } else {
+      void pause();
+    }
+  };
+
   return (
     <AppScaffold title={t('music.title', language())} onBack={() => router.goBack()} bodyClass={styles.content}>
-        <Show when={!disclaimerDismissed()}>
-          <div class={styles.disclaimer}>
-            <span class={styles.disclaimerText}>
-              Este recurso no se hace responsable del contenido musical reproducido. El uso es responsabilidad exclusiva del usuario.
-            </span>
-            <button class={styles.disclaimerClose} onClick={dismissDisclaimer}>✕</button>
-          </div>
-        </Show>
+      {/* Disclaimer */}
+      <Show when={!disclaimerDismissed()}>
+        <div class={styles.disclaimer}>
+          <span class={styles.disclaimerText}>
+            Este recurso no se hace responsable del contenido musical reproducido. El uso es responsabilidad exclusiva del usuario.
+          </span>
+          <button class={styles.disclaimerClose} onClick={dismissDisclaimer}>✕</button>
+        </div>
+      </Show>
 
-        <section class={styles.hero}>
-          <div class={styles.heroBackdrop} />
-          <div class={styles.heroText}>
-            <div class={styles.kicker}>{stateLabel()}</div>
-            <h2>{nowPlaying()}</h2>
-            <p>{status()}</p>
-          </div>
-        </section>
-
-        <section class="ios-list">
-          <div class="ios-row">
-            <span class="ios-label">{t('music.search_yt', language())}</span>
-            <span class="ios-value">{results().length}</span>
-          </div>
-          <div class={styles.searchRow}>
-            <input
-              class={`ios-input ${styles.searchInput}`}
-              type="text"
-              placeholder={t('music.search_example', language())}
-              value={query()}
-              disabled={!catalogEnabled()}
-              onInput={(e) => setQuery(e.currentTarget.value)}
-            />
-            <button class="ios-primary-btn" disabled={searching() || !catalogEnabled()} onClick={searchCatalog}>
-              {searching() ? t('music.searching', language()) : t('music.search', language())}
-            </button>
-          </div>
-          <Show when={searchError()}>
-            <div class={styles.error}>{searchError()}</div>
+      {/* Now Playing Hero */}
+      <section class={styles.hero}>
+        <div class={styles.heroBackdrop} />
+        <div class={styles.artwork}>
+          <Show
+            when={currentThumb()}
+            fallback={
+              <div class={styles.artworkPlaceholder}>
+                <svg viewBox="0 0 24 24"><path d="M12 3v10.55A4 4 0 1 0 14 17V7h4V3h-6z" /></svg>
+              </div>
+            }
+          >
+            <img src={currentThumb()} alt={nowPlaying()} />
           </Show>
-        </section>
+        </div>
+        <div class={styles.heroText}>
+          <h2 class={styles.heroTitle}>{nowPlaying()}</h2>
+          <span
+            class={styles.statusBadge}
+            classList={{
+              [styles.statusLive]: isPlaying() && !isPaused(),
+              [styles.statusPaused]: isPaused(),
+              [styles.statusIdle]: !isPlaying(),
+            }}
+          >
+            {stateLabel()}
+          </span>
+        </div>
+      </section>
 
-        <Show when={results().length > 0}>
-          <section class={styles.results}>
-            <For each={results()}>
-              {(item) => (
-                <button class={styles.track} onClick={() => playFromResult(item)} disabled={busyAction()}>
-                  <img src={item.thumbnail || DEFAULT_THUMB} alt={item.title} loading="lazy" />
-                  <div class={styles.trackMeta}>
-                    <div class={styles.trackTitle}>{item.title}</div>
-                    <div class={styles.trackChannel}>{item.channel || t('music.channel_unnamed', language())}</div>
-                  </div>
-                  <div class={styles.trackAction}>Play</div>
-                </button>
-              )}
-            </For>
-          </section>
-        </Show>
+      {/* Player Controls */}
+      <div class={styles.playerControls}>
+        <button
+          class={`${styles.controlBtn} ${styles.controlBtnSecondary}`}
+          onClick={stop}
+          disabled={!isPlaying() || busyAction()}
+        >
+          <svg viewBox="0 0 24 24"><path d="M6 6h12v12H6z" /></svg>
+        </button>
+        <button
+          class={`${styles.controlBtn} ${styles.controlBtnPrimary}`}
+          onClick={handlePlayPause}
+          disabled={!isPlaying() || busyAction()}
+        >
+          <Show
+            when={isPlaying() && !isPaused()}
+            fallback={<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>}
+          >
+            <svg viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" /></svg>
+          </Show>
+        </button>
+      </div>
 
-        <section class="ios-list">
-          <div class="ios-row">
-            <span class="ios-label">{t('music.manual_url', language())}</span>
+      {/* Status line */}
+      <div class={styles.statusText}>{status()}</div>
+
+      {/* Sliders */}
+      <div class={styles.slidersSection}>
+        <div class={styles.sliderRow}>
+          <div class={styles.sliderIcon}>
+            <svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0 0 14 8.18v7.64a4.49 4.49 0 0 0 2.5-3.82zM14 3.23v2.06a7 7 0 0 1 0 13.42v2.06A9 9 0 0 0 14 3.23z" /></svg>
           </div>
-          <div class={styles.searchRow}>
-            <input
-              class={`ios-input ${styles.searchInput}`}
-              type="text"
-              placeholder={t('music.manual_url_placeholder', language())}
-              value={manualUrl()}
-              onInput={(e) => setManualUrl(e.currentTarget.value)}
-            />
-            <button class="ios-secondary-btn" disabled={!manualUrl().trim() || busyAction()} onClick={playManual}>
-              {t('settings.apply', language())}
-            </button>
-          </div>
-        </section>
-
-        <section class="ios-list">
-          <div class="ios-row">
-            <span class="ios-label">{t('music.controls', language())}</span>
-          </div>
-
-          <div class={styles.toggleRow}>
-            <span class={styles.toggleLabel}>Solo yo</span>
-            <button
-              classList={{ [styles.toggle]: true, [styles.toggleActive]: privateMode() }}
-              onClick={() => setPrivateMode(!privateMode())}
-            >
-              <span class={styles.toggleKnob} />
-            </button>
-          </div>
-
-          <div class={styles.controls}>
-            <button class="ios-secondary-btn" onClick={pause} disabled={!isPlaying() || isPaused() || busyAction()}>
-              Pausar
-            </button>
-            <button class="ios-primary-btn" onClick={resume} disabled={!isPlaying() || !isPaused() || busyAction()}>
-              Reanudar
-            </button>
-            <button class="ios-danger-btn" onClick={stop} disabled={!isPlaying() || busyAction()}>
-              Detener
-            </button>
-          </div>
-
-          <div class={styles.sliderGroup}>
-            <div class={styles.sliderLabel}>
-              <span>{t('settings.volume', language())}</span>
-              <strong>{volume()}%</strong>
-            </div>
+          <div class={styles.sliderTrack}>
             <input
               class="ios-slider"
               type="range"
@@ -378,12 +357,13 @@ export function MusicApp() {
               }}
             />
           </div>
-
-          <div class={styles.sliderGroup}>
-            <div class={styles.sliderLabel}>
-              <span>Distancia 3D</span>
-              <strong>{distance()}m</strong>
-            </div>
+          <span class={styles.sliderValue}>{volume()}%</span>
+        </div>
+        <div class={styles.sliderRow}>
+          <div class={styles.sliderIcon}>
+            <svg viewBox="0 0 24 24"><path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3a4.24 4.24 0 0 0-6 0zm-4-4l2 2a7.07 7.07 0 0 1 10 0l2-2C14.34 8.34 9.66 8.34 5 13z" /></svg>
+          </div>
+          <div class={styles.sliderTrack}>
             <input
               class="ios-slider"
               type="range"
@@ -398,7 +378,90 @@ export function MusicApp() {
               }}
             />
           </div>
-        </section>
+          <span class={styles.sliderValue}>{distance()}m</span>
+        </div>
+      </div>
+
+      {/* Private Mode */}
+      <div class={styles.toggleRow}>
+        <span class={styles.toggleLabel}>Solo yo</span>
+        <button
+          classList={{ [styles.toggle]: true, [styles.toggleActive]: privateMode() }}
+          onClick={() => setPrivateMode(!privateMode())}
+        >
+          <span class={styles.toggleKnob} />
+        </button>
+      </div>
+
+      <div class={styles.divider} />
+
+      {/* Search */}
+      <div class={styles.sectionHeader}>{t('music.search_yt', language())}</div>
+      <div class={styles.searchRow}>
+        <input
+          class={styles.searchInput}
+          type="text"
+          placeholder={t('music.search_example', language())}
+          value={query()}
+          disabled={!catalogEnabled()}
+          onInput={(e) => setQuery(e.currentTarget.value)}
+        />
+        <button class={styles.searchBtn} disabled={searching() || !catalogEnabled()} onClick={searchCatalog}>
+          {searching() ? t('music.searching', language()) : t('music.search', language())}
+        </button>
+      </div>
+      <Show when={searchError()}>
+        <div class={styles.error}>{searchError()}</div>
+      </Show>
+
+      {/* Results */}
+      <Show when={results().length > 0}>
+        <div class={styles.results}>
+          <For each={results()}>
+            {(item) => (
+              <button class={styles.track} onClick={() => playFromResult(item)} disabled={busyAction()}>
+                <img src={item.thumbnail || DEFAULT_THUMB} alt={item.title} loading="lazy" />
+                <div class={styles.trackMeta}>
+                  <div class={styles.trackTitle}>{item.title}</div>
+                  <div class={styles.trackChannel}>{item.channel || t('music.channel_unnamed', language())}</div>
+                </div>
+                <div class={styles.trackPlayBtn}>
+                  <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
+                </div>
+              </button>
+            )}
+          </For>
+        </div>
+      </Show>
+
+      <div class={styles.divider} />
+
+      {/* Manual URL */}
+      <button class={styles.urlToggle} onClick={() => setShowUrlSection(!showUrlSection())}>
+        <span
+          class={styles.urlToggleArrow}
+          classList={{ [styles.urlToggleArrowOpen]: showUrlSection() }}
+        >
+          &#9654;
+        </span>
+        {t('music.manual_url', language())}
+      </button>
+      <Show when={showUrlSection()}>
+        <div class={styles.urlSection}>
+          <div class={styles.urlRow}>
+            <input
+              class={styles.searchInput}
+              type="text"
+              placeholder={t('music.manual_url_placeholder', language())}
+              value={manualUrl()}
+              onInput={(e) => setManualUrl(e.currentTarget.value)}
+            />
+            <button class={styles.urlBtn} disabled={!manualUrl().trim() || busyAction()} onClick={playManual}>
+              {t('settings.apply', language())}
+            </button>
+          </div>
+        </div>
+      </Show>
     </AppScaffold>
   );
 }

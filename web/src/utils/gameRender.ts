@@ -29,9 +29,12 @@ const FRAGMENT_SHADER = `
 precision mediump float;
 varying vec2 v_uv;
 uniform sampler2D external_texture;
-uniform float u_blur;       // 0.0 - 1.0
+uniform float u_blur;        // 0.0 - 1.0
 uniform float u_brightness;  // default 1.0
 uniform float u_contrast;    // default 1.0
+uniform float u_saturation;  // default 1.0, 0=gray, >1=vivid
+uniform float u_temperature; // -1.0 cool/blue .. +1.0 warm/orange
+uniform float u_vignette;    // 0.0=off, 1.0=strong
 uniform int u_effect;        // 0=normal 1=noir 2=vivid 3=warm
 uniform vec2 u_resolution;   // canvas width, height
 
@@ -52,19 +55,31 @@ void main() {
   // ── Contrast ──
   color.rgb = (color.rgb - 0.5) * u_contrast + 0.5;
 
+  // ── Saturation ──
+  float lum = dot(color.rgb, vec3(0.299, 0.587, 0.114));
+  color.rgb = mix(vec3(lum), color.rgb, u_saturation);
+
+  // ── Temperature ──
+  color.r += u_temperature * 0.1;
+  color.b -= u_temperature * 0.1;
+
   // ── Color grading ──
   if (u_effect == 1) {
     // Noir — desaturate + slight contrast boost
-    float lum = dot(color.rgb, vec3(0.299, 0.587, 0.114));
-    color.rgb = vec3(lum) * 1.08;
+    float lumNoir = dot(color.rgb, vec3(0.299, 0.587, 0.114));
+    color.rgb = vec3(lumNoir) * 1.08;
   } else if (u_effect == 2) {
-    // Vivid — saturation boost
-    float lum = dot(color.rgb, vec3(0.299, 0.587, 0.114));
-    color.rgb = mix(vec3(lum), color.rgb, 1.4) * 1.05;
+    // Vivid — extra saturation boost
+    float lumVivid = dot(color.rgb, vec3(0.299, 0.587, 0.114));
+    color.rgb = mix(vec3(lumVivid), color.rgb, 1.4) * 1.05;
   } else if (u_effect == 3) {
     // Warm — shift to warm tones
     color.rgb = mix(color.rgb, color.rgb * vec3(1.15, 1.05, 0.85), 0.5);
   }
+
+  // ── Vignette ──
+  float dist = distance(v_uv, vec2(0.5));
+  color.rgb *= 1.0 - u_vignette * smoothstep(0.3, 0.85, dist);
 
   color.rgb = clamp(color.rgb, 0.0, 1.0);
   gl_FragColor = vec4(color.rgb, 1.0);
@@ -141,6 +156,9 @@ function compileProgram(gl: WebGLRenderingContext) {
     uBlur: gl.getUniformLocation(program, 'u_blur'),
     uBrightness: gl.getUniformLocation(program, 'u_brightness'),
     uContrast: gl.getUniformLocation(program, 'u_contrast'),
+    uSaturation: gl.getUniformLocation(program, 'u_saturation'),
+    uTemperature: gl.getUniformLocation(program, 'u_temperature'),
+    uVignette: gl.getUniformLocation(program, 'u_vignette'),
     uEffect: gl.getUniformLocation(program, 'u_effect'),
     uResolution: gl.getUniformLocation(program, 'u_resolution'),
   };
@@ -159,6 +177,9 @@ export interface GameView {
   setBlur: (value: number) => void;
   setBrightness: (value: number) => void;
   setContrast: (value: number) => void;
+  setSaturation: (value: number) => void;
+  setTemperature: (value: number) => void;
+  setVignette: (value: number) => void;
   setEffect: (effectId: number) => void;
   startRecording: (onComplete: (blob: Blob, durationMs: number) => void, fps?: number) => Promise<void>;
   stopRecording: () => void;
@@ -185,7 +206,7 @@ export function createGameView(canvas: HTMLCanvasElement): GameView {
 
   // Setup
   const tex = createTexture(gl);
-  const { program, vloc, tloc, uBlur, uBrightness, uContrast, uEffect, uResolution } = compileProgram(gl);
+  const { program, vloc, tloc, uBlur, uBrightness, uContrast, uSaturation, uTemperature, uVignette, uEffect, uResolution } = compileProgram(gl);
   const { vertexBuff, texBuff } = createBuffers(gl);
 
   gl.useProgram(program);
@@ -196,6 +217,9 @@ export function createGameView(canvas: HTMLCanvasElement): GameView {
   gl.uniform1f(uBlur, 0.0);
   gl.uniform1f(uBrightness, 1.0);
   gl.uniform1f(uContrast, 1.0);
+  gl.uniform1f(uSaturation, 1.0);
+  gl.uniform1f(uTemperature, 0.0);
+  gl.uniform1f(uVignette, 0.0);
   gl.uniform1i(uEffect, 0);
   gl.uniform2f(uResolution, canvas.width || window.innerWidth, canvas.height || window.innerHeight);
 
@@ -266,6 +290,18 @@ export function createGameView(canvas: HTMLCanvasElement): GameView {
 
     setContrast(value: number) {
       gl.uniform1f(uContrast, Math.max(0, Math.min(2, value)));
+    },
+
+    setSaturation(value: number) {
+      gl.uniform1f(uSaturation, Math.max(0, Math.min(3, value)));
+    },
+
+    setTemperature(value: number) {
+      gl.uniform1f(uTemperature, Math.max(-1, Math.min(1, value)));
+    },
+
+    setVignette(value: number) {
+      gl.uniform1f(uVignette, Math.max(0, Math.min(1, value)));
     },
 
     setEffect(effectId: number) {

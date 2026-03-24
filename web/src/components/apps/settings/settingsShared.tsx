@@ -1,4 +1,4 @@
-import type { JSX } from 'solid-js';
+import { type JSX, type Accessor, Show, children as resolveChildren, createEffect, onCleanup } from 'solid-js';
 import { SectionGroup } from '../../shared/ui/SectionBlock';
 import styles from './SettingsApp.module.scss';
 
@@ -27,6 +27,7 @@ export const ICONS = {
   stop: './img/icons_ios/ui-stop.svg',
   backspace: './img/icons_ios/ui-backspace.svg',
   appIcon: './img/icons_ios/settings.svg',
+  autoReply: './img/icons_ios/ui-reply.svg',
 } as const;
 
 export const wallpapers = [
@@ -75,8 +76,8 @@ export function CheckIcon() {
   );
 }
 
-export function Group(props: { children: JSX.Element }) {
-  return <SectionGroup class={styles.group}>{props.children}</SectionGroup>;
+export function Group(props: { children: JSX.Element; class?: string }) {
+  return <SectionGroup class={`${styles.group} ${props.class || ''}`}>{props.children}</SectionGroup>;
 }
 
 export function Cell(props: {
@@ -84,17 +85,21 @@ export function Cell(props: {
   iconBg?: string;
   title: string;
   subtitle?: string;
-  right?: 'chevron' | 'switch' | 'value';
+  right?: 'chevron' | 'switch' | 'value' | 'slider' | 'value+chevron';
   switchValue?: boolean;
   onSwitch?: () => void;
   onClick?: () => void;
   value?: string;
   disabled?: boolean;
+  sliderMin?: number;
+  sliderMax?: number;
+  sliderValue?: number;
+  onSlider?: (v: number) => void;
 }) {
   return (
     <button
       class={styles.cell}
-      classList={{ [styles.pressable]: props.onClick !== undefined }}
+      classList={{ [styles.pressable]: !!props.onClick }}
       onClick={props.onClick}
       disabled={props.disabled}
     >
@@ -113,6 +118,23 @@ export function Cell(props: {
         {props.right === 'value' && props.value && (
           <span class={styles.cellValue}>{props.value}</span>
         )}
+        {props.right === 'value+chevron' && (
+          <>
+            <span class={styles.cellValue}>{props.value}</span>
+            <div class={styles.chevron} />
+          </>
+        )}
+        {props.right === 'slider' && (
+          <input
+            class={styles.cellSlider}
+            type="range"
+            min={props.sliderMin ?? 0}
+            max={props.sliderMax ?? 100}
+            value={props.sliderValue ?? 50}
+            onInput={(e) => { e.stopPropagation(); props.onSlider?.(Number(e.currentTarget.value)); }}
+            onClick={(e) => e.stopPropagation()}
+          />
+        )}
         {props.right === 'switch' && (
           <div
             class={`${styles.switch} ${props.switchValue ? styles.switchActive : ''}`}
@@ -126,5 +148,39 @@ export function Cell(props: {
         {props.right === 'chevron' && <div class={styles.chevron} />}
       </div>
     </button>
+  );
+}
+
+export function InlineExpander(props: { open: Accessor<boolean>; children: JSX.Element }) {
+  let ref: HTMLDivElement | undefined;
+  const resolved = resolveChildren(() => props.children);
+
+  createEffect(() => {
+    if (!ref) return;
+    if (props.open()) {
+      ref.style.maxHeight = `${ref.scrollHeight}px`;
+    } else {
+      ref.style.maxHeight = '0px';
+    }
+  });
+
+  const onTransitionEnd = () => {
+    if (ref && props.open()) {
+      ref.style.maxHeight = 'none';
+    }
+  };
+
+  onCleanup(() => {
+    if (ref) ref.removeEventListener('transitionend', onTransitionEnd);
+  });
+
+  return (
+    <div
+      ref={(el) => { ref = el; el.addEventListener('transitionend', onTransitionEnd); }}
+      class={styles.inlineExpander}
+      classList={{ [styles.expanderOpen]: props.open() }}
+    >
+      {resolved()}
+    </div>
   );
 }

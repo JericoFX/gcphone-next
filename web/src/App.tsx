@@ -15,7 +15,10 @@ import { localeTagFromLanguage } from './i18n';
 import { setLiveKitRemoteAudioPriority, setLiveKitRemoteAudioVolume } from './utils/livekit';
 import { useWindowEvent } from './hooks';
 import { emitInternalEvent, useInternalEvent } from './utils/internalEvents';
+import { setupMugshotListener } from './utils/mugshot';
 import './App.scss';
+
+setupMugshotListener();
 
 interface MusicNotificationState {
   isPlaying?: boolean;

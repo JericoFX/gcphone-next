@@ -1036,6 +1036,24 @@ RegisterNUICallback('garageSetGps', function(data, cb)
     end
 end)
 
+RegisterNUICallback('garagePayBail', function(data, cb)
+    lib.callback('gcphone:garage:payBail', false, function(payload)
+        cb(payload or { success = false })
+    end, data)
+end)
+
+RegisterNUICallback('garageRequestValet', function(data, cb)
+    lib.callback('gcphone:garage:requestValet', false, function(payload)
+        cb(payload or { success = false })
+    end, data)
+end)
+
+RegisterNUICallback('garageSetWaypoint', function(data, cb)
+    lib.callback('gcphone:garage:setWaypoint', false, function(payload)
+        cb(payload or { success = false })
+    end, data)
+end)
+
 RegisterNUICallback('snapGetStories', function(_, cb)
     lib.callback('gcphone:snap:getStories', false, function(stories)
         cb(stories or {})
@@ -1737,6 +1755,40 @@ RegisterNetEvent('gcphone:radio:musicUpdate', function(data)
     SendNUIMessage({ action = 'gcphone:radio:musicUpdate', data = data })
 end)
 
+RegisterNUICallback('radioSavePlaylist', function(data, cb)
+    lib.callback('gcphone:radio:savePlaylist', false, function(payload)
+        cb(payload or {})
+    end, data)
+end)
+
+RegisterNUICallback('radioGetPlaylists', function(_, cb)
+    lib.callback('gcphone:radio:getPlaylists', false, function(payload)
+        cb(payload or {})
+    end)
+end)
+
+RegisterNUICallback('radioDeletePlaylist', function(data, cb)
+    lib.callback('gcphone:radio:deletePlaylist', false, function(payload)
+        cb(payload or {})
+    end, data)
+end)
+
+RegisterNUICallback('radioMusicDuck', function(data, cb)
+    lib.callback('gcphone:radio:musicDuck', false, function(payload)
+        cb(payload or {})
+    end, data)
+end)
+
+RegisterNUICallback('radioMusicUnduck', function(data, cb)
+    lib.callback('gcphone:radio:musicUnduck', false, function(payload)
+        cb(payload or {})
+    end, data)
+end)
+
+RegisterNetEvent('gcphone:radio:musicDucked', function(data)
+    SendNUIMessage({ action = 'gcphone:radio:musicDucked', data = data })
+end)
+
 -- ── CityRide ──
 
 RegisterNUICallback('cityrideRegisterDriver', function(data, cb)
@@ -1852,6 +1904,12 @@ RegisterNUICallback('cityrideGetPlayerCoords', function(_, cb)
         y = coords.y,
         z = coords.z,
     })
+end)
+
+RegisterNUICallback('documentsUpdatePhoto', function(data, cb)
+    lib.callback('gcphone:documents:updatePhoto', false, function(payload)
+        cb(payload or {})
+    end, data)
 end)
 
 return {}

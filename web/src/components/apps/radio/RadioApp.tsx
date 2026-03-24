@@ -47,11 +47,20 @@ interface MusicSearchResponse {
   error?: string;
 }
 
+interface Playlist {
+  id: number;
+  name: string;
+  songs: MusicSearchResult[];
+  created_at: string;
+  expires_at: string;
+}
+
 type RadioView = 'list' | 'create' | 'broadcasting' | 'listening';
 
 const CATEGORIES = ['music', 'news', 'talk', 'emergency', 'community', 'other'] as const;
 
 const POLL_INTERVAL_MS = 5000;
+const MAX_QUEUE_SIZE = 10;
 
 export function RadioApp() {
   const router = useRouter();
@@ -86,6 +95,23 @@ export function RadioApp() {
   const [disclaimerDismissed, setDisclaimerDismissed] = createSignal(
     window.localStorage.getItem('gcphone:music:disclaimerDismissed') === 'true'
   );
+
+  // Queue
+  const [queue, setQueue] = createSignal<MusicSearchResult[]>([]);
+  const [currentQueueIndex, setCurrentQueueIndex] = createSignal(-1);
+
+  // Playlists
+  const [playlists, setPlaylists] = createSignal<Playlist[]>([]);
+  const [showPlaylists, setShowPlaylists] = createSignal(false);
+  const [savingPlaylist, setSavingPlaylist] = createSignal(false);
+  const [playlistNameInput, setPlaylistNameInput] = createSignal('');
+  const [showSavePrompt, setShowSavePrompt] = createSignal(false);
+
+  // Ducking (host)
+  const [duckPressed, setDuckPressed] = createSignal(false);
+
+  // Ducking (listener)
+  const [isDucked, setIsDucked] = createSignal(false);
 
   const dismissDisclaimer = () => {
     setDisclaimerDismissed(true);
@@ -151,6 +177,10 @@ export function RadioApp() {
       setMusicPlaying(false);
       setMusicTitle('');
       setMusicResults([]);
+      setQueue([]);
+      setCurrentQueueIndex(-1);
+      setDuckPressed(false);
+      setIsDucked(false);
     });
   };
 
@@ -166,6 +196,9 @@ export function RadioApp() {
         setActiveStation(null);
         setLivekitConnected(false);
         setMuted(false);
+        setQueue([]);
+        setCurrentQueueIndex(-1);
+        setIsDucked(false);
         setView('list');
       });
     }
@@ -178,21 +211,40 @@ export function RadioApp() {
     if (!d) return;
     const station = activeStation();
     if (station && station.id === d.stationId) {
+      const wasPlaying = musicPlaying();
       batch(() => {
         setMusicPlaying(d.isPlaying || false);
         setMusicTitle(d.title || '');
       });
+
+      // Auto-play next in queue when song ends (host only)
+      if (wasPlaying && !d.isPlaying && view() === 'broadcasting') {
+        void playNextInQueue();
+      }
+    }
+  };
+
+  const handleMusicDucked = (event: MessageEvent) => {
+    const p = event.data;
+    if (p?.action !== 'gcphone:radio:musicDucked') return;
+    const d = p.data;
+    if (!d) return;
+    const station = activeStation();
+    if (station && station.id === d.stationId) {
+      setIsDucked(d.ducked || false);
     }
   };
 
   onMount(() => {
     window.addEventListener('message', handleStationEnded);
     window.addEventListener('message', handleMusicUpdate);
+    window.addEventListener('message', handleMusicDucked);
   });
 
   onCleanup(() => {
     window.removeEventListener('message', handleStationEnded);
     window.removeEventListener('message', handleMusicUpdate);
+    window.removeEventListener('message', handleMusicDucked);
   });
 
   const connectToLiveKit = async (roomName: string, isHost: boolean) => {
@@ -218,6 +270,114 @@ export function RadioApp() {
     } catch {
       disconnectLiveKit();
       return false;
+    }
+  };
+
+  // --- Queue ---
+
+  const addToQueue = (song: MusicSearchResult) => {
+    if (queue().length >= MAX_QUEUE_SIZE) return;
+    setQueue(prev => [...prev, song]);
+  };
+
+  const removeFromQueue = (index: number) => {
+    const cur = currentQueueIndex();
+    setQueue(prev => prev.filter((_, i) => i !== index));
+    // Adjust current index if needed
+    if (index < cur) {
+      setCurrentQueueIndex(cur - 1);
+    } else if (index === cur) {
+      // Removed the currently playing song — don't change index, next playNextInQueue handles it
+    }
+  };
+
+  const clearQueue = () => {
+    setQueue([]);
+    setCurrentQueueIndex(-1);
+  };
+
+  const playNextInQueue = async () => {
+    const q = queue();
+    const nextIdx = currentQueueIndex() + 1;
+    if (nextIdx >= q.length) {
+      setCurrentQueueIndex(-1);
+      return;
+    }
+    setCurrentQueueIndex(nextIdx);
+    await handleMusicPlay(q[nextIdx]);
+  };
+
+  const startQueue = async () => {
+    const q = queue();
+    if (q.length === 0) return;
+    setCurrentQueueIndex(0);
+    await handleMusicPlay(q[0]);
+  };
+
+  // --- Playlists ---
+
+  const loadPlaylists = async () => {
+    try {
+      const result = await fetchNui<Playlist[]>('radioGetPlaylists', {}, []);
+      setPlaylists(result || []);
+    } catch {
+      setPlaylists([]);
+    }
+  };
+
+  const handleSavePlaylist = async () => {
+    const name = playlistNameInput().trim();
+    if (!name || queue().length === 0) return;
+    setSavingPlaylist(true);
+    try {
+      await fetchNui('radioSavePlaylist', {
+        name: sanitizeText(name, 60),
+        songs: queue(),
+      }, { success: false });
+      batch(() => {
+        setShowSavePrompt(false);
+        setPlaylistNameInput('');
+      });
+    } finally {
+      setSavingPlaylist(false);
+    }
+  };
+
+  const handleLoadPlaylist = async (playlist: Playlist) => {
+    setQueue(playlist.songs.slice(0, MAX_QUEUE_SIZE));
+    setCurrentQueueIndex(-1);
+    setShowPlaylists(false);
+  };
+
+  const handleDeletePlaylist = async (id: number) => {
+    await fetchNui('radioDeletePlaylist', { id }, { success: false });
+    setPlaylists(prev => prev.filter(p => p.id !== id));
+  };
+
+  const handleShowPlaylists = async () => {
+    if (showPlaylists()) {
+      setShowPlaylists(false);
+      return;
+    }
+    await loadPlaylists();
+    setShowPlaylists(true);
+  };
+
+  // --- Duck ---
+
+  const onDuckDown = () => {
+    setDuckPressed(true);
+    const station = activeStation();
+    if (station) {
+      void fetchNui('radioMusicDuck', { stationId: station.id }, { success: false });
+    }
+  };
+
+  const onDuckUp = () => {
+    setDuckPressed(false);
+    const station = activeStation();
+    if (station) {
+      void fetchNui('radioMusicUnduck', { stationId: station.id }, { success: false });
     }
   };
 
@@ -301,6 +461,9 @@ export function RadioApp() {
       setActiveStation(null);
       setLivekitConnected(false);
       setMuted(false);
+      setQueue([]);
+      setCurrentQueueIndex(-1);
+      setDuckPressed(false);
       setView('list');
     });
 
@@ -318,6 +481,7 @@ export function RadioApp() {
       setActiveStation(null);
       setLivekitConnected(false);
       setMuted(false);
+      setIsDucked(false);
       setView('list');
     });
 
@@ -408,6 +572,14 @@ export function RadioApp() {
   usePhoneKeyHandler({
     Backspace: handleBack,
   });
+
+  // Helper: get the current playing song from queue
+  const currentQueueSong = () => {
+    const idx = currentQueueIndex();
+    const q = queue();
+    if (idx >= 0 && idx < q.length) return q[idx];
+    return null;
+  };
 
   // --- Render ---
 
@@ -527,6 +699,7 @@ export function RadioApp() {
       {/* Broadcasting View (Host) */}
       <Show when={view() === 'broadcasting'}>
         <div class={styles.broadcastView}>
+          {/* ON AIR */}
           <div class={styles.onAirBlock}>
             <div class={styles.pulseRing}>
               <div class={styles.pulseCore} />
@@ -553,7 +726,8 @@ export function RadioApp() {
             </span>
           </div>
 
-          <div class={styles.broadcastControls}>
+          {/* Mic Controls: Mute + Duck */}
+          <div class={styles.controlsRow}>
             <button
               classList={{
                 [styles.controlBtn]: true,
@@ -563,14 +737,79 @@ export function RadioApp() {
             >
               {muted() ? 'Mic OFF' : 'Mic ON'}
             </button>
-            <button class={`${styles.controlBtn} ${styles.controlBtnDanger}`} onClick={() => void handleEndBroadcast()}>
-              {t('radio.end_broadcast', language())}
+            <button
+              classList={{
+                [styles.controlBtn]: true,
+                [styles.duckBtn]: true,
+                [styles.duckBtnActive]: duckPressed(),
+              }}
+              onPointerDown={onDuckDown}
+              onPointerUp={onDuckUp}
+              onPointerLeave={onDuckUp}
+            >
+              {duckPressed() ? 'Speaking...' : 'Press to Talk'}
             </button>
           </div>
 
-          {/* Music Section */}
-          <div class={styles.musicSection}>
-            <span class={styles.eyebrow}>{t('radio.music_eyebrow', language())}</span>
+          {/* Now Playing */}
+          <Show when={musicPlaying()}>
+            <div class={styles.section}>
+              <span class={styles.sectionTitle}>{t('radio.music_eyebrow', language())}</span>
+              <div class={styles.nowPlaying}>
+                <Show when={currentQueueSong()?.thumbnail}>
+                  <img class={styles.nowPlayingThumb} src={currentQueueSong()?.thumbnail} alt="" loading="lazy" />
+                </Show>
+                <div class={styles.nowPlayingInfo}>
+                  <span class={styles.nowPlayingLabel}>Now Playing</span>
+                  <span class={styles.nowPlayingTitle}>{musicTitle()}</span>
+                </div>
+                <button class={styles.musicStopBtn} onClick={() => void handleMusicStop()}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="1" /></svg>
+                </button>
+              </div>
+              <div class={styles.volumeRow}>
+                <span class={styles.volumeLabel}>Vol</span>
+                <input
+                  type="range"
+                  class={styles.volumeSlider}
+                  min="0"
+                  max="1"
+                  step="0.05"
+                  value={musicVolume()}
+                  onInput={(e) => void handleMusicVolumeChange(parseFloat(e.currentTarget.value))}
+                />
+              </div>
+            </div>
+          </Show>
+
+          {/* Queue */}
+          <div class={styles.section}>
+            <span class={styles.sectionTitle}>Queue ({queue().length}/{MAX_QUEUE_SIZE})</span>
+            <Show when={queue().length > 0} fallback={<span class={styles.queueEmpty}>No songs in queue</span>}>
+              <div class={styles.queueList}>
+                <For each={queue()}>
+                  {(song, i) => (
+                    <div classList={{ [styles.queueItem]: true, [styles.queueItemActive]: i() === currentQueueIndex() }}>
+                      <span class={styles.queueIndex}>{i() + 1}</span>
+                      <img class={styles.queueThumb} src={song.thumbnail} alt="" loading="lazy" />
+                      <span class={styles.queueTitle}>{song.title}</span>
+                      <button class={styles.queueRemoveBtn} onClick={() => removeFromQueue(i())}>&#10005;</button>
+                    </div>
+                  )}
+                </For>
+              </div>
+              <div class={styles.playlistActions}>
+                <Show when={!musicPlaying()}>
+                  <button class={styles.playlistBtn} onClick={() => void startQueue()}>Play Queue</button>
+                </Show>
+                <button class={styles.clearQueueBtn} onClick={clearQueue}>Clear Queue</button>
+              </div>
+            </Show>
+          </div>
+
+          {/* Music Search */}
+          <div class={styles.section}>
+            <span class={styles.sectionTitle}>Search Music</span>
 
             <Show when={!disclaimerDismissed()}>
               <div class={styles.disclaimer}>
@@ -591,69 +830,127 @@ export function RadioApp() {
               </button>
             </div>
 
-            <Show when={musicPlaying()}>
-              <div class={styles.musicNowPlaying}>
-                <span class={styles.musicNote}>&#9835;</span>
-                <span class={styles.musicNowTitle}>{musicTitle()}</span>
-                <button class={styles.musicStopBtn} onClick={() => void handleMusicStop()}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="1" /></svg>
-                </button>
-              </div>
-              <div class={styles.musicVolumeRow}>
-                <span class={styles.musicVolumeLabel}>Vol</span>
-                <input
-                  type="range"
-                  class={styles.musicVolumeSlider}
-                  min="0"
-                  max="1"
-                  step="0.05"
-                  value={musicVolume()}
-                  onInput={(e) => void handleMusicVolumeChange(parseFloat(e.currentTarget.value))}
-                />
+            <div class={styles.searchRow}>
+              <input
+                class="ios-input"
+                type="text"
+                placeholder={t('radio.music_search_placeholder', language())}
+                value={musicQuery()}
+                onInput={(e) => setMusicQuery(e.currentTarget.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') void handleMusicSearch(); }}
+              />
+              <button
+                class="ios-btn ios-btn-primary"
+                onClick={() => void handleMusicSearch()}
+                disabled={musicSearching() || !musicQuery().trim()}
+              >
+                {musicSearching() ? '...' : t('common.search', language())}
+              </button>
+            </div>
+
+            <Show when={musicResults().length > 0}>
+              <div class={styles.resultsList}>
+                <For each={musicResults()}>
+                  {(result) => (
+                    <div class={styles.resultItem}>
+                      <img class={styles.resultThumb} src={result.thumbnail} alt="" loading="lazy" />
+                      <div class={styles.resultInfo}>
+                        <span class={styles.resultTitle}>{result.title}</span>
+                        <span class={styles.resultChannel}>{result.channel}</span>
+                      </div>
+                      <button
+                        class={styles.addQueueBtn}
+                        onClick={() => addToQueue(result)}
+                        disabled={queue().length >= MAX_QUEUE_SIZE}
+                        title="Add to queue"
+                      >
+                        +
+                      </button>
+                    </div>
+                  )}
+                </For>
               </div>
             </Show>
+          </div>
 
-            <Show when={!musicPlaying()}>
-              <div class={styles.musicSearchRow}>
+          {/* Playlists */}
+          <div class={styles.section}>
+            <span class={styles.sectionTitle}>Playlists</span>
+            <div class={styles.playlistActions}>
+              <button
+                class={styles.playlistBtn}
+                onClick={() => {
+                  if (showSavePrompt()) {
+                    setShowSavePrompt(false);
+                  } else {
+                    setShowSavePrompt(true);
+                    setShowPlaylists(false);
+                  }
+                }}
+                disabled={queue().length === 0}
+              >
+                Save Queue
+              </button>
+              <button
+                class={styles.playlistBtn}
+                onClick={() => void handleShowPlaylists()}
+              >
+                {showPlaylists() ? 'Hide' : 'Load Playlist'}
+              </button>
+            </div>
+
+            <Show when={showSavePrompt()}>
+              <div class={styles.savePrompt}>
                 <input
                   class="ios-input"
                   type="text"
-                  placeholder={t('radio.music_search_placeholder', language())}
-                  value={musicQuery()}
-                  onInput={(e) => setMusicQuery(e.currentTarget.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') void handleMusicSearch(); }}
+                  placeholder="Playlist name"
+                  value={playlistNameInput()}
+                  onInput={(e) => setPlaylistNameInput(e.currentTarget.value)}
+                  maxLength={60}
+                  onKeyDown={(e) => { if (e.key === 'Enter') void handleSavePlaylist(); }}
                 />
                 <button
                   class="ios-btn ios-btn-primary"
-                  onClick={() => void handleMusicSearch()}
-                  disabled={musicSearching() || !musicQuery().trim()}
+                  onClick={() => void handleSavePlaylist()}
+                  disabled={savingPlaylist() || !playlistNameInput().trim()}
                 >
-                  {musicSearching() ? '...' : t('common.search', language())}
+                  {savingPlaylist() ? '...' : 'Save'}
                 </button>
               </div>
+            </Show>
 
-              <Show when={musicResults().length > 0}>
-                <div class={styles.musicResultsList}>
-                  <For each={musicResults()}>
-                    {(result) => (
-                      <button class={styles.musicResultItem} onClick={() => void handleMusicPlay(result)}>
-                        <img
-                          class={styles.musicThumb}
-                          src={result.thumbnail}
-                          alt=""
-                          loading="lazy"
-                        />
-                        <div class={styles.musicResultInfo}>
-                          <span class={styles.musicResultTitle}>{result.title}</span>
-                          <span class={styles.musicResultChannel}>{result.channel}</span>
+            <Show when={showPlaylists()}>
+              <Show when={playlists().length > 0} fallback={<span class={styles.queueEmpty}>No saved playlists</span>}>
+                <div class={styles.playlistList}>
+                  <For each={playlists()}>
+                    {(pl) => (
+                      <div class={styles.playlistCard}>
+                        <div class={styles.playlistInfo} onClick={() => void handleLoadPlaylist(pl)}>
+                          <span class={styles.playlistName}>{pl.name}</span>
+                          <span class={styles.playlistMeta}>{pl.songs.length} songs</span>
                         </div>
-                      </button>
+                        <button
+                          class={styles.playlistDeleteBtn}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            void handleDeletePlaylist(pl.id);
+                          }}
+                        >
+                          &#10005;
+                        </button>
+                      </div>
                     )}
                   </For>
                 </div>
               </Show>
             </Show>
           </div>
+
+          {/* End Broadcast */}
+          <button class={styles.endBroadcastBtn} onClick={() => void handleEndBroadcast()}>
+            {t('radio.end_broadcast', language())}
+          </button>
 
           <Show when={!livekitConnected()}>
             <span class={styles.connectionStatus}>{t('radio.connecting', language())}</span>
@@ -681,9 +978,25 @@ export function RadioApp() {
           </Show>
 
           <Show when={musicPlaying()}>
-            <div class={styles.musicNowPlaying}>
-              <span class={styles.musicNote}>&#9835;</span>
-              <span class={styles.musicNowTitle}>{musicTitle()}</span>
+            <div class={styles.nowPlaying}>
+              <div class={styles.nowPlayingInfo}>
+                <span class={styles.nowPlayingLabel}>Now Playing</span>
+                <span class={styles.nowPlayingTitle}>{musicTitle()}</span>
+              </div>
+            </div>
+          </Show>
+
+          {/* Duck indicator */}
+          <Show when={isDucked()}>
+            <div class={styles.duckIndicator}>
+              <span class={styles.duckIndicatorIcon}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+                  <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                  <line x1="12" x2="12" y1="19" y2="22" />
+                </svg>
+              </span>
+              <span class={styles.duckIndicatorText}>Host is speaking</span>
             </div>
           </Show>
 

@@ -31,6 +31,7 @@ type CameraTarget =
   | 'chirp-rechirp'
   | 'clips'
   | 'clips-avatar'
+  | 'contact-avatar'
   | '';
 
 interface EffectConfig {
@@ -55,6 +56,7 @@ function targetLabel(target: CameraTarget) {
   if (target === 'chirp-rechirp') return 'ReChirp';
   if (target === 'clips') return 'Clips';
   if (target === 'clips-avatar') return 'Avatar';
+  if (target === 'contact-avatar') return 'Avatar';
   return 'Foto';
 }
 
@@ -78,6 +80,9 @@ export function CameraApp() {
   const [blurLevel, setBlurLevel] = createSignal(0);
   const [brightness, setBrightness] = createSignal(100);
   const [contrast, setContrast] = createSignal(100);
+  const [saturation, setSaturation] = createSignal(100);
+  const [temperature, setTemperature] = createSignal(0);
+  const [vignette, setVignette] = createSignal(0);
   const [controlsOpen, setControlsOpen] = createSignal(false);
   const [videoMode, setVideoMode] = createSignal(false);
   const [renderer, setRenderer] = createSignal<'webgl' | 'css'>('webgl');
@@ -101,7 +106,8 @@ export function CameraApp() {
       nextTarget === 'chirp' ||
       nextTarget === 'chirp-avatar' ||
       nextTarget === 'clips' ||
-      nextTarget === 'clips-avatar'
+      nextTarget === 'clips-avatar' ||
+      nextTarget === 'contact-avatar'
     ) {
       setTarget(nextTarget as CameraTarget);
     } else {
@@ -189,6 +195,9 @@ export function CameraApp() {
     gameViewRef.setBlur(blurLevel() / 100);
     gameViewRef.setBrightness(brightness() / 100);
     gameViewRef.setContrast(contrast() / 100);
+    gameViewRef.setSaturation(saturation() / 100);
+    gameViewRef.setTemperature(temperature() / 100);
+    gameViewRef.setVignette(vignette() / 100);
     const effectMap: Record<CameraEffect, number> = { normal: 0, noir: 1, vivid: 2, warm: 3 };
     gameViewRef.setEffect(effectMap[effect()] ?? 0);
   });
@@ -200,6 +209,9 @@ export function CameraApp() {
     if (blurLevel() > 0) parts.push(`blur(${(blurLevel() / 100) * 4}px)`);
     if (brightness() !== 100) parts.push(`brightness(${brightness() / 100})`);
     if (contrast() !== 100) parts.push(`contrast(${contrast() / 100})`);
+    if (saturation() !== 100) parts.push(`saturate(${saturation() / 100})`);
+    if (temperature() > 0) parts.push(`sepia(${temperature() / 200})`);
+    else if (temperature() < 0) parts.push(`hue-rotate(${temperature() * 0.3}deg)`);
     if (effect() === 'noir') parts.push('grayscale(1) contrast(1.08)');
     else if (effect() === 'vivid') parts.push('saturate(1.3) contrast(1.08)');
     else if (effect() === 'warm') parts.push('sepia(0.24) saturate(1.15)');
@@ -210,6 +222,9 @@ export function CameraApp() {
     setBlurLevel(0);
     setBrightness(100);
     setContrast(100);
+    setSaturation(100);
+    setTemperature(0);
+    setVignette(0);
     setEffect('normal');
     setFov(fovRange().default_);
     void fetchNui('updateCameraSession', { effect: 'normal', fov: fovRange().default_, blur: 0, flash: flash(), selfie: selfie(), landscape: landscape() }, true);
@@ -393,6 +408,8 @@ export function CameraApp() {
       router.navigate('chirp', { avatarMedia: mediaUrl, openProfile: '1' });
     } else if (target() === 'clips-avatar') {
       router.navigate('clips', { avatarMedia: mediaUrl, openProfile: '1' });
+    } else if (target() === 'contact-avatar') {
+      router.navigate('contacts', { avatarMedia: mediaUrl });
     } else if (target() === 'chirp') {
       await fetchNui('chirpPublishTweet', {
         content: t('camera.new_photo', language()),
@@ -695,91 +712,81 @@ export function CameraApp() {
         <Show when={controlsOpen()}>
           <div class={styles.controlsPanel}>
             <div class={styles.controlsHeader}>
-              <span class={styles.controlsTitle}>{t('camera.controls', language())}</span>
-              <button class={styles.controlsResetBtn} onClick={resetControls}>
+              <div class={styles.controlsHeaderLeft}>
+                <svg class={styles.controlsChevron} viewBox="0 0 24 24" fill="none" onClick={() => setControlsOpen(false)}><path d="M6 15l6-6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <span class={styles.controlsTitle}>{t('camera.controls', language())}</span>
+              </div>
+              <button class={styles.controlsResetBtn} onClick={() => resetControls()}>
                 {t('camera.reset', language())}
               </button>
             </div>
 
-            {/* Filter strip */}
-            <div class={styles.controlsFilterStrip}>
-              {EFFECTS.map((fx) => (
-                <button
-                  class={styles.filterChip}
-                  classList={{ [styles.filterChipActive]: effect() === fx.id }}
-                  onClick={() => setEffect(fx.id)}
-                >
-                  <span class={`${styles.filterChipDot} ${fx.className}`} />
-                  <span class={styles.filterChipLabel}>
-                    {t(`camera.filter.${fx.id}`, language())}
-                  </span>
-                </button>
-              ))}
-            </div>
+              <div class={styles.controlsBody}>
+                {/* Filter strip */}
+                <div class={styles.controlsFilterStrip}>
+                  {EFFECTS.map((fx) => (
+                    <button
+                      class={styles.filterChip}
+                      classList={{ [styles.filterChipActive]: effect() === fx.id }}
+                      onClick={() => setEffect(fx.id)}
+                    >
+                      <span class={`${styles.filterChipDot} ${fx.className}`} />
+                      <span class={styles.filterChipLabel}>
+                        {t(`camera.filter.${fx.id}`, language())}
+                      </span>
+                    </button>
+                  ))}
+                </div>
 
-            {/* FOV slider */}
-            <div class={styles.sliderRow}>
-              <span class={styles.sliderRowLabel}>{t('camera.fov', language())}</span>
-              <input
-                type="range"
-                class={styles.horizontalSlider}
-                min={fovRange().min}
-                max={fovRange().max}
-                step={1}
-                value={fov()}
-                onInput={(e) => {
-                  const val = Number(e.currentTarget.value);
-                  setFov(val);
-                  void fetchNui('updateCameraSession', { effect: effect(), fov: val, blur: blurLevel(), flash: flash(), selfie: selfie(), landscape: landscape() }, true);
-                }}
-              />
-              <span class={styles.sliderRowValue}>{fov()}</span>
-            </div>
+                {/* FOV */}
+                <div class={styles.sliderRow}>
+                  <svg class={styles.sliderRowIcon} viewBox="0 0 24 24" fill="none"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  <input type="range" class={styles.horizontalSlider} min={fovRange().min} max={fovRange().max} step={1} value={fov()} onInput={(e) => { const val = Number(e.currentTarget.value); setFov(val); void fetchNui('updateCameraSession', { effect: effect(), fov: val, blur: blurLevel(), flash: flash(), selfie: selfie(), landscape: landscape() }, true); }} />
+                  <span class={styles.sliderRowValue}>{fov()}</span>
+                </div>
 
-            {/* Blur slider */}
-            <div class={styles.sliderRow}>
-              <span class={styles.sliderRowLabel}>{t('camera.blur', language())}</span>
-              <input
-                type="range"
-                class={styles.horizontalSlider}
-                min={0}
-                max={100}
-                step={1}
-                value={blurLevel()}
-                onInput={(e) => setBlurLevel(Number(e.currentTarget.value))}
-              />
-              <span class={styles.sliderRowValue}>{blurLevel()}</span>
-            </div>
+                {/* Blur */}
+                <div class={styles.sliderRow}>
+                  <svg class={styles.sliderRowIcon} viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" stroke-dasharray="3 3"/></svg>
+                  <input type="range" class={styles.horizontalSlider} min={0} max={100} step={1} value={blurLevel()} onInput={(e) => setBlurLevel(Number(e.currentTarget.value))} />
+                  <span class={styles.sliderRowValue}>{blurLevel()}</span>
+                </div>
 
-            {/* Brightness slider */}
-            <div class={styles.sliderRow}>
-              <span class={styles.sliderRowLabel}>{t('camera.brightness', language())}</span>
-              <input
-                type="range"
-                class={styles.horizontalSlider}
-                min={20}
-                max={200}
-                step={1}
-                value={brightness()}
-                onInput={(e) => setBrightness(Number(e.currentTarget.value))}
-              />
-              <span class={styles.sliderRowValue}>{brightness()}</span>
-            </div>
+                {/* Brightness */}
+                <div class={styles.sliderRow}>
+                  <svg class={styles.sliderRowIcon} viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="5" stroke="currentColor" stroke-width="2"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                  <input type="range" class={styles.horizontalSlider} min={20} max={200} step={1} value={brightness()} onInput={(e) => setBrightness(Number(e.currentTarget.value))} />
+                  <span class={styles.sliderRowValue}>{brightness()}</span>
+                </div>
 
-            {/* Contrast slider */}
-            <div class={styles.sliderRow}>
-              <span class={styles.sliderRowLabel}>{t('camera.contrast', language())}</span>
-              <input
-                type="range"
-                class={styles.horizontalSlider}
-                min={20}
-                max={200}
-                step={1}
-                value={contrast()}
-                onInput={(e) => setContrast(Number(e.currentTarget.value))}
-              />
-              <span class={styles.sliderRowValue}>{contrast()}</span>
-            </div>
+                {/* Contrast */}
+                <div class={styles.sliderRow}>
+                  <svg class={styles.sliderRowIcon} viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><path d="M12 2a10 10 0 0 1 0 20V2z" fill="currentColor"/></svg>
+                  <input type="range" class={styles.horizontalSlider} min={20} max={200} step={1} value={contrast()} onInput={(e) => setContrast(Number(e.currentTarget.value))} />
+                  <span class={styles.sliderRowValue}>{contrast()}</span>
+                </div>
+
+                {/* Saturation */}
+                <div class={styles.sliderRow}>
+                  <svg class={styles.sliderRowIcon} viewBox="0 0 24 24" fill="none"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0L12 2.69z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+                  <input type="range" class={styles.horizontalSlider} min={0} max={300} step={1} value={saturation()} onInput={(e) => setSaturation(Number(e.currentTarget.value))} />
+                  <span class={styles.sliderRowValue}>{saturation()}</span>
+                </div>
+
+                {/* Temperature */}
+                <div class={styles.sliderRow}>
+                  <svg class={styles.sliderRowIcon} viewBox="0 0 24 24" fill="none"><path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  <input type="range" class={styles.horizontalSlider} min={-100} max={100} step={1} value={temperature()} onInput={(e) => setTemperature(Number(e.currentTarget.value))} />
+                  <span class={styles.sliderRowValue}>{temperature()}</span>
+                </div>
+
+                {/* Vignette */}
+                <div class={styles.sliderRow}>
+                  <svg class={styles.sliderRowIcon} viewBox="0 0 24 24" fill="none"><rect x="2" y="2" width="20" height="20" rx="3" stroke="currentColor" stroke-width="2"/><ellipse cx="12" cy="12" rx="6" ry="6" stroke="currentColor" stroke-width="1.5" stroke-dasharray="2 2"/></svg>
+                  <input type="range" class={styles.horizontalSlider} min={0} max={100} step={1} value={vignette()} onInput={(e) => setVignette(Number(e.currentTarget.value))} />
+                  <span class={styles.sliderRowValue}>{vignette()}</span>
+                </div>
+              </div>
           </div>
         </Show>
 
