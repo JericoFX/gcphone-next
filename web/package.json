@@ -19,9 +19,11 @@
     "solid-js": "^1.9.11"
   },
   "devDependencies": {
+    "@csstools/postcss-color-mix-function": "^4.0.2",
     "@playwright/test": "^1.58.2",
     "@types/leaflet": "^1.9.21",
     "@types/node": "^25.5.0",
+    "postcss": "^8.5.8",
     "sass": "^1.98.0",
     "typescript": "^5.9.3",
     "vite": "^8.0.2",

@@ -8,6 +8,7 @@ local takePhoto = false
 
 local cameraSession = {
     active = false,
+    walkableMode = false,
     effect = 'normal',
     fov = 52.0,
     blur = 0.0,
@@ -101,6 +102,20 @@ local function NormalizeCameraData(data)
     cameraSession.quickZoomIndex = NormalizeQuickZoomIndex(type(data) == 'table' and data.quickZoomIndex or cameraSession.quickZoomIndex)
 end
 
+local function CleanupPhoneProps()
+    SetTimeout(500, function()
+        local objects = GetGamePool('CObject')
+        local playerCoords = GetEntityCoords(cache.ped)
+        for _, obj in ipairs(objects) do
+            local objCoords = GetEntityCoords(obj)
+            if #(playerCoords - objCoords) < 4.0 and GetEntityModel(obj) == 413312110 then
+                SetEntityAsMissionEntity(obj, true, true)
+                DeleteObject(obj)
+            end
+        end
+    end)
+end
+
 local function StartCameraSession(data)
     NormalizeCameraData(data)
     local ped = cache.ped
@@ -111,8 +126,11 @@ local function StartCameraSession(data)
     end
 
     cameraSession.active = true
+    cameraSession.walkableMode = true -- start in walkable/scripted cam (renders behind NUI)
     PhoneState.cameraActive = true
     SetPedCurrentWeaponVisible(ped, false, true, true, true)
+
+    -- Start with scripted camera (renders behind NUI transparently)
     CameraWalk.StartAdvancedPhoneCamera({
         fov = cameraSession.fov,
         selfie = cameraSession.selfie,
@@ -124,21 +142,45 @@ local function StartCameraSession(data)
     CreateThread(function()
         while cameraSession.active do
             Wait(0)
+            InvalidateIdleCam()
+            InvalidateVehicleIdleCam()
 
-            if IsControlJustPressed(0, 177) then
+            if IsControlJustPressed(0, 177) then -- Backspace - close
                 cameraSession.active = false
                 SendNUIMessage({ action = 'cameraSessionClosed' })
-            elseif IsControlJustPressed(0, 27) then
+            elseif IsControlJustPressed(0, 27) then -- Arrow Up - toggle selfie
                 cameraSession.selfie = not cameraSession.selfie
+                if not cameraSession.walkableMode then
+                    Citizen.InvokeNative(0x2635073306796480568, cameraSession.selfie)
+                end
                 ApplyCameraVisuals()
+            elseif IsControlJustPressed(0, 19) then -- Alt - toggle walkable/mobile cam
+                ToggleWalkableMode()
             end
 
             if cameraSession.flash then
                 DrawFaceLight(ped, cameraSession.selfie and 2.2 or 1.6)
             end
+
+            -- Disable attack controls in walkable mode
+            if cameraSession.walkableMode then
+                DisableControlAction(0, 24, true)
+                DisableControlAction(0, 25, true)
+                DisableControlAction(0, 140, true)
+                DisableControlAction(0, 141, true)
+                DisableControlAction(0, 142, true)
+                DisableControlAction(0, 257, true)
+            end
         end
 
-        CameraWalk.StopAdvancedPhoneCamera()
+        -- Cleanup whichever camera type is active
+        if cameraSession.walkableMode then
+            CameraWalk.StopAdvancedPhoneCamera()
+        else
+            DestroyMobilePhone()
+        end
+        CleanupPhoneProps()
+        cameraSession.walkableMode = false
         PhoneState.cameraActive = false
         ClearTimecycleModifier()
         SetTimecycleModifierStrength(0.0)
@@ -148,6 +190,42 @@ local function StartCameraSession(data)
     end)
 
     return true
+end
+
+local function ActivateMobilePhoneCam()
+    CameraWalk.StopAdvancedPhoneCamera()
+    cameraSession.walkableMode = false
+    CreateMobilePhone(0)
+    CellCamActivate(true, true)
+    Citizen.InvokeNative(0x2635073306796480568, cameraSession.selfie)
+    CleanupPhoneProps()
+end
+
+local function ActivateWalkableCam()
+    DestroyMobilePhone()
+    cameraSession.walkableMode = true
+    CameraWalk.StartAdvancedPhoneCamera({
+        fov = cameraSession.fov,
+        selfie = cameraSession.selfie,
+        frozen = cameraSession.frozen,
+        landscape = cameraSession.landscape,
+    })
+end
+
+local function ToggleWalkableMode()
+    if not cameraSession.active then return end
+
+    if cameraSession.walkableMode then
+        ActivateMobilePhoneCam()
+    else
+        ActivateWalkableCam()
+    end
+
+    ApplyCameraVisuals()
+    SendNUIMessage({
+        action = 'cameraWalkableModeChanged',
+        data = { walkable = cameraSession.walkableMode },
+    })
 end
 
 local function StopCameraSession()
@@ -206,10 +284,12 @@ RegisterNUICallback('cameraGetCapabilities', function(_, cb)
     cb({
         flashlight = Config.Flashlight.Enabled == true,
         advancedCamera = Config.Camera.Enabled == true,
-        video = false,
+        video = true,
         freeze = Config.Camera.Freeze.Enabled == true,
         landscape = true,
         quickZooms = Config.Camera.QuickZooms or { Config.Camera.Fov.Default },
+        renderer = Config.Camera.Renderer or 'webgl',
+        fov = { min = Config.Camera.Fov.Min, max = Config.Camera.Fov.Max, default_ = Config.Camera.Fov.Default },
     })
 end)
 
@@ -228,12 +308,29 @@ RegisterNUICallback('updateCameraSession', function(data, cb)
     cb(true)
 end)
 
+RegisterNUICallback('cameraToggleWalkable', function(_, cb)
+    ToggleWalkableMode()
+    cb({ walkable = cameraSession.walkableMode })
+end)
+
 RegisterNUICallback('captureCameraSession', function(data, cb)
     CaptureCurrentFrame(data, cb)
 end)
 
 RegisterNUICallback('captureCameraVideoSession', function(_, cb)
     cb({ url = nil, error = 'video_not_supported' })
+end)
+
+RegisterNUICallback('getVideoUploadConfig', function(_, cb)
+    lib.callback('gcphone:storage:getUploadConfig', false, function(config)
+        cb(config or { url = '', field = 'file' })
+    end, { mediaType = 'video' })
+end)
+
+RegisterNUICallback('getAudioUploadConfig', function(_, cb)
+    lib.callback('gcphone:storage:getUploadConfig', false, function(config)
+        cb(config or { url = '', field = 'file' })
+    end, { mediaType = 'audio' })
 end)
 
 RegisterNUICallback('cameraSetFreeze', function(data, cb)

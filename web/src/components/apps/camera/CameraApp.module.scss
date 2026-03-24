@@ -3,7 +3,7 @@
   position: relative;
   width: 100%;
   height: 100%;
-  background: #000;
+  background: transparent;
   overflow: hidden;
   display: flex;
 }
@@ -13,7 +13,7 @@
   position: relative;
   flex: 1;
   height: 100%;
-  background: #000;
+  background: transparent;
 }
 
 .previewLandscapeShell {
@@ -22,15 +22,14 @@
   }
 }
 
-// Feed layer (camera view)
+// Feed layer (camera view canvas)
 .feedLayer {
   position: absolute;
   top: 0;
   left: 0;
-  right: 0;
-  bottom: 0;
-  background-size: cover;
-  background-position: center;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
   transition: filter 0.3s ease;
 }
 
@@ -518,6 +517,20 @@
   border-radius: 50%;
   background: #fff;
   transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.shutterIcon {
+  width: 22px;
+  height: 22px;
+  color: rgba(0, 0, 0, 0.6);
+}
+
+.shutterVideo .shutterIcon,
+.shutterRecording .shutterIcon {
+  color: #fff;
 }
 
 .shutterBtn:active .shutterInner {
@@ -581,6 +594,164 @@
       background: #FFC800;
     }
   }
+}
+
+// ── Controls panel ──────────────────────────────────
+
+.controlsPanel {
+  position: absolute;
+  bottom: 104px;
+  left: 0;
+  right: 0;
+  z-index: 90;
+  max-height: 240px;
+  overflow-y: auto;
+  background: rgba(0, 0, 0, 0.78);
+  backdrop-filter: blur(12px);
+  border-radius: 16px 16px 0 0;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.controlsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.controlsTitle {
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.85);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.controlsResetBtn {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--warning);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 6px;
+
+  &:active {
+    opacity: 0.7;
+  }
+}
+
+.controlsFilterStrip {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 2px 0;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+.sliderRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sliderRowLabel {
+  font-size: 10px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.6);
+  min-width: 52px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.sliderRowValue {
+  font-size: 10px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.85);
+  min-width: 28px;
+  text-align: right;
+}
+
+.horizontalSlider {
+  -webkit-appearance: none;
+  appearance: none;
+  flex: 1;
+  height: 4px;
+  background: transparent;
+  cursor: pointer;
+
+  &::-webkit-slider-runnable-track {
+    width: 100%;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 2px;
+  }
+
+  &::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #fff;
+    border: none;
+    margin-top: -6px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+  }
+
+  &::-moz-range-track {
+    width: 100%;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 2px;
+  }
+
+  &::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #fff;
+    border: none;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+  }
+}
+
+// ── Video mode shutter ──────────────────────────────
+
+.shutterVideo .shutterInner {
+  background: #ff3b30;
+}
+
+.shutterRecording {
+  .shutterInner {
+    background: #ff3b30;
+    border-radius: 8px;
+    width: 32px;
+    height: 32px;
+  }
+}
+
+.modeIndicator {
+  position: absolute;
+  bottom: 106px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 95;
+  font-size: 10px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.7);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  pointer-events: none;
+}
+
+.modeVideo {
+  color: #ff3b30;
 }
 
 @media (max-width: 360px) {

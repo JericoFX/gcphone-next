@@ -17,6 +17,8 @@ import {
 } from '../../../utils/sanitize';
 import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { useNuiEvent } from '../../../utils/useNui';
+import { createGameView, type GameView } from '../../../utils/gameRender';
+import { isEnvBrowser } from '../../../utils/misc';
 import styles from './CameraApp.module.scss';
 
 type CameraEffect = 'normal' | 'noir' | 'vivid' | 'warm';
@@ -73,6 +75,16 @@ export function CameraApp() {
   const [videoSupported, setVideoSupported] = createSignal(false);
   const [sessionReady, setSessionReady] = createSignal(false);
   const [isRecording, setIsRecording] = createSignal(false);
+  const [blurLevel, setBlurLevel] = createSignal(0);
+  const [brightness, setBrightness] = createSignal(100);
+  const [contrast, setContrast] = createSignal(100);
+  const [controlsOpen, setControlsOpen] = createSignal(false);
+  const [videoMode, setVideoMode] = createSignal(false);
+  const [renderer, setRenderer] = createSignal<'webgl' | 'css'>('webgl');
+  const [fovRange, setFovRange] = createSignal({ min: 25, max: 90, default_: 52 });
+  let canvasRef: HTMLCanvasElement | undefined;
+  let gameViewRef: GameView | null = null;
+  let longPressTimer: ReturnType<typeof setTimeout> | null = null;
 
   useNuiEvent('cameraSessionClosed', () => {
     setSessionReady(false);
@@ -119,13 +131,23 @@ export function CameraApp() {
     const capabilities = await fetchNui<{
       quickZooms?: number[];
       video?: boolean;
-    }>('cameraGetCapabilities', {}, { quickZooms: [30, 52, 78], video: false });
+      renderer?: string;
+      fov?: { min?: number; max?: number; default_?: number };
+    }>('cameraGetCapabilities', {}, { quickZooms: [30, 52, 78], video: false, renderer: 'webgl' });
     setQuickZooms(
       (capabilities?.quickZooms || [30, 52, 78])
         .map((value) => Number(value))
         .filter((value) => Number.isFinite(value)),
     );
     setVideoSupported(capabilities?.video === true);
+    setRenderer(capabilities?.renderer === 'css' ? 'css' : 'webgl');
+    if (capabilities?.fov) {
+      setFovRange({
+        min: capabilities.fov.min ?? 25,
+        max: capabilities.fov.max ?? 90,
+        default_: capabilities.fov.default_ ?? 52,
+      });
+    }
 
     await fetchNui(
       'startCameraSession',
@@ -140,12 +162,135 @@ export function CameraApp() {
       true,
     );
     setSessionReady(true);
+
+    if (canvasRef && !isEnvBrowser()) {
+      try {
+        gameViewRef = createGameView(canvasRef);
+        gameViewRef.resize(canvasRef.clientWidth, canvasRef.clientHeight);
+      } catch (e) {
+        console.warn('[CameraApp] GameRender init failed:', e);
+      }
+    }
   });
 
   onCleanup(() => {
     void fetchNui('stopCameraSession', {}, true);
     setSessionReady(false);
+    if (gameViewRef) {
+      gameViewRef.destroy();
+      gameViewRef = null;
+    }
+    if (longPressTimer) clearTimeout(longPressTimer);
   });
+
+  // Sync WebGL shader uniforms when controls change
+  createEffect(() => {
+    if (!gameViewRef || renderer() !== 'webgl') return;
+    gameViewRef.setBlur(blurLevel() / 100);
+    gameViewRef.setBrightness(brightness() / 100);
+    gameViewRef.setContrast(contrast() / 100);
+    const effectMap: Record<CameraEffect, number> = { normal: 0, noir: 1, vivid: 2, warm: 3 };
+    gameViewRef.setEffect(effectMap[effect()] ?? 0);
+  });
+
+  // CSS filter fallback string
+  const cssFilter = () => {
+    if (renderer() !== 'css') return undefined;
+    const parts: string[] = [];
+    if (blurLevel() > 0) parts.push(`blur(${(blurLevel() / 100) * 4}px)`);
+    if (brightness() !== 100) parts.push(`brightness(${brightness() / 100})`);
+    if (contrast() !== 100) parts.push(`contrast(${contrast() / 100})`);
+    if (effect() === 'noir') parts.push('grayscale(1) contrast(1.08)');
+    else if (effect() === 'vivid') parts.push('saturate(1.3) contrast(1.08)');
+    else if (effect() === 'warm') parts.push('sepia(0.24) saturate(1.15)');
+    return parts.length ? parts.join(' ') : undefined;
+  };
+
+  const resetControls = () => {
+    setBlurLevel(0);
+    setBrightness(100);
+    setContrast(100);
+    setEffect('normal');
+    setFov(fovRange().default_);
+    void fetchNui('updateCameraSession', { effect: 'normal', fov: fovRange().default_, blur: 0, flash: flash(), selfie: selfie(), landscape: landscape() }, true);
+  };
+
+  // Long press shutter to toggle video mode
+  const onShutterDown = () => {
+    longPressTimer = setTimeout(() => {
+      setVideoMode((v) => !v);
+      longPressTimer = null;
+    }, 600);
+  };
+
+  const onShutterUp = () => {
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      longPressTimer = null;
+      // Short press — take photo or toggle recording
+      if (videoMode()) {
+        if (isRecording()) {
+          gameViewRef?.stopRecording();
+          setIsRecording(false);
+        } else if (gameViewRef) {
+          setIsRecording(true);
+          void gameViewRef.startRecording(async (blob, durationMs) => {
+            setIsRecording(false);
+            setBusy(true);
+            try {
+              // Get upload config from server (URL, headers, field name)
+              const uploadCfg = await fetchNui<{
+                url?: string; field?: string; headers?: Record<string, string>;
+                successPath?: string; errorPath?: string;
+              }>('getVideoUploadConfig', {}, { url: '', field: 'file' });
+
+              if (!uploadCfg?.url) {
+                setError(t('camera.error.upload_not_configured', language()));
+                setBusy(false);
+                return;
+              }
+
+              // Upload directly from NUI to the external API
+              const headers = new Headers();
+              if (uploadCfg.headers) {
+                for (const [k, v] of Object.entries(uploadCfg.headers)) headers.append(k, v);
+              }
+              const formData = new FormData();
+              formData.append(uploadCfg.field || 'file', blob, 'video.webm');
+
+              const resp = await fetch(uploadCfg.url, { method: 'POST', headers, body: formData });
+              if (!resp.ok) throw new Error(`Upload failed: ${resp.status}`);
+              const json = await resp.json();
+
+              // Extract URL from response using configured path
+              let videoUrl: string | undefined;
+              if (uploadCfg.successPath) {
+                let obj: unknown = json;
+                for (const key of uploadCfg.successPath.split('.')) {
+                  obj = (obj as Record<string, unknown>)?.[key];
+                }
+                videoUrl = typeof obj === 'string' ? obj : undefined;
+              } else {
+                videoUrl = json?.url || json?.data?.url || json?.link;
+              }
+
+              if (videoUrl) {
+                setLastUrl(videoUrl);
+                await fetchNui('storeMediaUrl', { url: videoUrl, type: 'video' }, { success: false });
+              } else {
+                setError(t('camera.error.record_failed', language()));
+              }
+            } catch {
+              setError(t('camera.error.record_failed', language()));
+            }
+            setBusy(false);
+          });
+        }
+      } else {
+        void takePhoto();
+      }
+    }
+  };
 
   createEffect(() => {
     if (!sessionReady()) return;
@@ -464,14 +609,15 @@ export function CameraApp() {
         class={styles.preview}
         classList={{ [styles.previewLandscapeShell]: landscape() }}
       >
-        <div
+        <canvas
+          ref={canvasRef}
           class={styles.feedLayer}
           classList={{
-            [styles.previewNoir]: effect() === 'noir',
-            [styles.previewVivid]: effect() === 'vivid',
-            [styles.previewWarm]: effect() === 'warm',
             [styles.previewSelfie]: selfie(),
           }}
+          style={renderer() === 'css' ? { filter: cssFilter() } : undefined}
+          width={window.innerWidth}
+          height={window.innerHeight}
         />
 
         {/* Recording indicator */}
@@ -531,10 +677,111 @@ export function CameraApp() {
           <button class={styles.minimalBtn} onClick={() => void cycleZoom()}>
             {currentZoomLabel()}
           </button>
-          <button class={styles.minimalBtn} onClick={cycleEffect}>
-            {EFFECTS.find((item) => item.id === effect())?.label || 'Normal'}
+          <button
+            class={styles.minimalBtn}
+            classList={{ [styles.minimalBtnActive]: controlsOpen() }}
+            onClick={() => setControlsOpen((v) => !v)}
+          >
+            {t('camera.controls', language())}
           </button>
         </div>
+
+        {/* Mode indicator */}
+        <div class={styles.modeIndicator} classList={{ [styles.modeVideo]: videoMode() }}>
+          {videoMode() ? t('camera.video', language()) : t('camera.photo', language())}
+        </div>
+
+        {/* Controls panel */}
+        <Show when={controlsOpen()}>
+          <div class={styles.controlsPanel}>
+            <div class={styles.controlsHeader}>
+              <span class={styles.controlsTitle}>{t('camera.controls', language())}</span>
+              <button class={styles.controlsResetBtn} onClick={resetControls}>
+                {t('camera.reset', language())}
+              </button>
+            </div>
+
+            {/* Filter strip */}
+            <div class={styles.controlsFilterStrip}>
+              {EFFECTS.map((fx) => (
+                <button
+                  class={styles.filterChip}
+                  classList={{ [styles.filterChipActive]: effect() === fx.id }}
+                  onClick={() => setEffect(fx.id)}
+                >
+                  <span class={`${styles.filterChipDot} ${fx.className}`} />
+                  <span class={styles.filterChipLabel}>
+                    {t(`camera.filter.${fx.id}`, language())}
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            {/* FOV slider */}
+            <div class={styles.sliderRow}>
+              <span class={styles.sliderRowLabel}>{t('camera.fov', language())}</span>
+              <input
+                type="range"
+                class={styles.horizontalSlider}
+                min={fovRange().min}
+                max={fovRange().max}
+                step={1}
+                value={fov()}
+                onInput={(e) => {
+                  const val = Number(e.currentTarget.value);
+                  setFov(val);
+                  void fetchNui('updateCameraSession', { effect: effect(), fov: val, blur: blurLevel(), flash: flash(), selfie: selfie(), landscape: landscape() }, true);
+                }}
+              />
+              <span class={styles.sliderRowValue}>{fov()}</span>
+            </div>
+
+            {/* Blur slider */}
+            <div class={styles.sliderRow}>
+              <span class={styles.sliderRowLabel}>{t('camera.blur', language())}</span>
+              <input
+                type="range"
+                class={styles.horizontalSlider}
+                min={0}
+                max={100}
+                step={1}
+                value={blurLevel()}
+                onInput={(e) => setBlurLevel(Number(e.currentTarget.value))}
+              />
+              <span class={styles.sliderRowValue}>{blurLevel()}</span>
+            </div>
+
+            {/* Brightness slider */}
+            <div class={styles.sliderRow}>
+              <span class={styles.sliderRowLabel}>{t('camera.brightness', language())}</span>
+              <input
+                type="range"
+                class={styles.horizontalSlider}
+                min={20}
+                max={200}
+                step={1}
+                value={brightness()}
+                onInput={(e) => setBrightness(Number(e.currentTarget.value))}
+              />
+              <span class={styles.sliderRowValue}>{brightness()}</span>
+            </div>
+
+            {/* Contrast slider */}
+            <div class={styles.sliderRow}>
+              <span class={styles.sliderRowLabel}>{t('camera.contrast', language())}</span>
+              <input
+                type="range"
+                class={styles.horizontalSlider}
+                min={20}
+                max={200}
+                step={1}
+                value={contrast()}
+                onInput={(e) => setContrast(Number(e.currentTarget.value))}
+              />
+              <span class={styles.sliderRowValue}>{contrast()}</span>
+            </div>
+          </div>
+        </Show>
 
         <Show when={target() === 'clips'}>
           <div class={styles.clipsRow}>
@@ -572,10 +819,33 @@ export function CameraApp() {
       <div class={styles.bottomControls}>
         <button
           class={styles.shutterBtn}
-          onClick={() => void takePhoto()}
+          classList={{
+            [styles.shutterVideo]: videoMode() && !isRecording(),
+            [styles.shutterRecording]: isRecording(),
+          }}
+          onPointerDown={onShutterDown}
+          onPointerUp={onShutterUp}
+          onPointerLeave={() => { if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; } }}
           disabled={busy()}
         >
-          <div class={styles.shutterInner} />
+          <div class={styles.shutterInner}>
+            <Show when={videoMode()} fallback={
+              <svg class={styles.shutterIcon} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 15.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4Z" fill="currentColor"/>
+                <path d="M9 2 7.17 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-3.17L15 2H9Zm3 15a5 5 0 1 1 0-10 5 5 0 0 1 0 10Z" fill="currentColor"/>
+              </svg>
+            }>
+              <Show when={!isRecording()} fallback={
+                <svg class={styles.shutterIcon} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/>
+                </svg>
+              }>
+                <svg class={styles.shutterIcon} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M17 10.5V7a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3.5l4 4v-11l-4 4Z" fill="currentColor"/>
+                </svg>
+              </Show>
+            </Show>
+          </div>
         </button>
       </div>
 
