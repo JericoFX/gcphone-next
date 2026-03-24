@@ -266,6 +266,8 @@ export function MessagesApp() {
     if (isReadOnly()) return;
     const number = selectedConversation();
     if (!number) return;
+
+    // audioData is already a URL from the upload provider
     await messagesActions.send({
       phoneNumber: number,
       message: '[Audio]',
@@ -273,6 +275,40 @@ export function MessagesApp() {
       audioData,
       audioDuration: duration,
     });
+  };
+
+  const recordAndSendVoice = async () => {
+    if (isReadOnly()) return;
+    const number = selectedConversation();
+    if (!number) return;
+
+    // Get upload config from server
+    const config = await fetchNui<{ url?: string; field?: string; headers?: Record<string, string> }>(
+      'getAudioUploadConfig', {}, { url: '', field: 'file' }
+    );
+
+    const { startAudioRecording, uploadAudioBlob } = await import('../../../utils/audioRecorder');
+
+    await startAudioRecording(
+      async (recording) => {
+        let audioUrl: string | null = null;
+
+        if (config?.url) {
+          audioUrl = await uploadAudioBlob(recording.blob, {
+            url: config.url,
+            field: config.field || 'file',
+            headers: config.headers,
+          });
+        }
+
+        if (audioUrl) {
+          await sendVoiceMessage(audioUrl, Math.ceil(recording.durationMs / 1000));
+        }
+      },
+      (error) => {
+        console.warn('[Messages] Voice recording error:', error);
+      },
+    );
   };
 
   const handleReply = (messageId: number) => {
@@ -373,6 +409,7 @@ export function MessagesApp() {
           onInput={setMessageInput}
           onSend={sendMessage}
           onSendVoice={sendVoiceMessage}
+          onRecordVoice={recordAndSendVoice}
           onReply={handleReply}
           replyTo={replyTo}
           onCancelReply={() => setReplyTo(null)}
@@ -517,11 +554,19 @@ function AudioPlayerBubble(props: { audioData: string; duration?: number }) {
 
   const play = () => {
     if (!audioRef) {
-      const blob = new Blob(
-        [Uint8Array.from(atob(props.audioData), c => c.charCodeAt(0))],
-        { type: 'audio/webm' }
-      );
-      audioRef = new Audio(URL.createObjectURL(blob));
+      // Support both URL (new) and base64 (legacy) formats
+      const isUrl = props.audioData.startsWith('http://') || props.audioData.startsWith('https://');
+      let src: string;
+      if (isUrl) {
+        src = props.audioData;
+      } else {
+        const blob = new Blob(
+          [Uint8Array.from(atob(props.audioData), c => c.charCodeAt(0))],
+          { type: 'audio/webm' }
+        );
+        src = URL.createObjectURL(blob);
+      }
+      audioRef = new Audio(src);
       audioRef.addEventListener('timeupdate', () => {
         if (audioRef && audioRef.duration > 0) setProgress(audioRef.currentTime / audioRef.duration);
       });
@@ -556,6 +601,7 @@ function ConversationView(props: {
   onInput: (value: string) => void;
   onSend: () => void;
   onSendVoice: (audioData: string, duration: number) => void;
+  onRecordVoice: () => void;
   onReply: (messageId: number) => void;
   replyTo: () => { id: number; snippet: string; sender: string } | null;
   onCancelReply: () => void;
@@ -579,6 +625,7 @@ function ConversationView(props: {
   readOnlyOwnerName?: string;
   myNumber?: string;
 }) {
+  const router = useRouter();
   const language = () => getStoredLanguage();
   let messagesEnd: HTMLDivElement | undefined;
   const [showAttachSheet, setShowAttachSheet] = createSignal(false);
@@ -771,7 +818,28 @@ function ConversationView(props: {
             onInput={(e) => props.onInput(e.currentTarget.value)}
             onKeyPress={(e) => e.key === 'Enter' && props.onSend()}
           />
-          <button class={styles.sendBtn} onClick={props.onSend}>
+          <button
+            class={styles.sendBtn}
+            onPointerDown={() => {
+              (window as any).__gcMsgSendTimer = setTimeout(() => {
+                (window as any).__gcMsgSendTimer = null;
+                props.onRecordVoice();
+              }, 500);
+            }}
+            onPointerUp={() => {
+              if ((window as any).__gcMsgSendTimer) {
+                clearTimeout((window as any).__gcMsgSendTimer);
+                (window as any).__gcMsgSendTimer = null;
+                props.onSend();
+              }
+            }}
+            onPointerLeave={() => {
+              if ((window as any).__gcMsgSendTimer) {
+                clearTimeout((window as any).__gcMsgSendTimer);
+                (window as any).__gcMsgSendTimer = null;
+              }
+            }}
+          >
             ➤
           </button>
         </div>
@@ -785,6 +853,7 @@ function ConversationView(props: {
           { label: t('messages.attach_gallery', language()), tone: 'primary', onClick: props.onAttachGallery },
           { label: t('messages.attach_camera', language()), onClick: props.onAttachCamera },
           { label: t('messages.attach_url', language()), onClick: props.onAttachUrl },
+          { label: t('messages.voice_note', language()), onClick: () => { setShowAttachSheet(false); props.onRecordVoice(); } },
           { label: t('maps.share_location', language()), onClick: props.onSendLocation },
           { label: 'Enviar pago', onClick: props.onSendPayment },
           { label: t('messages.remove_attachment', language()), tone: 'danger', onClick: props.onClearAttachment },

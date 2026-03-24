@@ -1971,6 +1971,7 @@ export async function handleBrowserNui<T = unknown>(eventName: string, data?: un
       id: nextPhotoId++,
       url,
       type: url.includes('.mp4') || url.includes('.webm') || url.includes('.mov') ? 'video' : 'image',
+      album_id: 0,
       created_at: nowIso(),
     };
     state.gallery.unshift(row);
@@ -1982,6 +1983,7 @@ export async function handleBrowserNui<T = unknown>(eventName: string, data?: un
       id: nextPhotoId++,
       url: `./img/background/back00${Math.floor(Math.random() * 3) + 1}.jpg`,
       type: 'image' as const,
+      album_id: 0,
       created_at: nowIso(),
     };
     state.gallery.unshift(photo);
@@ -1993,6 +1995,7 @@ export async function handleBrowserNui<T = unknown>(eventName: string, data?: un
       id: nextPhotoId++,
       url: 'https://samplelib.com/lib/preview/mp4/sample-5s.mp4',
       type: 'video' as const,
+      album_id: 0,
       created_at: nowIso(),
     };
     state.gallery.unshift(clip);

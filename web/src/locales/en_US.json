@@ -570,6 +570,7 @@
     "messages.attach_gallery": "Photo from gallery",
     "messages.attach_camera": "Take photo with camera",
     "messages.attach_url": "Paste media URL",
+    "messages.voice_note": "Voice note",
     "messages.remove_attachment": "Remove attachment",
     "messages.action_title": "Message",
     "messages.save_to_notes": "Save to Notes",

@@ -597,16 +597,18 @@ export function WaveChatApp() {
       return;
     }
 
-    const uploadConfig = await fetchNui<UploadConfig>('getUploadConfig', {}, { uploadUrl: '', uploadField: 'files[]' });
-    if (!uploadConfig?.uploadUrl) {
-      uiAlert('Configura Config.Gallery.UploadUrl para enviar audios');
+    const uploadConfig = await fetchNui<{ url?: string; field?: string; headers?: Record<string, string> }>(
+      'getAudioUploadConfig', {}, { url: '', field: 'file' }
+    );
+    if (!uploadConfig?.url) {
+      uiAlert('Configura el provider de storage (set gcphone_provider / set gcphone_provider_token en server.cfg)');
       return;
     }
 
     try {
       mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const chunks: BlobPart[] = [];
-      mediaRecorder = new MediaRecorder(mediaStream);
+      mediaRecorder = new MediaRecorder(mediaStream, { mimeType: 'audio/webm;codecs=opus' });
       mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) chunks.push(event.data);
       };
@@ -614,21 +616,25 @@ export function WaveChatApp() {
       mediaRecorder.onstop = async () => {
         setUploadingVoice(true);
         try {
-          const blob = new Blob(chunks, { type: mediaRecorder?.mimeType || 'audio/webm' });
+          const blob = new Blob(chunks, { type: 'audio/webm' });
+          const headers = new Headers();
+          if (uploadConfig.headers) {
+            for (const [k, v] of Object.entries(uploadConfig.headers)) headers.append(k, v);
+          }
           const formData = new FormData();
-          formData.append(uploadConfig.uploadField || 'files[]', blob, 'voice-note.webm');
+          formData.append(uploadConfig.field || 'file', blob, 'voice-note.webm');
 
-          const response = await fetch(uploadConfig.uploadUrl, { method: 'POST', body: formData });
+          const response = await fetch(uploadConfig.url, { method: 'POST', headers, body: formData });
           if (!response.ok) throw new Error('upload_failed');
-          const payload = (await response.json()) as { url?: string; files?: Array<{ url?: string }> };
-          const uploadedUrl = sanitizeMediaUrl(payload?.files?.[0]?.url || payload?.url);
-          if (uploadedUrl && resolveMediaType(uploadedUrl) === 'audio') {
+          const payload = await response.json();
+          const uploadedUrl = sanitizeMediaUrl(payload?.data?.url || payload?.url || payload?.link);
+          if (uploadedUrl) {
             setAttachmentUrl(uploadedUrl);
           } else {
-             uiAlert('Respuesta de upload invalida para audio');
+            uiAlert('Respuesta de upload invalida para audio');
           }
         } catch (_err) {
-           uiAlert('No se pudo subir la nota de voz');
+          uiAlert('No se pudo subir la nota de voz');
         } finally {
           setUploadingVoice(false);
           cleanupRecorder();
@@ -926,7 +932,29 @@ export function WaveChatApp() {
                       sendWaveTyping(String(selectedGroupId()!), next.trim().length > 0);
                     }
                   }} placeholder="Mensaje al grupo" />
-                  <button class={styles.sendBtn} onClick={() => void sendGroupMessage()}>➤</button>
+                  <button
+                    class={styles.sendBtn}
+                    classList={{ [styles.sendBtnRecording]: isRecordingVoice() }}
+                    onPointerDown={() => {
+                      (window as any).__gcGrpSendTimer = setTimeout(() => {
+                        (window as any).__gcGrpSendTimer = null;
+                        if (isRecordingVoice()) { stopVoiceRecording(); } else { void startVoiceRecording(); }
+                      }, 500);
+                    }}
+                    onPointerUp={() => {
+                      if ((window as any).__gcGrpSendTimer) {
+                        clearTimeout((window as any).__gcGrpSendTimer);
+                        (window as any).__gcGrpSendTimer = null;
+                        void sendGroupMessage();
+                      }
+                    }}
+                    onPointerLeave={() => {
+                      if ((window as any).__gcGrpSendTimer) {
+                        clearTimeout((window as any).__gcGrpSendTimer);
+                        (window as any).__gcGrpSendTimer = null;
+                      }
+                    }}
+                  >{isRecordingVoice() ? `⏹ ${recordingSeconds()}s` : '➤'}</button>
                 </div>
               </div>
             </Show>
@@ -1184,8 +1212,34 @@ function ConversationView(props: {
           onInput={(e) => props.onInput(e.currentTarget.value)}
           onKeyPress={(e) => e.key === 'Enter' && props.onSend()}
         />
-        <button class={styles.sendBtn} onClick={props.onSend}>
-          ➤
+        <button
+          class={styles.sendBtn}
+          classList={{ [styles.sendBtnRecording]: props.isRecordingVoice }}
+          onPointerDown={() => {
+            (window as any).__gcSendTimer = setTimeout(() => {
+              (window as any).__gcSendTimer = null;
+              if (props.isRecordingVoice) {
+                props.onStopVoiceRecording();
+              } else {
+                props.onStartVoiceRecording();
+              }
+            }, 500);
+          }}
+          onPointerUp={() => {
+            if ((window as any).__gcSendTimer) {
+              clearTimeout((window as any).__gcSendTimer);
+              (window as any).__gcSendTimer = null;
+              props.onSend();
+            }
+          }}
+          onPointerLeave={() => {
+            if ((window as any).__gcSendTimer) {
+              clearTimeout((window as any).__gcSendTimer);
+              (window as any).__gcSendTimer = null;
+            }
+          }}
+        >
+          {props.isRecordingVoice ? `⏹ ${props.recordingSeconds}s` : '➤'}
         </button>
       </div>
 
