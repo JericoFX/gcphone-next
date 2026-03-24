@@ -71,7 +71,6 @@ local function CleanupExpiredRequests()
     end
 end
 
--- Verified: CommunityOX ox_lib Timer/Shared exposes lib.timer(time, onEnd, async) with restart()
 CleanupTimer = lib.timer(CLEANUP_INTERVAL_MS, function()
     CleanupExpiredRequests()
     CleanupTimer:restart()
@@ -155,7 +154,6 @@ lib.callback.register('gcphone:livekit:getToken', function(source, data)
                 return { success = false, error = 'NOT_LIVE_PARTICIPANT' }
             end
 
-            -- Verified: only stream owner can publish in snap live room
             grants.canPublish = isOwner
         end
     end

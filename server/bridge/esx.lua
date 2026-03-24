@@ -26,7 +26,6 @@ local function ensureESXPhoneColumn()
 end
 
 CreateThread(function()
-    -- Verified: CommunityOX ox_lib WaitFor/Shared repeats the callback until it returns non-nil
     lib.waitFor(function()
         if GetResourceState('es_extended') == 'started' then
             return true

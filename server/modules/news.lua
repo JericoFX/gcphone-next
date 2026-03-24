@@ -35,7 +35,6 @@ local function IsPublishJobAllowed(source)
         return false
     end
 
-    -- Verified: CommunityOX ox_lib Table/Shared exposes lib.table.contains(tbl, value)
     return lib.table.contains(lib.array.map(rules, function(allowed)
         return tostring(allowed):lower()
     end), jobName)
@@ -641,7 +640,6 @@ end)
 CreateThread(function()
     MySQL.update.await('DELETE FROM phone_news WHERE is_live = 1')
 
-    -- Verified: CommunityOX ox_lib Cron/Server exposes lib.cron.new(expression, job, options)
     lib.cron.new('* * * * *', function()
         for articleId, liveData in pairs(ActiveLiveNews) do
             local currentTime = os.time()

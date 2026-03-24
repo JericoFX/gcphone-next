@@ -205,7 +205,6 @@ lib.callback.register('gcphone:dropPhone', function(source)
     return PerformPhoneDrop(source)
 end)
 
--- Verified: ox_inventory docs — swapItems hook with itemFilter and toType == 'drop'
 if Config.Phone.RequireItem and GetResourceState('ox_inventory') == 'started' then
     exports.ox_inventory:registerHook('swapItems', function(payload)
         if payload.toType ~= 'drop' then return true end

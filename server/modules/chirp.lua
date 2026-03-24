@@ -190,7 +190,6 @@ local function IsPublishJobAllowed(source)
         return false
     end
 
-    -- Verified: CommunityOX ox_lib Table/Shared exposes lib.table.contains(tbl, value)
     return lib.table.contains(lib.array.map(rules, function(allowed)
         return tostring(allowed):lower()
     end), jobName)

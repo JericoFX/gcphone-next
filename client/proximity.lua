@@ -17,7 +17,6 @@ local function GetNearbyPlayers(maxDistance)
     local coords = GetEntityCoords(ped)
     local nearbyPlayers = {}
 
-    -- Verified: Context7 /communityox/ox_lib exposes lib.getNearbyPlayers(coords, radius, includePlayer) returning id/ped/coords entries.
     local players = lib.getNearbyPlayers(coords, maxDistance, false)
     for i = 1, #players do
         local player = players[i]

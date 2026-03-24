@@ -357,7 +357,6 @@ local function UpdateActiveMusicPositions()
 end
 
 local function ScheduleMusicPositionUpdate()
-    -- Verified: CommunityOX ox_lib Timer/Shared exposes lib.timer(time, onEnd, async)
     MusicPositionTimer = lib.timer(GetPositionUpdateIntervalMs(), function()
         UpdateActiveMusicPositions()
         ScheduleMusicPositionUpdate()

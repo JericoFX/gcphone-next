@@ -2,7 +2,6 @@ local Core = nil
 local Framework = nil
 
 CreateThread(function()
-    -- Verified: CommunityOX ox_lib WaitFor/Shared supports indefinite waits with timeout = false
     local framework = lib.waitFor(function()
         if GetResourceState('qb-core') == 'started' then
             return 'qbcore'

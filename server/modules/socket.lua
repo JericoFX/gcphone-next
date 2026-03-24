@@ -41,7 +41,6 @@ local function CleanupExpiredRequests()
     end
 end
 
--- Verified: CommunityOX ox_lib Timer/Shared exposes lib.timer(time, onEnd, async) with restart()
 CleanupTimer = lib.timer(CLEANUP_INTERVAL_MS, function()
     CleanupExpiredRequests()
     CleanupTimer:restart()
@@ -55,7 +54,6 @@ local function GetUserGroupIds(identifier)
     )
     if not rows then return {} end
 
-    -- Verified: CommunityOX ox_lib Array/Shared exposes lib.array.map(arr, fn)
     return lib.array.map(rows, function(row)
         return tostring(row.group_id)
     end)

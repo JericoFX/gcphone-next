@@ -486,7 +486,6 @@ lib.callback.register('gcphone:wallet:getPendingRequests', function(source)
         { identifier }
     ) or {}
 
-    -- Verified: CommunityOX ox_lib Array/Shared exposes lib.array.map(arr, fn)
     local incomingPayload = lib.array.map(incoming, function(row)
         return BuildWalletRequestPayload(row)
     end)

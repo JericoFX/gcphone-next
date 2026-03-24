@@ -1,5 +1,4 @@
 -- txAdmin restart notifications → push to phone NUI
--- Verified: txAdmin fires these events on scheduled restarts
 
 AddEventHandler('txAdmin:events:scheduledRestart', function(data)
     if type(data) ~= 'table' then return end
