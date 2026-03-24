@@ -177,7 +177,7 @@ Config.NativeAudio = {
 Config.Phone = {
     KeyOpen = 288,
     KeyTakeCall = 38,
-    PropModel = 'prop_npc_phone_02',
+    PropModel = 'prop_npc_phone_02', -- Phone prop model. Common options: 'prop_npc_phone', 'prop_npc_phone_02', 'prop_amb_phone', or any custom prop
 
     RequireItem = false,
     ItemName = 'phone',
@@ -288,6 +288,7 @@ Config.Camera = {
         Enabled = true,
         MaxDistance = 8.0,
     },
+    Renderer = 'webgl', -- 'webgl' = GPU shaders (blur, color grading) | 'css' = CSS filters (lighter, more compatible)
 }
 
 Config.PhoneVisual = {
@@ -398,51 +399,36 @@ Config.Documents = {
     AllowCustomTitle = true,
 }
 
+-- ============================================================
+-- STORAGE / MEDIA UPLOAD
+-- ============================================================
+-- Configure via server.cfg convars (tokens NEVER go in shared config):
+--
+--   set gcphone_provider "fivemanage"
+--   set gcphone_provider_token "YOUR_FIVEMANAGE_API_TOKEN"
+--
+-- Supported providers:
+--   "fivemanage"    — https://fivemanage.com  (images, videos, audio)
+--   "discord"       — Discord webhook URL as token
+--   "custom"        — Custom HTTP endpoint
+--   "server_folder" — Local screenshot-basic (images only)
+--
+-- For custom provider, set the upload URL as the token:
+--   set gcphone_provider "custom"
+--   set gcphone_provider_token "https://your-api.com/upload"
+--
+-- See docs for full setup guide.
+-- ============================================================
+
 Config.Storage = {
-    Provider = 'fivemanage',
-    FiveManage = {
-        Endpoint = 'https://api.fivemanage.com/api/image',
-        ApiKey = '',
-        UploadField = 'files[]',
-    },
-    KnownProviders = {
-        {
-            id = 'fivemanage',
-            label = 'FiveManage',
-            uploadUrl = 'https://api.fivemanage.com/api/image',
-            uploadField = 'files[]',
-        },
-        {
-            id = 'server_folder',
-            label = 'Server folder',
-            uploadUrl = '',
-            uploadField = '',
-        },
-        {
-            id = 'local',
-            label = 'Local uploader',
-            uploadUrl = 'http://127.0.0.1:3012/upload',
-            uploadField = 'files[]',
-        },
-        {
-            id = 'direct',
-            label = 'Direct custom URL',
-            uploadUrl = '',
-            uploadField = 'files[]',
-        },
-    },
-    Custom = {
-        UploadUrl = '',
-        UploadField = 'files[]',
-    },
+    MaxVideoSizeMB = 50,
+    MaxVideoDurationSeconds = 30,
     ServerFolder = {
         Path = 'cache/gcphone',
         PublicBaseUrl = '',
         Encoding = 'jpg',
         Quality = 0.92,
     },
-    MaxVideoSizeMB = 50,
-    MaxVideoDurationSeconds = 30,
 }
 
 Config.Gallery = {

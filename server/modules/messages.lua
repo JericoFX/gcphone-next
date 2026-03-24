@@ -276,7 +276,8 @@ lib.callback.register('gcphone:sendMessage', function(source, data)
 
     -- Voice message validation
     if messageType == 'audio' then
-        if type(data.audioData) ~= 'string' or #data.audioData < 100 or #data.audioData > 153600 then
+        -- audio_data is the URL from the upload provider (fivemanage, etc.)
+        if type(data.audioData) ~= 'string' or data.audioData == '' then
             return false, 'INVALID_AUDIO'
         end
         audioData = data.audioData
@@ -618,16 +619,32 @@ lib.callback.register('gcphone:wavechatSendGroupMessage', function(source, data)
 
     local message = SanitizeText(data.message, 800)
     local mediaUrl = SanitizeMediaUrl(data.mediaUrl)
-    if message == '' and not mediaUrl then return false, 'Empty message' end
+    local messageType = (data.messageType == 'audio') and 'audio' or 'text'
+    local audioData = nil
+    local audioDuration = nil
+
+    if messageType == 'audio' then
+        -- Voice message: audio_data is the URL from the upload provider (fivemanage, etc.)
+        local waveRateMs = (Config.Security and Config.Security.RateLimits and Config.Security.RateLimits.wavechatVoice) or 3000
+        if Utils.HitRateLimit(source, 'wavechat_voice', waveRateMs, 1) then return false, 'RATE_LIMITED' end
+
+        audioData = type(data.audioData) == 'string' and data.audioData or nil
+        if not audioData or audioData == '' then
+            return false, 'INVALID_AUDIO'
+        end
+        audioDuration = math.min(math.max(math.floor(tonumber(data.audioDuration) or 0), 1), 30)
+    end
+
+    if message == '' and not mediaUrl and not audioData then return false, 'Empty message' end
 
     local senderNumber = Bridge.GetPhoneNumber(identifier)
     local messageId = MySQL.insert.await(
-        'INSERT INTO phone_chat_group_messages (group_id, sender_identifier, sender_number, message, media_url) VALUES (?, ?, ?, ?, ?)',
-        { groupId, identifier, senderNumber, message, mediaUrl }
+        'INSERT INTO phone_chat_group_messages (group_id, sender_identifier, sender_number, message, media_url, message_type, audio_data, audio_duration) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        { groupId, identifier, senderNumber, message, mediaUrl, messageType, audioData, audioDuration }
     )
 
     local payload = MySQL.single.await(
-        'SELECT id, group_id, sender_identifier, sender_number, message, media_url, created_at FROM phone_chat_group_messages WHERE id = ?',
+        'SELECT id, group_id, sender_identifier, sender_number, message, media_url, message_type, audio_data, audio_duration, created_at FROM phone_chat_group_messages WHERE id = ?',
         { messageId }
     )
 

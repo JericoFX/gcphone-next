@@ -66,55 +66,48 @@ local function GetServerFolderConfig()
     }
 end
 
-local function BuildKnownProviders()
-    local configured = type(Config.Storage and Config.Storage.KnownProviders) == 'table' and Config.Storage.KnownProviders or {}
-    local providers = {}
+-- ── Provider resolution (2 convars only) ──
 
-    for _, entry in ipairs(configured) do
-        if type(entry) == 'table' then
-            local id = NormalizeProvider(entry.id)
-            local label = Utils.SafeText(entry.label, 48) or id
-            local uploadUrl = IsHttpUrl(entry.uploadUrl or '') or ''
-            local uploadField = Utils.SafeText(entry.uploadField or 'files[]', 32) or 'files[]'
+local FIVEMANAGE_ENDPOINT = 'https://api.fivemanage.com/api/v3/file'
 
-            if id and id ~= '' then
-                providers[#providers + 1] = {
-                    id = id,
-                    label = label,
-                    uploadUrl = uploadUrl,
-                    uploadField = uploadField,
-                }
-            end
-        end
-    end
-
-    return providers
+local function GetProvider()
+    return NormalizeProvider(GetConvar('gcphone_provider', 'fivemanage'))
 end
 
+local function GetProviderToken()
+    local token = GetConvar('gcphone_provider_token', '')
+    return token ~= '' and token or nil
+end
+
+--- Build the upload config for a given media type.
+--- Returns: provider, url, field, headers, successPath
+local function ResolveUploadConfig(mediaType)
+    local provider = GetProvider()
+    local token = GetProviderToken()
+
+    if provider == 'server_folder' then
+        return provider, '', '', {}, nil
+    end
+
+    if provider == 'fivemanage' then
+        return provider, FIVEMANAGE_ENDPOINT, 'file', {
+            ['Authorization'] = token or '',
+        }, 'data.url'
+    end
+
+    if provider == 'discord' then
+        -- token is the webhook URL
+        return provider, token or '', 'file', {}, nil
+    end
+
+    -- custom: token is the upload URL
+    return provider, token or '', 'file', {}, nil
+end
+
+--- Legacy compat wrapper
 local function ResolveUploadTarget(provider)
-    local selected = NormalizeProvider(provider or ((Config.Storage and Config.Storage.Provider) or 'custom'))
-
-    if selected == 'server_folder' then
-        return selected, '', ''
-    end
-
-    if selected == 'fivemanage' then
-        local cfg = Config.Storage and Config.Storage.FiveManage or {}
-        local endpoint = IsHttpUrl(GetConvar('gcphone_storage_fivemanage_url', tostring(cfg.Endpoint or '')))
-        local field = Utils.SafeText(GetConvar('gcphone_storage_fivemanage_field', tostring(cfg.UploadField or 'files[]')), 32) or 'files[]'
-        return selected, endpoint or '', field
-    end
-
-    if selected == 'local' then
-        local known = IsHttpUrl(GetConvar('gcphone_storage_local_url', ''))
-        local field = Utils.SafeText(GetConvar('gcphone_storage_local_field', 'files[]'), 32) or 'files[]'
-        return selected, known or '', field
-    end
-
-    local customCfg = Config.Storage and Config.Storage.Custom or {}
-    local customUrl = IsHttpUrl(GetConvar('gcphone_storage_custom_url', tostring(customCfg.UploadUrl or '')))
-    local customField = Utils.SafeText(GetConvar('gcphone_storage_custom_field', tostring(customCfg.UploadField or 'files[]')), 32) or 'files[]'
-    return 'custom', customUrl or '', customField
+    local p, url, field = ResolveUploadConfig()
+    return p, url, field
 end
 
 local function CaptureScreenshotToServerFolder(source)
@@ -158,36 +151,21 @@ end
 
 lib.callback.register('gcphone:getStorageConfig', function(source)
     local identifier = Bridge.GetIdentifier(source)
-    local selectedProvider, uploadUrl, uploadField = ResolveUploadTarget()
-    local knownProviders = BuildKnownProviders()
+    if not identifier then return {} end
+
+    local provider, uploadUrl, uploadField = ResolveUploadTarget()
     local serverFolder = GetServerFolderConfig()
 
-    if not identifier then
-        return {
-            provider = selectedProvider,
-            uploadUrl = uploadUrl,
-            uploadField = uploadField,
-            customUploadUrl = uploadUrl,
-            customUploadField = uploadField,
-            serverFolderPath = serverFolder.path,
-            serverFolderPublicUrl = serverFolder.publicBaseUrl,
-            knownProviders = knownProviders,
-            maxVideoSizeMB = 50,
-            maxVideoDurationSeconds = 60,
-        }
-    end
-
     return {
-        provider = selectedProvider,
+        provider = provider,
         uploadUrl = uploadUrl,
         uploadField = uploadField,
         customUploadUrl = uploadUrl,
         customUploadField = uploadField,
         serverFolderPath = serverFolder.path,
         serverFolderPublicUrl = serverFolder.publicBaseUrl,
-        knownProviders = knownProviders,
         maxVideoSizeMB = tonumber((Config.Storage and Config.Storage.MaxVideoSizeMB) or 50) or 50,
-        maxVideoDurationSeconds = tonumber((Config.Storage and Config.Storage.MaxVideoDurationSeconds) or 60) or 60,
+        maxVideoDurationSeconds = tonumber((Config.Storage and Config.Storage.MaxVideoDurationSeconds) or 30) or 30,
     }
 end)
 
@@ -232,6 +210,26 @@ lib.callback.register('gcphone:storeMediaUrl', function(source, data)
     )
 
     return true, { id = id, url = url, type = mediaType }
+end)
+
+lib.callback.register('gcphone:storage:getUploadConfig', function(source, data)
+    local identifier = Bridge.GetIdentifier(source)
+    if not identifier then return nil end
+
+    local mediaType = type(data) == 'table' and data.mediaType or 'image'
+    local provider, url, field, headers, successPath = ResolveUploadConfig(mediaType)
+
+    if provider == 'server_folder' and mediaType ~= 'image' then
+        return { url = '', field = '', error = 'server_folder only supports images' }
+    end
+
+    return {
+        provider = provider,
+        url = url,
+        field = field,
+        headers = headers,
+        successPath = successPath,
+    }
 end)
 
 lib.callback.register('gcphone:storage:capturePhoto', function(source)

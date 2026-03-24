@@ -126,6 +126,17 @@ setr gcphone_socket_jwt_secret "YOUR_JWT_SECRET"
 - The JWT secret must match the one configured on your Socket.IO server.
 - See the [Socket.IO Setup Guide](/guides/socket-setup) for details.
 
+### Media Upload (required for photos/videos/audio)
+
+Configure your upload provider. See the [Storage Setup Guide](/guides/storage-setup) for all options.
+
+```cfg
+set gcphone_provider "fivemanage"
+set gcphone_provider_token "YOUR_FIVEMANAGE_API_TOKEN"
+```
+
+Supported providers: `fivemanage`, `discord`, `custom`, `server_folder`.
+
 ## Config.lua Overview
 
 The main configuration file is `shared/config.lua`. Key sections:
@@ -142,7 +153,7 @@ The main configuration file is `shared/config.lua`. Key sections:
 | `Config.Camera` | Camera sensitivity, FOV, offsets, freeze settings |
 | `Config.Flashlight` | Flashlight distance, intensity, kelvin/lumens range |
 | `Config.Music` | Music player volume, distance, max results |
-| `Config.Storage` | Upload provider (FiveManage, server folder, local, custom URL) |
+| `Config.Storage` | Upload settings (see [Storage Setup Guide](/guides/storage-setup)) — provider configured via `server.cfg` convars |
 | `Config.Gallery` | Max photos, allowed formats, size limits |
 | `Config.Bank` | Transfer fee, max transfer amount |
 | `Config.Wallet` | Initial balance, max transfer, proximity distance |
