@@ -700,7 +700,7 @@ lib.callback.register('gcphone:chirp:follow', function(source, data)
         return { following = false, requested = false }
     end
 
-    if tonumber(targetAccount.is_private) == 1 then
+    if Utils.isTruthy(targetAccount.is_private) then
         local pendingRequest = MySQL.scalar.await([[
             SELECT 1
             FROM phone_friend_requests

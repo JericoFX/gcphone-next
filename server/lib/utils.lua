@@ -1,6 +1,13 @@
 local M = {}
 local RESOURCE_NAME = GetCurrentResourceName()
 
+--- oxmysql may return TINYINT(1) as boolean instead of number.
+---@param val any
+---@return boolean
+function M.isTruthy(val)
+    return val == true or tonumber(val) == 1
+end
+
 ---Trim control chars and whitespace, return nil if empty.
 ---@param value any
 ---@param maxLen? number

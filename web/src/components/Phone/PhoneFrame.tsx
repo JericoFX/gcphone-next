@@ -317,8 +317,9 @@ export const PhoneFrame: ParentComponent & { Router: () => JSX.Element } = (
     >
       <div
         class={styles.phoneScreen}
+        classList={{ [styles.cameraActive]: currentRoute() === 'camera' }}
         style={{
-          'background-image': `url(${phoneState.settings.wallpaper})`,
+          'background-image': currentRoute() === 'camera' ? 'none' : `url(${phoneState.settings.wallpaper})`,
           filter: `brightness(${notifications.brightness})`,
         }}
       >
@@ -514,6 +515,7 @@ function Router() {
                 currentRoute() === route && direction() === 'forward',
               [styles.routeBack]:
                 currentRoute() === route && direction() === 'back',
+              [styles.routeTransparent]: route === 'camera',
             }}
           >
             {renderRoute(route)}

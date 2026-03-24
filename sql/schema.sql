@@ -98,7 +98,7 @@ CREATE TABLE IF NOT EXISTS `phone_messages` (
     `time` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     `reply_to_id` INT DEFAULT NULL,
     `message_type` VARCHAR(10) NOT NULL DEFAULT 'text',
-    `audio_data` MEDIUMTEXT DEFAULT NULL,
+    `audio_data` VARCHAR(500) DEFAULT NULL,
     `audio_duration` SMALLINT DEFAULT NULL,
     `status` VARCHAR(10) NOT NULL DEFAULT 'sent',
     `delivered_at` TIMESTAMP NULL DEFAULT NULL,
@@ -158,7 +158,7 @@ CREATE TABLE IF NOT EXISTS `phone_chat_group_messages` (
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     `reply_to_id` INT DEFAULT NULL,
     `message_type` VARCHAR(10) NOT NULL DEFAULT 'text',
-    `audio_data` MEDIUMTEXT DEFAULT NULL,
+    `audio_data` VARCHAR(500) DEFAULT NULL,
     `audio_duration` SMALLINT DEFAULT NULL,
     FOREIGN KEY (`group_id`) REFERENCES `phone_chat_groups`(`id`) ON DELETE CASCADE,
     KEY `idx_group_created` (`group_id`, `created_at`),
@@ -398,6 +398,27 @@ CREATE TABLE IF NOT EXISTS `phone_snap_stories` (
     KEY `idx_account` (`account_id`),
     KEY `idx_expires` (`expires_at`),
     KEY `idx_snap_stories_expires` (`expires_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Snap following relationships (V21)
+CREATE TABLE IF NOT EXISTS `phone_snap_following` (
+    `follower_id` INT NOT NULL,
+    `following_id` INT NOT NULL,
+    PRIMARY KEY (`follower_id`, `following_id`),
+    FOREIGN KEY (`follower_id`) REFERENCES `phone_snap_accounts`(`id`) ON DELETE CASCADE,
+    FOREIGN KEY (`following_id`) REFERENCES `phone_snap_accounts`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Snap likes (V21)
+CREATE TABLE IF NOT EXISTS `phone_snap_likes` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `post_id` INT NOT NULL,
+    `account_id` INT NOT NULL,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (`post_id`) REFERENCES `phone_snap_posts`(`id`) ON DELETE CASCADE,
+    FOREIGN KEY (`account_id`) REFERENCES `phone_snap_accounts`(`id`) ON DELETE CASCADE,
+    UNIQUE KEY `idx_snap_post_account` (`post_id`, `account_id`),
+    KEY `idx_snap_likes_account` (`account_id`, `created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================
@@ -1105,10 +1126,11 @@ CREATE TABLE IF NOT EXISTS `phone_cleanup_rules` (
 -- STORED PROCEDURES (V4)
 -- ============================================================
 
-DELIMITER $$
+DELIMITER //
 
 -- Add or update a cleanup rule
-CREATE PROCEDURE IF NOT EXISTS `sp_gcphone_cleanup_add_rule`(
+DROP PROCEDURE IF EXISTS `sp_gcphone_cleanup_add_rule`//
+CREATE PROCEDURE `sp_gcphone_cleanup_add_rule`(
     IN p_rule_key VARCHAR(64),
     IN p_action VARCHAR(10),
     IN p_table_name VARCHAR(64),
@@ -1153,10 +1175,11 @@ BEGIN
         `where_clause` = VALUES(`where_clause`),
         `run_every_minutes` = VALUES(`run_every_minutes`),
         `enabled` = 1;
-END$$
+END//
 
 -- Seed all default cleanup rules (V4 + V10 + V12 + V15 + V20)
-CREATE PROCEDURE IF NOT EXISTS `sp_gcphone_cleanup_seed_defaults`()
+DROP PROCEDURE IF EXISTS `sp_gcphone_cleanup_seed_defaults`//
+CREATE PROCEDURE `sp_gcphone_cleanup_seed_defaults`()
 BEGIN
     -- Expiry-based cleanup
     CALL sp_gcphone_cleanup_add_rule('live_locations_expired', 'delete', 'phone_live_locations', NULL, 'expires_at < NOW()', 1);
@@ -1192,10 +1215,11 @@ BEGIN
     -- Voice audio_data cleanup (3 days) — null the blob, keep the message row
     CALL sp_gcphone_cleanup_add_rule('retention_audio_messages', 'update', 'phone_messages', 'audio_data = NULL', 'message_type = ''audio'' AND audio_data IS NOT NULL AND `time` < (NOW() - INTERVAL 3 DAY)', 30);
     CALL sp_gcphone_cleanup_add_rule('retention_audio_group_messages', 'update', 'phone_chat_group_messages', 'audio_data = NULL', 'message_type = ''audio'' AND audio_data IS NOT NULL AND created_at < (NOW() - INTERVAL 3 DAY)', 30);
-END$$
+END//
 
 -- Cleanup runner — iterates due rules, builds and executes SQL (V4)
-CREATE PROCEDURE IF NOT EXISTS `sp_gcphone_run_cleanup`()
+DROP PROCEDURE IF EXISTS `sp_gcphone_run_cleanup`//
+CREATE PROCEDURE `sp_gcphone_run_cleanup`()
 BEGIN
     DECLARE v_done INT DEFAULT 0;
     DECLARE v_id INT;
@@ -1249,7 +1273,7 @@ BEGIN
     END LOOP;
 
     CLOSE cleanup_cursor;
-END$$
+END//
 
 DELIMITER ;
 
@@ -1271,13 +1295,13 @@ CREATE EVENT `ev_gcphone_cleanup_runner`
 -- TRIGGERS
 -- ============================================================
 
-DELIMITER $$
+DELIMITER //
 
 -- -----------------------------------------------------------
 -- IMEI auto-generation (V18)
 -- -----------------------------------------------------------
 
-DROP TRIGGER IF EXISTS `trg_phone_numbers_before_insert_imei`$$
+DROP TRIGGER IF EXISTS `trg_phone_numbers_before_insert_imei`//
 CREATE TRIGGER `trg_phone_numbers_before_insert_imei`
     BEFORE INSERT ON `phone_numbers`
     FOR EACH ROW
@@ -1286,9 +1310,9 @@ CREATE TRIGGER `trg_phone_numbers_before_insert_imei`
             INSERT INTO `phone_imei_sequence` VALUES (NULL);
             SET NEW.`imei` = LPAD(LAST_INSERT_ID(), 15, '0');
         END IF;
-    END$$
+    END//
 
-DROP TRIGGER IF EXISTS `trg_phone_numbers_before_update_imei`$$
+DROP TRIGGER IF EXISTS `trg_phone_numbers_before_update_imei`//
 CREATE TRIGGER `trg_phone_numbers_before_update_imei`
     BEFORE UPDATE ON `phone_numbers`
     FOR EACH ROW
@@ -1297,33 +1321,37 @@ CREATE TRIGGER `trg_phone_numbers_before_update_imei`
             INSERT INTO `phone_imei_sequence` VALUES (NULL);
             SET NEW.`imei` = LPAD(LAST_INSERT_ID(), 15, '0');
         END IF;
-    END$$
+    END//
 
 -- -----------------------------------------------------------
 -- Chirp: likes counter (V5)
 -- -----------------------------------------------------------
 
-DROP TRIGGER IF EXISTS `trg_phone_chirp_likes_after_insert`$$
+DROP TRIGGER IF EXISTS `trg_phone_chirp_likes_after_insert`//
 CREATE TRIGGER `trg_phone_chirp_likes_after_insert`
     AFTER INSERT ON `phone_chirp_likes`
     FOR EACH ROW
-    UPDATE `phone_chirp_tweets`
-    SET `likes` = (SELECT COUNT(*) FROM `phone_chirp_likes` WHERE `tweet_id` = NEW.`tweet_id`)
-    WHERE `id` = NEW.`tweet_id`$$
+    BEGIN
+        UPDATE `phone_chirp_tweets`
+        SET `likes` = (SELECT COUNT(*) FROM `phone_chirp_likes` WHERE `tweet_id` = NEW.`tweet_id`)
+        WHERE `id` = NEW.`tweet_id`;
+    END//
 
-DROP TRIGGER IF EXISTS `trg_phone_chirp_likes_after_delete`$$
+DROP TRIGGER IF EXISTS `trg_phone_chirp_likes_after_delete`//
 CREATE TRIGGER `trg_phone_chirp_likes_after_delete`
     AFTER DELETE ON `phone_chirp_likes`
     FOR EACH ROW
-    UPDATE `phone_chirp_tweets`
-    SET `likes` = (SELECT COUNT(*) FROM `phone_chirp_likes` WHERE `tweet_id` = OLD.`tweet_id`)
-    WHERE `id` = OLD.`tweet_id`$$
+    BEGIN
+        UPDATE `phone_chirp_tweets`
+        SET `likes` = (SELECT COUNT(*) FROM `phone_chirp_likes` WHERE `tweet_id` = OLD.`tweet_id`)
+        WHERE `id` = OLD.`tweet_id`;
+    END//
 
 -- -----------------------------------------------------------
 -- Chirp: following counter (V5)
 -- -----------------------------------------------------------
 
-DROP TRIGGER IF EXISTS `trg_phone_chirp_following_after_insert`$$
+DROP TRIGGER IF EXISTS `trg_phone_chirp_following_after_insert`//
 CREATE TRIGGER `trg_phone_chirp_following_after_insert`
     AFTER INSERT ON `phone_chirp_following`
     FOR EACH ROW
@@ -1335,9 +1363,9 @@ CREATE TRIGGER `trg_phone_chirp_following_after_insert`
         UPDATE `phone_chirp_accounts`
         SET `followers` = (SELECT COUNT(*) FROM `phone_chirp_following` WHERE `following_id` = NEW.`following_id`)
         WHERE `id` = NEW.`following_id`;
-    END$$
+    END//
 
-DROP TRIGGER IF EXISTS `trg_phone_chirp_following_after_delete`$$
+DROP TRIGGER IF EXISTS `trg_phone_chirp_following_after_delete`//
 CREATE TRIGGER `trg_phone_chirp_following_after_delete`
     AFTER DELETE ON `phone_chirp_following`
     FOR EACH ROW
@@ -1349,53 +1377,61 @@ CREATE TRIGGER `trg_phone_chirp_following_after_delete`
         UPDATE `phone_chirp_accounts`
         SET `followers` = (SELECT COUNT(*) FROM `phone_chirp_following` WHERE `following_id` = OLD.`following_id`)
         WHERE `id` = OLD.`following_id`;
-    END$$
+    END//
 
 -- -----------------------------------------------------------
 -- Chirp: replies counter (V6)
 -- -----------------------------------------------------------
 
-DROP TRIGGER IF EXISTS `trg_phone_chirp_comments_after_insert`$$
+DROP TRIGGER IF EXISTS `trg_phone_chirp_comments_after_insert`//
 CREATE TRIGGER `trg_phone_chirp_comments_after_insert`
     AFTER INSERT ON `phone_chirp_comments`
     FOR EACH ROW
-    UPDATE `phone_chirp_tweets`
-    SET `replies` = (SELECT COUNT(*) FROM `phone_chirp_comments` WHERE `tweet_id` = NEW.`tweet_id`)
-    WHERE `id` = NEW.`tweet_id`$$
+    BEGIN
+        UPDATE `phone_chirp_tweets`
+        SET `replies` = (SELECT COUNT(*) FROM `phone_chirp_comments` WHERE `tweet_id` = NEW.`tweet_id`)
+        WHERE `id` = NEW.`tweet_id`;
+    END//
 
-DROP TRIGGER IF EXISTS `trg_phone_chirp_comments_after_delete`$$
+DROP TRIGGER IF EXISTS `trg_phone_chirp_comments_after_delete`//
 CREATE TRIGGER `trg_phone_chirp_comments_after_delete`
     AFTER DELETE ON `phone_chirp_comments`
     FOR EACH ROW
-    UPDATE `phone_chirp_tweets`
-    SET `replies` = (SELECT COUNT(*) FROM `phone_chirp_comments` WHERE `tweet_id` = OLD.`tweet_id`)
-    WHERE `id` = OLD.`tweet_id`$$
+    BEGIN
+        UPDATE `phone_chirp_tweets`
+        SET `replies` = (SELECT COUNT(*) FROM `phone_chirp_comments` WHERE `tweet_id` = OLD.`tweet_id`)
+        WHERE `id` = OLD.`tweet_id`;
+    END//
 
 -- -----------------------------------------------------------
 -- Chirp: rechirps counter (V6)
 -- -----------------------------------------------------------
 
-DROP TRIGGER IF EXISTS `trg_phone_chirp_rechirps_after_insert`$$
+DROP TRIGGER IF EXISTS `trg_phone_chirp_rechirps_after_insert`//
 CREATE TRIGGER `trg_phone_chirp_rechirps_after_insert`
     AFTER INSERT ON `phone_chirp_rechirps`
     FOR EACH ROW
-    UPDATE `phone_chirp_tweets`
-    SET `rechirps` = (SELECT COUNT(*) FROM `phone_chirp_rechirps` WHERE `original_tweet_id` = NEW.`original_tweet_id`)
-    WHERE `id` = NEW.`original_tweet_id`$$
+    BEGIN
+        UPDATE `phone_chirp_tweets`
+        SET `rechirps` = (SELECT COUNT(*) FROM `phone_chirp_rechirps` WHERE `original_tweet_id` = NEW.`original_tweet_id`)
+        WHERE `id` = NEW.`original_tweet_id`;
+    END//
 
-DROP TRIGGER IF EXISTS `trg_phone_chirp_rechirps_after_delete`$$
+DROP TRIGGER IF EXISTS `trg_phone_chirp_rechirps_after_delete`//
 CREATE TRIGGER `trg_phone_chirp_rechirps_after_delete`
     AFTER DELETE ON `phone_chirp_rechirps`
     FOR EACH ROW
-    UPDATE `phone_chirp_tweets`
-    SET `rechirps` = (SELECT COUNT(*) FROM `phone_chirp_rechirps` WHERE `original_tweet_id` = OLD.`original_tweet_id`)
-    WHERE `id` = OLD.`original_tweet_id`$$
+    BEGIN
+        UPDATE `phone_chirp_tweets`
+        SET `rechirps` = (SELECT COUNT(*) FROM `phone_chirp_rechirps` WHERE `original_tweet_id` = OLD.`original_tweet_id`)
+        WHERE `id` = OLD.`original_tweet_id`;
+    END//
 
 -- -----------------------------------------------------------
 -- Snap: posts counter (V5)
 -- -----------------------------------------------------------
 
-DROP TRIGGER IF EXISTS `trg_phone_snap_posts_after_insert`$$
+DROP TRIGGER IF EXISTS `trg_phone_snap_posts_after_insert`//
 CREATE TRIGGER `trg_phone_snap_posts_after_insert`
     AFTER INSERT ON `phone_snap_posts`
     FOR EACH ROW
@@ -1405,9 +1441,9 @@ CREATE TRIGGER `trg_phone_snap_posts_after_insert`
             SET `posts` = (SELECT COUNT(*) FROM `phone_snap_posts` WHERE `account_id` = NEW.`account_id` AND `is_live` = 0)
             WHERE `id` = NEW.`account_id`;
         END IF;
-    END$$
+    END//
 
-DROP TRIGGER IF EXISTS `trg_phone_snap_posts_after_delete`$$
+DROP TRIGGER IF EXISTS `trg_phone_snap_posts_after_delete`//
 CREATE TRIGGER `trg_phone_snap_posts_after_delete`
     AFTER DELETE ON `phone_snap_posts`
     FOR EACH ROW
@@ -1417,187 +1453,223 @@ CREATE TRIGGER `trg_phone_snap_posts_after_delete`
             SET `posts` = (SELECT COUNT(*) FROM `phone_snap_posts` WHERE `account_id` = OLD.`account_id` AND `is_live` = 0)
             WHERE `id` = OLD.`account_id`;
         END IF;
-    END$$
+    END//
 
 -- -----------------------------------------------------------
 -- Clips: likes counter (V7)
 -- -----------------------------------------------------------
 
-DROP TRIGGER IF EXISTS `trg_phone_clips_likes_after_insert`$$
+DROP TRIGGER IF EXISTS `trg_phone_clips_likes_after_insert`//
 CREATE TRIGGER `trg_phone_clips_likes_after_insert`
     AFTER INSERT ON `phone_clips_likes`
     FOR EACH ROW
-    UPDATE `phone_clips_posts`
-    SET `likes` = (SELECT COUNT(*) FROM `phone_clips_likes` WHERE `clip_id` = NEW.`clip_id`)
-    WHERE `id` = NEW.`clip_id`$$
+    BEGIN
+        UPDATE `phone_clips_posts`
+        SET `likes` = (SELECT COUNT(*) FROM `phone_clips_likes` WHERE `clip_id` = NEW.`clip_id`)
+        WHERE `id` = NEW.`clip_id`;
+    END//
 
-DROP TRIGGER IF EXISTS `trg_phone_clips_likes_after_delete`$$
+DROP TRIGGER IF EXISTS `trg_phone_clips_likes_after_delete`//
 CREATE TRIGGER `trg_phone_clips_likes_after_delete`
     AFTER DELETE ON `phone_clips_likes`
     FOR EACH ROW
-    UPDATE `phone_clips_posts`
-    SET `likes` = (SELECT COUNT(*) FROM `phone_clips_likes` WHERE `clip_id` = OLD.`clip_id`)
-    WHERE `id` = OLD.`clip_id`$$
+    BEGIN
+        UPDATE `phone_clips_posts`
+        SET `likes` = (SELECT COUNT(*) FROM `phone_clips_likes` WHERE `clip_id` = OLD.`clip_id`)
+        WHERE `id` = OLD.`clip_id`;
+    END//
 
 -- -----------------------------------------------------------
 -- Clips: comments_count counter (V20)
 -- -----------------------------------------------------------
 
-DROP TRIGGER IF EXISTS `trg_clips_comments_ai`$$
+DROP TRIGGER IF EXISTS `trg_clips_comments_ai`//
 CREATE TRIGGER `trg_clips_comments_ai`
     AFTER INSERT ON `phone_clips_comments`
     FOR EACH ROW
-    UPDATE `phone_clips_posts`
-    SET `comments_count` = `comments_count` + 1
-    WHERE `id` = NEW.`clip_id`$$
+    BEGIN
+        UPDATE `phone_clips_posts`
+        SET `comments_count` = `comments_count` + 1
+        WHERE `id` = NEW.`clip_id`;
+    END//
 
-DROP TRIGGER IF EXISTS `trg_clips_comments_ad`$$
+DROP TRIGGER IF EXISTS `trg_clips_comments_ad`//
 CREATE TRIGGER `trg_clips_comments_ad`
     AFTER DELETE ON `phone_clips_comments`
     FOR EACH ROW
-    UPDATE `phone_clips_posts`
-    SET `comments_count` = GREATEST(`comments_count` - 1, 0)
-    WHERE `id` = OLD.`clip_id`$$
+    BEGIN
+        UPDATE `phone_clips_posts`
+        SET `comments_count` = GREATEST(`comments_count` - 1, 0)
+        WHERE `id` = OLD.`clip_id`;
+    END//
 
 -- -----------------------------------------------------------
 -- Mail: account auto-mailbox, recipient normalization,
 --       unread/total counters (V10)
 -- -----------------------------------------------------------
 
-DROP TRIGGER IF EXISTS `tr_mail_accounts_after_insert`$$
+DROP TRIGGER IF EXISTS `tr_mail_accounts_after_insert`//
 CREATE TRIGGER `tr_mail_accounts_after_insert`
     AFTER INSERT ON `phone_mail_accounts`
     FOR EACH ROW
-    INSERT IGNORE INTO `phone_mail_boxes` (`account_id`, `unread_count`, `total_count`)
-    VALUES (NEW.`id`, 0, 0)$$
+    BEGIN
+        INSERT IGNORE INTO `phone_mail_boxes` (`account_id`, `unread_count`, `total_count`)
+        VALUES (NEW.`id`, 0, 0);
+    END//
 
-DROP TRIGGER IF EXISTS `tr_mail_messages_before_insert`$$
+DROP TRIGGER IF EXISTS `tr_mail_messages_before_insert`//
 CREATE TRIGGER `tr_mail_messages_before_insert`
     BEFORE INSERT ON `phone_mail_messages`
     FOR EACH ROW
-    SET NEW.`recipient_email` = LOWER(TRIM(NEW.`recipient_email`))$$
+    BEGIN
+        SET NEW.`recipient_email` = LOWER(TRIM(NEW.`recipient_email`));
+    END//
 
-DROP TRIGGER IF EXISTS `tr_mail_messages_after_insert`$$
+DROP TRIGGER IF EXISTS `tr_mail_messages_after_insert`//
 CREATE TRIGGER `tr_mail_messages_after_insert`
     AFTER INSERT ON `phone_mail_messages`
     FOR EACH ROW
-    UPDATE `phone_mail_boxes`
-    SET `total_count` = `total_count` + 1,
-        `unread_count` = `unread_count` + IF(NEW.`is_read` = 1, 0, 1),
-        `updated_at` = CURRENT_TIMESTAMP
-    WHERE `account_id` = NEW.`recipient_account_id`$$
+    BEGIN
+        UPDATE `phone_mail_boxes`
+        SET `total_count` = `total_count` + 1,
+            `unread_count` = `unread_count` + IF(NEW.`is_read` = 1, 0, 1),
+            `updated_at` = CURRENT_TIMESTAMP
+        WHERE `account_id` = NEW.`recipient_account_id`;
+    END//
 
-DROP TRIGGER IF EXISTS `tr_mail_messages_after_update`$$
+DROP TRIGGER IF EXISTS `tr_mail_messages_after_update`//
 CREATE TRIGGER `tr_mail_messages_after_update`
     AFTER UPDATE ON `phone_mail_messages`
     FOR EACH ROW
-    UPDATE `phone_mail_boxes`
-    SET `unread_count` = GREATEST(`unread_count` - 1, 0),
-        `updated_at` = CURRENT_TIMESTAMP
-    WHERE `account_id` = NEW.`recipient_account_id`
-      AND OLD.`is_read` = 0
-      AND NEW.`is_read` = 1$$
+    BEGIN
+        UPDATE `phone_mail_boxes`
+        SET `unread_count` = GREATEST(`unread_count` - 1, 0),
+            `updated_at` = CURRENT_TIMESTAMP
+        WHERE `account_id` = NEW.`recipient_account_id`
+          AND OLD.`is_read` = 0
+          AND NEW.`is_read` = 1;
+    END//
 
-DROP TRIGGER IF EXISTS `tr_mail_messages_after_delete`$$
+DROP TRIGGER IF EXISTS `tr_mail_messages_after_delete`//
 CREATE TRIGGER `tr_mail_messages_after_delete`
     AFTER DELETE ON `phone_mail_messages`
     FOR EACH ROW
-    UPDATE `phone_mail_boxes`
-    SET `total_count` = GREATEST(`total_count` - 1, 0),
-        `unread_count` = GREATEST(`unread_count` - IF(OLD.`is_read` = 0, 1, 0), 0),
-        `updated_at` = CURRENT_TIMESTAMP
-    WHERE `account_id` = OLD.`recipient_account_id`$$
+    BEGIN
+        UPDATE `phone_mail_boxes`
+        SET `total_count` = GREATEST(`total_count` - 1, 0),
+            `unread_count` = GREATEST(`unread_count` - IF(OLD.`is_read` = 0, 1, 0), 0),
+            `updated_at` = CURRENT_TIMESTAMP
+        WHERE `account_id` = OLD.`recipient_account_id`;
+    END//
 
 -- -----------------------------------------------------------
 -- DarkRooms: comments_count counter (V20)
 -- -----------------------------------------------------------
 
-DROP TRIGGER IF EXISTS `trg_darkrooms_comments_ai`$$
+DROP TRIGGER IF EXISTS `trg_darkrooms_comments_ai`//
 CREATE TRIGGER `trg_darkrooms_comments_ai`
     AFTER INSERT ON `phone_darkrooms_comments`
     FOR EACH ROW
-    UPDATE `phone_darkrooms_posts`
-    SET `comments_count` = `comments_count` + 1
-    WHERE `id` = NEW.`post_id`$$
+    BEGIN
+        UPDATE `phone_darkrooms_posts`
+        SET `comments_count` = `comments_count` + 1
+        WHERE `id` = NEW.`post_id`;
+    END//
 
-DROP TRIGGER IF EXISTS `trg_darkrooms_comments_ad`$$
+DROP TRIGGER IF EXISTS `trg_darkrooms_comments_ad`//
 CREATE TRIGGER `trg_darkrooms_comments_ad`
     AFTER DELETE ON `phone_darkrooms_comments`
     FOR EACH ROW
-    UPDATE `phone_darkrooms_posts`
-    SET `comments_count` = GREATEST(`comments_count` - 1, 0)
-    WHERE `id` = OLD.`post_id`$$
+    BEGIN
+        UPDATE `phone_darkrooms_posts`
+        SET `comments_count` = GREATEST(`comments_count` - 1, 0)
+        WHERE `id` = OLD.`post_id`;
+    END//
 
 -- -----------------------------------------------------------
 -- DarkRooms: vote score counters (V20)
 -- -----------------------------------------------------------
 
-DROP TRIGGER IF EXISTS `trg_darkrooms_votes_ai`$$
+DROP TRIGGER IF EXISTS `trg_darkrooms_votes_ai`//
 CREATE TRIGGER `trg_darkrooms_votes_ai`
     AFTER INSERT ON `phone_darkrooms_votes`
     FOR EACH ROW
-    UPDATE `phone_darkrooms_posts`
-    SET `score` = `score` + NEW.`value`
-    WHERE `id` = NEW.`post_id`$$
+    BEGIN
+        UPDATE `phone_darkrooms_posts`
+        SET `score` = `score` + NEW.`value`
+        WHERE `id` = NEW.`post_id`;
+    END//
 
-DROP TRIGGER IF EXISTS `trg_darkrooms_votes_au`$$
+DROP TRIGGER IF EXISTS `trg_darkrooms_votes_au`//
 CREATE TRIGGER `trg_darkrooms_votes_au`
     AFTER UPDATE ON `phone_darkrooms_votes`
     FOR EACH ROW
-    UPDATE `phone_darkrooms_posts`
-    SET `score` = `score` + (NEW.`value` - OLD.`value`)
-    WHERE `id` = NEW.`post_id`$$
+    BEGIN
+        UPDATE `phone_darkrooms_posts`
+        SET `score` = `score` + (NEW.`value` - OLD.`value`)
+        WHERE `id` = NEW.`post_id`;
+    END//
 
-DROP TRIGGER IF EXISTS `trg_darkrooms_votes_ad`$$
+DROP TRIGGER IF EXISTS `trg_darkrooms_votes_ad`//
 CREATE TRIGGER `trg_darkrooms_votes_ad`
     AFTER DELETE ON `phone_darkrooms_votes`
     FOR EACH ROW
-    UPDATE `phone_darkrooms_posts`
-    SET `score` = `score` - OLD.`value`
-    WHERE `id` = OLD.`post_id`$$
+    BEGIN
+        UPDATE `phone_darkrooms_posts`
+        SET `score` = `score` - OLD.`value`
+        WHERE `id` = OLD.`post_id`;
+    END//
 
 -- -----------------------------------------------------------
 -- CityRide: rating counter (V20)
 -- -----------------------------------------------------------
 
-DROP TRIGGER IF EXISTS `trg_cityride_ratings_ai`$$
+DROP TRIGGER IF EXISTS `trg_cityride_ratings_ai`//
 CREATE TRIGGER `trg_cityride_ratings_ai`
     AFTER INSERT ON `phone_cityride_ratings`
     FOR EACH ROW
-    UPDATE `phone_cityride_drivers`
-    SET `rating_sum` = `rating_sum` + NEW.`score`,
-        `rating_count` = `rating_count` + 1
-    WHERE `identifier` = NEW.`driver_identifier`$$
+    BEGIN
+        UPDATE `phone_cityride_drivers`
+        SET `rating_sum` = `rating_sum` + NEW.`score`,
+            `rating_count` = `rating_count` + 1
+        WHERE `identifier` = NEW.`driver_identifier`;
+    END//
 
 -- -----------------------------------------------------------
 -- Services: rating counters (V20)
 -- -----------------------------------------------------------
 
-DROP TRIGGER IF EXISTS `trg_services_ratings_ai`$$
+DROP TRIGGER IF EXISTS `trg_services_ratings_ai`//
 CREATE TRIGGER `trg_services_ratings_ai`
     AFTER INSERT ON `phone_services_ratings`
     FOR EACH ROW
-    UPDATE `phone_services`
-    SET `rating_sum` = `rating_sum` + NEW.`score`,
-        `rating_count` = `rating_count` + 1
-    WHERE `id` = NEW.`service_id`$$
+    BEGIN
+        UPDATE `phone_services`
+        SET `rating_sum` = `rating_sum` + NEW.`score`,
+            `rating_count` = `rating_count` + 1
+        WHERE `id` = NEW.`service_id`;
+    END//
 
-DROP TRIGGER IF EXISTS `trg_services_ratings_au`$$
+DROP TRIGGER IF EXISTS `trg_services_ratings_au`//
 CREATE TRIGGER `trg_services_ratings_au`
     AFTER UPDATE ON `phone_services_ratings`
     FOR EACH ROW
-    UPDATE `phone_services`
-    SET `rating_sum` = `rating_sum` + (NEW.`score` - OLD.`score`)
-    WHERE `id` = NEW.`service_id`$$
+    BEGIN
+        UPDATE `phone_services`
+        SET `rating_sum` = `rating_sum` + (NEW.`score` - OLD.`score`)
+        WHERE `id` = NEW.`service_id`;
+    END//
 
-DROP TRIGGER IF EXISTS `trg_services_ratings_ad`$$
+DROP TRIGGER IF EXISTS `trg_services_ratings_ad`//
 CREATE TRIGGER `trg_services_ratings_ad`
     AFTER DELETE ON `phone_services_ratings`
     FOR EACH ROW
-    UPDATE `phone_services`
-    SET `rating_sum` = `rating_sum` - OLD.`score`,
-        `rating_count` = GREATEST(`rating_count` - 1, 0)
-    WHERE `id` = OLD.`service_id`$$
+    BEGIN
+        UPDATE `phone_services`
+        SET `rating_sum` = `rating_sum` - OLD.`score`,
+            `rating_count` = GREATEST(`rating_count` - 1, 0)
+        WHERE `id` = OLD.`service_id`;
+    END//
 
 DELIMITER ;
 
@@ -1608,7 +1680,7 @@ DELIMITER ;
 -- Helper: adds a column only if it doesn't already exist.
 DROP PROCEDURE IF EXISTS `sp_gcphone_add_column`;
 
-DELIMITER $$
+DELIMITER //
 CREATE PROCEDURE `sp_gcphone_add_column`(
     IN p_table VARCHAR(64),
     IN p_column VARCHAR(64),
@@ -1627,7 +1699,7 @@ BEGIN
         EXECUTE stmt;
         DEALLOCATE PREPARE stmt;
     END IF;
-END$$
+END//
 DELIMITER ;
 
 -- phone_numbers
@@ -1643,13 +1715,14 @@ CALL sp_gcphone_add_column('phone_numbers', 'stolen_at',         "TIMESTAMP NULL
 CALL sp_gcphone_add_column('phone_numbers', 'stolen_reason',     "VARCHAR(255) DEFAULT NULL AFTER `stolen_at`");
 CALL sp_gcphone_add_column('phone_numbers', 'stolen_reporter',   "VARCHAR(80) DEFAULT NULL AFTER `stolen_reason`");
 CALL sp_gcphone_add_column('phone_numbers', 'clips_username',    "VARCHAR(32) NULL");
+CALL sp_gcphone_add_column('phone_numbers', 'is_setup',          "TINYINT(1) NOT NULL DEFAULT 1");
 
 -- phone_messages
 CALL sp_gcphone_add_column('phone_messages', 'time',             "TIMESTAMP DEFAULT CURRENT_TIMESTAMP");
 CALL sp_gcphone_add_column('phone_messages', 'media_url',        "VARCHAR(500) DEFAULT NULL");
 CALL sp_gcphone_add_column('phone_messages', 'reply_to_id',      "INT DEFAULT NULL");
 CALL sp_gcphone_add_column('phone_messages', 'message_type',     "VARCHAR(10) NOT NULL DEFAULT 'text'");
-CALL sp_gcphone_add_column('phone_messages', 'audio_data',       "MEDIUMTEXT DEFAULT NULL");
+CALL sp_gcphone_add_column('phone_messages', 'audio_data',       "VARCHAR(500) DEFAULT NULL");
 CALL sp_gcphone_add_column('phone_messages', 'audio_duration',   "SMALLINT DEFAULT NULL");
 CALL sp_gcphone_add_column('phone_messages', 'status',           "VARCHAR(10) NOT NULL DEFAULT 'sent'");
 CALL sp_gcphone_add_column('phone_messages', 'delivered_at',     "TIMESTAMP NULL DEFAULT NULL");

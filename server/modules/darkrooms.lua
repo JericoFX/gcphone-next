@@ -1,6 +1,7 @@
 -- Creado/Modificado por JericoFX
 
 local Bridge = require 'server.bridge'
+local Utils = require 'server.lib.utils'
 
 local LastRoomActionBySource = {}
 
@@ -193,7 +194,7 @@ lib.callback.register('gcphone:darkrooms:joinRoom', function(source, data)
         return { success = false, error = 'ROOM_NOT_FOUND' }
     end
 
-    local hasPassword = tonumber(room.has_password) == 1
+    local hasPassword = Utils.isTruthy(room.has_password)
     if hasPassword then
         local password = SanitizeText(type(data) == 'table' and data.password or '', 64)
         if password == '' then
@@ -228,7 +229,7 @@ lib.callback.register('gcphone:darkrooms:getPosts', function(source, data)
     local room = MySQL.single.await('SELECT id, password_hash IS NOT NULL AS has_password FROM phone_darkrooms_rooms WHERE id = ? LIMIT 1', { roomId })
     if not room then return {} end
 
-    if tonumber(room.has_password) == 1 and not IsRoomMember(roomId, identifier) then
+    if Utils.isTruthy(room.has_password) and not IsRoomMember(roomId, identifier) then
         return {}
     end
 
@@ -268,7 +269,7 @@ lib.callback.register('gcphone:darkrooms:createPost', function(source, data)
     local room = MySQL.single.await('SELECT id, password_hash IS NOT NULL AS has_password FROM phone_darkrooms_rooms WHERE id = ? LIMIT 1', { roomId })
     if not room then return { success = false, error = 'ROOM_NOT_FOUND' } end
 
-    if tonumber(room.has_password) == 1 and not IsRoomMember(roomId, identifier) then
+    if Utils.isTruthy(room.has_password) and not IsRoomMember(roomId, identifier) then
         return { success = false, error = 'ROOM_JOIN_REQUIRED' }
     end
 

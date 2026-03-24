@@ -1,5 +1,13 @@
 <svg width="350" height="766" viewBox="0 0 350 766" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <!-- Outer bezel -->
+  <defs>
+    <mask id="screen-hole">
+      <rect width="350" height="766" fill="white"/>
+      <rect x="7" y="7" width="336" height="752" rx="34" fill="black"/>
+    </mask>
+  </defs>
+  <!-- Bezel body with screen hole cut out -->
+  <rect width="350" height="766" rx="39" fill="#1C1C1E" mask="url(#screen-hole)"/>
+  <!-- Outer bezel border -->
   <rect x="1" y="1" width="348" height="764" rx="38" stroke="#0E1420" stroke-width="2"/>
   <!-- Inner edge (screen border) -->
   <rect x="7" y="7" width="336" height="752" rx="34" stroke="#3A465A" stroke-width="1.5"/>

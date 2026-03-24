@@ -83,7 +83,8 @@ const TIME_LABELS: Record<string, { ago: string; now: string; units: Array<[stri
 export const timeAgo = (date: Date | string, language?: string | null): string => {
   const lang = normalizeAppLanguage(language);
   const labels = TIME_LABELS[lang] || TIME_LABELS.es;
-  const d = typeof date === 'string' ? new Date(date) : date;
+  const d = date instanceof Date ? date : new Date(date as string);
+  if (isNaN(d.getTime())) return labels.now;
   const seconds = Math.floor((Date.now() - d.getTime()) / 1000);
 
   for (const [singular, secondsInUnit, plural] of labels.units) {

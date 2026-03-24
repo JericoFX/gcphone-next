@@ -3,15 +3,11 @@ local Main = require 'client.main'
 local Anim = require 'client.phone_animation'
 
 local menuIsOpen = false
+local walkMode = false -- true = keepInput (walk around), false = full NUI focus (cursor)
 local phoneProp = nil
 local PHONE_PROP_MODEL = GetHashKey(Config.Phone.PropModel or 'prop_npc_phone_02')
 local phoneVisualMode = 'text'
 local phoneVisualOptions = {}
-local nuiInputState = {
-    focus = false,
-    cursor = false,
-    keepInput = false,
-}
 
 local function ResolvePhoneOpenKey()
     local key = Config.Phone and Config.Phone.KeyOpen
@@ -33,27 +29,18 @@ end
 
 ---@alias GCPhoneVisualMode 'text'|'call'|'camera'|'live'
 
-local function UpdateNuiInputState(force)
-    local desiredFocus = menuIsOpen
-    local desiredCursor = menuIsOpen
-    local desiredKeepInput = menuIsOpen
-
-    if not force
-        and nuiInputState.focus == desiredFocus
-        and nuiInputState.cursor == desiredCursor
-        and nuiInputState.keepInput == desiredKeepInput then
-        return
+local function ApplyNuiFocus()
+    if menuIsOpen then
+        SetNuiFocus(true, true)
+        SetNuiFocusKeepInput(walkMode)
+        PhoneState.hasFocus = true
+        PhoneState.useMouse = true
+    else
+        SetNuiFocus(false, false)
+        SetNuiFocusKeepInput(false)
+        PhoneState.hasFocus = false
+        PhoneState.useMouse = false
     end
-
-    nuiInputState.focus = desiredFocus
-    nuiInputState.cursor = desiredCursor
-    nuiInputState.keepInput = desiredKeepInput
-
-    SetNuiFocus(desiredFocus, desiredCursor)
-    SetNuiFocusKeepInput(desiredKeepInput)
-
-    PhoneState.hasFocus = desiredFocus
-    PhoneState.useMouse = desiredCursor
 end
 
 local function GetVisualPreset()
@@ -137,7 +124,7 @@ local function ShowPhonePayload(data)
     PhoneState.isOpen = true
     TriggerServerEvent('gcphone:stateChanged', true)
     EnsurePhoneProp()
-    UpdateNuiInputState(true)
+    ApplyNuiFocus()
 
     data.nuiAuthToken = Main.RotateNuiAuthToken()
     SendNUIMessage({
@@ -174,15 +161,16 @@ TogglePhone = function()
         OpenPhoneUsingServerData()
     else
         PhoneState.isOpen = false
+        walkMode = false
         TriggerServerEvent('gcphone:stateChanged', false)
         TriggerServerEvent('gcphone:clearPhoneAccessContext')
         RemovePhoneProp()
         phoneVisualMode = 'text'
         phoneVisualOptions = {}
-        
+
         SendNUIMessage({ action = 'hidePhone' })
-        UpdateNuiInputState(true)
-        
+        ApplyNuiFocus()
+
         Anim.PlayPhoneAnimation('out')
     end
 end
@@ -223,6 +211,41 @@ local phoneKeybind = lib.addKeybind({
     end,
 })
 
+-- Toggle walk mode: Alt key switches between cursor mode and walk mode
+lib.addKeybind({
+    name = 'gcphone_walk_toggle',
+    description = 'Telefono: alternar cursor/caminar',
+    defaultMapper = 'keyboard',
+    defaultKey = 'LMENU',
+    onPressed = function()
+        if not menuIsOpen then return end
+        walkMode = not walkMode
+        ApplyNuiFocus()
+    end,
+})
+
+-- Disable attack/melee controls while in walk mode
+CreateThread(function()
+    while true do
+        if menuIsOpen and walkMode then
+            DisableControlAction(0, 24, true)  -- INPUT_ATTACK
+            DisableControlAction(0, 25, true)  -- INPUT_AIM
+            DisableControlAction(0, 47, true)  -- INPUT_DETONATE
+            DisableControlAction(0, 58, true)  -- INPUT_THROW_GRENADE
+            DisableControlAction(0, 140, true) -- INPUT_MELEE_ATTACK_LIGHT
+            DisableControlAction(0, 141, true) -- INPUT_MELEE_ATTACK_HEAVY
+            DisableControlAction(0, 142, true) -- INPUT_MELEE_ATTACK_ALTERNATE
+            DisableControlAction(0, 143, true) -- INPUT_MELEE_BLOCK
+            DisableControlAction(0, 257, true) -- INPUT_ATTACK2
+            DisableControlAction(0, 263, true) -- INPUT_MELEE_ATTACK1
+            DisableControlAction(0, 264, true) -- INPUT_MELEE_ATTACK2
+            Wait(0)
+        else
+            Wait(500)
+        end
+    end
+end)
+
 AddEventHandler('onResourceStop', function(resourceName)
     if resourceName ~= GetCurrentResourceName() then return end
     phoneKeybind:disable(true)
@@ -237,12 +260,12 @@ RegisterNUICallback('closePhone', function(_, cb)
 end)
 
 RegisterNUICallback('useMouse', function(state, cb)
-    UpdateNuiInputState(true)
+    ApplyNuiFocus()
     cb(true)
 end)
 
 RegisterNUICallback('setIgnoreFocus', function(data, cb)
-    UpdateNuiInputState(true)
+    ApplyNuiFocus()
     cb(true)
 end)
 

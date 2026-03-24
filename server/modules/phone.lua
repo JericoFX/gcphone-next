@@ -7,6 +7,8 @@ local Utils = require 'server.lib.utils'
 local PhoneExists
 local RESOURCE_NAME = GetCurrentResourceName()
 
+local isTruthy = Utils.isTruthy
+
 local StreamerModePlayers = {}
 
 ---@class GCPhoneLookupOwner
@@ -369,8 +371,23 @@ local function ResolveSetupState(identifier)
     local hasClips = phone and type(phone.clips_username) == 'string' and phone.clips_username ~= ''
     local hasMail = not featureFlags.mail or (type(mail) == 'string' and mail ~= '')
 
-    local explicitlySetup = phone and tonumber(phone.is_setup) == 1
+    local explicitlySetup = phone and isTruthy(phone.is_setup)
     local complete = explicitlySetup and hasSnap and hasChirp and hasClips and hasMail
+
+    print(('[gcphone:debug] ResolveSetupState id=%s is_setup=%s clips_username=%s snap=%s chirp=%s mail=%s | explicitlySetup=%s hasSnap=%s hasChirp=%s hasClips=%s hasMail=%s complete=%s'):format(
+        tostring(identifier),
+        tostring(phone and phone.is_setup),
+        tostring(phone and phone.clips_username),
+        tostring(snap),
+        tostring(chirp),
+        tostring(mail),
+        tostring(explicitlySetup),
+        tostring(hasSnap),
+        tostring(hasChirp),
+        tostring(hasClips),
+        tostring(hasMail),
+        tostring(complete)
+    ))
 
     return {
         requiresSetup = not complete,
@@ -678,7 +695,7 @@ local function BuildPhonePayload(phone, source)
     local setup = ResolveSetupState(phone.identifier)
     local ownerName = isForeignReadOnly and context.ownerName or ResolvePhoneOwnerName(source, phone.identifier)
 
-    local isStreamer = tonumber(phone.streamer_mode) == 1
+    local isStreamer = isTruthy(phone.streamer_mode)
     if source then
         StreamerModePlayers[source] = isStreamer or nil
     end
@@ -688,7 +705,7 @@ local function BuildPhonePayload(phone, source)
         framework = framework,
         imei = phone.imei,
         deviceOwnerName = ownerName,
-        isStolen = tonumber(phone.is_stolen) == 1,
+        isStolen = isTruthy(phone.is_stolen),
         stolenAt = phone.stolen_at,
         stolenReason = phone.stolen_reason,
         wallpaper = phone.wallpaper,
@@ -762,7 +779,7 @@ local function SetPhoneStolenStateByIMEI(imei, data)
         identifier = phone and phone.identifier or nil,
         phoneNumber = phone and phone.phone_number or nil,
         imei = phone and phone.imei or safeImei,
-        isStolen = phone and tonumber(phone.is_stolen) == 1 or isStolen,
+        isStolen = phone and isTruthy(phone.is_stolen) or isStolen,
         stolenAt = phone and phone.stolen_at or nil,
         stolenReason = phone and phone.stolen_reason or reason,
         stolenReporter = phone and phone.stolen_reporter or reporter,
@@ -1449,7 +1466,7 @@ local function BuildOwnerLookupResponse(phone)
             name = ResolvePhoneOwnerName(nil, phone.identifier),
             phoneNumber = phone.phone_number,
             imei = phone.imei,
-            isStolen = tonumber(phone.is_stolen) == 1,
+            isStolen = isTruthy(phone.is_stolen),
             stolenAt = phone.stolen_at,
             stolenReason = phone.stolen_reason,
             stolenReporter = phone.stolen_reporter,

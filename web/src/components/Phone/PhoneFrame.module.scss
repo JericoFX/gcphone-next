@@ -1,7 +1,7 @@
 .phone-wrapper {
   position: absolute;
   bottom: 0;
-  right: 8px;
+  right: -20px;
   width: var(--phone-shell-width);
   height: var(--phone-shell-height);
   pointer-events: auto;
@@ -21,6 +21,10 @@
   background-size: cover;
   background-position: center;
   border-radius: var(--phone-screen-radius);
+
+  &.cameraActive {
+    background-color: transparent;
+  }
 }
 
 .phone-frame {
@@ -386,4 +390,60 @@
   height: 104px;
   border: 1px dashed var(--border);
   border-radius: 12px;
+}
+
+// ── Router / App views ──────────────────────────────────
+
+.routerContainer {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.routeView {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--bg);
+  overflow-y: auto;
+  overflow-x: hidden;
+  visibility: hidden;
+  pointer-events: none;
+
+  &.routeTransparent {
+    background-color: transparent;
+  }
+}
+
+.routeVisible {
+  visibility: visible;
+  pointer-events: auto;
+  z-index: 1;
+}
+
+.routeHidden {
+  visibility: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.routeForward {
+  animation: slideInRight 0.3s ease forwards;
+}
+
+.routeBack {
+  animation: slideInLeft 0.2s ease forwards;
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(30%); opacity: 0; }
+  to   { transform: translateX(0);   opacity: 1; }
+}
+
+@keyframes slideInLeft {
+  from { transform: translateX(-15%); opacity: 0.5; }
+  to   { transform: translateX(0);    opacity: 1; }
 }
