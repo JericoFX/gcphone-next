@@ -1912,4 +1912,29 @@ RegisterNUICallback('documentsUpdatePhoto', function(data, cb)
     end, data)
 end)
 
+-- ── Flashlight ──
+
+local Flashlight = require 'client.flashlight'
+
+RegisterNUICallback('cameraGetFlashlightSettings', function(_, cb)
+    cb({
+        enabled = Flashlight.IsPhoneFlashlightEnabled(),
+        brightness = Flashlight.GetFlashlightBrightness and Flashlight.GetFlashlightBrightness() or 100,
+    })
+end)
+
+RegisterNUICallback('cameraToggleFlashlight', function(data, cb)
+    local enabled = type(data) == 'table' and data.enabled == true
+    Flashlight.SetPhoneFlashlightEnabled(enabled)
+    cb({ success = true, enabled = enabled })
+end)
+
+RegisterNUICallback('cameraSetFlashlightBrightness', function(data, cb)
+    local brightness = type(data) == 'table' and tonumber(data.brightness) or 100
+    if Flashlight.SetFlashlightBrightness then
+        Flashlight.SetFlashlightBrightness(brightness)
+    end
+    cb({ success = true })
+end)
+
 return {}

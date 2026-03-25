@@ -335,8 +335,23 @@ do
     flashlightState.lumens = defaultLumens
 end
 
+---@return number
+local function GetFlashlightBrightness()
+    local _, maxLumens = GetLumensRange()
+    return Round((flashlightState.lumens / maxLumens) * 100)
+end
+
+---@param percent number 10-100
+local function SetFlashlightBrightness(percent)
+    local minLumens, maxLumens = GetLumensRange()
+    local clamped = Clamp(percent, 10, 100)
+    flashlightState.lumens = Clamp(minLumens + (maxLumens - minLumens) * (clamped / 100), minLumens, maxLumens)
+end
+
 return {
     SetPhoneFlashlightEnabled = SetPhoneFlashlightEnabled,
     IsPhoneFlashlightEnabled = IsPhoneFlashlightEnabled,
     GetPhoneFlashlightProfile = GetPhoneFlashlightProfile,
+    GetFlashlightBrightness = GetFlashlightBrightness,
+    SetFlashlightBrightness = SetFlashlightBrightness,
 }

@@ -15,6 +15,7 @@ export function ControlCenter() {
   const [dragProgress, setDragProgress] = createSignal(0);
   const [liveLocationEnabled, setLiveLocationEnabled] = createSignal(false);
   const [flashlightEnabled, setFlashlightEnabled] = createSignal(false);
+  const [flashlightBrightness, setFlashlightBrightness] = createSignal(100);
 
   let sheetGestureStartX = 0;
   let sheetGestureStartY = 0;
@@ -58,6 +59,7 @@ export function ControlCenter() {
   async function syncFlashlightState() {
     const result = await fetchNui<{ enabled?: boolean }>('cameraGetFlashlightSettings', {}, { enabled: false });
     setFlashlightEnabled(result?.enabled === true);
+    if (typeof result?.brightness === "number") setFlashlightBrightness(Math.round(result.brightness));
   }
 
   async function toggleFlashlight() {
@@ -523,6 +525,31 @@ export function ControlCenter() {
                 }}
               />
             </div>
+
+            {/* Flashlight brightness */}
+            <Show when={flashlightEnabled()}>
+              <div class={styles.sliderModule}>
+                <div class={styles.sliderHeader}>
+                  <img src="./img/icons_ios/ui-flashlight.svg" alt="" class={styles.sliderIcon} draggable={false} />
+                  <span>{t('control.flashlight', language())}</span>
+                  <strong>{flashlightBrightness()}%</strong>
+                </div>
+                <input
+                  class={`${styles.slider} ios-slider`}
+                  type="range"
+                  min="10"
+                  max="100"
+                  value={flashlightBrightness()}
+                  style={{ '--value-percent': `${((flashlightBrightness() - 10) / 90) * 100}%` }}
+                  onInput={(e) => {
+                    const val = Number(e.currentTarget.value);
+                    e.currentTarget.style.setProperty('--value-percent', `${((val - 10) / 90) * 100}%`);
+                    setFlashlightBrightness(val);
+                    void fetchNui('cameraSetFlashlightBrightness', { brightness: val }, { success: true });
+                  }}
+                />
+              </div>
+            </Show>
 
             <div class={styles.sheetFooter}>
               <button class={styles.closeBtn} onClick={() => notificationsActions.setControlCenterOpen(false)}>{t('control.close', language())}</button>
