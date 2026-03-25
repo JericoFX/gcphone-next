@@ -64,7 +64,7 @@ export function LockScreen() {
   const [imeiModalOpen, setImeiModalOpen] = createSignal(false);
   const [sosStatus, setSosStatus] = createSignal<'idle' | 'sending' | 'sent'>('idle');
   const language = () => phoneState.settings.language || 'es';
-  const swipeUnlockEnabled = () => phoneState.settings.swipeUnlock === true;
+  const swipeUnlockEnabled = () => phoneState.settings.swipeUnlock === true || !hasPinSet();
   const hasPinSet = () => {
     const lc = phoneState.settings.lockCode;
     return !!lc && lc !== '0000';

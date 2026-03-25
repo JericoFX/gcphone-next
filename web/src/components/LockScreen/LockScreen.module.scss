@@ -391,7 +391,7 @@
 
 .music-icon-btn svg {
   width: 18px;
-  height: 18px;
+  height: 28px;
 }
 
 .music-btn:disabled,
@@ -712,28 +712,26 @@
 }
 
 .swipe-unlock-dock {
-  flex: 1;
-  min-width: 0;
+  position: absolute;
+  bottom: 80px;
+  left: 0;
+  right: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 0 var(--s-2);
+  gap: 8px;
+  z-index: 5;
   touch-action: none;
+  cursor: ns-resize;
 }
-
-// ---------------------------------------------------------------------------
-// Swipe unlock — vertical track with handle
-// ---------------------------------------------------------------------------
 
 .swipe-unlock-track {
   position: relative;
-  width: 34px;
-  height: 52px;
+  width: 42px;
+  height: 120px;
   border-radius: var(--r-pill);
-  border: 1px solid var(--ls-glass-border);
-  background: var(--ls-glass);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.25);
   overflow: hidden;
 }
 
@@ -743,54 +741,42 @@
   right: 0;
   bottom: 0;
   border-radius: inherit;
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.1),
-    rgba(255, 255, 255, 0.4)
-  );
-  transition: height 120ms ease;
+  background: rgba(255, 255, 255, 0.25);
+  transition: height 80ms ease;
 }
 
 .swipe-unlock-handle {
   position: absolute;
-  left: 4px;
-  right: 4px;
-  bottom: 4px;
-  height: 18px;
+  left: 5px;
+  right: 5px;
+  bottom: 5px;
+  height: 28px;
   border-radius: var(--r-pill);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: rgba(0, 0, 0, 0.8);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(230, 240, 255, 0.9));
-  box-shadow:
-    0 2px 8px rgba(0, 0, 0, 0.15),
-    0 0 12px rgba(255, 255, 255, 0.15);
-  transition: box-shadow 180ms ease;
-
-  &:active {
-    box-shadow:
-      0 2px 8px rgba(0, 0, 0, 0.2),
-      0 0 20px rgba(255, 255, 255, 0.3);
-  }
+  color: rgba(0, 0, 0, 0.7);
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  transition: transform 120ms ease;
 }
 
 .swipe-unlock-arrow {
-  font-size: 12px;
+  font-size: 16px;
   line-height: 1;
 }
 
 .swipe-unlock-label {
-  font-size: 11px;
-  font-weight: 500;
-  color: var(--ls-text-muted);
-  letter-spacing: 0.02em;
-  animation: swipe-pulse 2.4s ease-in-out infinite;
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.8);
+  letter-spacing: 0.01em;
+  animation: swipe-pulse 2s ease-in-out infinite;
 }
 
 @keyframes swipe-pulse {
-  0%, 100% { opacity: 0.6; }
-  50% { opacity: 1; }
+  0%, 100% { opacity: 0.5; transform: translateY(0); }
+  50% { opacity: 1; transform: translateY(-3px); }
 }
 
 // ---------------------------------------------------------------------------
@@ -820,7 +806,7 @@
 
 .bottom-btn img {
   width: 18px;
-  height: 18px;
+  height: 28px;
   object-fit: contain;
 }
 
