@@ -139,6 +139,8 @@ export function SettingsApp() {
             notificationsActions={notificationsActions}
             liveLocationEnabled={liveLocationEnabled}
             phoneVersion={phoneState.resourceVersion}
+            playerName={phoneState.settings?.playerName || phoneState.playerName}
+            phoneNumber={phoneState.settings?.phoneNumber}
             onNavigate={(s) => setSection(s as SettingsSection)}
           />
         </Match>

@@ -558,6 +558,8 @@
     "settings.active": "Activo",
     "settings.inactive": "Inactivo",
     "settings.info_group": "INFORMACION",
+    "settings.citizen": "Ciudadano",
+    "settings.phone_settings": "Ajustes del telefono",
     "settings.about_gcphone": "Acerca de GCPhone",
     "settings.public_library": "Biblioteca publica",
     "settings.public_library_desc": "Fuente recomendada: {source} - licencia {license}. El preview actual usa audio web/NUI; el audio nativo queda pendiente hasta convertir los bancos finales.",

@@ -557,6 +557,8 @@
     "settings.active": "Active",
     "settings.inactive": "Inactive",
     "settings.info_group": "INFORMATION",
+    "settings.citizen": "Citizen",
+    "settings.phone_settings": "Phone settings",
     "settings.about_gcphone": "About GCPhone",
     "settings.public_library": "Public library",
     "settings.public_library_desc": "Recommended source: {source} - license {license}. The current preview uses web/NUI audio; native audio remains pending until the final banks are converted.",

@@ -176,14 +176,77 @@
   opacity: 0.6;
 }
 
-/* ── Icon backgrounds ── */
+/* ── Icon backgrounds (iOS 18 solid rounded squares) ── */
 
-.iconBlue { background: var(--tint-hover) !important; }
-.iconOrange { background: var(--warning-subtle) !important; }
-.iconRed { background: var(--danger-subtle) !important; }
-.iconGreen { background: var(--success-subtle) !important; }
-.iconPurple { background: rgba(88, 86, 214, 0.16) !important; }
-.iconGray { background: rgba(142, 142, 147, 0.16) !important; }
+.iconBlue { background: #007aff !important; }
+.iconOrange { background: #ff9500 !important; }
+.iconRed { background: #ff3b30 !important; }
+.iconGreen { background: #34c759 !important; }
+.iconPurple { background: #5856d6 !important; }
+.iconPink { background: #ff2d55 !important; }
+.iconGray { background: #8e8e93 !important; }
+
+.iconBlue, .iconOrange, .iconRed, .iconGreen, .iconPurple, .iconPink, .iconGray {
+  .cellIconImage {
+    filter: brightness(10);
+  }
+}
+
+/* ── Profile banner (Apple ID style) ── */
+
+.profileBanner {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-3) var(--s-4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-xl);
+  box-shadow: var(--shadow-1);
+  cursor: pointer;
+  margin-bottom: var(--s-1);
+
+  &:active { opacity: 0.7; }
+}
+
+.profileAvatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #007aff, #5856d6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  span {
+    color: #fff;
+    font-size: 20px;
+    font-weight: 700;
+  }
+}
+
+.profileInfo {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.profileName {
+  font-size: var(--fs-headline);
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.profileSub {
+  font-size: var(--fs-caption1);
+  color: var(--text-3);
+}
 
 /* ── Switch ── */
 
