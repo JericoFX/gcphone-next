@@ -80,9 +80,10 @@ export function LockScreen() {
 
   const musicStatusLabel = createMemo(() => {
     const current = musicState();
-    if (current.isPlaying && current.isPaused) return `Pausado: ${current.title || 'Sin musica'}`;
-    if (current.isPlaying) return `Reproduciendo: ${current.title || 'Sin musica'}`;
-    return 'Sin musica';
+    const noMusic = t('lock.music_idle', language());
+    if (current.isPlaying && current.isPaused) return t('lock.music_paused', language(), { title: current.title || noMusic });
+    if (current.isPlaying) return t('lock.music_playing', language(), { title: current.title || noMusic });
+    return noMusic;
   });
 
   const musicVolumePercent = createMemo(() => Math.round(musicState().volume * 100));
@@ -255,17 +256,17 @@ export function LockScreen() {
 
     const target = matchedEmergencyContact();
     if (!target) {
-      setEmergencyStatus(emergencyContacts().length > 0 ? 'Solo numeros de emergencia configurados' : 'No hay numeros de emergencia');
+      setEmergencyStatus(emergencyContacts().length > 0 ? t('lock.emergency_only_configured', language()) : t('lock.emergency_none', language()));
       return;
     }
 
     const result = await fetchNui<{ error?: string }>('startCall', { phoneNumber: target.number, extraData: { source: 'lockscreen' } }, {});
     if (result?.error) {
-      setEmergencyStatus('No se pudo iniciar la llamada');
+      setEmergencyStatus(t('lock.emergency_failed', language()));
       return;
     }
 
-    setEmergencyStatus(`Llamando a ${target.label}`);
+    setEmergencyStatus(t('lock.emergency_calling', language(), { label: target.label }));
   };
 
   const unlockWithSwipe = () => {
@@ -350,20 +351,21 @@ export function LockScreen() {
           onStop={() => void stopMusic()}
           onVolumeDown={() => void updateMusicVolume(-0.1)}
           onVolumeUp={() => void updateMusicVolume(0.1)}
+          language={language()}
         />
       </div>
 
       <div class={styles.unlockSheet}>
         <div class={styles.sheetHandle} aria-hidden="true" />
           <div class={styles.codeContainer}>
-            <span class={styles.unlockTitle}>{pendingDestination()?.route === 'camera' ? 'Abrir camara' : 'Desbloquear Gcphone-Next'}</span>
+            <span class={styles.unlockTitle}>{pendingDestination()?.route === 'camera' ? t('lock.open_camera', language()) : t('lock.unlock_device', language())}</span>
             <div class={styles.dots}>
               {[0, 1, 2, 3].map((i) => (
                 <div class={styles.dot} classList={{ [styles.filled]: i < code().length, [styles.errorDot]: error() }} />
               ))}
             </div>
             <Show when={attempts() > 0}>
-              <span class={styles.errorMsg}>PIN incorrecto ({attempts()})</span>
+              <span class={styles.errorMsg}>{t('lock.pin_incorrect', language(), { attempts: attempts() })}</span>
             </Show>
           </div>
 
@@ -395,9 +397,9 @@ export function LockScreen() {
             <div class={styles.emergencyHeader}>
               <div>
                 <strong>{emergencyDial() || '...'}</strong>
-                <span>{matchedEmergencyContact() ? `${matchedEmergencyContact()?.label}: ${matchedEmergencyContact()?.number}` : 'Marca *#06# para ver el IMEI'}</span>
+                <span>{matchedEmergencyContact() ? `${matchedEmergencyContact()?.label}: ${matchedEmergencyContact()?.number}` : t('lock.emergency_imei_hint', language())}</span>
               </div>
-              <button class={styles.emergencyCallBtn} onClick={() => void startEmergencyCall()}>Llamar</button>
+              <button class={styles.emergencyCallBtn} onClick={() => void startEmergencyCall()}>{t('lock.emergency_call', language())}</button>
             </div>
 
             <div class={styles.emergencyTagRow}>
@@ -432,9 +434,9 @@ export function LockScreen() {
                   window.setTimeout(() => setSosStatus('idle'), 2000);
                 }}
               >
-                {sosStatus() === 'sent' ? 'Enviado!' : 'SOS'}
+                {sosStatus() === 'sent' ? t('lock.emergency_sent', language()) : 'SOS'}
               </button>
-              <button class={styles.emergencyActionBtn} onClick={() => setEmergencySheetOpen(false)}>Cerrar</button>
+              <button class={styles.emergencyActionBtn} onClick={() => setEmergencySheetOpen(false)}>{t('lock.close', language())}</button>
             </div>
 
             <Show when={emergencyStatus()}>
@@ -449,7 +451,7 @@ export function LockScreen() {
           <div class={styles.imeiModalCard} onClick={(event) => event.stopPropagation()}>
             <h3>IMEI</h3>
             <p>{phoneState.imei || 'N/A'}</p>
-            <button class={styles.emergencyActionBtn} onClick={() => setImeiModalOpen(false)}>Cerrar</button>
+            <button class={styles.emergencyActionBtn} onClick={() => setImeiModalOpen(false)}>{t('lock.close', language())}</button>
           </div>
         </div>
       </Show>
@@ -475,7 +477,7 @@ export function LockScreen() {
                 <span class={styles.swipeUnlockArrow}>⌃</span>
               </div>
             </div>
-            <span class={styles.swipeUnlockLabel}>Desliza hacia arriba</span>
+            <span class={styles.swipeUnlockLabel}>{t('lock.swipe_up', language())}</span>
           </div>
         </Show>
         <button class={styles.sosBtn} onClick={() => setEmergencySheetOpen(true)}>SOS</button>

@@ -1,5 +1,6 @@
 import { For, Show } from 'solid-js';
 import { formatPhoneNumber } from '../../utils/misc';
+import { t } from '../../i18n';
 import styles from './LockScreen.module.scss';
 
 interface MusicSessionState {
@@ -52,17 +53,18 @@ interface LockScreenWidgetsProps {
   onStop: () => void;
   onVolumeDown: () => void;
   onVolumeUp: () => void;
+  language: string;
 }
 
-function NotificationPanel(props: Pick<LockScreenWidgetsProps, 'visibleNotifications' | 'onNotificationClick'>) {
+function NotificationPanel(props: Pick<LockScreenWidgetsProps, 'visibleNotifications' | 'onNotificationClick' | 'language'>) {
   if (props.visibleNotifications.length === 0) {
     return (
       <>
         <div class={styles.notificationCenterHeader}>
-          <span class={styles.widgetLabel}>Notificaciones</span>
+          <span class={styles.widgetLabel}>{t('lock.notifications', props.language)}</span>
           <span class={styles.widgetMeta}>0</span>
         </div>
-        <div class={styles.notificationEmpty}>No hay notificaciones</div>
+        <div class={styles.notificationEmpty}>{t('lock.no_notifications', props.language)}</div>
       </>
     );
   }
@@ -70,7 +72,7 @@ function NotificationPanel(props: Pick<LockScreenWidgetsProps, 'visibleNotificat
   return (
     <>
       <div class={styles.notificationCenterHeader}>
-        <span class={styles.widgetLabel}>Notificaciones</span>
+        <span class={styles.widgetLabel}>{t('lock.notifications', props.language)}</span>
         <span class={styles.widgetMeta}>{props.visibleNotifications.length}</span>
       </div>
       <div class={styles.notificationList}>
@@ -95,25 +97,25 @@ function NotificationPanel(props: Pick<LockScreenWidgetsProps, 'visibleNotificat
   );
 }
 
-function DevicePanel(props: Pick<LockScreenWidgetsProps, 'deviceOwnerName' | 'phoneNumber' | 'imei' | 'framework' | 'isStolen'>) {
+function DevicePanel(props: Pick<LockScreenWidgetsProps, 'deviceOwnerName' | 'phoneNumber' | 'imei' | 'framework' | 'isStolen' | 'language'>) {
   return (
     <>
       <div class={styles.widgetHeader}>
-        <span class={styles.widgetLabel}>Device Info</span>
+        <span class={styles.widgetLabel}>{t('lock.device_info', props.language)}</span>
         <Show when={props.isStolen}>
-          <span class={styles.widgetFlag}>Reportado</span>
+          <span class={styles.widgetFlag}>{t('lock.reported', props.language)}</span>
         </Show>
       </div>
       <div class={styles.deviceInfoRows}>
         <Show when={props.deviceOwnerName}>
           <div class={styles.deviceIdentityRow}>
-            <span>Propietario</span>
+            <span>{t('lock.owner', props.language)}</span>
             <strong>{props.deviceOwnerName}</strong>
           </div>
         </Show>
         <Show when={props.phoneNumber}>
           <div class={styles.deviceIdentityRow}>
-            <span>Numero</span>
+            <span>{t('lock.number', props.language)}</span>
             <strong>{formatPhoneNumber(props.phoneNumber!, props.framework || 'unknown')}</strong>
           </div>
         </Show>
@@ -128,21 +130,21 @@ function DevicePanel(props: Pick<LockScreenWidgetsProps, 'deviceOwnerName' | 'ph
   );
 }
 
-function MusicPanel(props: Pick<LockScreenWidgetsProps, 'musicState' | 'musicStatusLabel' | 'musicVolumePercent' | 'onPauseResume' | 'onStop' | 'onVolumeDown' | 'onVolumeUp'>) {
+function MusicPanel(props: Pick<LockScreenWidgetsProps, 'musicState' | 'musicStatusLabel' | 'musicVolumePercent' | 'onPauseResume' | 'onStop' | 'onVolumeDown' | 'onVolumeUp' | 'language'>) {
   return (
     <>
       <div class={styles.widgetHeader}>
-        <span class={styles.widgetLabel}>Musica</span>
+        <span class={styles.widgetLabel}>{t('lock.music', props.language)}</span>
         <span class={styles.widgetMeta}>{props.musicVolumePercent}%</span>
       </div>
       <strong class={styles.widgetTitle}>{props.musicStatusLabel}</strong>
       <div class={styles.musicControls}>
-        <button class={styles.musicIconBtn} type="button" onClick={props.onPauseResume} disabled={!props.musicState.isPlaying} aria-label={props.musicState.isPaused ? 'Reanudar musica' : 'Pausar musica'}>
+        <button class={styles.musicIconBtn} type="button" onClick={props.onPauseResume} disabled={!props.musicState.isPlaying} aria-label={props.musicState.isPaused ? t('lock.music_resume', props.language) : t('lock.music_pause', props.language)}>
           <Show when={props.musicState.isPaused} fallback={<PauseIcon />}>
             <PlayIcon />
           </Show>
         </button>
-        <button class={styles.musicIconBtn} type="button" onClick={props.onStop} disabled={!props.musicState.isPlaying} aria-label="Detener musica">
+        <button class={styles.musicIconBtn} type="button" onClick={props.onStop} disabled={!props.musicState.isPlaying} aria-label={t('lock.music_stop', props.language)}>
           <StopIcon />
         </button>
       </div>
@@ -165,7 +167,7 @@ export function LockScreenWidgets(props: LockScreenWidgetsProps) {
       <div class={styles.widgetViewport}>
         <Show when={props.activeWidget === 0}>
           <section class={`${styles.widgetPanel} ${styles.primaryPanel}`}>
-            <NotificationPanel visibleNotifications={props.visibleNotifications} onNotificationClick={props.onNotificationClick} />
+            <NotificationPanel visibleNotifications={props.visibleNotifications} onNotificationClick={props.onNotificationClick} language={props.language} />
           </section>
         </Show>
 
@@ -177,6 +179,7 @@ export function LockScreenWidgets(props: LockScreenWidgetsProps) {
               imei={props.imei}
               framework={props.framework}
               isStolen={props.isStolen}
+              language={props.language}
             />
           </section>
         </Show>
@@ -191,6 +194,7 @@ export function LockScreenWidgets(props: LockScreenWidgetsProps) {
               onStop={props.onStop}
               onVolumeDown={props.onVolumeDown}
               onVolumeUp={props.onVolumeUp}
+              language={props.language}
             />
           </section>
         </Show>

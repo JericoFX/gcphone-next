@@ -1,6 +1,5 @@
 // ---------------------------------------------------------------------------
-// LockScreen — Premium minimal lock screen
-// Uses CSSGUIDE tokens throughout. No hardcoded hex colors.
+// LockScreen — iOS 18 lock screen redesign
 // ---------------------------------------------------------------------------
 
 .lock-screen {
@@ -47,16 +46,15 @@
   inset: 0;
   z-index: 1;
   background:
-    linear-gradient(180deg, rgba(0, 0, 0, 0.45) 0%, rgba(0, 0, 0, 0.18) 18%),
-    linear-gradient(180deg, rgba(0, 0, 0, 0.12) 72%, rgba(0, 0, 0, 0.50) 100%),
-    rgba(0, 0, 0, 0.22);
+    linear-gradient(180deg, rgba(0, 0, 0, 0.32) 0%, rgba(0, 0, 0, 0.08) 25%),
+    linear-gradient(180deg, rgba(0, 0, 0, 0.04) 60%, rgba(0, 0, 0, 0.42) 100%);
 }
 
 .wallpaper-noise {
   position: absolute;
   inset: 0;
   z-index: 2;
-  opacity: 0.03;
+  opacity: 0.025;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
   pointer-events: none;
 }
@@ -75,28 +73,30 @@
 }
 
 // ---------------------------------------------------------------------------
-// Time display — large, thin, centered
+// Time display — iOS 18 large bold clock
 // ---------------------------------------------------------------------------
 
 .time-block {
   text-align: center;
-  margin-top: var(--s-1);
+  margin-top: var(--s-3);
+  padding-bottom: var(--s-1);
 }
 
 .time {
-  font-size: 64px;
+  font-size: 72px;
   line-height: 1;
-  font-weight: 200;
-  letter-spacing: -0.04em;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--ls-text-primary);
   text-shadow:
-    0 2px 12px rgba(0, 0, 0, 0.3),
-    0 0 40px rgba(0, 0, 0, 0.1);
+    0 2px 16px rgba(0, 0, 0, 0.35),
+    0 0 48px rgba(0, 0, 0, 0.12);
 }
 
 .date {
-  margin-top: var(--s-1);
-  font-size: 16px;
-  font-weight: 400;
+  margin-top: var(--s-2);
+  font-size: 17px;
+  font-weight: 500;
   text-transform: capitalize;
   color: var(--ls-text-soft);
   letter-spacing: 0.01em;
@@ -113,12 +113,14 @@
   padding: var(--s-2) var(--s-3);
   border-radius: var(--r-pill);
   background: var(--ls-glass);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border: 1px solid var(--ls-glass-border);
   color: var(--ls-text-primary);
   font-size: var(--fs-caption1);
   font-weight: 600;
   max-width: 200px;
-  margin: 0 auto var(--s-2);
+  margin: 0 auto var(--s-1);
   position: relative;
   z-index: 3;
   transition: background 180ms ease;
@@ -191,7 +193,7 @@
 }
 
 // ---------------------------------------------------------------------------
-// Shared glass surfaces — widget panels, notification center, unlock sheet, buttons
+// Shared glass surfaces — frosted glass with backdrop-filter
 // ---------------------------------------------------------------------------
 
 .widget-panel,
@@ -202,6 +204,8 @@
   position: relative;
   border: 1px solid var(--ls-glass-border);
   background: var(--ls-material);
+  backdrop-filter: blur(40px) saturate(1.8);
+  -webkit-backdrop-filter: blur(40px) saturate(1.8);
   box-shadow: var(--ls-shadow);
 }
 
@@ -219,7 +223,7 @@
   content: '';
   position: absolute;
   inset: 0;
-  opacity: 0.04;
+  opacity: 0.035;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
   pointer-events: none;
   border-radius: inherit;
@@ -238,7 +242,7 @@
   inset: 0;
   border-radius: inherit;
   pointer-events: none;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.15), transparent 30%);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.12), transparent 25%);
   opacity: 0.5;
 }
 
@@ -470,7 +474,7 @@
 }
 
 // ---------------------------------------------------------------------------
-// Notification center
+// Notification center — frosted glass cards
 // ---------------------------------------------------------------------------
 
 .notification-center {
@@ -501,6 +505,8 @@
   border-radius: var(--r-lg);
   border: 1px solid var(--ls-glass-border);
   background: var(--ls-glass-strong);
+  backdrop-filter: blur(24px) saturate(1.4);
+  -webkit-backdrop-filter: blur(24px) saturate(1.4);
   transition: background 180ms ease;
 }
 
@@ -541,24 +547,28 @@
   padding: var(--s-5) var(--s-3);
   text-align: center;
   border-radius: var(--r-lg);
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.06);
   color: var(--ls-text-muted);
   font-size: var(--fs-footnote);
 }
 
 // ---------------------------------------------------------------------------
-// Unlock sheet — bottom sheet with rounded top, grabber, PIN dots, keypad
+// Unlock sheet — iOS 18 dark glass PIN pad
 // ---------------------------------------------------------------------------
 
 .unlock-sheet,
 .unlock-sheet-collapsed {
   border-radius: var(--r-2xl) var(--r-2xl) var(--r-xl) var(--r-xl);
+  backdrop-filter: blur(48px) saturate(1.6);
+  -webkit-backdrop-filter: blur(48px) saturate(1.6);
 }
 
 .unlock-sheet {
   padding: var(--s-3) var(--s-3) var(--s-3);
   display: grid;
   gap: var(--s-2);
+  background: rgba(0, 0, 0, 0.55);
+  border-color: rgba(255, 255, 255, 0.1);
 }
 
 // Grabber handle
@@ -567,7 +577,7 @@
   width: 42px;
   height: 5px;
   border-radius: var(--r-pill);
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.25);
 }
 
 .unlock-sheet-collapsed {
@@ -593,7 +603,7 @@
 }
 
 // ---------------------------------------------------------------------------
-// PIN code entry
+// PIN code entry — iOS 18 style
 // ---------------------------------------------------------------------------
 
 .code-container {
@@ -604,8 +614,9 @@
 
 .unlock-title {
   font-size: var(--fs-footnote);
-  font-weight: 700;
-  color: var(--ls-text-primary);
+  font-weight: 600;
+  color: var(--ls-text-soft);
+  letter-spacing: 0.02em;
 }
 
 .dots {
@@ -614,11 +625,11 @@
 }
 
 .dot {
-  width: 10px;
-  height: 10px;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
-  border: 1.5px solid rgba(255, 255, 255, 0.6);
-  background: rgba(255, 255, 255, 0.15);
+  border: 1.5px solid rgba(255, 255, 255, 0.5);
+  background: transparent;
   transition: background 180ms ease,
               border-color 180ms ease,
               transform 120ms ease;
@@ -650,7 +661,7 @@
 }
 
 // ---------------------------------------------------------------------------
-// Keypad — glass buttons
+// Keypad — iOS 18 circular glass buttons
 // ---------------------------------------------------------------------------
 
 .keypad {
@@ -662,26 +673,25 @@
 
 .key,
 .key-spacer {
-  width: 56px;
-  height: 56px;
+  width: 60px;
+  height: 60px;
 }
 
 .key {
-  border-radius: var(--r-pill);
-  border: 1px solid var(--ls-glass-border);
-  background: var(--ls-glass);
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   color: var(--ls-text-primary);
-  font-size: 24px;
+  font-size: 26px;
   font-weight: 300;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.12),
-    var(--shadow-1);
   transition: background 120ms ease,
               transform 120ms ease;
 }
 
 .key:active {
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.25);
   transform: scale(0.94);
 }
 
@@ -705,7 +715,7 @@
 }
 
 // ---------------------------------------------------------------------------
-// Bottom actions — circular glass-effect buttons
+// Bottom actions — iOS 18 pill-shaped bottom bar
 // ---------------------------------------------------------------------------
 
 .bottom-actions {
@@ -718,15 +728,16 @@
   flex: 1;
   min-width: 0;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: var(--s-2);
+  gap: 6px;
   padding: 0 var(--s-2);
   touch-action: none;
 }
 
 // ---------------------------------------------------------------------------
-// Swipe unlock — vertical track with handle and glow
+// Swipe unlock — vertical track with handle
 // ---------------------------------------------------------------------------
 
 .swipe-unlock-track {
@@ -784,8 +795,15 @@
 
 .swipe-unlock-label {
   font-size: 11px;
-  font-weight: 700;
-  color: var(--ls-text-soft);
+  font-weight: 500;
+  color: var(--ls-text-muted);
+  letter-spacing: 0.02em;
+  animation: swipe-pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes swipe-pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
 }
 
 // ---------------------------------------------------------------------------
@@ -802,6 +820,8 @@
   align-items: center;
   justify-content: center;
   background: var(--ls-glass);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border: 1px solid var(--ls-glass-border);
   transition: background 180ms ease,
               transform 120ms ease,
@@ -897,6 +917,8 @@
   border-radius: var(--r-2xl);
   border: 1px solid var(--ls-glass-border);
   background: rgba(20, 24, 34, 0.79);
+  backdrop-filter: blur(40px) saturate(1.4);
+  -webkit-backdrop-filter: blur(40px) saturate(1.4);
   box-shadow: var(--shadow-3);
 }
 
