@@ -3066,9 +3066,12 @@ export async function handleBrowserNui<T = unknown>(eventName: string, data?: un
   // ── Radio ──
 
   if (eventName === 'radioGetStations') {
+    const ts = Math.floor(Date.now() / 1000);
     return [
-      { id: 1, hostName: 'DJ Mock', stationName: 'Los Santos FM', description: 'La mejor musica de la ciudad', category: 'music', livekitRoom: 'radio-1', listenerCount: 5, createdAt: Math.floor(Date.now() / 1000) },
-      { id: 2, hostName: 'Periodista', stationName: 'Noticias LS', description: 'Noticias en vivo las 24h', category: 'news', livekitRoom: 'radio-2', listenerCount: 12, createdAt: Math.floor(Date.now() / 1000) },
+      { id: 1, hostName: 'DJ Mock', stationName: 'Los Santos FM', description: 'La mejor musica de la ciudad', category: 'music', livekitRoom: 'radio-1', listenerCount: 5, createdAt: ts },
+      { id: 2, hostName: 'Periodista', stationName: 'Noticias LS', description: 'Noticias en vivo las 24h', category: 'news', livekitRoom: 'radio-2', listenerCount: 12, createdAt: ts },
+      { id: 3, hostName: 'Carlos Mendez', stationName: 'Tertulia Nocturna', description: 'Debates y opiniones hasta la madrugada', category: 'talk', livekitRoom: 'radio-3', listenerCount: 8, createdAt: ts - 3600 },
+      { id: 4, hostName: 'Dispatch', stationName: 'Emergencias 24/7', description: 'Canal oficial de emergencias', category: 'emergency', livekitRoom: 'radio-4', listenerCount: 3, createdAt: ts - 7200 },
     ] as T;
   }
 
@@ -3076,12 +3079,12 @@ export async function handleBrowserNui<T = unknown>(eventName: string, data?: un
     return {
       success: true,
       station: {
-        id: 99,
+        id: 100 + Math.floor(Math.random() * 900),
         hostName: 'Mock User',
         stationName: String(payload.stationName || 'Mi estacion'),
         description: String(payload.description || ''),
         category: String(payload.category || 'other'),
-        livekitRoom: 'radio-99',
+        livekitRoom: `radio-${Date.now()}`,
         listenerCount: 0,
         createdAt: Math.floor(Date.now() / 1000),
       },
@@ -3090,16 +3093,23 @@ export async function handleBrowserNui<T = unknown>(eventName: string, data?: un
 
   if (eventName === 'radioJoinStation') {
     const stationId = Number(payload.stationId || 1);
+    const mockStationMap: Record<number, { hostName: string; stationName: string; description: string; category: string; listenerCount: number }> = {
+      1: { hostName: 'DJ Mock', stationName: 'Los Santos FM', description: 'La mejor musica de la ciudad', category: 'music', listenerCount: 6 },
+      2: { hostName: 'Periodista', stationName: 'Noticias LS', description: 'Noticias en vivo las 24h', category: 'news', listenerCount: 13 },
+      3: { hostName: 'Carlos Mendez', stationName: 'Tertulia Nocturna', description: 'Debates y opiniones hasta la madrugada', category: 'talk', listenerCount: 9 },
+      4: { hostName: 'Dispatch', stationName: 'Emergencias 24/7', description: 'Canal oficial de emergencias', category: 'emergency', listenerCount: 4 },
+    };
+    const info = mockStationMap[stationId] || mockStationMap[1];
     return {
       success: true,
       station: {
         id: stationId,
-        hostName: 'DJ Mock',
-        stationName: 'Los Santos FM',
-        description: 'La mejor musica',
-        category: 'music',
+        hostName: info.hostName,
+        stationName: info.stationName,
+        description: info.description,
+        category: info.category,
         livekitRoom: `radio-${stationId}`,
-        listenerCount: 6,
+        listenerCount: info.listenerCount,
         createdAt: Math.floor(Date.now() / 1000),
       },
     } as T;
@@ -3131,6 +3141,7 @@ export async function handleBrowserNui<T = unknown>(eventName: string, data?: un
         { videoId: 'dQw4w9WgXcQ', title: `${term} - Live Session`, channel: 'Mock Channel', thumbnail: 'https://i.ytimg.com/vi/dQw4w9WgXcQ/mqdefault.jpg' },
         { videoId: '9bZkp7q19f0', title: `${term} - Remix`, channel: 'Mock Studio', thumbnail: 'https://i.ytimg.com/vi/9bZkp7q19f0/mqdefault.jpg' },
         { videoId: 'kJQP7kiw5Fk', title: `${term} - Chill Mix`, channel: 'LoFi Radio', thumbnail: 'https://i.ytimg.com/vi/kJQP7kiw5Fk/mqdefault.jpg' },
+        { videoId: 'fJ9rUzIMcZQ', title: `${term} - Acoustic`, channel: 'Unplugged Sessions', thumbnail: 'https://i.ytimg.com/vi/fJ9rUzIMcZQ/mqdefault.jpg' },
       ],
     } as T;
   }
@@ -3145,6 +3156,44 @@ export async function handleBrowserNui<T = unknown>(eventName: string, data?: un
 
   if (eventName === 'radioSetMusicVolume') {
     return { success: true, volume: Number(payload.volume || 0.5), distance: Number(payload.distance || 25) } as T;
+  }
+
+  if (eventName === 'radioMusicDuck' || eventName === 'radioMusicUnduck') {
+    return { success: true } as T;
+  }
+
+  if (eventName === 'radioGetPlaylists') {
+    return [
+      {
+        id: 1,
+        name: 'Chill Vibes',
+        songs: [
+          { videoId: 'dQw4w9WgXcQ', title: 'Sunset Drive - Live Session', channel: 'Mock Channel', thumbnail: 'https://i.ytimg.com/vi/dQw4w9WgXcQ/mqdefault.jpg' },
+          { videoId: 'kJQP7kiw5Fk', title: 'Ocean Waves - Chill Mix', channel: 'LoFi Radio', thumbnail: 'https://i.ytimg.com/vi/kJQP7kiw5Fk/mqdefault.jpg' },
+        ],
+        created_at: nowIso(),
+        expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+      },
+      {
+        id: 2,
+        name: 'Fiesta Mix',
+        songs: [
+          { videoId: '9bZkp7q19f0', title: 'Noche Loca - Remix', channel: 'Mock Studio', thumbnail: 'https://i.ytimg.com/vi/9bZkp7q19f0/mqdefault.jpg' },
+          { videoId: 'fJ9rUzIMcZQ', title: 'Fuego - Acoustic', channel: 'Unplugged Sessions', thumbnail: 'https://i.ytimg.com/vi/fJ9rUzIMcZQ/mqdefault.jpg' },
+          { videoId: 'kJQP7kiw5Fk', title: 'Ritmo Caliente - Chill Mix', channel: 'LoFi Radio', thumbnail: 'https://i.ytimg.com/vi/kJQP7kiw5Fk/mqdefault.jpg' },
+        ],
+        created_at: nowIso(),
+        expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+      },
+    ] as T;
+  }
+
+  if (eventName === 'radioSavePlaylist') {
+    return { success: true } as T;
+  }
+
+  if (eventName === 'radioDeletePlaylist') {
+    return { success: true } as T;
   }
 
   // ── MatchMyLove ──
