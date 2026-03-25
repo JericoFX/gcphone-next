@@ -196,9 +196,9 @@ export function ControlCenter() {
   };
 
   const formatTime = (unix?: number) => {
-    if (!unix || unix <= 0) return 'Ahora';
+    if (!unix || unix <= 0) return t('control.now', language());
     const diffSeconds = Math.max(0, Math.floor((Date.now() - unix) / 1000));
-    if (diffSeconds < 60) return 'Ahora';
+    if (diffSeconds < 60) return t('control.now', language());
     if (diffSeconds < 3600) return `${Math.floor(diffSeconds / 60)}m`;
     if (diffSeconds < 86400) return `${Math.floor(diffSeconds / 3600)}h`;
     return `${Math.floor(diffSeconds / 86400)}d`;
@@ -325,7 +325,7 @@ export function ControlCenter() {
                 <strong>{totalNotificationCount()}</strong>
               </article>
               <article class={styles.summaryCard}>
-                <span>Silenciadas</span>
+                <span>{t('control.muted', language())}</span>
                 <strong>{mutedAppsCount()}</strong>
               </article>
             </div>
@@ -350,8 +350,8 @@ export function ControlCenter() {
                           const swipe = createSwipeHandlers(item.id);
                           return (
                             <div class={styles.swipeTrack}>
-                              <div class={`${styles.swipeBg} ${styles.swipeBgRight}`} data-swipe-bg-right>Eliminar</div>
-                              <div class={`${styles.swipeBg} ${styles.swipeBgLeft}`} data-swipe-bg-left>Eliminar</div>
+                              <div class={`${styles.swipeBg} ${styles.swipeBgRight}`} data-swipe-bg-right>{t('control.delete', language())}</div>
+                              <div class={`${styles.swipeBg} ${styles.swipeBgLeft}`} data-swipe-bg-left>{t('control.delete', language())}</div>
                               <button
                                 class={styles.notificationItem}
                                 onPointerDown={swipe.onPointerDown}
@@ -375,7 +375,7 @@ export function ControlCenter() {
                         }}
                       </For>
                       <Show when={group.items.length > 2}>
-                        <div class={styles.moreCount}>+{group.items.length - 2} mas</div>
+                        <div class={styles.moreCount}>{t('control.more_count', language(), { n: group.items.length - 2 })}</div>
                       </Show>
                     </div>
                   )}
@@ -404,50 +404,62 @@ export function ControlCenter() {
               <div class={styles.grabber} />
             </div>
 
-            {/* Connectivity module */}
-            <div class={styles.connectivityModule}>
+            {/* iOS 18 tile grid */}
+            <div class={styles.tileGrid}>
               <button
-                class={styles.connectivityTile}
-                classList={{ [styles.connectivityTileActive]: notifications.airplaneMode }}
+                class={styles.gridTile}
+                classList={{
+                  [styles.gridTileActive]: notifications.airplaneMode,
+                  [styles.gridTileBlue]: notifications.airplaneMode,
+                }}
                 onClick={() => notificationsActions.setAirplaneMode(!notifications.airplaneMode)}
               >
-                <span class={styles.tileIcon}>
+                <span class={styles.gridTileIcon}>
                   <img src="./img/icons_ios/ui-plane.svg" alt="" draggable={false} />
                 </span>
-                <span class={styles.tileLabel}>{t('control.airplane', language())}</span>
+                <span class={styles.gridTileLabel}>{t('control.airplane', language())}</span>
               </button>
 
               <button
-                class={styles.connectivityTile}
-                classList={{ [styles.connectivityTileActive]: notifications.doNotDisturb }}
+                class={styles.gridTile}
+                classList={{
+                  [styles.gridTileActive]: notifications.doNotDisturb,
+                  [styles.gridTilePurple]: notifications.doNotDisturb,
+                }}
                 onClick={() => notificationsActions.setDoNotDisturb(!notifications.doNotDisturb)}
               >
-                <span class={styles.tileIcon}>
+                <span class={styles.gridTileIcon}>
                   <img src="./img/icons_ios/ui-moon.svg" alt="" draggable={false} />
                 </span>
-                <span class={styles.tileLabel}>{t('control.dnd', language())}</span>
+                <span class={styles.gridTileLabel}>{t('control.dnd', language())}</span>
               </button>
 
               <button
-                class={styles.connectivityTile}
-                classList={{ [styles.connectivityTileActive]: notifications.silentMode }}
+                class={styles.gridTile}
+                classList={{
+                  [styles.gridTileActive]: notifications.silentMode,
+                  [styles.gridTileRed]: notifications.silentMode,
+                }}
                 onClick={() => notificationsActions.setSilentMode(!notifications.silentMode)}
               >
-                <span class={styles.tileIcon}>
+                <span class={styles.gridTileIcon}>
                   <img src="./img/icons_ios/ui-bell.svg" alt="" draggable={false} />
                 </span>
-                <span class={styles.tileLabel}>{t('control.silent', language())}</span>
+                <span class={styles.gridTileLabel}>{t('control.silent', language())}</span>
               </button>
 
               <button
-                class={styles.connectivityTile}
-                classList={{ [styles.connectivityTileActive]: liveLocationEnabled() }}
+                class={styles.gridTile}
+                classList={{
+                  [styles.gridTileActive]: liveLocationEnabled(),
+                  [styles.gridTileBlue]: liveLocationEnabled(),
+                }}
                 onClick={() => void toggleGpsQuickAction()}
               >
-                <span class={styles.tileIcon}>
+                <span class={styles.gridTileIcon}>
                   <img src="./img/icons_ios/ui-location.svg" alt="" draggable={false} />
                 </span>
-                <span class={styles.tileLabel}>GPS</span>
+                <span class={styles.gridTileLabel}>GPS</span>
               </button>
             </div>
 

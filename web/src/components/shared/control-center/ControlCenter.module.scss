@@ -22,21 +22,27 @@
   background: transparent;
 }
 
-/* ── Glass system (shared with lock screen aesthetic) ── */
+/* ── iOS 18 dark glass base ── */
 
 .overlay {
-  --cc-glass: rgba(255, 255, 255, 0.1);
-  --cc-glass-strong: rgba(255, 255, 255, 0.16);
-  --cc-glass-border: rgba(255, 255, 255, 0.12);
+  --cc-bg: rgba(28, 28, 30, 0.92);
+  --cc-tile: rgba(255, 255, 255, 0.12);
+  --cc-tile-hover: rgba(255, 255, 255, 0.18);
+  --cc-border: rgba(255, 255, 255, 0.08);
   --cc-text: rgba(255, 255, 255, 0.95);
   --cc-text-soft: rgba(255, 255, 255, 0.7);
   --cc-text-muted: rgba(255, 255, 255, 0.45);
 
+  --cc-blue: #007aff;
+  --cc-purple: #af52de;
+  --cc-red: #ff3b30;
+  --cc-yellow: #ffcc00;
+  --cc-green: #34c759;
+
   position: absolute;
   inset: 0;
   z-index: 90;
-  background:
-    linear-gradient(180deg, rgba(0, 0, 0, 0.82) 0%, rgba(0, 0, 0, 0.90) 100%);
+  background: var(--cc-bg);
 }
 
 .sheet {
@@ -53,7 +59,7 @@
 }
 
 .control-sheet {
-  gap: var(--s-2);
+  gap: var(--s-3);
 }
 
 .notification-sheet {
@@ -93,85 +99,124 @@
   margin-top: var(--s-1);
 }
 
-/* ── Connectivity module (2×2 grid) ── */
+/* ── iOS 18 tile grid (2-col square tiles) ── */
 
-.connectivity-module {
+.tile-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--s-2);
-  padding: var(--s-2);
-  border-radius: var(--r-xl);
-  background: var(--cc-glass);
-  border: 1px solid var(--cc-glass-border);
 }
 
-.connectivity-tile {
+.grid-tile {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: var(--s-2);
-  padding: var(--s-2) var(--s-3);
-  min-height: 44px;
+  justify-content: center;
+  gap: 6px;
+  aspect-ratio: 1 / 1;
+  max-height: 80px;
   border: none;
-  border-radius: var(--r-lg);
-  background: var(--cc-glass);
+  border-radius: var(--r-xl);
+  background: var(--cc-tile);
   color: var(--cc-text);
   cursor: pointer;
   transition:
     transform 120ms ease,
     background 180ms ease;
+  padding: var(--s-1);
 
   &:active {
-    transform: scale(0.96);
-    background: var(--cc-glass-strong);
+    transform: scale(0.94);
+    background: var(--cc-tile-hover);
   }
 }
 
-.connectivity-tile-active {
-  background: var(--tint);
-  color: #fff;
-  box-shadow: 0 4px 14px rgba(var(--tint-rgb), 0.4);
-
-  .tile-icon {
-    background: rgba(255, 255, 255, 0.24);
-
-    img {
-      filter: brightness(0) invert(1);
-    }
-  }
-
-  .tile-label {
-    color: #fff;
-  }
-}
-
-.tile-icon {
-  width: 28px;
-  height: 28px;
+.grid-tile-icon {
+  width: 32px;
+  height: 32px;
   border-radius: var(--r-pill);
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.1);
   display: grid;
   place-items: center;
   flex-shrink: 0;
 
   img {
-    width: 14px;
-    height: 14px;
-    opacity: 0.9;
+    width: 16px;
+    height: 16px;
     filter: brightness(0) invert(1);
+    opacity: 0.9;
   }
 }
 
-.tile-label {
-  font-size: var(--fs-caption1);
+.grid-tile-label {
+  font-size: 10px;
   font-weight: 600;
-  color: var(--cc-text);
+  color: var(--cc-text-soft);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  line-height: var(--lh-tight);
+  max-width: 100%;
+  text-align: center;
+  line-height: 1.2;
 }
 
-/* ── Quick action tiles ── */
+/* Active tile color variants */
+.grid-tile-active {
+  color: #fff;
+
+  .grid-tile-icon {
+    background: rgba(255, 255, 255, 0.24);
+
+    img {
+      opacity: 1;
+      filter: brightness(0) invert(1);
+    }
+  }
+
+  .grid-tile-label {
+    color: #fff;
+  }
+}
+
+.grid-tile-blue {
+  background: var(--cc-blue);
+  box-shadow: 0 4px 14px rgba(0, 122, 255, 0.35);
+}
+
+.grid-tile-purple {
+  background: var(--cc-purple);
+  box-shadow: 0 4px 14px rgba(175, 82, 222, 0.35);
+}
+
+.grid-tile-red {
+  background: var(--cc-red);
+  box-shadow: 0 4px 14px rgba(255, 59, 48, 0.35);
+}
+
+.grid-tile-yellow {
+  background: var(--cc-yellow);
+  box-shadow: 0 4px 14px rgba(255, 204, 0, 0.35);
+
+  .grid-tile-icon {
+    background: rgba(0, 0, 0, 0.12);
+
+    img {
+      filter: brightness(0);
+      opacity: 0.85;
+    }
+  }
+
+  .grid-tile-label {
+    color: rgba(0, 0, 0, 0.8);
+  }
+}
+
+.grid-tile-green {
+  background: var(--cc-green);
+  box-shadow: 0 4px 14px rgba(52, 199, 89, 0.35);
+}
+
+/* ── Quick action row (flashlight, camera, lock) ── */
 
 .quick-row {
   display: flex;
@@ -180,13 +225,16 @@
 }
 
 .quick-tile {
-  width: 52px;
-  height: 52px;
-  border: 1px solid var(--cc-glass-border);
+  width: 56px;
+  height: 56px;
+  border: none;
   border-radius: var(--r-xl);
-  background: var(--cc-glass);
-  display: grid;
-  place-items: center;
+  background: var(--cc-tile);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
   cursor: pointer;
   transition:
     transform 120ms ease,
@@ -201,26 +249,35 @@
 
   &:active {
     transform: scale(0.92);
-    background: var(--cc-glass-strong);
+    background: var(--cc-tile-hover);
   }
+}
+
+.quick-tile-label {
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--cc-text-muted);
 }
 
 .quick-tile-active {
-  background: var(--tint);
-  box-shadow: 0 6px 16px rgba(var(--tint-rgb), 0.4);
-  border-color: transparent;
+  background: var(--cc-yellow);
+  box-shadow: 0 4px 14px rgba(255, 204, 0, 0.35);
 
   img {
     opacity: 1;
+    filter: brightness(0);
+  }
+
+  .quick-tile-label {
+    color: rgba(0, 0, 0, 0.7);
   }
 }
 
-/* ── Slider modules ── */
+/* ── Slider modules (iOS 18 style) ── */
 
 .slider-module {
-  border-radius: var(--r-lg);
-  background: var(--cc-glass);
-  border: 1px solid var(--cc-glass-border);
+  border-radius: var(--r-xl);
+  background: var(--cc-tile);
   padding: var(--s-3);
   display: grid;
   gap: var(--s-2);
@@ -270,9 +327,8 @@
 
 .summary-card {
   min-height: 48px;
-  border-radius: var(--r-lg);
-  background: var(--cc-glass);
-  border: 1px solid var(--cc-glass-border);
+  border-radius: var(--r-xl);
+  background: var(--cc-tile);
   display: grid;
   align-content: center;
   justify-items: start;
@@ -299,7 +355,7 @@
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: var(--s-2);
+  gap: var(--s-3);
   padding: 0 2px;
 }
 
@@ -311,22 +367,23 @@
 .group-title {
   display: flex;
   align-items: center;
-  gap: var(--s-1);
+  gap: var(--s-2);
+  padding: 0 var(--s-1);
 
   img {
-    width: 12px;
-    height: 12px;
-    border-radius: var(--s-1);
+    width: 18px;
+    height: 18px;
+    border-radius: 4px;
     flex-shrink: 0;
     filter: brightness(0) invert(1);
-    opacity: 0.6;
+    opacity: 0.7;
   }
 
   span {
     font-size: var(--fs-caption2);
     font-weight: 700;
     color: var(--cc-text-muted);
-    letter-spacing: 0.05em;
+    letter-spacing: 0.04em;
   }
 }
 
@@ -350,7 +407,7 @@
 .swipe-track {
   position: relative;
   overflow: hidden;
-  border-radius: var(--r-lg);
+  border-radius: var(--r-xl);
 }
 
 .swipe-bg {
@@ -383,14 +440,13 @@
 .notification-item {
   position: relative;
   border: none;
-  border-radius: var(--r-lg);
-  background: var(--cc-glass);
+  border-radius: var(--r-xl);
+  background: var(--cc-tile);
   color: var(--cc-text);
   text-align: left;
   padding: var(--s-3);
   display: grid;
   gap: 2px;
-  border: 1px solid var(--cc-glass-border);
   cursor: pointer;
   transition: transform 180ms ease;
   touch-action: pan-y;
@@ -451,8 +507,8 @@
 .close-btn {
   flex: 1;
   border: none;
-  border-radius: var(--r-md);
-  height: 36px;
+  border-radius: var(--r-xl);
+  height: 38px;
   font-size: var(--fs-footnote);
   font-weight: 700;
   cursor: pointer;
@@ -492,15 +548,15 @@
   width: 100%;
   -webkit-appearance: none;
   appearance: none;
-  height: 4px;
-  border-radius: 2px;
+  height: 6px;
+  border-radius: 3px;
   background: rgba(255, 255, 255, 0.15);
   outline: none;
   cursor: pointer;
 
   &::-webkit-slider-runnable-track {
-    height: 4px;
-    border-radius: 2px;
+    height: 6px;
+    border-radius: 3px;
     background: linear-gradient(
       to right,
       var(--tint) 0%,
@@ -511,8 +567,8 @@
   }
 
   &::-moz-range-track {
-    height: 4px;
-    border-radius: 2px;
+    height: 6px;
+    border-radius: 3px;
     background: rgba(255, 255, 255, 0.15);
   }
 
@@ -524,7 +580,7 @@
     border-radius: 50%;
     background: #fff;
     cursor: pointer;
-    margin-top: -10px;
+    margin-top: -9px;
     box-shadow:
       0 1px 3px rgba(0, 0, 0, 0.3),
       0 2px 6px rgba(0, 0, 0, 0.15);
@@ -548,8 +604,8 @@
   }
 
   &::-moz-range-progress {
-    height: 4px;
-    border-radius: 2px;
+    height: 6px;
+    border-radius: 3px;
     background: var(--tint);
   }
 }
@@ -558,15 +614,15 @@
   width: 100%;
   -webkit-appearance: none;
   appearance: none;
-  height: 4px;
-  border-radius: 2px;
+  height: 6px;
+  border-radius: 3px;
   background: rgba(255, 255, 255, 0.2);
   outline: none;
   cursor: pointer;
 
   &::-webkit-slider-runnable-track {
-    height: 4px;
-    border-radius: 2px;
+    height: 6px;
+    border-radius: 3px;
     background: linear-gradient(
       to right,
       var(--tint-2) 0%,
@@ -584,7 +640,7 @@
     border-radius: 50%;
     background: #fff;
     cursor: pointer;
-    margin-top: -10px;
+    margin-top: -9px;
     box-shadow:
       0 1px 3px rgba(0, 0, 0, 0.3),
       0 2px 6px rgba(0, 0, 0, 0.15);
