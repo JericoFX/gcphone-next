@@ -3,7 +3,7 @@ import { fetchNui } from '../../../utils/fetchNui';
 import { SectionHeader } from '../../shared/ui/SectionBlock';
 import { uiConfirm } from '../../../utils/uiDialog';
 import { t } from '../../../i18n';
-import { Cell, Group, ICONS, InlineExpander } from './settingsShared';
+import { IconImage, ICONS } from './settingsShared';
 import styles from './SettingsApp.module.scss';
 
 interface SettingsSystemProps {
@@ -33,24 +33,42 @@ export function SettingsSystem(props: SettingsSystemProps) {
   return (
     <div class={styles.content}>
       <SectionHeader title={t('settings.live_location', props.language()).toUpperCase()} />
-      <Group>
-        <Cell
-          icon={ICONS.location} iconBg="iconGreen"
-          title={t('settings.share_location', props.language()) || 'Ubicacion en vivo'}
-          subtitle={props.liveLocationEnabled() ? t('settings.active', props.language()) : t('settings.inactive', props.language())}
-          right="switch"
-          switchValue={props.liveLocationEnabled()}
-          onSwitch={() => props.toggleLiveLocation()}
-        />
-        <InlineExpander open={props.liveLocationEnabled}>
+      <div class="ios18-list">
+        <div class="ios18-cell">
+          <div style={{ display: 'flex', 'align-items': 'center', gap: '8px', flex: '1' }}>
+            <div class={`${styles.settingsIcon} ${styles.iconGreen}`}>
+              <IconImage src={ICONS.location} class={styles.settingsIconImg} />
+            </div>
+            <div style={{ display: 'flex', 'flex-direction': 'column', gap: '1px' }}>
+              <span class="ios18-cell__title">
+                {t('settings.share_location', props.language()) || 'Ubicacion en vivo'}
+              </span>
+              <span class="ios18-cell__subtitle">
+                {props.liveLocationEnabled()
+                  ? t('settings.active', props.language())
+                  : t('settings.inactive', props.language())}
+              </span>
+            </div>
+          </div>
+          <div
+            class="ios18-switch"
+            role="switch"
+            aria-checked={props.liveLocationEnabled()}
+            onClick={() => props.toggleLiveLocation()}
+          >
+            <div class="ios18-switch__thumb" />
+          </div>
+        </div>
+
+        <Show when={props.liveLocationEnabled()}>
           <div class={styles.liveStatus}>
             <span class={styles.pulseDot} />
             <span class={styles.liveText}>
               {t('settings.live_enabled_every', props.language(), { seconds: props.liveLocationInterval() }) || `Cada ${props.liveLocationInterval()} segundos`}
             </span>
           </div>
-        </InlineExpander>
-      </Group>
+        </Show>
+      </div>
 
       <Show when={props.liveLocationStatus()}>
         <div class={`${styles.statusMsg} ${props.liveLocationEnabled() ? styles.success : styles.error}`}>
@@ -59,15 +77,24 @@ export function SettingsSystem(props: SettingsSystemProps) {
       </Show>
 
       <SectionHeader title={t('settings.reset_group', props.language()) || 'ZONA DE PELIGRO'} />
-      <Group class={styles.dangerGroup}>
-        <Cell
-          icon={ICONS.trash} iconBg="iconRed"
-          title={t('settings.erase_phone', props.language())}
-          subtitle={t('settings.erase_phone_desc', props.language())}
-          right="chevron"
+      <div class="ios18-list" classList={{ [styles.dangerGroup]: true }}>
+        <button
+          class="ios18-cell"
+          style={{ cursor: 'pointer' }}
           onClick={() => void handleFactoryReset()}
-        />
-      </Group>
+        >
+          <div style={{ display: 'flex', 'align-items': 'center', gap: '8px', flex: '1' }}>
+            <div class={`${styles.settingsIcon} ${styles.iconRed}`}>
+              <IconImage src={ICONS.trash} class={styles.settingsIconImg} />
+            </div>
+            <div style={{ display: 'flex', 'flex-direction': 'column', gap: '1px' }}>
+              <span class="ios18-cell__title">{t('settings.erase_phone', props.language())}</span>
+              <span class="ios18-cell__subtitle">{t('settings.erase_phone_desc', props.language())}</span>
+            </div>
+          </div>
+          <div class={styles.chevron} />
+        </button>
+      </div>
     </div>
   );
 }

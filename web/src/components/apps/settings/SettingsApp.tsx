@@ -9,6 +9,7 @@ import { AppScaffold } from '../../shared/layout';
 import { InlineNotice } from '../../shared/ui/InlineNotice';
 import { t } from '../../../i18n';
 import { TONE_CATALOG, type ToneCategory } from '../../../utils/phoneAudio';
+import { useLiveActivity } from '../../../store/liveActivity';
 import { SettingsMain } from './SettingsMain';
 import { SettingsAppearance } from './SettingsAppearance';
 import { SettingsSound } from './SettingsSound';
@@ -24,6 +25,7 @@ export function SettingsApp() {
   const router = useRouter();
   const [phoneState, phoneActions] = usePhone();
   const [notifications, notificationsActions] = useNotifications();
+  const { setActivity, removeActivity } = useLiveActivity();
 
   const [section, _setSection] = createSignal<SettingsSection>(
     (sessionStorage.getItem('gcphone:settingsSection') as SettingsSection) || 'main'
@@ -60,7 +62,19 @@ export function SettingsApp() {
     if (persisted === '10') setLiveLocationInterval(10);
 
     const state = await fetchNui<{ success?: boolean; active?: boolean; intervalSeconds?: number }>('getLiveLocationState', {}, { success: false, active: false, intervalSeconds: 10 });
-    if (state?.success) { setLiveLocationEnabled(Boolean(state.active)); setLiveLocationInterval(10); }
+    if (state?.success) {
+      setLiveLocationEnabled(Boolean(state.active));
+      setLiveLocationInterval(10);
+      if (state.active) {
+        setActivity('location', {
+          title: t('settings.live_location', language()) || 'Ubicacion en vivo',
+          subtitle: `Cada 10 seg`,
+          icon: './img/icons_ios/ui-location.svg',
+          onStop: () => void toggleLiveLocation(),
+          onNavigate: () => { router.navigate('settings'); },
+        });
+      }
+    }
 
     const autoReply = await fetchNui<{ enabled?: boolean; message?: string }>('getAutoReply', {}, { enabled: false, message: '' });
     setAutoReplyEnabled(autoReply?.enabled === true);
@@ -78,7 +92,11 @@ export function SettingsApp() {
   const toggleLiveLocation = async () => {
     if (liveLocationEnabled()) {
       const response = await fetchNui<{ success?: boolean }>('stopLiveLocation', {}, { success: false });
-      if (response?.success) { setLiveLocationEnabled(false); setLiveLocationStatus(t('settings.live_disabled', language())); }
+      if (response?.success) {
+        setLiveLocationEnabled(false);
+        setLiveLocationStatus(t('settings.live_disabled', language()));
+        removeActivity('location');
+      }
       return;
     }
 
@@ -92,6 +110,13 @@ export function SettingsApp() {
     if (response?.success) {
       setLiveLocationEnabled(true);
       setLiveLocationStatus(t('settings.live_enabled_every', language(), { seconds: liveLocationInterval() }));
+      setActivity('location', {
+        title: t('settings.live_location', language()) || 'Ubicacion en vivo',
+        subtitle: `Cada ${liveLocationInterval()} seg`,
+        icon: './img/icons_ios/ui-location.svg',
+        onStop: () => void toggleLiveLocation(),
+        onNavigate: () => { router.navigate('settings'); },
+      });
       return;
     }
     setLiveLocationStatus(response?.error || t('settings.live_enable_failed', language()));

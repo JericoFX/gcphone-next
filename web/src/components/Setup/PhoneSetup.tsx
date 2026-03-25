@@ -2,19 +2,11 @@ import { For, Show, createMemo, createSignal } from 'solid-js';
 import { usePhone } from '../../store/phone';
 import { t } from '../../i18n';
 import type { AppLanguage } from '../../i18n';
-import { fetchNui } from '../../utils/fetchNui';
 import type { PhoneSetupPayload } from '../../types';
+import { languages } from '../apps/settings/settingsShared';
 import styles from './PhoneSetup.module.scss';
 
-const LANGUAGES = [
-  { code: 'es', labelKey: 'setup.language.es.label', metaKey: 'setup.language.es.meta' },
-  { code: 'en', labelKey: 'setup.language.en.label', metaKey: 'setup.language.en.meta' },
-  { code: 'pt', labelKey: 'setup.language.pt.label', metaKey: 'setup.language.pt.meta' },
-  { code: 'fr', labelKey: 'setup.language.fr.label', metaKey: 'setup.language.fr.meta' },
-] as const;
-
 const STEP_LABELS = ['setup.step.language', 'setup.step.security', 'setup.step.identity', 'Resumen'] as const;
-const DIAL_KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#'] as const;
 
 function sanitizeUsername(value: string) {
   return value.toLowerCase().replace(/\s+/g, '').replace(/[^a-z0-9._-]/g, '').slice(0, 32);
@@ -67,99 +59,66 @@ function humanizeError(code: string | undefined, language: AppLanguage) {
 }
 
 function summaryText(language: AppLanguage) {
-  if (language === 'en') {
-    return {
-      summaryTitle: 'Review your setup',
-      summaryDesc: 'Check your data before finishing the phone setup.',
-      emergencyTitle: 'Emergency calls only',
-      emergencyDesc: 'This quick dial only accepts emergency numbers defined in Lua.',
-      callAction: 'Call',
-      imeiTitle: 'Device IMEI',
-      imeiHint: 'Dial *#06# to check the IMEI before finishing.',
-      invalidEmergency: 'This dialer only allows configured emergency numbers.',
-      noEmergency: 'No emergency numbers configured.',
-      callFailed: 'Unable to start the emergency call.',
-      reviewLanguage: 'Language',
-      reviewPin: 'PIN',
-      reviewMail: 'Mail',
-      reviewSnap: 'Snap',
-      reviewChirp: 'Chirp',
-      reviewClips: 'Clips',
-      hiddenPin: 'Configured',
-      imeiModalTitle: 'IMEI',
-      close: 'Close',
-    };
-  }
-
-  if (language === 'pt') {
-    return {
-      summaryTitle: 'Revise sua configuracao',
-      summaryDesc: 'Confira seus dados antes de finalizar a configuracao do telefone.',
-      emergencyTitle: 'Somente chamadas de emergencia',
-      emergencyDesc: 'Este teclado rapido aceita apenas numeros de emergencia definidos em Lua.',
-      callAction: 'Ligar',
-      imeiTitle: 'IMEI do aparelho',
-      imeiHint: 'Digite *#06# para consultar o IMEI antes de terminar.',
-      invalidEmergency: 'Este teclado so permite numeros de emergencia configurados.',
-      noEmergency: 'Nenhum numero de emergencia configurado.',
-      callFailed: 'Nao foi possivel iniciar a chamada de emergencia.',
-      reviewLanguage: 'Idioma',
-      reviewPin: 'PIN',
-      reviewMail: 'Mail',
-      reviewSnap: 'Snap',
-      reviewChirp: 'Chirp',
-      reviewClips: 'Clips',
-      hiddenPin: 'Configurado',
-      imeiModalTitle: 'IMEI',
-      close: 'Fechar',
-    };
-  }
-
-  if (language === 'fr') {
-    return {
-      summaryTitle: 'Verifiez votre configuration',
-      summaryDesc: 'Controlez vos donnees avant de terminer la configuration du telephone.',
-      emergencyTitle: 'Appels d urgence uniquement',
-      emergencyDesc: 'Ce clavier rapide accepte uniquement les numeros d urgence definis en Lua.',
-      callAction: 'Appeler',
-      imeiTitle: 'IMEI de l appareil',
-      imeiHint: 'Composez *#06# pour consulter l IMEI avant de terminer.',
-      invalidEmergency: 'Ce clavier autorise seulement les numeros d urgence configures.',
-      noEmergency: 'Aucun numero d urgence configure.',
-      callFailed: 'Impossible de lancer l appel d urgence.',
-      reviewLanguage: 'Langue',
-      reviewPin: 'PIN',
-      reviewMail: 'Mail',
-      reviewSnap: 'Snap',
-      reviewChirp: 'Chirp',
-      reviewClips: 'Clips',
-      hiddenPin: 'Configure',
-      imeiModalTitle: 'IMEI',
-      close: 'Fermer',
-    };
-  }
-
-  return {
-    summaryTitle: 'Revisa tu configuracion',
-    summaryDesc: 'Comprueba tus datos antes de terminar la configuracion del telefono.',
-    emergencyTitle: 'Solo llamadas de emergencia',
-    emergencyDesc: 'Este teclado rapido solo acepta numeros de emergencia definidos en Lua.',
-    callAction: 'Llamar',
-    imeiTitle: 'IMEI del dispositivo',
-    imeiHint: 'Marca *#06# para consultar el IMEI antes de finalizar.',
-    invalidEmergency: 'Este teclado solo permite numeros de emergencia configurados.',
-    noEmergency: 'No hay numeros de emergencia configurados.',
-    callFailed: 'No se pudo iniciar la llamada de emergencia.',
-    reviewLanguage: 'Idioma',
-    reviewPin: 'PIN',
-    reviewMail: 'Mail',
-    reviewSnap: 'Snap',
-    reviewChirp: 'Chirp',
-    reviewClips: 'Clips',
-    hiddenPin: 'Configurado',
-    imeiModalTitle: 'IMEI',
-    close: 'Cerrar',
+  const texts: Record<string, Record<string, string>> = {
+    en: { summaryTitle: 'Review your setup', summaryDesc: 'Check your data before finishing.', reviewLanguage: 'Language', reviewPin: 'PIN', reviewMail: 'Mail', reviewSnap: 'Snap', reviewChirp: 'Chirp', reviewClips: 'Clips', hiddenPin: 'Configured' },
+    pt: { summaryTitle: 'Revise sua configuracao', summaryDesc: 'Confira seus dados antes de finalizar.', reviewLanguage: 'Idioma', reviewPin: 'PIN', reviewMail: 'Mail', reviewSnap: 'Snap', reviewChirp: 'Chirp', reviewClips: 'Clips', hiddenPin: 'Configurado' },
+    fr: { summaryTitle: 'Verifiez votre configuration', summaryDesc: 'Controlez vos donnees avant de terminer.', reviewLanguage: 'Langue', reviewPin: 'PIN', reviewMail: 'Mail', reviewSnap: 'Snap', reviewChirp: 'Chirp', reviewClips: 'Clips', hiddenPin: 'Configure' },
+    es: { summaryTitle: 'Revisa tu configuracion', summaryDesc: 'Comprueba tus datos antes de terminar.', reviewLanguage: 'Idioma', reviewPin: 'PIN', reviewMail: 'Mail', reviewSnap: 'Snap', reviewChirp: 'Chirp', reviewClips: 'Clips', hiddenPin: 'Configurado' },
   };
+  return texts[language] || texts.es;
+}
+
+function PhonePreviewSvg(props: { theme: 'light' | 'dark' | 'auto' }) {
+  const lightBg = '#f2f2f7';
+  const darkBg = '#000000';
+  const lightSurface = '#ffffff';
+  const darkSurface = '#1c1c1e';
+  const lightText = '#111111';
+  const darkText = '#ffffff';
+  const lightNav = '#f8f8fa';
+  const darkNav = '#1c1c1e';
+
+  const bg = () => props.theme === 'dark' ? darkBg : lightBg;
+  const surface = () => props.theme === 'dark' ? darkSurface : lightSurface;
+  const text = () => props.theme === 'dark' ? darkText : lightText;
+  const nav = () => props.theme === 'dark' ? darkNav : lightNav;
+
+  return (
+    <svg viewBox="0 0 140 260" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', height: '100%' }}>
+      <rect x="2" y="2" width="136" height="256" rx="20" fill={bg()} stroke="var(--border)" stroke-width="2"/>
+      <rect x="42" y="6" width="56" height="6" rx="3" fill={props.theme === 'dark' ? '#333' : '#ddd'}/>
+      <rect x="6" y="18" width="128" height="28" rx="4" fill={nav()}/>
+      <rect x="14" y="28" width="40" height="6" rx="2" fill={text()} opacity="0.6"/>
+      <rect x="6" y="54" width="128" height="36" rx="8" fill={surface()}/>
+      <rect x="14" y="62" width="50" height="5" rx="2" fill={text()} opacity="0.5"/>
+      <rect x="14" y="72" width="30" height="4" rx="2" fill={text()} opacity="0.2"/>
+      <rect x="6" y="96" width="128" height="36" rx="8" fill={surface()}/>
+      <rect x="14" y="104" width="60" height="5" rx="2" fill={text()} opacity="0.5"/>
+      <rect x="14" y="114" width="35" height="4" rx="2" fill={text()} opacity="0.2"/>
+      <rect x="6" y="138" width="128" height="36" rx="8" fill={surface()}/>
+      <rect x="14" y="146" width="45" height="5" rx="2" fill={text()} opacity="0.5"/>
+      <rect x="14" y="156" width="28" height="4" rx="2" fill={text()} opacity="0.2"/>
+      <Show when={props.theme === 'auto'}>
+        <clipPath id="rightHalf"><rect x="70" y="2" width="70" height="256"/></clipPath>
+        <g clip-path="url(#rightHalf)">
+          <rect x="2" y="2" width="136" height="256" rx="20" fill={darkBg}/>
+          <rect x="42" y="6" width="56" height="6" rx="3" fill="#333"/>
+          <rect x="6" y="18" width="128" height="28" rx="4" fill={darkNav}/>
+          <rect x="14" y="28" width="40" height="6" rx="2" fill={darkText} opacity="0.6"/>
+          <rect x="6" y="54" width="128" height="36" rx="8" fill={darkSurface}/>
+          <rect x="14" y="62" width="50" height="5" rx="2" fill={darkText} opacity="0.5"/>
+          <rect x="14" y="72" width="30" height="4" rx="2" fill={darkText} opacity="0.2"/>
+          <rect x="6" y="96" width="128" height="36" rx="8" fill={darkSurface}/>
+          <rect x="14" y="104" width="60" height="5" rx="2" fill={darkText} opacity="0.5"/>
+          <rect x="14" y="114" width="35" height="4" rx="2" fill={darkText} opacity="0.2"/>
+          <rect x="6" y="138" width="128" height="36" rx="8" fill={darkSurface}/>
+          <rect x="14" y="146" width="45" height="5" rx="2" fill={darkText} opacity="0.5"/>
+          <rect x="14" y="156" width="28" height="4" rx="2" fill={darkText} opacity="0.2"/>
+        </g>
+      </Show>
+      <rect x="46" y="244" width="48" height="4" rx="2" fill={text()} opacity="0.3"/>
+    </svg>
+  );
 }
 
 export function PhoneSetup() {
@@ -171,18 +130,14 @@ export function PhoneSetup() {
   const [chirpUsername, setChirpUsername] = createSignal('');
   const [clipsUsername, setClipsUsername] = createSignal('');
   const [language, setLanguage] = createSignal<AppLanguage>(phoneState.settings.language || 'es');
+  const [theme, setTheme] = createSignal<'auto' | 'light' | 'dark'>('auto');
   const [error, setError] = createSignal('');
   const [loading, setLoading] = createSignal(false);
-  const [dialValue, setDialValue] = createSignal('');
-  const [dialStatus, setDialStatus] = createSignal('');
-  const [imeiModalOpen, setImeiModalOpen] = createSignal(false);
   const currentLanguage = () => language();
   const copy = createMemo(() => summaryText(currentLanguage()));
 
   const mailEnabled = createMemo(() => phoneState.featureFlags.mail !== false);
   const mailDomain = createMemo(() => phoneState.setup.mailDomain || 'jericofx.gg');
-  const emergencyContacts = createMemo(() => phoneState.setup.emergencyContacts || []);
-  const matchedEmergencyContact = createMemo(() => emergencyContacts().find((entry) => entry.number === dialValue().trim()));
   const payload = createMemo<PhoneSetupPayload>(() => ({
     pin: pin().trim(),
     snapUsername: snapUsername().trim(),
@@ -190,6 +145,7 @@ export function PhoneSetup() {
     clipsUsername: clipsUsername().trim(),
     mailAlias: mailEnabled() ? mailAlias().trim() : undefined,
     language: language(),
+    theme: theme(),
     audioProfile: phoneState.settings.audioProfile || 'normal',
   }));
 
@@ -229,7 +185,6 @@ export function PhoneSetup() {
 
   const goBack = () => {
     setError('');
-    setDialStatus('');
     setStep((current) => Math.max(current - 1, 0));
   };
 
@@ -256,43 +211,9 @@ export function PhoneSetup() {
     phoneActions.lock();
   };
 
-  const appendDial = (value: string) => {
-    setDialStatus('');
-    setDialValue((current) => (current + value).slice(0, 20));
-  };
-
-  const deleteDial = () => {
-    setDialStatus('');
-    setDialValue((current) => current.slice(0, -1));
-  };
-
-  const startEmergencyCall = async () => {
-    const dialed = dialValue().trim();
-    if (dialed === '*#06#') {
-      await fetchNui('phoneReportImeiViewed', { context: 'setup' }, { success: true });
-      setImeiModalOpen(true);
-      setDialStatus('');
-      return;
-    }
-
-    const target = matchedEmergencyContact();
-    if (!target) {
-      setDialStatus(emergencyContacts().length > 0 ? copy().invalidEmergency : copy().noEmergency);
-      return;
-    }
-
-    const result = await fetchNui<{ error?: string }>('startCall', { phoneNumber: target.number, extraData: { source: 'setup' } }, {});
-    if (result?.error) {
-      setDialStatus(copy().callFailed);
-      return;
-    }
-
-    setDialStatus(`${copy().callAction}: ${target.label}`);
-  };
-
   const selectedLanguageLabel = createMemo(() => {
-    const selected = LANGUAGES.find((entry) => entry.code === language());
-    return selected ? t(selected.labelKey, currentLanguage()) : language();
+    const selected = languages.find((entry) => entry.code === language());
+    return selected?.name || language();
   });
 
   return (
@@ -330,19 +251,26 @@ export function PhoneSetup() {
                 <h3>{t('setup.language.title', currentLanguage())}</h3>
                 <p>{t('setup.language.description', currentLanguage())}</p>
               </div>
-
-              <div class={styles.optionGrid}>
-                {LANGUAGES.map((option) => (
-                  <button
-                    type="button"
-                    class={styles.optionCard}
-                    classList={{ [styles.optionCardActive]: language() === option.code }}
-                    onClick={() => setLanguage(option.code)}
-                  >
-                    <strong>{t(option.labelKey, currentLanguage())}</strong>
-                    <span>{t(option.metaKey, currentLanguage())}</span>
-                  </button>
-                ))}
+              <div class="ios18-list">
+                <For each={languages}>
+                  {(lang) => (
+                    <button
+                      class="ios18-cell"
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => setLanguage(lang.code as AppLanguage)}
+                    >
+                      <div style={{ display: 'flex', 'align-items': 'center', gap: '8px', flex: '1' }}>
+                        <span style={{ 'font-size': 'var(--fs-caption1)', 'font-weight': '700', color: 'var(--text-2)', 'min-width': '24px' }}>{lang.label}</span>
+                        <span class="ios18-cell__title">{lang.name}</span>
+                      </div>
+                      <Show when={language() === lang.code}>
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                          <path d="M3 8.5L6.5 12L13 4" stroke="var(--tint)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                      </Show>
+                    </button>
+                  )}
+                </For>
               </div>
             </section>
           </Show>
@@ -432,42 +360,21 @@ export function PhoneSetup() {
 
               <section class={styles.section}>
                 <div class={styles.sectionHeader}>
-                  <h3>{copy().emergencyTitle}</h3>
-                  <p>{copy().emergencyDesc}</p>
+                  <h3>{t('setup.theme.title', currentLanguage()) || 'Tema'}</h3>
+                  <p>{t('setup.theme.description', currentLanguage()) || 'Elige como se ve tu telefono'}</p>
                 </div>
-
-                <div class={styles.emergencyBlock}>
-                  <div class={styles.dialHeader}>
-                    <div>
-                      <strong>{dialValue() || '...'}</strong>
-                      <span>{matchedEmergencyContact() ? `${matchedEmergencyContact()?.label}: ${matchedEmergencyContact()?.number}` : copy().imeiHint}</span>
-                    </div>
-                    <button type="button" class={styles.emergencyCallButton} onClick={() => void startEmergencyCall()}>
-                      <span class={styles.emergencyPhoneIcon}>☎</span>
-                      <span>{copy().callAction}</span>
-                    </button>
+                <div class={styles.themePicker}>
+                  <div class={styles.themePreview}>
+                    <PhonePreviewSvg theme={theme()} />
                   </div>
-
-                  <div class={styles.emergencyTags}>
-                    <For each={emergencyContacts()}>
-                      {(contact) => <button type="button" class={styles.emergencyTag} onClick={() => setDialValue(contact.number)}>{contact.label}: {contact.number}</button>}
-                    </For>
+                  <div class={`ios-segment ${styles.themeSegment}`}>
+                    <button class="ios-segment-btn" classList={{ 'ios-segment-btn-active': theme() === 'light' }} onClick={() => setTheme('light')}>Light</button>
+                    <button class="ios-segment-btn" classList={{ 'ios-segment-btn-active': theme() === 'dark' }} onClick={() => setTheme('dark')}>Dark</button>
+                    <button class="ios-segment-btn" classList={{ 'ios-segment-btn-active': theme() === 'auto' }} onClick={() => setTheme('auto')}>Auto</button>
                   </div>
-
-                  <div class={styles.dialPad}>
-                    <For each={DIAL_KEYS}>
-                      {(key) => <button type="button" class={styles.dialKey} onClick={() => appendDial(key)}>{key}</button>}
-                    </For>
-                  </div>
-
-                  <div class={styles.dialActions}>
-                    <button type="button" class={styles.secondaryButton} onClick={deleteDial}>⌫</button>
-                    <button type="button" class={styles.secondaryButton} onClick={() => setDialValue('')}>C</button>
-                  </div>
-
-                  <Show when={dialStatus()}>
-                    <p class={styles.statusNote}>{dialStatus()}</p>
-                  </Show>
+                  <p class={styles.themeHint}>
+                    {t('setup.theme.auto_hint', currentLanguage()) || 'Auto usa el tema del sistema'}
+                  </p>
                 </div>
               </section>
             </>
@@ -503,18 +410,6 @@ export function PhoneSetup() {
           </Show>
         </div>
       </div>
-
-      <Show when={imeiModalOpen()}>
-        <div class={styles.modalOverlay} onClick={() => setImeiModalOpen(false)}>
-          <div class={styles.modalCard} onClick={(event) => event.stopPropagation()}>
-            <h3>{copy().imeiModalTitle}</h3>
-            <p>{phoneState.imei || 'N/A'}</p>
-            <button type="button" class={styles.primaryButton} onClick={() => setImeiModalOpen(false)}>
-              {copy().close}
-            </button>
-          </div>
-        </div>
-      </Show>
     </div>
   );
 }

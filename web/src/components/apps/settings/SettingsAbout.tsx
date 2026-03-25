@@ -1,7 +1,7 @@
 import { fetchNui } from '../../../utils/fetchNui';
 import { formatPhoneNumber } from '../../../utils/misc';
 import { t } from '../../../i18n';
-import { Group, IconImage, ICONS } from './settingsShared';
+import { IconImage, ICONS } from './settingsShared';
 import styles from './SettingsApp.module.scss';
 
 interface SettingsAboutProps {
@@ -32,7 +32,7 @@ export function SettingsAbout(props: SettingsAboutProps) {
         <div class={styles.aboutVersion}>{t('settings.version_label', props.language())} {version()}</div>
       </div>
 
-      <Group>
+      <div class="ios18-list">
         <div
           class={`${styles.infoRow} ${styles.copiable}`}
           onClick={() => copyToClipboard(props.phoneState.settings.phoneNumber || '')}
@@ -56,9 +56,9 @@ export function SettingsAbout(props: SettingsAboutProps) {
           <span class={styles.infoLabel}>{t('settings.visual_framework', props.language())}</span>
           <span class={styles.infoValue}>{props.phoneState.framework || 'unknown'}</span>
         </div>
-      </Group>
+      </div>
 
-      <Group>
+      <div class="ios18-list">
         <div class={styles.infoRow}>
           <span class={styles.infoLabel}>{t('settings.version_label', props.language()) || 'Version'}</span>
           <span class={styles.infoValue}>{version()}</span>
@@ -67,7 +67,7 @@ export function SettingsAbout(props: SettingsAboutProps) {
           <span class={styles.infoLabel}>Author</span>
           <span class={styles.infoValue}>{author()}</span>
         </div>
-      </Group>
+      </div>
     </div>
   );
 }

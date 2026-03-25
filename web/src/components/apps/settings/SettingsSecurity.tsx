@@ -1,6 +1,6 @@
 import { For, Show, createSignal } from 'solid-js';
 import { t } from '../../../i18n';
-import { Cell, Group, IconImage, ICONS, InlineExpander, PIN_LENGTH } from './settingsShared';
+import { IconImage, ICONS, PIN_LENGTH } from './settingsShared';
 import styles from './SettingsApp.module.scss';
 
 type SecurityFlow = 'idle' | 'disable-lock' | 'change-verify' | 'change-new' | 'change-confirm';
@@ -85,40 +85,61 @@ export function SettingsSecurity(props: SettingsSecurityProps) {
 
   return (
     <div class={styles.content}>
-      <Group>
-        <Cell
-          icon={ICONS.security} iconBg="iconBlue"
-          title={t('settings.screen_lock', props.language()) || 'Bloqueo de pantalla'}
-          right="switch"
-          switchValue={props.screenLockEnabled()}
-          onSwitch={() => {
-            setStatus(null);
-            if (props.screenLockEnabled()) {
-              resetSecurityFlow();
-              setSecurityFlow('disable-lock');
-              return;
-            }
-            props.phoneActions.setScreenLockEnabled(true);
-          }}
-        />
+      <div class="ios18-list">
+        <div class="ios18-cell">
+          <div style={{ display: 'flex', 'align-items': 'center', gap: '8px', flex: '1' }}>
+            <div class={`${styles.settingsIcon} ${styles.iconBlue}`}>
+              <IconImage src={ICONS.security} class={styles.settingsIconImg} />
+            </div>
+            <span class="ios18-cell__title">
+              {t('settings.screen_lock', props.language()) || 'Bloqueo de pantalla'}
+            </span>
+          </div>
+          <div
+            class="ios18-switch"
+            role="switch"
+            aria-checked={props.screenLockEnabled()}
+            onClick={() => {
+              setStatus(null);
+              if (props.screenLockEnabled()) {
+                resetSecurityFlow();
+                setSecurityFlow('disable-lock');
+                return;
+              }
+              props.phoneActions.setScreenLockEnabled(true);
+            }}
+          >
+            <div class="ios18-switch__thumb" />
+          </div>
+        </div>
+
         {/* Swipe to Unlock: only when screen lock ON and NO PIN set */}
         <Show when={props.screenLockEnabled() && !hasPinSet()}>
-          <Cell
-            icon={ICONS.security} iconBg="iconGray"
-            title={t('settings.swipe_unlock', props.language()) || 'Deslizar para desbloquear'}
-            right="switch"
-            switchValue={props.phoneState.settings.swipeUnlock ?? false}
-            onSwitch={() => props.phoneActions.setSwipeUnlock(!(props.phoneState.settings.swipeUnlock ?? false))}
-          />
+          <div class="ios18-cell">
+            <div style={{ display: 'flex', 'align-items': 'center', gap: '8px', flex: '1' }}>
+              <div class={`${styles.settingsIcon} ${styles.iconGray}`}>
+                <IconImage src={ICONS.security} class={styles.settingsIconImg} />
+              </div>
+              <span class="ios18-cell__title">
+                {t('settings.swipe_unlock', props.language()) || 'Deslizar para desbloquear'}
+              </span>
+            </div>
+            <div
+              class="ios18-switch"
+              role="switch"
+              aria-checked={props.phoneState.settings.swipeUnlock ?? false}
+              onClick={() => props.phoneActions.setSwipeUnlock(!(props.phoneState.settings.swipeUnlock ?? false))}
+            >
+              <div class="ios18-switch__thumb" />
+            </div>
+          </div>
         </Show>
-      </Group>
+      </div>
 
-      <Group>
-        <Cell
-          icon={ICONS.security} iconBg="iconRed"
-          title={t('settings.pin_lock', props.language()) || 'PIN Lock'}
-          right="value+chevron"
-          value={hasPinSet() ? (t('settings.pin_active', props.language()) || 'Activo') : (t('settings.pin_inactive', props.language()) || 'Inactivo')}
+      <div class="ios18-list">
+        <button
+          class="ios18-cell"
+          style={{ cursor: 'pointer' }}
           onClick={() => {
             setStatus(null);
             resetSecurityFlow();
@@ -128,8 +149,24 @@ export function SettingsSecurity(props: SettingsSecurityProps) {
               setSecurityFlow('change-new');
             }
           }}
-        />
-        <InlineExpander open={() => securityFlow() !== 'idle'}>
+        >
+          <div style={{ display: 'flex', 'align-items': 'center', gap: '8px', flex: '1' }}>
+            <div class={`${styles.settingsIcon} ${styles.iconRed}`}>
+              <IconImage src={ICONS.security} class={styles.settingsIconImg} />
+            </div>
+            <span class="ios18-cell__title">
+              {t('settings.pin_lock', props.language()) || 'PIN Lock'}
+            </span>
+          </div>
+          <span style={{ 'font-size': 'var(--fs-caption1)', color: 'var(--text-3)' }}>
+            {hasPinSet()
+              ? (t('settings.pin_active', props.language()) || 'Activo')
+              : (t('settings.pin_inactive', props.language()) || 'Inactivo')}
+          </span>
+          <div class={styles.chevron} />
+        </button>
+
+        <Show when={securityFlow() !== 'idle'}>
           <div class={styles.pinContainer}>
             <div class={styles.pinTitle}>{securityTitle()}</div>
             <div class={styles.pinDots}>
@@ -154,8 +191,8 @@ export function SettingsSecurity(props: SettingsSecurityProps) {
               {(msg) => <div class={`${styles.pinMessage} ${styles[msg().type]}`}>{msg().text}</div>}
             </Show>
           </div>
-        </InlineExpander>
-      </Group>
+        </Show>
+      </div>
     </div>
   );
 }
