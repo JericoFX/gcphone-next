@@ -288,6 +288,8 @@ CreateThread(function()
             local rollStep = CameraClamp(cfg.RollStep or 2.5, 0.5, 10.0)
 
             DisablePlayerFiring(PlayerId(), true)
+            DisableControlAction(0, 1, true)
+            DisableControlAction(0, 2, true)
             DisableControlAction(0, 24, true)
             DisableControlAction(0, 25, true)
             DisableControlAction(0, 44, true)
