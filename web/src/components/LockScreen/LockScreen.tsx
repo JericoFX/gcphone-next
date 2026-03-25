@@ -469,22 +469,8 @@ export function LockScreen() {
         <button class={styles.bottomBtn} onClick={openCameraQuickAction}>
           <img src="./img/icons_ios/camera.svg" alt="" draggable={false} />
         </button>
-        <Show when={swipeUnlockEnabled()}>
-          <div
-            class={styles.swipeUnlockDock}
-            onPointerDown={handleSwipeUnlockPointerDown}
-            onPointerMove={handleSwipeUnlockPointerMove}
-            onPointerUp={handleSwipeUnlockPointerEnd}
-            onPointerCancel={handleSwipeUnlockPointerEnd}
-          >
-            <div class={styles.swipeUnlockTrack}>
-              <div class={styles.swipeUnlockFill} style={{ height: `${swipeUnlockProgress()}%` }} />
-              <div class={styles.swipeUnlockHandle} style={{ transform: `translateY(-${Math.min(swipeUnlockProgress(), 92)}%)` }}>
-                <span class={styles.swipeUnlockArrow}>⌃</span>
-              </div>
-            </div>
-            <span class={styles.swipeUnlockLabel}>{t('lock.swipe_up', language())}</span>
-          </div>
+        <Show when={!hasPinSet()}>
+          <button class={styles.tapUnlockBtn} onClick={() => { phoneActions.unlockDirect(); finalizeUnlock(); }} />
         </Show>
         <button class={styles.sosBtn} onClick={() => setEmergencySheetOpen(true)}>SOS</button>
       </div>

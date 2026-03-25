@@ -1018,3 +1018,12 @@
 .imei-modal-card p {
   word-break: break-all;
 }
+
+.tap-unlock-btn {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
