@@ -1,7 +1,6 @@
 import { For, Show, createEffect, createMemo, createSignal, onCleanup, onMount } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { fetchNui } from '../../../utils/fetchNui';
-import { timeAgo } from '../../../utils/misc';
 import { resolveMediaType, sanitizeMediaUrl, sanitizeText } from '../../../utils/sanitize';
 import { useNuiEvent } from '../../../utils/useNui';
 import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
@@ -26,23 +25,22 @@ import { FormField, Modal, ModalActions, ModalButton } from '../../shared/ui/Mod
 import { ActionSheet } from '../../shared/ui/ActionSheet';
 import { EmojiPickerButton } from '../../shared/ui/EmojiPicker';
 import { LiveFlashlightControl } from '../../shared/ui/LiveFlashlightControl';
-import { MediaActionButtons } from '../../shared/ui/MediaActionButtons';
-import { MediaAttachmentPreview } from '../../shared/ui/MediaAttachmentPreview';
 import { SearchInput } from '../../shared/ui/SearchInput';
-import { SegmentedTabs } from '../../shared/ui/SegmentedTabs';
-import { SheetIntro } from '../../shared/ui/SheetIntro';
 import { SocialOnboardingModal, type SocialOnboardingPayload } from '../../shared/ui/SocialOnboardingModal';
 import { ShareSheet, type SharePayload } from '../../shared/ui/ShareSheet';
 import { VirtualList } from '../../shared/ui/VirtualList';
 import { useLiveFlashlight } from '../../../hooks/useLiveFlashlight';
 import { getStoredLanguage, t } from '../../../i18n';
+import { SnapStoryViewerOverlay } from './SnapStoryViewer';
+import { SnapCreatePostModal } from './SnapCreatePostModal';
+import { SnapRequestsModal } from './SnapRequestsModal';
 import type {
   SnapPost, SnapStory, SnapLive, SnapLiveSocketMessage, SnapLiveReaction,
   TrackKind, MediaTrackEntry, SnapFollowRequest, SnapDiscoverPost,
   LiveStartResponse, SnapLiveAudioStartResponse, SnapLiveProximityState,
   SnapLiveProximityVolume, SnapLiveProximityDisabled, SnapLiveAudioStatusResponse, SnapAccount,
 } from './SnapTypes';
-import { cleanLiveText, normalizeLiveMessage, getLiveAudioDisabledMessage, SNAP_MOCK_LIVE_ID, SNAP_MOCK_USERS, SNAP_MOCK_LINES } from './SnapTypes';
+import { normalizeLiveMessage, getLiveAudioDisabledMessage, SNAP_MOCK_LIVE_ID, SNAP_MOCK_USERS, SNAP_MOCK_LINES } from './SnapTypes';
 import styles from './SnapApp.module.scss';
 
 // Removed: all interfaces and helper functions moved to SnapTypes.ts
@@ -72,7 +70,6 @@ export function SnapApp() {
   const [sharePayload, setSharePayload] = createSignal<SharePayload | null>(null);
   const [fabTooltipVisible, setFabTooltipVisible] = createSignal(false);
   const [activeStoryIndex, setActiveStoryIndex] = createSignal<number | null>(null);
-  const [storyProgressPct, setStoryProgressPct] = createSignal(0);
   const [viewerUrl, setViewerUrl] = createSignal<string | null>(null);
   const [showActionSheet, setShowActionSheet] = createSignal(false);
   const [statusMessage, setStatusMessage] = createSignal('');
@@ -87,11 +84,6 @@ export function SnapApp() {
   const [discoverOffset, setDiscoverOffset] = createSignal(0);
   const [discoverHasMore, setDiscoverHasMore] = createSignal(true);
   const [discoverQuery, setDiscoverQuery] = createSignal('');
-  const postModeTabs = [
-    { id: 'post', label: 'Publicacion' },
-    { id: 'story', label: 'Story' },
-  ];
-
   const [profileDisplayName, setProfileDisplayName] = createSignal('');
   const [profileAvatar, setProfileAvatar] = createSignal('');
   const [profileBio, setProfileBio] = createSignal('');
@@ -121,10 +113,8 @@ export function SnapApp() {
   // Create Post
   const [showCreatePost, setShowCreatePost] = createSignal(false);
   const [postMedia, setPostMedia] = createSignal('');
-  const [postCaption, setPostCaption] = createSignal('');
   const [postMode, setPostMode] = createSignal<'post' | 'story'>('post');
 
-  let storyTick: number | undefined;
   let floatingTimers = new Map<string, number>();
   let liveParticipantTracks = new Map<string, MediaTrackEntry[]>();
   let liveVideoHost: HTMLDivElement | undefined;
@@ -401,21 +391,21 @@ export function SnapApp() {
 
     if (result?.error) {
       if (result.error === 'ALREADY_FOLLOWING') {
-        setStatusMessage('Ya sigues a esta cuenta');
+        setStatusMessage(t('snap.already_following', language()));
       } else if (result.error === 'ACCOUNT_NOT_FOUND') {
-        setStatusMessage('Cuenta no encontrada');
+        setStatusMessage(t('snap.account_not_found', language()));
       } else {
-        setStatusMessage('No se pudo actualizar el seguimiento');
+        setStatusMessage(t('snap.follow_error', language()));
       }
       return;
     }
 
     if (result?.following) {
-      setStatusMessage('Ahora sigues esta cuenta');
+      setStatusMessage(t('snap.now_following', language()));
     } else if (result?.requested) {
-      setStatusMessage('Solicitud de seguimiento enviada');
+      setStatusMessage(t('snap.follow_requested', language()));
     } else if (result?.cancelled) {
-      setStatusMessage('Solicitud de seguimiento cancelada');
+      setStatusMessage(t('snap.follow_cancelled', language()));
     }
 
     await Promise.all([loadDiscoverFeed(true), refreshFollowRequests()]);
@@ -441,18 +431,6 @@ export function SnapApp() {
 
     onCleanup(() => window.clearTimeout(timer));
   });
-
-  const handleStoryVideoTimeUpdate = (event: Event) => {
-    const target = event.currentTarget as HTMLVideoElement | null;
-    if (!target || target.duration <= 0) return;
-    const pct = Math.min(100, (target.currentTime / target.duration) * 100);
-    setStoryProgressPct(pct);
-  };
-
-  const handleStoryVideoEnded = () => {
-    setStoryProgressPct(100);
-    shiftStory(1);
-  };
 
   useNuiEvent<SnapLive>('gcphone:snap:liveStarted', (live) => {
     setLiveStreams((prev) => {
@@ -510,7 +488,7 @@ export function SnapApp() {
     setMutedUsers((prev) => (prev.includes(username) ? prev : [...prev, username]));
     if (sanitizeText(myAccount()?.username || '', 40).toLowerCase() === username) {
       setViewerMuted(true);
-      setStatusMessage('Estas silenciado en este live');
+      setStatusMessage(t('snap.live_muted', language()));
       setLiveKitRemoteAudioVolume(0);
     }
   });
@@ -526,19 +504,19 @@ export function SnapApp() {
     setLiveAudioDistanceMeters(Number.isFinite(Number(payload?.distance)) ? Number(payload?.distance) : -1);
 
     if (viewerMuted()) {
-      setStatusMessage('Estas silenciado en este live');
+      setStatusMessage(t('snap.live_muted', language()));
       setLiveKitRemoteAudioVolume(0);
       return;
     }
 
     if (payload?.targetOnline === false) {
-      setStatusMessage('Live sin emisor cercano');
+      setStatusMessage(t('snap.live_no_broadcaster', language()));
       setLiveKitRemoteAudioVolume(0);
       return;
     }
 
     if (payload?.listening === false) {
-      setStatusMessage('Acercate para escuchar el live');
+      setStatusMessage(t('snap.live_approach', language()));
       setLiveKitRemoteAudioVolume(0);
       return;
     }
@@ -571,7 +549,7 @@ export function SnapApp() {
 
     const reason = String(payload?.reason || '');
     if (reason === 'command_stop' || reason === 'manual_stop') {
-      setStatusMessage('Audio pausado: proximidad requerida');
+      setStatusMessage(t('snap.audio_paused_proximity', language()));
       return;
     }
     setStatusMessage('Audio pausado hasta recuperar proximidad');
@@ -598,7 +576,7 @@ export function SnapApp() {
     lastAvatarMedia = sharedAvatar;
     setProfileAvatar(sharedAvatar);
     setActiveTab('profile');
-    setStatusMessage('Avatar listo para guardar');
+    setStatusMessage(t('snap.avatar_ready', language()));
   });
 
   onCleanup(() => {
@@ -612,10 +590,6 @@ export function SnapApp() {
     if (liveAudioWatchdogTimer) {
       window.clearInterval(liveAudioWatchdogTimer);
       liveAudioWatchdogTimer = undefined;
-    }
-    if (storyTick) {
-      window.clearInterval(storyTick);
-      storyTick = undefined;
     }
   });
 
@@ -643,7 +617,7 @@ export function SnapApp() {
       setLiveAudioProximityEnabled(false);
       setLiveKitRemoteAudioPriority(null);
       setLiveKitRemoteAudioVolume(0);
-      setStatusMessage('Audio pausado hasta recuperar proximidad');
+      setStatusMessage(t('snap.audio_paused_recover', language()));
       void fetchNui('snapLiveAudioStop', {}, { success: true });
     }, 1000);
 
@@ -734,7 +708,7 @@ export function SnapApp() {
     }, { success: false });
 
     if (!response?.success) {
-      return { ok: false, error: response?.error || 'No se pudo crear la cuenta de Snap.' };
+      return { ok: false, error: response?.error || t('snap.create_account_failed', language()) };
     }
 
     const updated = await fetchNui<{ success?: boolean }>('snapUpdateAccount', {
@@ -745,7 +719,7 @@ export function SnapApp() {
     }, { success: false });
 
     if (!updated?.success) {
-      return { ok: false, error: 'Cuenta creada, pero no se pudieron guardar todos los datos del perfil.' };
+      return { ok: false, error: t('snap.create_account_partial', language()) };
     }
 
     setShowOnboarding(false);
@@ -774,20 +748,6 @@ export function SnapApp() {
       setStatusMessage(t('snap.request_cancelled', language()));
       await refreshFollowRequests();
     }
-  };
-
-  const formatStoryTime = (expiresAt?: string) => {
-    if (!expiresAt) return '';
-    const remaining = Math.max(0, new Date(expiresAt).getTime() - Date.now());
-    const hours = Math.floor(remaining / (1000 * 60 * 60));
-    if (hours > 0) return `${hours}h`;
-    const mins = Math.floor(remaining / (1000 * 60));
-    return `${mins}m`;
-  };
-
-  const activeStory = () => {
-    const idx = activeStoryIndex();
-    return idx !== null ? stories()[idx] : null;
   };
 
   const isLiveOwner = createMemo(() => {
@@ -1084,7 +1044,7 @@ export function SnapApp() {
     setShowActionSheet(false);
     const result = await fetchNui<LiveStartResponse>('snapStartLive', {});
     if (!result?.success || !result.payload?.postId) {
-      setStatusMessage('No se pudo iniciar el live');
+      setStatusMessage(t('snap.live_start_failed', language()));
       return;
     }
 
@@ -1115,7 +1075,7 @@ export function SnapApp() {
 
   const sendLiveMessage = async () => {
     if (viewerMuted()) {
-      setStatusMessage('Estas silenciado en este live');
+      setStatusMessage(t('snap.live_muted', language()));
       return;
     }
 
@@ -1141,7 +1101,7 @@ export function SnapApp() {
     const response = await sendSnapLiveMessage(String(stream.id), content);
     if (response?.error === 'MUTED') {
       setViewerMuted(true);
-      setStatusMessage('Estas silenciado en este live');
+      setStatusMessage(t('snap.live_muted', language()));
       return;
     }
 
@@ -1150,7 +1110,7 @@ export function SnapApp() {
       return;
     }
 
-    setStatusMessage('No se pudo enviar el mensaje');
+    setStatusMessage(t('snap.send_message_failed', language()));
   };
 
   const sendReaction = async (reaction: string) => {
@@ -1170,7 +1130,7 @@ export function SnapApp() {
     }
     const response = await sendSnapLiveReaction(String(stream.id), reaction);
     if (response?.success) return;
-    setStatusMessage('No se pudo enviar reaccion');
+    setStatusMessage(t('snap.send_reaction_failed', language()));
   };
 
   const removeLiveMessage = async (messageId: string) => {
@@ -1183,7 +1143,7 @@ export function SnapApp() {
     }
     const response = await deleteSnapLiveMessage(String(stream.id), messageId);
     if (response?.success) return;
-    setStatusMessage('No se pudo eliminar el mensaje');
+    setStatusMessage(t('snap.delete_message_failed', language()));
   };
 
   const muteLiveUser = async (username: string) => {
@@ -1196,59 +1156,12 @@ export function SnapApp() {
     }
     const response = await muteSnapLiveUser(String(stream.id), username);
     if (response?.success) return;
-    setStatusMessage('No se pudo silenciar al usuario');
+    setStatusMessage(t('snap.mute_user_failed', language()));
   };
 
   const openStory = (index: number) => {
-    setStoryProgressPct(0);
     setActiveStoryIndex(index);
   };
-
-  const shiftStory = (offset: number) => {
-    const current = activeStoryIndex();
-    if (current === null) return;
-    const next = current + offset;
-    if (next < 0 || next >= stories().length) {
-      setActiveStoryIndex(null);
-      setStoryProgressPct(0);
-      return;
-    }
-    setStoryProgressPct(0);
-    setActiveStoryIndex(next);
-  };
-
-  createEffect(() => {
-    const story = activeStory();
-    if (!story) {
-      if (storyTick) window.clearInterval(storyTick);
-      storyTick = undefined;
-      setStoryProgressPct(0);
-      return;
-    }
-
-    if (story.media_type === 'video') {
-      return;
-    }
-
-    const durationMs = 5000;
-    const startedAt = Date.now();
-    if (storyTick) window.clearInterval(storyTick);
-    storyTick = window.setInterval(() => {
-      const elapsed = Date.now() - startedAt;
-      const pct = Math.min(100, (elapsed / durationMs) * 100);
-      setStoryProgressPct(pct);
-      if (pct >= 100) {
-        window.clearInterval(storyTick);
-        storyTick = undefined;
-        shiftStory(1);
-      }
-    }, 100);
-
-    onCleanup(() => {
-      if (storyTick) window.clearInterval(storyTick);
-      storyTick = undefined;
-    });
-  });
 
   createEffect(() => {
     const stream = activeLive();
@@ -1294,51 +1207,6 @@ export function SnapApp() {
       stopSnapMockFeed = undefined;
     });
   });
-
-  const publishPost = async () => {
-    const media = sanitizeMediaUrl(postMedia());
-    if (!media) {
-      setStatusMessage(t('snap.select_media', language()));
-      return;
-    }
-    setStatusMessage('');
-    
-    setLoading(true);
-    
-    if (postMode() === 'story') {
-      const result = await fetchNui<{ success?: boolean }>('snapPublishStory', {
-        mediaUrl: media,
-        mediaType: resolveMediaType(media)
-      });
-      if (result?.success) {
-        setPostMedia('');
-        setShowCreatePost(false);
-        await loadData();
-      }
-    } else {
-      const result = await fetchNui<{ success?: boolean }>('snapPublishPost', {
-        mediaUrl: media,
-        mediaType: resolveMediaType(media),
-        caption: sanitizeText(postCaption(), 2200)
-      });
-      if (result?.success) {
-        setPostMedia('');
-        setPostCaption('');
-        setShowCreatePost(false);
-        cache.invalidate('snap:feed');
-        await loadData();
-      }
-    }
-    
-    setLoading(false);
-  };
-
-  const attachFromGallery = async () => {
-    const gallery = await fetchNui<any[]>('getGallery', undefined, []);
-    if (gallery?.[0]?.url) {
-      setPostMedia(sanitizeMediaUrl(gallery[0].url) || '');
-    }
-  };
 
   const attachAvatarFromGallery = async () => {
     const gallery = await fetchNui<any[]>('getGallery', undefined, []);
@@ -1581,7 +1449,7 @@ export function SnapApp() {
 
                         <div class={styles.discoverMeta}>
                           <strong>{post.display_name || post.username || t('chirp.user', language())}</strong>
-                          <span>@{post.username || 'usuario'}</span>
+                          <span>@{post.username || 'user'}</span>
                           <Show when={post.caption}>
                             <p>{post.caption}</p>
                           </Show>
@@ -1680,116 +1548,34 @@ export function SnapApp() {
           { label: t('chirp.gallery', language()), tone: 'primary', onClick: () => { setShowActionSheet(false); setShowCreatePost(true); } },
           { label: t('snap.upload_story', language()), onClick: () => { setPostMode('story'); setShowActionSheet(false); setShowCreatePost(true); } },
           { label: t('snap.start_live', language()), onClick: () => void startLive() },
-          { label: 'Mock Live', onClick: () => void startMockLive() },
+          { label: t('snap.mock_live', language()), onClick: () => void startMockLive() },
         ]}
       />
 
       {/* Create Post Modal */}
-      <Modal
-        open={showCreatePost()}
-        title={postMode() === 'story' ? t('snap.upload_story', language()) : t('snap.new_post', language())}
-        onClose={() => { setShowCreatePost(false); setPostMedia(''); setPostCaption(''); }}
-        size="md"
-      >
-        <div class={styles.createContent}>
-          <SheetIntro title={t('snap.create', language())} description={t('snap.create_desc', language())} />
-          <div class={styles.modeToggle}>
-            <SegmentedTabs items={postModeTabs} active={postMode()} onChange={(id) => setPostMode(id as 'post' | 'story')} />
-          </div>
-
-          <Show when={!postMedia()}>
-            <MediaActionButtons
-              actions={[
-                { icon: './img/icons_ios/camera.svg', label: t('chirp.camera', language()), onClick: openCamera },
-                { icon: './img/icons_ios/gallery.svg', label: t('chirp.gallery', language()), onClick: attachFromGallery },
-              ]}
-              variant="tiles"
-            />
-          </Show>
-
-          <Show when={postMedia()}>
-            <MediaAttachmentPreview url={postMedia()} removable onRemove={() => setPostMedia('')} />
-
-            <Show when={postMode() === 'post'}>
-              <EmojiPickerButton value={postCaption()} onChange={setPostCaption} maxLength={2200} />
-      <textarea class={styles.captionInput}
-                placeholder={t('snap.caption', language())}
-                value={postCaption()}
-                onInput={(e) => setPostCaption(e.currentTarget.value)}
-                rows={3}
-              />
-            </Show>
-          </Show>
-        </div>
-
-        <ModalActions>
-          <ModalButton label={t('action.cancel', language())} onClick={() => { setShowCreatePost(false); setPostMedia(''); setPostCaption(''); }} />
-          <ModalButton 
-            label={loading() ? t('chirp.publishing', language()) : t('news.post', language())}
-            onClick={() => void publishPost()}
-            tone="primary"
-            disabled={!postMedia() || loading()}
-          />
-        </ModalActions>
-      </Modal>
+      <SnapCreatePostModal
+        open={showCreatePost}
+        onClose={() => setShowCreatePost(false)}
+        media={postMedia}
+        setMedia={setPostMedia}
+        mode={postMode}
+        setMode={setPostMode}
+        loading={loading}
+        myAccount={myAccount}
+        language={language}
+        router={router}
+        cache={cache}
+        onPublished={() => void loadData()}
+        onStatusMessage={setStatusMessage}
+      />
 
       {/* Story Viewer */}
-      <Show when={activeStoryIndex() !== null && activeStory()}>
-        <div class={styles.storyViewer}>
-          <button 
-            class={styles.storyClose}
-            onClick={() => setActiveStoryIndex(null)}
-          >
-            <img src="./img/icons_ios/ui-close.svg" alt="" draggable={false} />
-          </button>
-          
-          <button 
-            class={styles.storyNav}
-            classList={{ [styles.disabled]: (activeStoryIndex() || 0) <= 0 }}
-            onClick={() => shiftStory(-1)}
-          >
-            <img src="./img/icons_ios/ui-chevron-left.svg" alt="" draggable={false} />
-          </button>
-          
-          <button 
-            class={styles.storyNav}
-            classList={{ [styles.next]: true, [styles.disabled]: (activeStoryIndex() || 0) >= stories().length - 1 }}
-            onClick={() => shiftStory(1)}
-          >
-            <img src="./img/icons_ios/ui-chevron-right.svg" alt="" draggable={false} />
-          </button>
-
-          <div class={styles.storyProgress}>
-            <div 
-              class={styles.progressBar}
-              style={{ width: `${storyProgressPct()}%` }}
-            />
-          </div>
-
-          <div class={styles.storyInfo}>
-            <strong>{activeStory()?.display_name || activeStory()?.username}</strong>
-            <span>{formatStoryTime(activeStory()?.expires_at)} restante</span>
-          </div>
-
-          {resolveMediaType(activeStory()?.media_url) === 'video' ? (
-            <video 
-              src={activeStory()?.media_url} 
-              playsinline 
-              autoplay
-              muted={false}
-              onTimeUpdate={handleStoryVideoTimeUpdate}
-              onEnded={handleStoryVideoEnded}
-              class={styles.storyMedia}
-            />
-          ) : (
-            <img 
-              src={activeStory()?.media_url} 
-              alt="" 
-              class={styles.storyMedia}
-            />
-          )}
-        </div>
-      </Show>
+      <SnapStoryViewerOverlay
+        stories={stories}
+        activeIndex={activeStoryIndex}
+        setActiveIndex={setActiveStoryIndex}
+        language={language}
+      />
 
       {/* Live Viewer */}
       <Show when={activeLive()}>
@@ -1799,11 +1585,11 @@ export function SnapApp() {
             <div class={styles.liveOwnerInfo}>
               <strong>{activeLive()?.display_name || activeLive()?.username || 'Live'}</strong>
               <span>
-                {isMockLive() ? 'MOCK LIVE' : (liveConnected() ? 'EN VIVO' : 'Conectando...')}
+                {isMockLive() ? t('snap.mock_live', language()).toUpperCase() : (liveConnected() ? t('snap.live_on_air', language()) : t('snap.live_connecting', language()))}
               </span>
             </div>
             <div class={styles.liveTopBarRight}>
-              <span class={styles.liveViewerCount}>{Math.max(Number(activeLive()?.live_viewers || 0), isLiveOwner() ? 1 : 0)} viendo</span>
+              <span class={styles.liveViewerCount}>{Math.max(Number(activeLive()?.live_viewers || 0), isLiveOwner() ? 1 : 0)} {t('snap.live_viewers_count', language())}</span>
               <Show when={liveAudioProximityEnabled() && !isLiveOwner()}>
                 <div
                   class={styles.liveAudioBadge}
@@ -1831,7 +1617,7 @@ export function SnapApp() {
                 kelvinRange={liveFlashlight.kelvinRange()}
                 lumensRange={liveFlashlight.lumensRange()}
                 buttonLabel={<img src="./img/icons_ios/ui-flashlight.svg" alt="" draggable={false} />}
-                buttonTitle="Linterna"
+                buttonTitle={t('snap.flashlight', language())}
                 theme="dark"
                 variant="circle"
                 onPointerDown={liveFlashlight.beginPress}
@@ -1863,7 +1649,7 @@ export function SnapApp() {
               />
               <Show when={!liveVideoReady()}>
                 <div class={styles.livePlaceholder}>
-                  {isMockLive() ? 'Vista previa mock del live' : (liveConnected() ? 'Esperando video del live...' : 'Conectando video...')}
+                  {isMockLive() ? t('snap.mock_preview', language()) : (liveConnected() ? t('snap.waiting_video', language()) : t('snap.connecting_video', language()))}
                 </div>
               </Show>
             </div>
@@ -1924,7 +1710,7 @@ export function SnapApp() {
 
                 <Show
                   when={!isLiveOwner()}
-                  fallback={<div class={styles.liveHostHint}>Sos host: hablas en vivo, moderas el chat.</div>}
+                  fallback={<div class={styles.liveHostHint}>{t('snap.host_hint', language())}</div>}
                 >
                   <div class={styles.liveChatInputRow}>
                     <EmojiPickerButton value={liveMessageInput()} onChange={setLiveMessageInput} maxLength={300} />
@@ -1959,54 +1745,16 @@ export function SnapApp() {
         onClose={() => setShowOnboarding(false)}
       />
 
-      <Modal
-        open={showRequestsModal()}
-        title={t('chirp.requests', language())}
+      <SnapRequestsModal
+        open={showRequestsModal}
         onClose={() => setShowRequestsModal(false)}
-        size="lg"
-      >
-        <div class={styles.requestsBlock}>
-          <SheetIntro title={t('chirp.requests', language())} description={t('snap.requests_desc', language())} />
-          <h4>{t('chirp.requests_received', language())}</h4>
-          <Show when={!requestsLoading()} fallback={<p>{t('state.loading', language())}</p>}>
-            <Show when={pendingRequests().length > 0} fallback={<EmptyState title={t('snap.no_pending', language())} description={t('snap.no_pending_desc', language())} />}>
-              <For each={pendingRequests()}>
-                {(request) => (
-                  <div class={styles.requestRow}>
-                    <div class={styles.requestIdentity}>
-                      <strong>{request.display_name || request.username || 'Usuario'}</strong>
-                      <span>@{request.username || request.from_identifier || 'user'}</span>
-                    </div>
-                    <div class={styles.requestActions}>
-                      <button onClick={() => void respondFollowRequest(request.id, false)}>{t('wallet.reject', language())}</button>
-                      <button class={styles.acceptBtn} onClick={() => void respondFollowRequest(request.id, true)}>{t('chirp.accept', language())}</button>
-                    </div>
-                  </div>
-                )}
-              </For>
-            </Show>
-          </Show>
-        </div>
-
-        <div class={styles.requestsBlock}>
-          <h4>{t('chirp.requests_sent', language())}</h4>
-          <Show when={sentRequests().length > 0} fallback={<EmptyState title={t('snap.no_sent', language())} description={t('snap.no_sent_desc', language())} />}>
-            <For each={sentRequests()}>
-              {(request) => (
-                <div class={styles.requestRow}>
-                  <div class={styles.requestIdentity}>
-                    <strong>{request.display_name || request.username || 'Usuario'}</strong>
-                    <span>@{request.username || request.to_identifier || 'user'}</span>
-                  </div>
-                  <div class={styles.requestActions}>
-                    <button onClick={() => void cancelSentRequest(request.account_id)}>{t('action.cancel', language())}</button>
-                  </div>
-                </div>
-              )}
-            </For>
-          </Show>
-        </div>
-      </Modal>
+        pendingRequests={pendingRequests}
+        sentRequests={sentRequests}
+        requestsLoading={requestsLoading}
+        language={language}
+        onRespond={respondFollowRequest}
+        onCancel={cancelSentRequest}
+      />
 
       <Modal
         open={deletePostId() !== null}
@@ -2014,7 +1762,7 @@ export function SnapApp() {
         onClose={() => setDeletePostId(null)}
         size="sm"
       >
-        <p>Esta accion no se puede deshacer.</p>
+        <p>{t('snap.delete_confirm', language())}</p>
         <ModalActions>
           <ModalButton label={t('action.cancel', language())} onClick={() => setDeletePostId(null)} />
           <ModalButton label={t('action.delete', language())} tone="danger" onClick={() => void confirmDeletePost()} />
