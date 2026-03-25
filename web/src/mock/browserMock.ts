@@ -3076,19 +3076,29 @@ export async function handleBrowserNui<T = unknown>(eventName: string, data?: un
   }
 
   if (eventName === 'radioCreateStation') {
-    return {
-      success: true,
-      station: {
-        id: 100 + Math.floor(Math.random() * 900),
-        hostName: 'Mock User',
-        stationName: String(payload.stationName || 'Mi estacion'),
-        description: String(payload.description || ''),
-        category: String(payload.category || 'other'),
-        livekitRoom: `radio-${Date.now()}`,
-        listenerCount: 0,
-        createdAt: Math.floor(Date.now() / 1000),
-      },
-    } as T;
+    const newStation = {
+      id: 100 + Math.floor(Math.random() * 900),
+      hostName: 'Mock User',
+      stationName: String(payload.stationName || 'Mi estacion'),
+      description: String(payload.description || ''),
+      category: String(payload.category || 'other'),
+      livekitRoom: `radio-${Date.now()}`,
+      listenerCount: 0,
+      createdAt: Math.floor(Date.now() / 1000),
+    };
+    // After 1s, broadcast station creation to all "clients"
+    setTimeout(() => {
+      window.dispatchEvent(new MessageEvent('message', {
+        data: { action: 'radioStationCreated', data: newStation },
+      }));
+    }, 1000);
+    // After 3.5s, simulate a listener joining
+    setTimeout(() => {
+      window.dispatchEvent(new MessageEvent('message', {
+        data: { action: 'radioStationUpdated', data: { ...newStation, listenerCount: newStation.listenerCount + 1 } },
+      }));
+    }, 3500);
+    return { success: true, station: newStation } as T;
   }
 
   if (eventName === 'radioJoinStation') {
@@ -3100,6 +3110,12 @@ export async function handleBrowserNui<T = unknown>(eventName: string, data?: un
       4: { hostName: 'Dispatch', stationName: 'Emergencias 24/7', description: 'Canal oficial de emergencias', category: 'emergency', listenerCount: 4 },
     };
     const info = mockStationMap[stationId] || mockStationMap[1];
+    // After 500ms, simulate a track playing
+    setTimeout(() => {
+      window.dispatchEvent(new MessageEvent('message', {
+        data: { action: 'gcphone:radio:musicUpdate', data: { stationId, isPlaying: true, title: 'Chill Beats - LoFi Radio' } },
+      }));
+    }, 500);
     return {
       success: true,
       station: {
@@ -3115,7 +3131,18 @@ export async function handleBrowserNui<T = unknown>(eventName: string, data?: un
     } as T;
   }
 
-  if (eventName === 'radioLeaveStation' || eventName === 'radioEndStation') {
+  if (eventName === 'radioLeaveStation') {
+    return { success: true } as T;
+  }
+
+  if (eventName === 'radioEndStation') {
+    const stationId = Number(payload.stationId || 0);
+    // After 500ms dispatch stationEnded — keep 'gcphone:radio:stationEnded' name so Lua code needs no changes
+    setTimeout(() => {
+      window.dispatchEvent(new MessageEvent('message', {
+        data: { action: 'gcphone:radio:stationEnded', data: stationId },
+      }));
+    }, 500);
     return { success: true } as T;
   }
 
@@ -3147,10 +3174,25 @@ export async function handleBrowserNui<T = unknown>(eventName: string, data?: un
   }
 
   if (eventName === 'radioPlayMusic') {
-    return { success: true, title: String(payload.title || 'Mock Track'), isPlaying: true } as T;
+    const stationId = Number(payload.stationId || 0);
+    const title = String(payload.title || 'Mock Track');
+    // After 200ms dispatch musicUpdate with isPlaying: true
+    setTimeout(() => {
+      window.dispatchEvent(new MessageEvent('message', {
+        data: { action: 'gcphone:radio:musicUpdate', data: { stationId, isPlaying: true, title } },
+      }));
+    }, 200);
+    return { success: true, title, isPlaying: true } as T;
   }
 
   if (eventName === 'radioStopMusic') {
+    const stationId = Number(payload.stationId || 0);
+    // After 100ms dispatch musicUpdate with isPlaying: false
+    setTimeout(() => {
+      window.dispatchEvent(new MessageEvent('message', {
+        data: { action: 'gcphone:radio:musicUpdate', data: { stationId, isPlaying: false, title: '' } },
+      }));
+    }, 100);
     return { success: true } as T;
   }
 
@@ -3159,40 +3201,6 @@ export async function handleBrowserNui<T = unknown>(eventName: string, data?: un
   }
 
   if (eventName === 'radioMusicDuck' || eventName === 'radioMusicUnduck') {
-    return { success: true } as T;
-  }
-
-  if (eventName === 'radioGetPlaylists') {
-    return [
-      {
-        id: 1,
-        name: 'Chill Vibes',
-        songs: [
-          { videoId: 'dQw4w9WgXcQ', title: 'Sunset Drive - Live Session', channel: 'Mock Channel', thumbnail: 'https://i.ytimg.com/vi/dQw4w9WgXcQ/mqdefault.jpg' },
-          { videoId: 'kJQP7kiw5Fk', title: 'Ocean Waves - Chill Mix', channel: 'LoFi Radio', thumbnail: 'https://i.ytimg.com/vi/kJQP7kiw5Fk/mqdefault.jpg' },
-        ],
-        created_at: nowIso(),
-        expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-      },
-      {
-        id: 2,
-        name: 'Fiesta Mix',
-        songs: [
-          { videoId: '9bZkp7q19f0', title: 'Noche Loca - Remix', channel: 'Mock Studio', thumbnail: 'https://i.ytimg.com/vi/9bZkp7q19f0/mqdefault.jpg' },
-          { videoId: 'fJ9rUzIMcZQ', title: 'Fuego - Acoustic', channel: 'Unplugged Sessions', thumbnail: 'https://i.ytimg.com/vi/fJ9rUzIMcZQ/mqdefault.jpg' },
-          { videoId: 'kJQP7kiw5Fk', title: 'Ritmo Caliente - Chill Mix', channel: 'LoFi Radio', thumbnail: 'https://i.ytimg.com/vi/kJQP7kiw5Fk/mqdefault.jpg' },
-        ],
-        created_at: nowIso(),
-        expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-      },
-    ] as T;
-  }
-
-  if (eventName === 'radioSavePlaylist') {
-    return { success: true } as T;
-  }
-
-  if (eventName === 'radioDeletePlaylist') {
     return { success: true } as T;
   }
 
