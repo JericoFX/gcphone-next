@@ -16,6 +16,7 @@ import {
   joinMmlRoom, leaveMmlRoom, sendMmlMessage, sendMmlTyping,
   type MmlSocketMessage,
 } from '../../../utils/socket';
+import { t } from '../../../i18n';
 import styles from './MatchMyLoveApp.module.scss';
 
 interface Profile {
@@ -56,28 +57,28 @@ interface ChatMessage {
 
 type TabId = 'swipe' | 'matches' | 'profile';
 
-const TABS = [
-  { id: 'swipe', label: 'Descubrir' },
-  { id: 'matches', label: 'Matches' },
-  { id: 'profile', label: 'Perfil' },
-];
-
-const GENDER_OPTIONS = [
-  { value: 'male', label: 'Hombre' },
-  { value: 'female', label: 'Mujer' },
-  { value: 'other', label: 'Otro' },
-];
-
-const LOOKING_FOR_OPTIONS = [
-  { value: 'male', label: 'Hombres' },
-  { value: 'female', label: 'Mujeres' },
-  { value: 'everyone', label: 'Todos' },
-];
-
 export function MatchMyLoveApp() {
   const router = useRouter();
   const [phoneState] = usePhone();
   const language = () => phoneState.settings.language || 'es';
+
+  const tabs = () => [
+    { id: 'swipe', label: t('matchmylove.tab_discover', language()) },
+    { id: 'matches', label: t('matchmylove.tab_matches', language()) },
+    { id: 'profile', label: t('matchmylove.tab_profile', language()) },
+  ];
+
+  const genderOptions = () => [
+    { value: 'male', label: t('matchmylove.gender_male', language()) },
+    { value: 'female', label: t('matchmylove.gender_female', language()) },
+    { value: 'other', label: t('matchmylove.gender_other', language()) },
+  ];
+
+  const lookingForOptions = () => [
+    { value: 'male', label: t('matchmylove.looking_male', language()) },
+    { value: 'female', label: t('matchmylove.looking_female', language()) },
+    { value: 'everyone', label: t('matchmylove.looking_everyone', language()) },
+  ];
 
   const [activeTab, setActiveTab] = createSignal<TabId>('swipe');
   const [profile, setProfile] = createSignal<Profile | null>(null);
@@ -185,8 +186,8 @@ export function MatchMyLoveApp() {
   async function handleCreateProfile() {
     setSaving(true);
     const data = buildFormData();
-    if (!data.display_name) { uiAlert('Nombre requerido'); setSaving(false); return; }
-    if (!data.age || data.age < 18 || data.age > 99) { uiAlert('Edad invalida (18-99)'); setSaving(false); return; }
+    if (!data.display_name) { uiAlert(t('matchmylove.name_required', language())); setSaving(false); return; }
+    if (!data.age || data.age < 18 || data.age > 99) { uiAlert(t('matchmylove.invalid_age', language())); setSaving(false); return; }
 
     const result = await fetchNui<{ success: boolean; message?: string; profile?: Profile }>(
       'matchmyloveCreateProfile', data, { success: false }
@@ -195,7 +196,7 @@ export function MatchMyLoveApp() {
 
     if (result && typeof result === 'object' && 'success' in result) {
       if (!result.success) {
-        uiAlert(result.message || 'Error al crear perfil');
+        uiAlert(result.message || t('matchmylove.error_create', language()));
         return;
       }
     }
@@ -212,8 +213,8 @@ export function MatchMyLoveApp() {
   async function handleUpdateProfile() {
     setSaving(true);
     const data = buildFormData();
-    if (!data.display_name) { uiAlert('Nombre requerido'); setSaving(false); return; }
-    if (!data.age || data.age < 18 || data.age > 99) { uiAlert('Edad invalida (18-99)'); setSaving(false); return; }
+    if (!data.display_name) { uiAlert(t('matchmylove.name_required', language())); setSaving(false); return; }
+    if (!data.age || data.age < 18 || data.age > 99) { uiAlert(t('matchmylove.invalid_age', language())); setSaving(false); return; }
 
     const result = await fetchNui<{ success: boolean; message?: string }>(
       'matchmyloveUpdateProfile', data, { success: false }
@@ -222,7 +223,7 @@ export function MatchMyLoveApp() {
 
     if (result && typeof result === 'object' && 'success' in result) {
       if (!result.success) {
-        uiAlert(result.message || 'Error al actualizar');
+        uiAlert(result.message || t('matchmylove.error_update', language()));
         return;
       }
     }
@@ -230,11 +231,11 @@ export function MatchMyLoveApp() {
     const p = await fetchNui<Profile | null>('matchmyloveGetProfile', undefined, null);
     setProfile(p);
     if (p) populateForm(p);
-    uiAlert('Perfil actualizado');
+    uiAlert(t('matchmylove.profile_updated', language()));
   }
 
   async function handleDeleteProfile() {
-    const confirmed = await uiConfirm('Eliminar tu perfil? Se perderan tus matches y mensajes.');
+    const confirmed = await uiConfirm(t('matchmylove.confirm_delete_profile', language()));
     if (!confirmed) return;
 
     await fetchNui('matchmyloveDeleteProfile');
@@ -391,7 +392,7 @@ export function MatchMyLoveApp() {
     const chat = activeChat();
     if (!chat) return;
 
-    const confirmed = await uiConfirm('Deshacer match con ' + chat.display_name + '?');
+    const confirmed = await uiConfirm(t('matchmylove.confirm_unmatch', language(), { name: chat.display_name }));
     if (!confirmed) return;
 
     await fetchNui('matchmyloveUnmatch', { matchId: chat.match_id });
@@ -427,7 +428,7 @@ export function MatchMyLoveApp() {
       const url = typeof item === 'string' ? item : item?.url || '';
       return /\.(jpg|jpeg|png|gif|webp|svg)(\?|$)/i.test(url) || url.startsWith('data:image/');
     });
-    if (images.length === 0) { uiAlert('No hay fotos en la galeria'); return; }
+    if (images.length === 0) { uiAlert(t('matchmylove.no_gallery_photos', language())); return; }
     const url = typeof images[0] === 'string' ? images[0] : images[0]?.url || '';
     const sanitized = sanitizeMediaUrl(url);
     if (sanitized) setFormAvatar(sanitized);
@@ -439,7 +440,7 @@ export function MatchMyLoveApp() {
       const url = typeof item === 'string' ? item : item?.url || '';
       return /\.(jpg|jpeg|png|gif|webp|svg)(\?|$)/i.test(url) || url.startsWith('data:image/');
     });
-    if (images.length === 0) { uiAlert('No hay fotos en la galeria'); return; }
+    if (images.length === 0) { uiAlert(t('matchmylove.no_gallery_photos', language())); return; }
     const url = typeof images[0] === 'string' ? images[0] : images[0]?.url || '';
     const sanitized = sanitizeMediaUrl(url);
     if (sanitized) {
@@ -462,19 +463,19 @@ export function MatchMyLoveApp() {
     return (
       <div class={styles.form}>
         <div class={styles.formField}>
-          <label class={styles.formLabel}>Nombre</label>
+          <label class={styles.formLabel}>{t('matchmylove.label_name', language())}</label>
           <input
             class="ios-input"
             type="text"
             value={formName()}
             onInput={(e) => setFormName(e.currentTarget.value)}
-            placeholder="Tu nombre..."
+            placeholder={t('matchmylove.placeholder_name', language())}
             maxLength={30}
           />
         </div>
 
         <div class={styles.formField}>
-          <label class={styles.formLabel}>Edad</label>
+          <label class={styles.formLabel}>{t('matchmylove.label_age', language())}</label>
           <input
             class="ios-input"
             type="number"
@@ -487,19 +488,19 @@ export function MatchMyLoveApp() {
         </div>
 
         <div class={styles.formField}>
-          <label class={styles.formLabel}>Bio</label>
+          <label class={styles.formLabel}>{t('matchmylove.label_bio', language())}</label>
           <textarea
             class="ios-textarea"
             value={formBio()}
             onInput={(e) => setFormBio(e.currentTarget.value)}
-            placeholder="Algo sobre ti..."
+            placeholder={t('matchmylove.placeholder_bio', language())}
             rows={2}
             maxLength={500}
           />
         </div>
 
         <div class={styles.formField}>
-          <label class={styles.formLabel}>Avatar URL</label>
+          <label class={styles.formLabel}>{t('matchmylove.label_avatar', language())}</label>
           <div class={styles.inputWithBtn}>
             <input
               class="ios-input"
@@ -509,33 +510,33 @@ export function MatchMyLoveApp() {
               placeholder="https://..."
             />
             <button class={styles.galleryBtn} onClick={attachAvatarFromGallery} type="button">
-              Galeria
+              {t('matchmylove.gallery', language())}
             </button>
           </div>
         </div>
 
         <div class={styles.formRow}>
           <div class={styles.formField}>
-            <label class={styles.formLabel}>Genero</label>
+            <label class={styles.formLabel}>{t('matchmylove.label_gender', language())}</label>
             <select
               class="ios-input"
               value={formGender()}
               onChange={(e) => setFormGender(e.currentTarget.value)}
             >
-              <For each={GENDER_OPTIONS}>
+              <For each={genderOptions()}>
                 {(opt) => <option value={opt.value}>{opt.label}</option>}
               </For>
             </select>
           </div>
 
           <div class={styles.formField}>
-            <label class={styles.formLabel}>Busco</label>
+            <label class={styles.formLabel}>{t('matchmylove.label_looking_for', language())}</label>
             <select
               class="ios-input"
               value={formLookingFor()}
               onChange={(e) => setFormLookingFor(e.currentTarget.value)}
             >
-              <For each={LOOKING_FOR_OPTIONS}>
+              <For each={lookingForOptions()}>
                 {(opt) => <option value={opt.value}>{opt.label}</option>}
               </For>
             </select>
@@ -543,18 +544,18 @@ export function MatchMyLoveApp() {
         </div>
 
         <div class={styles.formField}>
-          <label class={styles.formLabel}>Intereses (separados por coma)</label>
+          <label class={styles.formLabel}>{t('matchmylove.label_interests', language())}</label>
           <input
             class="ios-input"
             type="text"
             value={formInterests()}
             onInput={(e) => setFormInterests(e.currentTarget.value)}
-            placeholder="musica, deportes, cine..."
+            placeholder={t('matchmylove.placeholder_interests', language())}
           />
         </div>
 
         <div class={styles.formField}>
-          <label class={styles.formLabel}>Fotos (URLs, una por linea)</label>
+          <label class={styles.formLabel}>{t('matchmylove.label_photos', language())}</label>
           <textarea
             class="ios-textarea"
             value={formPhotos()}
@@ -563,7 +564,7 @@ export function MatchMyLoveApp() {
             rows={2}
           />
           <button class={styles.galleryBtn} onClick={attachPhotoFromGallery} type="button">
-            Agregar desde galeria
+            {t('matchmylove.add_from_gallery', language())}
           </button>
           <Show when={getPhotosArray().length > 0}>
             <div class={styles.photoThumbs}>
@@ -601,9 +602,9 @@ export function MatchMyLoveApp() {
             <img src="./img/icons_ios/matchmylove.svg" alt="" />
           </div>
           <h2 class={styles.setupTitle}>MatchMyLove</h2>
-          <p class={styles.setupSubtitle}>Crea tu perfil para empezar</p>
+          <p class={styles.setupSubtitle}>{t('matchmylove.setup_subtitle', language())}</p>
         </div>
-        {ProfileForm(handleCreateProfile, 'Crear Perfil')}
+        {ProfileForm(handleCreateProfile, t('matchmylove.create_profile', language()))}
       </div>
     );
   }
@@ -615,7 +616,7 @@ export function MatchMyLoveApp() {
     return (
       <div class={styles.swipeView}>
         <Show when={currentCard()} fallback={
-          <EmptyState title="Sin perfiles" description="No hay mas perfiles por ahora" />
+          <EmptyState title={t('matchmylove.no_profiles', language())} description={t('matchmylove.no_profiles_desc', language())} />
         }>
           {(card) => {
             const photo = () => getCardPhoto(card());
@@ -679,8 +680,8 @@ export function MatchMyLoveApp() {
                   <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
                 </svg>
               </div>
-              <h2 class={styles.matchText}>Es un Match!</h2>
-              <p class={styles.matchSubtext}>Tu y {matchedName()} se gustan</p>
+              <h2 class={styles.matchText}>{t('matchmylove.its_a_match', language())}</h2>
+              <p class={styles.matchSubtext}>{t('matchmylove.match_subtext', language(), { name: matchedName() })}</p>
             </div>
           </div>
         </Show>
@@ -696,11 +697,11 @@ export function MatchMyLoveApp() {
     return (
       <div class={styles.matchesView}>
         <Show when={matches().length > 0} fallback={
-          <EmptyState title="Sin matches" description="Sigue deslizando para encontrar tu match" />
+          <EmptyState title={t('matchmylove.no_matches', language())} description={t('matchmylove.no_matches_desc', language())} />
         }>
           <Show when={newMatches().length > 0}>
             <div class={styles.newMatchesSection}>
-              <div class={styles.newMatchesLabel}>Nuevos matches</div>
+              <div class={styles.newMatchesLabel}>{t('matchmylove.new_matches', language())}</div>
               <div class={styles.newMatchesRow}>
                 <For each={newMatches()}>
                   {(match) => (
@@ -723,7 +724,7 @@ export function MatchMyLoveApp() {
           </Show>
 
           <Show when={messageMatches().length > 0}>
-            <div class={styles.messagesLabel}>Mensajes</div>
+            <div class={styles.messagesLabel}>{t('matchmylove.messages', language())}</div>
           </Show>
           <For each={messageMatches()}>
             {(match) => (
@@ -764,7 +765,7 @@ export function MatchMyLoveApp() {
                   </div>
                   <div class={styles.matchInfo}>
                     <span class={styles.matchName}>{match.display_name}, {match.age}</span>
-                    <span class={styles.matchLastMsg}>Nuevo match!</span>
+                    <span class={styles.matchLastMsg}>{t('matchmylove.new_match', language())}</span>
                   </div>
                 </button>
               )}
@@ -808,7 +809,7 @@ export function MatchMyLoveApp() {
         <div class={styles.messageList} ref={messageListRef}>
           <Show when={messages().length === 0}>
             <div class={styles.chatEmptyHint}>
-              Enviale un mensaje!
+              {t('matchmylove.send_first_message', language())}
             </div>
           </Show>
           <For each={messages()}>
@@ -826,7 +827,7 @@ export function MatchMyLoveApp() {
 
         <Show when={peerTyping()}>
           <div class={styles.typingIndicator}>
-            <span>{chat.display_name} esta escribiendo...</span>
+            <span>{t('matchmylove.typing', language(), { name: chat.display_name })}</span>
           </div>
         </Show>
 
@@ -840,7 +841,7 @@ export function MatchMyLoveApp() {
               if (isMmlSocketConnected()) sendMmlTyping(chat.match_id, true);
             }}
             onKeyDown={(e) => { if (e.key === 'Enter') handleSendMessage(); }}
-            placeholder="Mensaje..."
+            placeholder={t('matchmylove.placeholder_message', language())}
             maxLength={500}
           />
           <button
@@ -879,9 +880,9 @@ export function MatchMyLoveApp() {
           </div>
           <h3>{profile()?.display_name}, {profile()?.age}</h3>
         </div>
-        {ProfileForm(handleUpdateProfile, 'Guardar Cambios')}
+        {ProfileForm(handleUpdateProfile, t('matchmylove.save_changes', language()))}
         <button class={styles.dangerBtn} onClick={handleDeleteProfile}>
-          Eliminar Perfil
+          {t('matchmylove.delete_profile', language())}
         </button>
       </div>
     );
@@ -894,7 +895,7 @@ export function MatchMyLoveApp() {
       bodyClass={styles.body}
       bodyPadding="none"
     >
-      <Show when={!loading()} fallback={<div class={styles.loading}>Cargando...</div>}>
+      <Show when={!loading()} fallback={<div class={styles.loading}>{t('matchmylove.loading', language())}</div>}>
         <Show when={activeChat()}>
           {ChatView()}
         </Show>
@@ -908,7 +909,7 @@ export function MatchMyLoveApp() {
             <div class={styles.matchApp}>
               <div class={styles.tabs}>
                 <SegmentedTabs
-                  items={TABS}
+                  items={tabs()}
                   active={activeTab()}
                   onChange={(id) => {
                     setActiveTab(id as TabId);
