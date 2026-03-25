@@ -1,4 +1,5 @@
 import { Show, mergeProps, splitProps, type JSX, type ParentComponent, type ParentProps } from 'solid-js';
+import { Motion, Presence } from '@motionone/solid';
 import { getStoredLanguage, tl } from '../../../i18n';
 import styles from './Modal.module.scss';
 
@@ -19,26 +20,39 @@ export const Modal: ParentComponent<ModalProps> = (props) => {
   const [local] = splitProps(merged, ['open', 'title', 'onClose', 'size', 'class', 'children']);
 
   return (
-    <Show when={local.open}>
-      <div class={styles.overlay} onClick={local.onClose}>
-        <div
-          classList={{
-            [styles.modal]: true,
-            [styles.sm]: local.size === 'sm',
-            [styles.lg]: local.size === 'lg',
-            [local.class || '']: !!local.class,
-          }}
-          onClick={(e) => e.stopPropagation()}
+    <Presence>
+      <Show when={local.open}>
+        <Motion.div
+          class={styles.overlay}
+          onClick={local.onClose}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
         >
-          <Show when={local.title}>
-            <div class={styles.header}>
-              <h2 class={styles.title}>{tl(local.title || '', getStoredLanguage())}</h2>
-            </div>
-          </Show>
-          <div class={styles.content}>{local.children}</div>
-        </div>
-      </div>
-    </Show>
+          <Motion.div
+            classList={{
+              [styles.modal]: true,
+              [styles.sm]: local.size === 'sm',
+              [styles.lg]: local.size === 'lg',
+              [local.class || '']: !!local.class,
+            }}
+            onClick={(e: MouseEvent) => e.stopPropagation()}
+            initial={{ opacity: 0, scale: 0.92, y: 16 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.92, y: 16 }}
+            transition={{ duration: 0.25, easing: [0.32, 0.72, 0, 1] }}
+          >
+            <Show when={local.title}>
+              <div class={styles.header}>
+                <h2 class={styles.title}>{tl(local.title || '', getStoredLanguage())}</h2>
+              </div>
+            </Show>
+            <div class={styles.content}>{local.children}</div>
+          </Motion.div>
+        </Motion.div>
+      </Show>
+    </Presence>
   );
 };
 
