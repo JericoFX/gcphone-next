@@ -735,7 +735,7 @@ export function RadioApp() {
               }}
               onClick={() => void handleMuteToggle()}
             >
-              {muted() ? 'Mic OFF' : 'Mic ON'}
+              {muted() ? t('radio.mic_off', language()) : t('radio.mic_on', language())}
             </button>
             <button
               classList={{
@@ -747,7 +747,7 @@ export function RadioApp() {
               onPointerUp={onDuckUp}
               onPointerLeave={onDuckUp}
             >
-              {duckPressed() ? 'Speaking...' : 'Press to Talk'}
+              {duckPressed() ? t('radio.speaking', language()) : t('radio.press_to_talk', language())}
             </button>
           </div>
 
@@ -895,7 +895,7 @@ export function RadioApp() {
                 class={styles.playlistBtn}
                 onClick={() => void handleShowPlaylists()}
               >
-                {showPlaylists() ? 'Hide' : 'Load Playlist'}
+                {showPlaylists() ? t('radio.hide', language()) : t('radio.load_playlist', language())}
               </button>
             </div>
 
@@ -904,7 +904,7 @@ export function RadioApp() {
                 <input
                   class="ios-input"
                   type="text"
-                  placeholder="Playlist name"
+                  placeholder={t('radio.playlist_name', language())}
                   value={playlistNameInput()}
                   onInput={(e) => setPlaylistNameInput(e.currentTarget.value)}
                   maxLength={60}
@@ -915,7 +915,7 @@ export function RadioApp() {
                   onClick={() => void handleSavePlaylist()}
                   disabled={savingPlaylist() || !playlistNameInput().trim()}
                 >
-                  {savingPlaylist() ? '...' : 'Save'}
+                  {savingPlaylist() ? '...' : t('radio.save', language())}
                 </button>
               </div>
             </Show>
