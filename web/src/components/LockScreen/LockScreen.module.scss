@@ -45,9 +45,7 @@
   position: absolute;
   inset: 0;
   z-index: 1;
-  background:
-    linear-gradient(180deg, rgba(0, 0, 0, 0.32) 0%, rgba(0, 0, 0, 0.08) 25%),
-    linear-gradient(180deg, rgba(0, 0, 0, 0.04) 60%, rgba(0, 0, 0, 0.42) 100%);
+  background: rgba(0, 0, 0, 0.25);
 }
 
 .wallpaper-noise {
@@ -113,8 +111,6 @@
   padding: var(--s-2) var(--s-3);
   border-radius: var(--r-pill);
   background: var(--ls-glass);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
   border: 1px solid var(--ls-glass-border);
   color: var(--ls-text-primary);
   font-size: var(--fs-caption1);
@@ -193,7 +189,6 @@
 }
 
 // ---------------------------------------------------------------------------
-// Shared glass surfaces — frosted glass with backdrop-filter
 // ---------------------------------------------------------------------------
 
 .widget-panel,
@@ -204,8 +199,6 @@
   position: relative;
   border: 1px solid var(--ls-glass-border);
   background: var(--ls-material);
-  backdrop-filter: blur(40px) saturate(1.8);
-  -webkit-backdrop-filter: blur(40px) saturate(1.8);
   box-shadow: var(--ls-shadow);
 }
 
@@ -505,8 +498,6 @@
   border-radius: var(--r-lg);
   border: 1px solid var(--ls-glass-border);
   background: var(--ls-glass-strong);
-  backdrop-filter: blur(24px) saturate(1.4);
-  -webkit-backdrop-filter: blur(24px) saturate(1.4);
   transition: background 180ms ease;
 }
 
@@ -559,8 +550,6 @@
 .unlock-sheet,
 .unlock-sheet-collapsed {
   border-radius: var(--r-2xl) var(--r-2xl) var(--r-xl) var(--r-xl);
-  backdrop-filter: blur(48px) saturate(1.6);
-  -webkit-backdrop-filter: blur(48px) saturate(1.6);
 }
 
 .unlock-sheet {
@@ -681,8 +670,6 @@
   border-radius: 50%;
   border: 1px solid rgba(255, 255, 255, 0.1);
   background: rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
   color: var(--ls-text-primary);
   font-size: 26px;
   font-weight: 300;
@@ -820,8 +807,6 @@
   align-items: center;
   justify-content: center;
   background: var(--ls-glass);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
   border: 1px solid var(--ls-glass-border);
   transition: background 180ms ease,
               transform 120ms ease,
@@ -917,8 +902,6 @@
   border-radius: var(--r-2xl);
   border: 1px solid var(--ls-glass-border);
   background: rgba(20, 24, 34, 0.79);
-  backdrop-filter: blur(40px) saturate(1.4);
-  -webkit-backdrop-filter: blur(40px) saturate(1.4);
   box-shadow: var(--shadow-3);
 }
 

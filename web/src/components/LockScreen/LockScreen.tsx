@@ -65,6 +65,10 @@ export function LockScreen() {
   const [sosStatus, setSosStatus] = createSignal<'idle' | 'sending' | 'sent'>('idle');
   const language = () => phoneState.settings.language || 'es';
   const swipeUnlockEnabled = () => phoneState.settings.swipeUnlock === true;
+  const hasPinSet = () => {
+    const lc = phoneState.settings.lockCode;
+    return !!lc && lc !== '0000';
+  };
 
   let timer: number | undefined;
   let swipePointerId: number | null = null;
@@ -355,6 +359,7 @@ export function LockScreen() {
         />
       </div>
 
+      <Show when={hasPinSet()}>
       <div class={styles.unlockSheet}>
         <div class={styles.sheetHandle} aria-hidden="true" />
           <div class={styles.codeContainer}>
@@ -390,6 +395,7 @@ export function LockScreen() {
               <button onClick={() => void submitUnlock()}>{t('lock.unlock', language())}</button>
           </div>
       </div>
+      </Show>
 
       <Show when={emergencySheetOpen()}>
         <div class={styles.emergencySheetOverlay} onClick={() => setEmergencySheetOpen(false)}>
