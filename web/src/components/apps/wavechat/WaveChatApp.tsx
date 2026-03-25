@@ -8,7 +8,7 @@ import { useMediaAttachment } from '../../../hooks/useMediaAttachment';
 import { getPlayerCoords, formatLocationMessage } from '../../../utils/playerLocation';
 import { fetchNui } from '../../../utils/fetchNui';
 import { useNuiCustomEvent } from '../../../utils/useNui';
-import { formatPhoneNumber, generateColorForString, timeAgo } from '../../../utils/misc';
+import { generateColorForString, timeAgo } from '../../../utils/misc';
 import { resolveMediaType, sanitizeMediaUrl, sanitizePhone, sanitizeText } from '../../../utils/sanitize';
 import { parseSharedContactMessage } from '../../../utils/contactShare';
 import { fetchSocketToken } from '../../../utils/realtimeAuth';
@@ -25,13 +25,15 @@ import { SearchInput } from '../../shared/ui/SearchInput';
 import { SegmentedTabs } from '../../shared/ui/SegmentedTabs';
 import { SheetIntro } from '../../shared/ui/SheetIntro';
 import { VirtualList } from '../../shared/ui/VirtualList';
-import { EmojiPickerButton } from '../../shared/ui/EmojiPicker';
 import { AppScaffold } from '../../shared/layout';
 import { getStoredLanguage, t } from '../../../i18n';
 import { useWaveChatDerivedData } from './hooks/useWaveChatDerivedData';
 import { useWaveChatRouteSync } from './hooks/useWaveChatRouteSync';
-import type { GifResult, UploadConfig, WaveChatGroup, WaveChatInvite, WaveChatGroupMessage, WaveStatus, WaveStatusMediaConfig, WaveSocketAuth } from './WaveChatTypes';
-import { extractCoords } from './WaveChatTypes';
+import { WaveChatConversationView } from './WaveChatConversationView';
+import { WaveChatStatusTab } from './WaveChatStatusTab';
+import { WaveChatCallsTab } from './WaveChatCallsTab';
+import { WaveChatGroupsTab } from './WaveChatGroupsTab';
+import type { GifResult, WaveChatGroup, WaveChatInvite, WaveChatGroupMessage, WaveStatus, WaveStatusMediaConfig, WaveSocketAuth } from './WaveChatTypes';
 import styles from './WaveChatApp.module.scss';
 
 export function WaveChatApp() {
@@ -66,10 +68,10 @@ export function WaveChatApp() {
   const [groupMessageInput, setGroupMessageInput] = createSignal('');
   const [showCreateGroupModal, setShowCreateGroupModal] = createSignal(false);
   const waveTabs = [
-    { id: 'chats', label: 'Chats' },
-    { id: 'status', label: 'Estado' },
-    { id: 'calls', label: 'Llamadas' },
-    { id: 'groups', label: 'Grupos' },
+    { id: 'chats', label: t('wavechat.tab.chats', language()) },
+    { id: 'status', label: t('wavechat.tab.status', language()) },
+    { id: 'calls', label: t('wavechat.tab.calls', language()) },
+    { id: 'groups', label: t('wavechat.tab.groups', language()) },
   ];
   const [groupNameDraft, setGroupNameDraft] = createSignal('');
   const [groupContactSearch, setGroupContactSearch] = createSignal('');
@@ -280,7 +282,6 @@ export function WaveChatApp() {
   };
 
   const isSelectedConversationIndex = createSelector(selectedIndex);
-  const isSelectedGroup = createSelector(selectedGroupId);
 
   const selectedConversationMessages = createMemo(() => {
     const number = selectedConversation();
@@ -431,21 +432,21 @@ export function WaveChatApp() {
   const createStatusFromMedia = async (mediaUrl: string, mediaType: 'image' | 'video') => {
     const safeUrl = sanitizeMediaUrl(mediaUrl);
     if (!safeUrl) {
-      uiAlert('Media invalida para estado');
+      uiAlert(t('wavechat.invalid_status_media', language()));
       return;
     }
 
     if (mediaType === 'video' && !statusMediaConfig().canUploadVideo) {
-      uiAlert('El endpoint de video no esta disponible para estados');
+      uiAlert(t('wavechat.status_video_unavailable', language()));
       return;
     }
 
     if (mediaType === 'image' && !statusMediaConfig().canUploadImage) {
-      uiAlert('No hay endpoint de imagen configurado para estados');
+      uiAlert(t('wavechat.status_image_unavailable', language()));
       return;
     }
 
-    const caption = sanitizeText((await uiPrompt('Texto del estado (opcional)', { title: 'Nuevo estado' })) || '', 140);
+    const caption = sanitizeText((await uiPrompt(t('wavechat.status_caption_prompt', language()), { title: t('wavechat.status_new', language()) })) || '', 140);
     const result = await fetchNui<{ success?: boolean; error?: string }>('wavechatCreateStatus', {
       mediaUrl: safeUrl,
       mediaType,
@@ -453,7 +454,7 @@ export function WaveChatApp() {
     }, { success: false });
 
     if (!result?.success) {
-      uiAlert(result?.error || 'No se pudo publicar el estado');
+      uiAlert(result?.error || t('wavechat.status_publish_failed', language()));
       return;
     }
 
@@ -462,7 +463,7 @@ export function WaveChatApp() {
 
   const createPhotoStatus = async () => {
     if (!statusMediaConfig().canUploadImage) {
-      uiAlert('No hay endpoint configurado para estados con foto');
+      uiAlert(t('wavechat.status_photo_unavailable', language()));
       return;
     }
 
@@ -473,7 +474,7 @@ export function WaveChatApp() {
 
   const createGalleryStatus = async () => {
     if (!statusMediaConfig().canUploadImage) {
-      uiAlert('No hay endpoint configurado para estados con foto');
+      uiAlert(t('wavechat.status_photo_unavailable', language()));
       return;
     }
 
@@ -483,7 +484,7 @@ export function WaveChatApp() {
       return url && resolveMediaType(url) === 'image';
     });
     if (!image?.url) {
-      uiAlert('No se encontraron fotos en la galeria');
+      uiAlert(t('wavechat.no_gallery_photos', language()));
       return;
     }
 
@@ -495,7 +496,7 @@ export function WaveChatApp() {
     setStatusMediaConfig(mediaConfig || { canUploadImage: false, canUploadVideo: false, maxVideoDurationSeconds: 10 });
 
     if (!mediaConfig?.canUploadVideo) {
-      uiAlert('No hay endpoint de video disponible para estados');
+      uiAlert(t('wavechat.status_video_endpoint_unavailable', language()));
       return;
     }
 
@@ -513,7 +514,7 @@ export function WaveChatApp() {
     }, { url: '', error: 'video_not_supported' });
 
     if (!result?.url) {
-      uiAlert('No se pudo grabar el video del estado');
+      uiAlert(t('wavechat.status_record_failed', language()));
       return;
     }
 
@@ -528,12 +529,12 @@ export function WaveChatApp() {
   };
 
   const attachAudioUrl = async () => {
-    const input = await uiPrompt('Pega URL de audio (mp3, ogg, wav, m4a)', { title: 'Adjuntar' });
+    const input = await uiPrompt(t('wavechat.prompt.audio_url', language()), { title: t('wavechat.attach', language()) });
     const nextUrl = sanitizeMediaUrl(input);
     if (nextUrl && resolveMediaType(nextUrl) === 'audio') {
       setAttachmentUrl(nextUrl);
     } else if (input && input.trim()) {
-      uiAlert('URL de audio invalida');
+      uiAlert(t('wavechat.invalid_audio_url', language()));
     }
     setShowAttachSheet(false);
   };
@@ -546,23 +547,23 @@ export function WaveChatApp() {
 
   const addContactFromMessage = async (display: string, number: string) => {
     if (isKnownContact(number)) {
-      uiAlert('El contacto ya existe');
+      uiAlert(t('wavechat.contact_exists', language()));
       return;
     }
     const added = await contactsActions.add(display, number);
-    uiAlert(added ? 'Contacto agregado' : 'No se pudo agregar el contacto');
+    uiAlert(added ? t('wavechat.contact_saved', language()) : t('wavechat.contact_add_failed', language()));
   };
 
   const getPreviewText = (message: any) => {
-    if (getMediaUrl(message)) return 'Adjunto multimedia';
+    if (getMediaUrl(message)) return t('wavechat.attachment_media', language());
     const shared = parseSharedContactMessage(message?.message);
-    if (shared) return `Contacto: ${shared.display}`;
-    return sanitizeText(message?.message || '', 80) || 'Mensaje';
+    if (shared) return t('wavechat.contact_prefix', language(), { name: shared.display });
+    return sanitizeText(message?.message || '', 80) || t('wavechat.message', language());
   };
 
   const getStatusSummary = (status: WaveStatus) => {
     if (status.caption) return status.caption;
-    return status.media_type === 'video' ? 'Video efimero de 10 segundos' : 'Foto efimera';
+    return status.media_type === 'video' ? t('wavechat.status_video_summary', language()) : t('wavechat.status_photo_summary', language());
   };
 
   const sendLocationText = async () => {
@@ -593,7 +594,7 @@ export function WaveChatApp() {
   const startVoiceRecording = async () => {
     if (isRecordingVoice()) return;
     if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
-      uiAlert('Grabacion de audio no disponible en este entorno');
+      uiAlert(t('wavechat.voice_unavailable', language()));
       return;
     }
 
@@ -601,7 +602,7 @@ export function WaveChatApp() {
       'getAudioUploadConfig', {}, { url: '', field: 'file' }
     );
     if (!uploadConfig?.url) {
-      uiAlert('Configura el provider de storage (set gcphone_provider / set gcphone_provider_token en server.cfg)');
+      uiAlert(t('wavechat.storage_unconfigured', language()));
       return;
     }
 
@@ -631,10 +632,10 @@ export function WaveChatApp() {
           if (uploadedUrl) {
             setAttachmentUrl(uploadedUrl);
           } else {
-            uiAlert('Respuesta de upload invalida para audio');
+            uiAlert(t('wavechat.upload_invalid_audio', language()));
           }
         } catch (_err) {
-          uiAlert('No se pudo subir la nota de voz');
+          uiAlert(t('wavechat.voice_upload_failed', language()));
         } finally {
           setUploadingVoice(false);
           cleanupRecorder();
@@ -647,7 +648,7 @@ export function WaveChatApp() {
       recordingInterval = window.setInterval(() => setRecordingSeconds((prev) => prev + 1), 1000);
     } catch (_err) {
       cleanupRecorder();
-      uiAlert('No se pudo iniciar la grabacion');
+      uiAlert(t('wavechat.voice_start_failed', language()));
     }
   };
 
@@ -673,7 +674,7 @@ export function WaveChatApp() {
       <Show
         when={!selectedConversation()}
         fallback={
-          <ConversationView
+          <WaveChatConversationView
             phoneNumber={selectedConversation()!}
             contactName={routeConversationName() || getContactName(selectedConversation()!)}
             messages={selectedConversationMessages()}
@@ -713,7 +714,7 @@ export function WaveChatApp() {
           />
         }
       >
-        <AppScaffold title='WaveChat' subtitle='Chats, grupos y llamadas' onBack={() => router.goBack()} bodyPadding='none'>
+        <AppScaffold title='WaveChat' subtitle={t('wavechat.subtitle', language())} onBack={() => router.goBack()} bodyPadding='none'>
           <div class={styles.app}>
             <div class={styles.tabs}>
               <SegmentedTabs items={waveTabs} active={activeTab()} onChange={(id) => setActiveTab(id as 'chats' | 'status' | 'calls' | 'groups')} />
@@ -721,7 +722,7 @@ export function WaveChatApp() {
 
             <div class={styles.list}>
           <Show when={activeTab() === 'chats'}>
-            <Show when={conversations().length > 0} fallback={<EmptyState class={styles.emptyState} title="Sin chats por ahora" description="Tus conversaciones apareceran aqui." />}>
+            <Show when={conversations().length > 0} fallback={<EmptyState class={styles.emptyState} title={t('wavechat.no_chats', language())} description={t('wavechat.no_chats_desc', language())} />}>
               <VirtualList items={conversations} itemHeight={78} overscan={5}>
                 {(convo, index) => (
                   <div
@@ -746,7 +747,7 @@ export function WaveChatApp() {
                       </div>
                     </div>
                     <button class={styles.deleteConversationBtn} onClick={(e) => { e.stopPropagation(); void deleteConversation(convo.number); }}>
-                      Borrar
+                      {t('wavechat.delete', language())}
                     </button>
                   </div>
                 )}
@@ -755,209 +756,60 @@ export function WaveChatApp() {
           </Show>
 
           <Show when={activeTab() === 'status'}>
-            <div class={styles.statusPanel}>
-              <div class={styles.statusHero}>
-                <div class={styles.statusHeroHeader}>
-                  <div>
-                    <span class={styles.statusHeroEyebrow}>WaveChat Status</span>
-                    <h3>Estados efimeros</h3>
-                    <p>Se borran solos en 24 horas. Foto si hay endpoint; video solo si Lua confirma subida y hasta 10 segundos.</p>
-                  </div>
-                  <div class={styles.statusHeroStats}>
-                    <strong>{statusRows().mine.length}</strong>
-                    <span>mios</span>
-                  </div>
-                </div>
-                <div class={styles.statusComposer}>
-                  <button class={styles.statusBtn} onClick={() => void createPhotoStatus()} disabled={!statusMediaConfig().canUploadImage}>Foto</button>
-                  <button class={styles.statusBtn} onClick={() => void createGalleryStatus()} disabled={!statusMediaConfig().canUploadImage}>Galeria</button>
-                  <button class={styles.statusBtn} onClick={() => void createVideoStatus()} disabled={!statusMediaConfig().canUploadVideo}>Video 10s</button>
-                </div>
-              </div>
-
-              <Show when={statusRows().mine.length > 0}>
-                <div class={styles.statusSectionTitle}>Mi estado</div>
-                <For each={statusRows().mine}>
-                  {(status) => (
-                    <div class={styles.statusItem} onClick={() => void openStatus(status)}>
-                      <div class={styles.statusRing}>
-                        <LetterAvatar class={styles.avatar} color={generateColorForString(status.phone_number)} label={status.contact_name || 'Yo'} />
-                      </div>
-                      <div class={styles.info}>
-                        <div class={styles.name}>Mi estado</div>
-                        <div class={styles.previewText}>{getStatusSummary(status)}</div>
-                      </div>
-                      <div class={styles.statusMeta}>
-                        <span class={styles.time}>{timeAgo(status.created_at)}</span>
-                        <span class={styles.statusBadge}>{status.media_type === 'video' ? 'Video' : 'Foto'}</span>
-                      </div>
-                    </div>
-                  )}
-                </For>
-              </Show>
-
-              <div class={styles.statusSectionTitle}>Recientes</div>
-              <Show when={statusRows().others.length > 0} fallback={<div class={styles.statusEmpty}>Tus contactos aun no publicaron estados.</div>}>
-                <For each={statusRows().others}>
-                  {(status) => (
-                    <div class={styles.statusItem} onClick={() => void openStatus(status)}>
-                      <div class={styles.statusRing}>
-                        <LetterAvatar class={styles.avatar} color={generateColorForString(status.phone_number)} label={status.contact_name || getContactName(status.phone_number)} />
-                      </div>
-                      <div class={styles.info}>
-                        <div class={styles.name}>{status.contact_name || getContactName(status.phone_number)}</div>
-                        <div class={styles.previewText}>{getStatusSummary(status)}</div>
-                      </div>
-                      <div class={styles.statusMeta}>
-                        <span class={styles.time}>{timeAgo(status.created_at)}</span>
-                        <button class={styles.statusBtn} onClick={(e) => { e.stopPropagation(); void openStatus(status); }}>Ver</button>
-                      </div>
-                    </div>
-                  )}
-                </For>
-              </Show>
-            </div>
+            <WaveChatStatusTab
+              statusRows={statusRows}
+              statusMediaConfig={statusMediaConfig}
+              getContactName={getContactName}
+              getStatusSummary={getStatusSummary}
+              onCreatePhotoStatus={() => void createPhotoStatus()}
+              onCreateGalleryStatus={() => void createGalleryStatus()}
+              onCreateVideoStatus={() => void createVideoStatus()}
+              onOpenStatus={(status) => void openStatus(status)}
+            />
           </Show>
 
           <Show when={activeTab() === 'calls'}>
-            <Show when={callHistory().length > 0} fallback={<EmptyState class={styles.emptyState} title="Sin llamadas recientes" description="Tu historial de llamadas aparecera aqui." />}>
-              <VirtualList items={callHistory} itemHeight={72} overscan={4}>
-                {(call) => (
-                  <div class={styles.callItem}>
-                    <div class={styles.callDirection}>{call.incoming ? 'Entrante' : 'Saliente'}</div>
-                    <div class={styles.info}>
-                      <div class={styles.name}>{call.hidden ? 'Privado' : formatPhoneNumber(call.num, phoneState.framework || 'unknown')}</div>
-                      <div class={styles.previewText}>{timeAgo(call.time)}</div>
-                    </div>
-                    <button class={styles.statusBtn} onClick={() => fetchNui('startCall', { phoneNumber: call.num })}>Llamar</button>
-                  </div>
-                )}
-              </VirtualList>
-            </Show>
+            <WaveChatCallsTab
+              callHistory={callHistory}
+              framework={phoneState.framework || 'unknown'}
+            />
           </Show>
 
           <Show when={activeTab() === 'groups'}>
-            <Show when={groupInvites().length > 0}>
-              <div class={styles.groupInvitesPanel}>
-                <div class={styles.statusSectionTitle}>Invitaciones pendientes</div>
-                <For each={groupInvites()}>
-                  {(invite) => (
-                    <div class={styles.groupInviteItem}>
-                      <div class={styles.info}>
-                        <div class={styles.name}>{invite.group_name}</div>
-                        <div class={styles.previewText}>Te invito {invite.inviter_number ? getContactName(invite.inviter_number) : 'un contacto'}</div>
-                      </div>
-                      <div class={styles.groupInviteActions}>
-                        <button class={styles.groupSecondaryBtn} onClick={() => void respondToInvite(invite.id, false)}>Rechazar</button>
-                        <button class={styles.statusBtn} onClick={() => void respondToInvite(invite.id, true)}>Aceptar</button>
-                      </div>
-                    </div>
-                  )}
-                </For>
-              </div>
-            </Show>
-            <div class={styles.groupsHeadRow}>
-              <button class={styles.statusBtn} onClick={() => setShowCreateGroupModal(true)}>Crear grupo</button>
-            </div>
-            <VirtualList items={groups} itemHeight={74} overscan={4}>
-              {(group) => (
-                <button
-                  class={styles.conversationItem}
-                  classList={{ [styles.selected]: isSelectedGroup(group.id) }}
-                  onClick={() => {
-                    setSelectedGroupId(group.id);
-                    void loadGroupMessages(group.id);
-                  }}
-                >
-                  <LetterAvatar class={styles.avatar} color={generateColorForString(String(group.id))} label={group.name} />
-                  <div class={styles.info}>
-                    <div class={styles.topRow}>
-                      <span class={styles.name}>{group.name}</span>
-                      <span class={styles.time}>{group.members || 1} miembros</span>
-                    </div>
-                    <div class={styles.previewText}>Grupo de WaveChat</div>
-                  </div>
-                </button>
-              )}
-            </VirtualList>
-
-            <Show when={selectedGroupId()}>
-              <div class={styles.groupThread}>
-                <div class={styles.groupThreadHeader}>
-                  <div>
-                    <h4>{groups().find((entry) => entry.id === selectedGroupId())?.name || 'Grupo'}</h4>
-                    <p>Persistencia batch por socket y maximo 30 mensajes guardados.</p>
-                  </div>
-                  <span>{selectedGroupMessages().length}/30</span>
-                </div>
-                <Show when={selectedGroupTypingList().length > 0}>
-                  <div class={styles.groupTypingRow}>
-                    {selectedGroupTypingList().join(', ')} escribiendo...
-                  </div>
-                </Show>
-                <For each={selectedGroupMessages()}>
-                  {(msg) => (
-                    <div class={styles.groupMsgRow}>
-                      <div class={styles.groupMsgMeta}>
-                        <strong>{msg.sender_number ? getContactName(msg.sender_number) : 'usuario'}</strong>
-                        <span>{timeAgo(msg.created_at)}</span>
-                      </div>
-                      <Show when={msg.message}>
-                        <span>{msg.message}</span>
-                      </Show>
-                      <Show when={msg.media_url}>
-                        {(mediaUrl) => {
-                          const mediaType = resolveMediaType(mediaUrl());
-                          return (
-                            <>
-                              <Show when={mediaType === 'image'}>
-                                <img class={styles.groupMediaPreview} src={mediaUrl()} alt="Adjunto" onClick={() => setViewerUrl(mediaUrl())} />
-                              </Show>
-                              <Show when={mediaType === 'video'}>
-                                <video class={styles.groupMediaPreview} src={mediaUrl()} controls playsinline />
-                              </Show>
-                            </>
-                          );
-                        }}
-                      </Show>
-                    </div>
-                  )}
-                </For>
-                <div class={styles.inputContainer}>
-                  <EmojiPickerButton value={groupMessageInput()} onChange={setGroupMessageInput} maxLength={800} />
-                  <input value={groupMessageInput()} onInput={(e) => {
-                    const next = e.currentTarget.value;
-                    setGroupMessageInput(next);
-                    if (selectedGroupId() && socketReady() && isWaveSocketConnected()) {
-                      sendWaveTyping(String(selectedGroupId()!), next.trim().length > 0);
-                    }
-                  }} placeholder="Mensaje al grupo" />
-                  <button
-                    class={styles.sendBtn}
-                    classList={{ [styles.sendBtnRecording]: isRecordingVoice() }}
-                    onPointerDown={() => {
-                      (window as any).__gcGrpSendTimer = setTimeout(() => {
-                        (window as any).__gcGrpSendTimer = null;
-                        if (isRecordingVoice()) { stopVoiceRecording(); } else { void startVoiceRecording(); }
-                      }, 500);
-                    }}
-                    onPointerUp={() => {
-                      if ((window as any).__gcGrpSendTimer) {
-                        clearTimeout((window as any).__gcGrpSendTimer);
-                        (window as any).__gcGrpSendTimer = null;
-                        void sendGroupMessage();
-                      }
-                    }}
-                    onPointerLeave={() => {
-                      if ((window as any).__gcGrpSendTimer) {
-                        clearTimeout((window as any).__gcGrpSendTimer);
-                        (window as any).__gcGrpSendTimer = null;
-                      }
-                    }}
-                  >{isRecordingVoice() ? `⏹ ${recordingSeconds()}s` : '➤'}</button>
-                </div>
-              </div>
-            </Show>
+            <WaveChatGroupsTab
+              groups={groups}
+              groupInvites={groupInvites}
+              selectedGroupId={selectedGroupId}
+              selectedGroupMessages={selectedGroupMessages}
+              selectedGroupTypingList={selectedGroupTypingList}
+              groupMessageInput={groupMessageInput}
+              setGroupMessageInput={setGroupMessageInput}
+              socketReady={socketReady}
+              isRecordingVoice={isRecordingVoice}
+              recordingSeconds={recordingSeconds}
+              showCreateGroupModal={showCreateGroupModal}
+              groupNameDraft={groupNameDraft}
+              groupContactSearch={groupContactSearch}
+              groupMemberDraft={groupMemberDraft}
+              selectableContacts={selectableContacts}
+              framework={phoneState.framework || 'unknown'}
+              getContactName={getContactName}
+              onSelectGroup={(groupId) => {
+                setSelectedGroupId(groupId);
+                void loadGroupMessages(groupId);
+              }}
+              onRespondToInvite={(inviteId, accept) => void respondToInvite(inviteId, accept)}
+              onSendGroupMessage={() => void sendGroupMessage()}
+              onStartVoiceRecording={startVoiceRecording}
+              onStopVoiceRecording={stopVoiceRecording}
+              onOpenViewer={setViewerUrl}
+              onShowCreateGroupModal={setShowCreateGroupModal}
+              onSetGroupNameDraft={setGroupNameDraft}
+              onSetGroupContactSearch={setGroupContactSearch}
+              onToggleGroupMember={toggleGroupMember}
+              onCreateGroup={() => void createGroup()}
+              onCloseCreateGroupModal={closeCreateGroupModal}
+            />
           </Show>
             </div>
           </div>
@@ -966,19 +818,19 @@ export function WaveChatApp() {
 
       <Modal open={showGifPicker()} title="GIFs" onClose={() => setShowGifPicker(false)} size="lg">
         <div class={styles.gifPanel}>
-          <SheetIntro title="Buscar GIF" description="Encuentra una reaccion rapida y agregala al mensaje actual." />
+          <SheetIntro title={t('wavechat.search_gif', language())} description={t('wavechat.search_gif_desc', language())} />
           <div class={styles.gifSearchRow}>
             <SearchInput
               value={gifQuery()}
               onInput={(value) => setGifQuery(sanitizeText(value, 80))}
-              placeholder="Buscar GIF"
+              placeholder={t('wavechat.search_gif', language())}
               class={styles.gifSearchInputRoot}
               inputClass={styles.gifSearchInput}
             />
-            <button onClick={() => void searchGifs()}>Buscar</button>
+            <button onClick={() => void searchGifs()}>{t('wavechat.search', language())}</button>
           </div>
-          <Show when={!gifLoading()} fallback={<div class={styles.gifEmpty}>Buscando...</div>}>
-            <Show when={gifResults().length > 0} fallback={<div class={styles.gifEmpty}>Sin resultados</div>}>
+          <Show when={!gifLoading()} fallback={<div class={styles.gifEmpty}>{t('wavechat.searching', language())}</div>}>
+            <Show when={gifResults().length > 0} fallback={<div class={styles.gifEmpty}>{t('wavechat.no_results', language())}</div>}>
               <div class={styles.gifGrid}>
                 <For each={gifResults()}>
                   {(gif) => (
@@ -997,64 +849,7 @@ export function WaveChatApp() {
             </Show>
           </Show>
           <ModalActions>
-            <ModalButton label="Cerrar" onClick={() => setShowGifPicker(false)} />
-          </ModalActions>
-        </div>
-      </Modal>
-      <Modal open={showCreateGroupModal()} title="Nuevo grupo" onClose={closeCreateGroupModal} size="lg">
-        <div class={styles.groupModalBody}>
-          <SheetIntro title="Crear grupo" description="Elige un nombre claro y suma contactos para iniciar la conversacion compartida." />
-          <label class={styles.groupField}>
-            <span>Nombre del grupo</span>
-            <input
-              value={groupNameDraft()}
-              onInput={(e) => setGroupNameDraft(sanitizeText(e.currentTarget.value, 80))}
-              placeholder="Ej. Familia, Trabajo, Amigos"
-            />
-          </label>
-
-          <label class={styles.groupField}>
-            <span>Buscar contactos</span>
-            <SearchInput
-              value={groupContactSearch()}
-              onInput={(value) => setGroupContactSearch(sanitizeText(value, 80))}
-              placeholder="Buscar por nombre o numero"
-              class={styles.groupSearchInputRoot}
-              inputClass={styles.groupSearchInput}
-            />
-          </label>
-
-          <div class={styles.groupSelectionSummary}>
-            <strong>{groupMemberDraft().length}</strong>
-            <span>contactos seleccionados</span>
-          </div>
-
-          <div class={styles.groupChecklist}>
-            <For each={selectableContacts()}>
-              {(contact) => {
-                const safeNumber = sanitizePhone(contact.number);
-                return (
-                  <label class={styles.groupChecklistItem}>
-                    <input
-                      type="checkbox"
-                      checked={groupMemberDraft().includes(safeNumber)}
-                      onChange={() => toggleGroupMember(safeNumber)}
-                    />
-                    <div class={styles.groupChecklistInfo}>
-                      <strong>{contact.display}</strong>
-                      <span>{formatPhoneNumber(contact.number, phoneState.framework || 'unknown')}</span>
-                    </div>
-                  </label>
-                );
-              }}
-            </For>
-            <Show when={selectableContacts().length === 0}>
-              <div class={styles.groupChecklistEmpty}>No hay contactos disponibles para agregar.</div>
-            </Show>
-          </div>
-          <ModalActions>
-            <ModalButton label="Cancelar" onClick={closeCreateGroupModal} />
-            <ModalButton label="Crear" tone="primary" onClick={() => void createGroup()} disabled={!groupNameDraft().trim()} />
+            <ModalButton label={t('wavechat.close', language())} onClick={() => setShowGifPicker(false)} />
           </ModalActions>
         </div>
       </Modal>
@@ -1070,198 +865,5 @@ export function WaveChatApp() {
         ]}
       />
     </>
-  );
-}
-
-function ConversationView(props: {
-  phoneNumber: string;
-  contactName: string;
-  messages: any[];
-  messageInput: string;
-  attachmentUrl: string | null;
-  showAttachSheet: boolean;
-  setShowAttachSheet: (value: boolean) => void;
-  onInput: (value: string) => void;
-  onSend: () => void;
-  onAttachGallery: () => void;
-  onAttachCamera: () => void;
-  onAttachUrl: () => void;
-  onAttachAudioUrl: () => void;
-  onSendLocation: () => void;
-  isRecordingVoice: boolean;
-  recordingSeconds: number;
-  uploadingVoice: boolean;
-  onStartVoiceRecording: () => void;
-  onStopVoiceRecording: () => void;
-  onOpenGifPicker: () => void;
-  onClearAttachment: () => void;
-  onOpenViewer: (url: string | null) => void;
-  getMediaUrl: (msg: any) => string | undefined;
-  isKnownContact: (number: string) => boolean;
-  onAddContact: (display: string, number: string) => void;
-  onBack: () => void;
-  onOpenCoords: (x: number, y: number) => void;
-  onDeleteConversation: () => void;
-  framework?: 'esx' | 'qbcore' | 'qbox' | 'unknown';
-}) {
-  const language = () => getStoredLanguage();
-  let messagesEnd: HTMLDivElement | undefined;
-
-  onMount(() => {
-    messagesEnd?.scrollIntoView({ behavior: 'auto' });
-  });
-
-  createEffect(() => {
-    if (props.messages.length > 0) {
-      messagesEnd?.scrollIntoView({ behavior: 'smooth' });
-    }
-  });
-
-  return (
-    <div class={styles.thread}>
-      <div class={styles.nav}>
-        <button class={styles.iconBtn} onClick={props.onBack}>
-          <img src="./img/icons_ios/ui-chevron-left.svg" alt="" draggable={false} />
-        </button>
-        <div class={styles.navTitle}>{props.contactName}</div>
-        <button class={styles.deleteConversationBtn} onClick={props.onDeleteConversation}>Borrar</button>
-      </div>
-
-      <div class={styles.messagesList}>
-        <For each={props.messages}>
-          {(msg) => {
-            const shared = parseSharedContactMessage(msg.message);
-            const messageText = sanitizeText(msg.message || '', 800);
-            const coords = extractCoords(msg.message);
-            const mediaUrl = props.getMediaUrl(msg);
-            const mediaType = resolveMediaType(mediaUrl);
-
-            return (
-            <div class={styles.bubble} classList={{ [styles.sent]: msg.owner === 1, [styles.received]: msg.owner === 0 }}>
-              <Show when={shared} fallback={
-                <>
-                  <Show when={messageText}>
-                    <span class={styles.messageText}>{messageText}</span>
-                  </Show>
-                  <Show when={coords}>
-                    {(coords) => (
-                      <button class={styles.mapBtn} onClick={() => props.onOpenCoords(coords().x, coords().y)}>
-                        Abrir en mapa
-                      </button>
-                    )}
-                  </Show>
-                </>
-              }>
-                {(shared) => (
-                  <div class={styles.contactCard}>
-                    <div class={styles.contactCardLabel}>Contacto compartido</div>
-                    <div class={styles.contactCardName}>{shared().display}</div>
-                    <div class={styles.contactCardNumber}>{formatPhoneNumber(shared().number, props.framework || 'unknown')}</div>
-                    <button
-                      class={styles.contactCardBtn}
-                      disabled={props.isKnownContact(shared().number)}
-                      onClick={() => props.onAddContact(shared().display, shared().number)}
-                    >
-                      {props.isKnownContact(shared().number) ? 'Ya agregado' : 'Agregar contacto'}
-                    </button>
-                  </div>
-                )}
-              </Show>
-              <Show when={mediaUrl}>
-                <Show when={mediaType === 'image'}>
-                  <img class={styles.mediaPreview} src={mediaUrl!} alt="adjunto" onClick={() => props.onOpenViewer(mediaUrl || null)} />
-                </Show>
-                <Show when={mediaType === 'video'}>
-                  <video class={styles.mediaPreview} src={mediaUrl!} controls playsinline preload="metadata" />
-                </Show>
-                <Show when={mediaType === 'audio'}>
-                  <audio class={styles.audioPreview} src={mediaUrl!} controls preload="metadata" />
-                </Show>
-              </Show>
-              <span class={styles.messageTime}>{timeAgo(msg.time)}</span>
-            </div>
-          )}}
-        </For>
-        <div ref={messagesEnd} />
-      </div>
-
-      <Show when={props.attachmentUrl}>
-        <div class={styles.attachmentPreview}>
-          <Show when={resolveMediaType(props.attachmentUrl || undefined) === 'image'}>
-            <img src={props.attachmentUrl!} alt="adjunto" onClick={() => props.onOpenViewer(props.attachmentUrl)} />
-          </Show>
-          <Show when={resolveMediaType(props.attachmentUrl || undefined) === 'video'}>
-            <video src={props.attachmentUrl!} controls playsinline preload="metadata" />
-          </Show>
-          <Show when={resolveMediaType(props.attachmentUrl || undefined) === 'audio'}>
-            <audio class={styles.audioPreview} src={props.attachmentUrl!} controls preload="metadata" />
-          </Show>
-          <button onClick={props.onClearAttachment}>Quitar</button>
-        </div>
-      </Show>
-
-      <div class={styles.inputContainer}>
-        <button class={styles.attachBtn} onClick={() => props.setShowAttachSheet(true)}>
-          ＋
-        </button>
-        <EmojiPickerButton value={props.messageInput} onChange={props.onInput} maxLength={800} />
-        <input
-          type="text"
-          placeholder={t('messages.message_placeholder', language())}
-          value={props.messageInput}
-          onInput={(e) => props.onInput(e.currentTarget.value)}
-          onKeyPress={(e) => e.key === 'Enter' && props.onSend()}
-        />
-        <button
-          class={styles.sendBtn}
-          classList={{ [styles.sendBtnRecording]: props.isRecordingVoice }}
-          onPointerDown={() => {
-            (window as any).__gcSendTimer = setTimeout(() => {
-              (window as any).__gcSendTimer = null;
-              if (props.isRecordingVoice) {
-                props.onStopVoiceRecording();
-              } else {
-                props.onStartVoiceRecording();
-              }
-            }, 500);
-          }}
-          onPointerUp={() => {
-            if ((window as any).__gcSendTimer) {
-              clearTimeout((window as any).__gcSendTimer);
-              (window as any).__gcSendTimer = null;
-              props.onSend();
-            }
-          }}
-          onPointerLeave={() => {
-            if ((window as any).__gcSendTimer) {
-              clearTimeout((window as any).__gcSendTimer);
-              (window as any).__gcSendTimer = null;
-            }
-          }}
-        >
-          {props.isRecordingVoice ? `⏹ ${props.recordingSeconds}s` : '➤'}
-        </button>
-      </div>
-
-      <Show when={props.uploadingVoice}>
-        <div class={styles.voiceUploading}>{t('wavechat.uploading_voice', language())}</div>
-      </Show>
-
-      <ActionSheet
-        open={props.showAttachSheet}
-        title={t('messages.attach', language())}
-        onClose={() => props.setShowAttachSheet(false)}
-        actions={[
-          { label: t('messages.attach_gallery', language()), tone: 'primary', onClick: props.onAttachGallery },
-          { label: t('messages.attach_camera', language()), onClick: props.onAttachCamera },
-          { label: t('wavechat.search_gif', language()), onClick: props.onOpenGifPicker },
-          { label: t('messages.attach_url', language()), onClick: props.onAttachUrl },
-          { label: t('wavechat.attach_audio_url', language()), onClick: props.onAttachAudioUrl },
-          { label: props.isRecordingVoice ? t('wavechat.stop_recording', language(), { seconds: props.recordingSeconds }) : t('wavechat.record_voice', language()), onClick: props.isRecordingVoice ? props.onStopVoiceRecording : props.onStartVoiceRecording },
-          { label: t('maps.share_location', language()), onClick: props.onSendLocation },
-          { label: t('messages.remove_attachment', language()), tone: 'danger', onClick: props.onClearAttachment },
-        ]}
-      />
-    </div>
   );
 }
