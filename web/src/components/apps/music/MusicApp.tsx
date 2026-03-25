@@ -6,6 +6,8 @@ import { t } from '../../../i18n';
 import { fetchNui } from '../../../utils/fetchNui';
 import { useNuiEvent } from '../../../utils/useNui';
 import { AppScaffold } from '../../shared/layout';
+import { useLiveActivity } from '../../../store/liveActivity';
+import { useInternalEvent } from '../../../utils/internalEvents';
 import styles from './MusicApp.module.scss';
 
 interface SearchItem {
@@ -38,6 +40,7 @@ export function MusicApp() {
   const router = useRouter();
   const [phoneState] = usePhone();
   const language = () => phoneState.settings.language || 'es';
+  const { setActivity, removeActivity } = useLiveActivity();
 
   const [query, setQuery] = createSignal('');
   const [searching, setSearching] = createSignal(false);
@@ -109,12 +112,40 @@ export function MusicApp() {
     if (payload.error) {
       setStatus(`Error: ${payload.error}`);
     }
+
+    syncLiveActivity();
+  };
+
+  const syncLiveActivity = () => {
+    if (isPlaying() || isPaused()) {
+      setActivity('music', {
+        title: nowPlaying(),
+        subtitle: isPaused() ? 'Pausado' : 'Reproduciendo',
+        icon: './img/icons_ios/music.svg',
+        isPlaying: isPlaying() && !isPaused(),
+        volume: volume(),
+        onPause: () => handlePlayPause(),
+        onStop: () => void stop(),
+        onVolumeUp: () => void syncAudioControls(Math.min(100, volume() + 10), distance()),
+        onVolumeDown: () => void syncAudioControls(Math.max(0, volume() - 10), distance()),
+        onNavigate: () => router.navigate('music'),
+      });
+    } else {
+      removeActivity('music');
+    }
   };
 
   usePhoneKeyHandler({
     Backspace: () => {
       router.goBack();
     },
+  });
+
+  useInternalEvent<{ route: string }>('phone:appForceClose', (detail) => {
+    if (detail?.route === 'music') {
+      void fetchNui('musicStop', {}, {});
+      removeActivity('music');
+    }
   });
 
   useNuiEvent<MusicStatePayload>('musicStateUpdated', (payload) => {

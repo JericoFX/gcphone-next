@@ -1,6 +1,8 @@
 import { createSignal, For, Show, createEffect, onCleanup, onMount, batch, untrack } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { usePhoneState } from '../../../store/phone';
+import { useLiveActivity } from '../../../store/liveActivity';
+import { useInternalEvent } from '../../../utils/internalEvents';
 import { fetchNui } from '../../../utils/fetchNui';
 import { useNuiEvent } from '../../../utils/useNui';
 import { formatPhoneNumber, generateColorForString, timeAgo } from '../../../utils/misc';
@@ -35,6 +37,7 @@ export function CallsApp() {
   const router = useRouter();
   const phoneState = usePhoneState();
   const [notifications, notificationsActions] = useNotifications();
+  const { setActivity, removeActivity } = useLiveActivity();
   const [activeTab, setActiveTab] = createSignal<TabType>('recents');
   const [callHistory, setCallHistory] = createSignal<Call[]>([]);
   const [dialNumber, setDialNumber] = createSignal('');
@@ -194,6 +197,7 @@ export function CallsApp() {
   const resetCallUi = () => {
     disconnectLiveKit();
     clearVideoState();
+    removeActivity('call');
     batch(() => {
       setInCall(false);
       setCallInfo(null);
@@ -224,6 +228,13 @@ export function CallsApp() {
       }
       router.goBack();
     },
+  });
+
+  useInternalEvent<{ route: string }>('phone:appForceClose', (detail) => {
+    if (detail?.route === 'calls') {
+      void endCall();
+      removeActivity('call');
+    }
   });
   
   const startCall = async (number: string, displayName?: string) => {
@@ -404,12 +415,26 @@ export function CallsApp() {
       incoming: true,
     }));
     setInCall(true);
+    setActivity('call', {
+      title: incoming.displayName || incoming.transmitterNum || incoming.receiverNum || 'Llamada',
+      subtitle: 'Llamada en curso',
+      icon: './img/icons_ios/calls.svg',
+      onStop: () => void endCall(),
+      onNavigate: () => router.navigate('calls'),
+    });
   });
 
   useNuiEvent<any>('callAccepted', (payload) => {
     const accepted = payload || {};
     setCallInfo((prev) => ({ ...(prev || {}), ...accepted }));
     setInCall(true);
+    setActivity('call', {
+      title: accepted.displayName || accepted.receiverNum || accepted.transmitterNum || 'Llamada',
+      subtitle: 'Llamada en curso',
+      icon: './img/icons_ios/calls.svg',
+      onStop: () => void endCall(),
+      onNavigate: () => router.navigate('calls'),
+    });
   });
 
   useNuiEvent<any>('callRejected', () => {

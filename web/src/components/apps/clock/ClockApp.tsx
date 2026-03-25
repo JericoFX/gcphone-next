@@ -4,6 +4,7 @@ import { fetchNui } from '../../../utils/fetchNui';
 import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { AppScaffold } from '../../shared/layout';
 import { getStoredLanguage, t } from '../../../i18n';
+import { useLiveActivity } from '../../../store/liveActivity';
 import styles from './ClockApp.module.scss';
 
 type Tab = 'clock' | 'timer' | 'stopwatch';
@@ -11,6 +12,7 @@ type Tab = 'clock' | 'timer' | 'stopwatch';
 export function ClockApp() {
   const router = useRouter();
   const language = () => getStoredLanguage();
+  const { setActivity, removeActivity } = useLiveActivity();
   const [tab, setTab] = createSignal<Tab>('clock');
   const [realTime, setRealTime] = createSignal(new Date());
   const [gameHour, setGameHour] = createSignal(12);
@@ -51,11 +53,31 @@ export function ClockApp() {
     if (!value) return;
     setTimerSec(value);
     setTimerRunning(true);
+    setActivity('timer', {
+      title: fmt(value),
+      subtitle: t('clock.tab_timer', language()) || 'Timer',
+      icon: './img/icons_ios/clock.svg',
+      onStop: () => stopTimer(),
+      onNavigate: () => router.navigate('clock'),
+    });
     if (timerHandle) clearInterval(timerHandle);
     timerHandle = setInterval(() => {
       setTimerSec((sec) => {
-        if (sec <= 1) { clearInterval(timerHandle!); setTimerRunning(false); return 0; }
-        return sec - 1;
+        if (sec <= 1) {
+          clearInterval(timerHandle!);
+          setTimerRunning(false);
+          removeActivity('timer');
+          return 0;
+        }
+        const next = sec - 1;
+        setActivity('timer', {
+          title: fmt(next),
+          subtitle: t('clock.tab_timer', language()) || 'Timer',
+          icon: './img/icons_ios/clock.svg',
+          onStop: () => stopTimer(),
+          onNavigate: () => router.navigate('clock'),
+        });
+        return next;
       });
     }, 1000);
   };
@@ -63,18 +85,39 @@ export function ClockApp() {
   const stopTimer = () => {
     if (timerHandle) clearInterval(timerHandle);
     setTimerRunning(false);
+    removeActivity('timer');
   };
 
   const startStopwatch = () => {
     if (stopwatchRunning()) return;
     setStopwatchRunning(true);
-    stopwatchHandle = setInterval(() => setStopwatchSec((s) => s + 1), 1000);
+    setActivity('timer', {
+      title: fmt(stopwatchSec()),
+      subtitle: t('clock.tab_stopwatch', language()) || 'Cronometro',
+      icon: './img/icons_ios/clock.svg',
+      onStop: () => pauseStopwatch(),
+      onNavigate: () => router.navigate('clock'),
+    });
+    stopwatchHandle = setInterval(() => {
+      setStopwatchSec((s) => {
+        const next = s + 1;
+        setActivity('timer', {
+          title: fmt(next),
+          subtitle: t('clock.tab_stopwatch', language()) || 'Cronometro',
+          icon: './img/icons_ios/clock.svg',
+          onStop: () => pauseStopwatch(),
+          onNavigate: () => router.navigate('clock'),
+        });
+        return next;
+      });
+    }, 1000);
   };
 
   const pauseStopwatch = () => {
     if (stopwatchHandle) clearInterval(stopwatchHandle);
     stopwatchHandle = undefined;
     setStopwatchRunning(false);
+    removeActivity('timer');
   };
 
   const resetStopwatch = () => { pauseStopwatch(); setStopwatchSec(0); };

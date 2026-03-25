@@ -12,6 +12,7 @@ import { LeafletMap, type LeafletPin } from '../maps/LeafletMap';
 import { t } from '../../../i18n';
 import { usePhone } from '../../../store/phone';
 import { ShareSheet, type SharePayload } from '../../shared/ui/ShareSheet';
+import { useLiveActivity } from '../../../store/liveActivity';
 import styles from './CityRideApp.module.scss';
 
 interface Coords {
@@ -73,6 +74,7 @@ function formatMoney(amount: number) {
 export function CityRideApp() {
   const router = useRouter();
   const [phoneState] = usePhone();
+  const { setActivity, removeActivity } = useLiveActivity();
   const language = () => phoneState.settings.language || 'es';
 
   const tabs = () => [
@@ -131,13 +133,28 @@ export function CityRideApp() {
         if (ride.role === 'driver') {
           setDriverActiveRide(ride);
           setActiveRide(null);
+          setActivity('cityride', {
+            title: ride.driverName || t('cityride.passenger_label', language()) || 'Pasajero',
+            subtitle: ride.status,
+            icon: './img/icons_ios/cityride.svg',
+            onStop: () => void cancelRide(ride.id),
+            onNavigate: () => router.navigate('cityride'),
+          });
         } else {
           setActiveRide(ride);
           setDriverActiveRide(null);
+          setActivity('cityride', {
+            title: ride.driverName || 'CityRide',
+            subtitle: `ETA: ${Math.max(1, Math.round(ride.distance / 80))} min`,
+            icon: './img/icons_ios/cityride.svg',
+            onStop: () => void cancelRide(ride.id),
+            onNavigate: () => router.navigate('cityride'),
+          });
         }
       } else {
         setActiveRide(null);
         setDriverActiveRide(null);
+        removeActivity('cityride');
       }
 
       if (profile && typeof profile === 'object' && profile.id) {
@@ -170,21 +187,49 @@ export function CityRideApp() {
           });
         }
       } else if (action === 'cityRideAccepted') {
-        if (data) setActiveRide(data);
+        if (data) {
+          setActiveRide(data);
+          setActivity('cityride', {
+            title: data.driverName || 'CityRide',
+            subtitle: `ETA: ${Math.max(1, Math.round((data.distance || 0) / 80))} min`,
+            icon: './img/icons_ios/cityride.svg',
+            onStop: () => void cancelRide(data.id),
+            onNavigate: () => router.navigate('cityride'),
+          });
+        }
       } else if (action === 'cityRideUpdate') {
         if (data) {
           setActiveRide((prev) => (prev && prev.id === data.id ? data : prev));
           setDriverActiveRide((prev) => (prev && prev.id === data.id ? data : prev));
+          if (activeRide()?.id === data.id) {
+            setActivity('cityride', {
+              title: data.driverName || 'CityRide',
+              subtitle: `ETA: ${Math.max(1, Math.round((data.distance || 0) / 80))} min`,
+              icon: './img/icons_ios/cityride.svg',
+              onStop: () => void cancelRide(data.id),
+              onNavigate: () => router.navigate('cityride'),
+            });
+          } else if (driverActiveRide()?.id === data.id) {
+            setActivity('cityride', {
+              title: data.driverName || t('cityride.passenger_label', language()) || 'Pasajero',
+              subtitle: data.status,
+              icon: './img/icons_ios/cityride.svg',
+              onStop: () => void cancelRide(data.id),
+              onNavigate: () => router.navigate('cityride'),
+            });
+          }
         }
       } else if (action === 'cityRideCancelled') {
         if (data) {
           setActiveRide((prev) => (prev && prev.id === data.rideId ? null : prev));
           setDriverActiveRide((prev) => (prev && prev.id === data.rideId ? null : prev));
+          removeActivity('cityride');
           uiAlert(t('cityride.cancelled', language()), 'CityRide');
         }
       } else if (action === 'cityRideCompleted') {
         if (data) {
           setDriverActiveRide(null);
+          removeActivity('cityride');
           if (activeRide()?.id === data.id) {
             setActiveRide(null);
             setCompletedRide(data);
@@ -271,6 +316,13 @@ export function CityRideApp() {
     const result = await fetchNui<{ success?: boolean; ride?: RideData; error?: string }>('cityrideRequestRide', { pickup, dest }, { success: false });
     if (result.success && result.ride) {
       setActiveRide(result.ride);
+      setActivity('cityride', {
+        title: 'CityRide',
+        subtitle: t('cityride.searching', language()) || 'Buscando conductor...',
+        icon: './img/icons_ios/cityride.svg',
+        onStop: () => void cancelRide(result.ride!.id),
+        onNavigate: () => router.navigate('cityride'),
+      });
     } else {
       uiAlert(result.error || t('cityride.request_failed', language()), 'CityRide');
     }
@@ -284,6 +336,7 @@ export function CityRideApp() {
     if (result.success) {
       setActiveRide(null);
       setDriverActiveRide(null);
+      removeActivity('cityride');
     } else {
       uiAlert(result.error || t('cityride.cancel_failed', language()), 'CityRide');
     }
@@ -360,6 +413,13 @@ export function CityRideApp() {
     if (result.success && result.ride) {
       setDriverActiveRide(result.ride);
       setAvailableRides([]);
+      setActivity('cityride', {
+        title: result.ride.driverName || t('cityride.passenger_label', language()) || 'Pasajero',
+        subtitle: result.ride.status,
+        icon: './img/icons_ios/cityride.svg',
+        onStop: () => void cancelRide(result.ride!.id),
+        onNavigate: () => router.navigate('cityride'),
+      });
     } else {
       uiAlert(result.error || t('cityride.accept_failed', language()), 'CityRide');
       setAvailableRides((prev) => prev.filter((r) => r.id !== rideId));
@@ -382,6 +442,7 @@ export function CityRideApp() {
     const result = await fetchNui<{ success?: boolean; ride?: RideData; error?: string }>('cityrideCompleteRide', { rideId }, { success: false });
     if (result.success) {
       setDriverActiveRide(null);
+      removeActivity('cityride');
       void loadState();
     } else {
       uiAlert(result.error || t('cityride.complete_failed', language()), 'CityRide');

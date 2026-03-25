@@ -18,6 +18,7 @@ import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { useNuiEvent } from '../../../utils/useNui';
 import { createGameView, type GameView } from '../../../utils/gameRender';
 import { isEnvBrowser } from '../../../utils/misc';
+import { useLiveActivity } from '../../../store/liveActivity';
 import styles from './CameraApp.module.scss';
 
 type CameraEffect = 'normal' | 'noir' | 'vivid' | 'warm';
@@ -62,6 +63,7 @@ function targetLabel(target: CameraTarget) {
 export function CameraApp() {
   const router = useRouter();
   const language = () => getStoredLanguage();
+  const { setActivity, removeActivity } = useLiveActivity();
   const [effect, setEffect] = createSignal<CameraEffect>('normal');
   const [lastUrl, setLastUrl] = createSignal('');
   const [busy, setBusy] = createSignal(false);
@@ -214,10 +216,19 @@ export function CameraApp() {
         if (isRecording()) {
           gameViewRef?.stopRecording();
           setIsRecording(false);
+          removeActivity('recording');
         } else if (gameViewRef) {
           setIsRecording(true);
+          setActivity('recording', {
+            title: t('camera.recording', language()) || 'Grabando',
+            subtitle: t('camera.video', language()) || 'Video',
+            icon: './img/icons_ios/camera.svg',
+            onStop: () => { gameViewRef?.stopRecording(); setIsRecording(false); removeActivity('recording'); },
+            onNavigate: () => router.navigate('camera'),
+          });
           void gameViewRef.startRecording(async (blob, durationMs) => {
             setIsRecording(false);
+            removeActivity('recording');
             setBusy(true);
             try {
               // Get upload config from server (URL, headers, field name)
@@ -451,6 +462,13 @@ export function CameraApp() {
 
   const publishClipFromRecording = async () => {
     setIsRecording(true);
+    setActivity('recording', {
+      title: t('camera.recording', language()) || 'Grabando',
+      subtitle: t('camera.video', language()) || 'Video',
+      icon: './img/icons_ios/camera.svg',
+      onStop: () => { setIsRecording(false); removeActivity('recording'); },
+      onNavigate: () => router.navigate('camera'),
+    });
     const storage = await fetchNui<{
       uploadUrl?: string;
       uploadField?: string;
@@ -479,6 +497,7 @@ export function CameraApp() {
     );
 
     setIsRecording(false);
+    removeActivity('recording');
 
     const videoUrl = sanitizeMediaUrl(result?.url);
     if (!videoUrl || resolveMediaType(videoUrl) !== 'video') {

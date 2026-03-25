@@ -17,12 +17,14 @@ import { HomeScreen } from '../apps/home/HomeScreen';
 import { AppPlaceholder } from '../shared/ui/AppPlaceholder';
 import { PhoneNotificationBanner } from '../shared/notifications/PhoneNotificationBanner';
 import { ControlCenter } from '../shared/control-center/ControlCenter';
+import { DynamicIsland } from '../shared/DynamicIsland/DynamicIsland';
 import { useNotifications } from '../../store/notifications';
 import { APP_BY_ID } from '../../config/apps';
 import { appName } from '../../i18n';
 import { isEnvBrowser } from '../../utils/misc';
 import { useWindowEvent } from '../../hooks';
-import { useInternalEvent } from '../../utils/internalEvents';
+import { useInternalEvent, emitInternalEvent } from '../../utils/internalEvents';
+import { LiveActivityProvider } from '../../store/liveActivity';
 import styles from './PhoneFrame.module.scss';
 
 type AppRoute = string;
@@ -223,6 +225,8 @@ export const PhoneFrame: ParentComponent & { Router: () => JSX.Element } = (
     const appRoute = normalizeRoute(route);
     if (appRoute === 'home') return;
 
+    emitInternalEvent('phone:appForceClose', { route: appRoute });
+
     setOpenApps((apps) => apps.filter((item) => item !== appRoute));
     setHistory((stack) => {
       const filtered = stack.filter((item) => item !== appRoute);
@@ -324,6 +328,7 @@ export const PhoneFrame: ParentComponent & { Router: () => JSX.Element } = (
         }}
       >
         <RouterContext.Provider value={router}>
+          <LiveActivityProvider>
           <ControlCenter />
           <div class={styles.bannerWrap}>
             <PhoneNotificationBanner
@@ -337,6 +342,7 @@ export const PhoneFrame: ParentComponent & { Router: () => JSX.Element } = (
             </div>
           </Show>
           {props.children}
+          <DynamicIsland />
 
           <Show when={!phoneState.requiresSetup && !phoneState.locked}>
             <button
@@ -463,6 +469,7 @@ export const PhoneFrame: ParentComponent & { Router: () => JSX.Element } = (
               </div>
             </div>
           </Show>
+          </LiveActivityProvider>
         </RouterContext.Provider>
       </div>
       <img
