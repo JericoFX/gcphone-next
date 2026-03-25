@@ -1,12 +1,16 @@
 let YouTube = null;
 try {
-  YouTube = require('./node_modules/youtube-sr').default || require('youtube-sr').default;
+  YouTube = require('server/js/node_modules/youtube-sr').default;
 } catch (e) {
   try {
-    YouTube = require('youtube-sr').default;
+    YouTube = require('./server/js/node_modules/youtube-sr').default;
   } catch (e2) {
-    YouTube = null;
-    console.warn('[gcphone] youtube-sr not installed — music search disabled');
+    try {
+      YouTube = require('youtube-sr').default;
+    } catch (e3) {
+      YouTube = null;
+      console.warn('[gcphone] youtube-sr not found — music search disabled');
+    }
   }
 }
 

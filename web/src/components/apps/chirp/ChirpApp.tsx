@@ -83,9 +83,9 @@ export function ChirpApp() {
   const [viewerUrl, setViewerUrl] = createSignal<string | null>(null);
   const [query, setQuery] = createSignal('');
   const chirpTabs = [
-    { id: 'forYou', label: 'Para ti' },
-    { id: 'following', label: 'Siguiendo' },
-    { id: 'myActivity', label: 'Actividad' },
+    { id: 'forYou', label: t('chirp.tab_for_you', language()) },
+    { id: 'following', label: t('chirp.tab_following', language()) },
+    { id: 'myActivity', label: t('chirp.tab_activity', language()) },
   ];
 
   const pendingCount = createMemo(() => pendingRequests().length);
@@ -211,7 +211,7 @@ export function ChirpApp() {
     lastAvatarMedia = sharedAvatar;
     setProfileAvatar(sharedAvatar);
     setShowProfileModal(true);
-    setStatusMessage('Avatar listo para guardar');
+    setStatusMessage(t('chirp.avatar_ready', language()));
   });
 
   usePhoneKeyHandler({
@@ -313,15 +313,15 @@ export function ChirpApp() {
         };
       });
 
-      setStatusMessage(nextRechirped ? 'ReChirp agregado a tu actividad' : 'ReChirp eliminado');
+      setStatusMessage(nextRechirped ? t('chirp.rechirp_added', language()) : t('chirp.rechirp_removed', language()));
       notificationsActions.receive({
         appId: 'chirp',
-        title: nextRechirped ? 'ReChirp agregado' : 'ReChirp eliminado',
+        title: nextRechirped ? t('chirp.rechirp_added', language()) : t('chirp.rechirp_removed', language()),
         message: nextRechirped
           ? content.trim()
-            ? 'Tu comentario fue publicado junto al ReChirp.'
-            : 'Ahora aparece en Actividad.'
-          : 'El chirp ya no aparece como rechirpeado.',
+            ? t('chirp.rechirp_comment_published', language())
+            : t('chirp.rechirp_now_in_activity', language())
+          : t('chirp.rechirp_undone', language()),
         icon: '↻',
         durationMs: 2200,
       });
@@ -467,7 +467,7 @@ export function ChirpApp() {
   const confirmAttachUrl = () => {
     const url = sanitizeMediaUrl(attachUrlInput());
     if (!url) {
-      setStatusMessage('URL invalida o formato no permitido.');
+      setStatusMessage(t('chirp.invalid_url', language()));
       return;
     }
 
@@ -491,9 +491,9 @@ export function ChirpApp() {
       const clean = sanitizeMediaUrl(image.url) || '';
       setProfileAvatar(clean);
       setShowProfileModal(true);
-      setStatusMessage('Avatar listo para guardar');
+      setStatusMessage(t('chirp.avatar_ready', language()));
     } else {
-      setStatusMessage('No se encontraron imagenes en la galeria');
+      setStatusMessage(t('chirp.no_gallery_images', language()));
     }
   };
 
@@ -520,7 +520,7 @@ export function ChirpApp() {
 
     const ok = await fetchNui<boolean>('chirpUpdateAccount', payload, false);
     if (!ok) {
-      setStatusMessage('No se pudo guardar el perfil');
+      setStatusMessage(t('chirp.save_profile_failed', language()));
       return;
     }
 
@@ -554,7 +554,7 @@ export function ChirpApp() {
     }, false);
 
     if (!updated) {
-      return { ok: false, error: 'Cuenta creada, pero no se pudieron guardar todos los datos del perfil.' };
+      return { ok: false, error: t('chirp.create_account_partial', language()) };
     }
 
     setShowOnboarding(false);
@@ -566,11 +566,11 @@ export function ChirpApp() {
   const respondFollowRequest = async (requestId: number, accept: boolean) => {
     const ok = await fetchNui<boolean>('chirpRespondFollowRequest', { requestId, accept }, false);
     if (!ok) {
-      setStatusMessage('No se pudo responder la solicitud');
+      setStatusMessage(t('chirp.respond_request_failed', language()));
       return;
     }
 
-    setStatusMessage(accept ? 'Solicitud aceptada' : 'Solicitud rechazada');
+    setStatusMessage(accept ? t('chirp.request_accepted', language()) : t('chirp.request_rejected', language()));
     cache.invalidate(`tweets:${currentTab()}`);
     await Promise.all([refreshFollowRequests(), loadTweets()]);
   };
@@ -578,11 +578,11 @@ export function ChirpApp() {
   const cancelSentRequest = async (targetAccountId: number) => {
     const ok = await fetchNui<boolean>('chirpCancelFollowRequest', { targetAccountId }, false);
     if (!ok) {
-      setStatusMessage('No se pudo cancelar la solicitud');
+      setStatusMessage(t('chirp.cancel_request_failed', language()));
       return;
     }
 
-    setStatusMessage('Solicitud cancelada');
+    setStatusMessage(t('chirp.request_cancelled', language()));
     cache.invalidate(`tweets:${currentTab()}`);
     await Promise.all([refreshFollowRequests(), loadTweets()]);
   };
@@ -640,10 +640,10 @@ export function ChirpApp() {
     const quotedContent = () => tweet.original_content || tweet.content;
     const activityLabel = () => {
       if (tweet.activity_type === 'rechirp') {
-        return `${tweet.activity_actor_display_name || 'Tu cuenta'} hizo rechirp`;
+        return `${tweet.activity_actor_display_name || t('chirp.profile', language())} rechirp`;
       }
       if (tweet.activity_type === 'like') {
-        return 'Te gusto este chirp';
+        return t('chirp.like', language());
       }
       return '';
     };
@@ -663,7 +663,7 @@ export function ChirpApp() {
           </div>
           <div class={styles.tweetMeta}>
             <div class={styles.nameRow}>
-              <strong>{tweet.display_name || 'Usuario'}</strong>
+              <strong>{tweet.display_name || t('chirp.user', language())}</strong>
               {tweet.verified && <span class={styles.verified}><img src="./img/icons_ios/ui-check.svg" alt="" draggable={false} /></span>}
               <span class={styles.username}>@{tweet.username || 'user'}</span>
             </div>
@@ -688,7 +688,7 @@ export function ChirpApp() {
         <Show when={tweet.activity_type === 'rechirp'}>
           <div class={styles.quoteCard}>
             <div class={styles.quoteHeader}>
-              <strong>{tweet.original_display_name || tweet.display_name || 'Usuario'}</strong>
+              <strong>{tweet.original_display_name || tweet.display_name || t('chirp.user', language())}</strong>
               <span class={styles.username}>@{tweet.original_username || tweet.username || 'user'}</span>
             </div>
             <p class={styles.quoteContent}>{quotedContent()}</p>
@@ -1157,7 +1157,7 @@ export function ChirpApp() {
             checked={profilePrivate()}
             onChange={(e) => setProfilePrivate(e.currentTarget.checked)}
           />
-          <span>Cuenta privada</span>
+          <span>{t('chirp.private_account', language())}</span>
         </label>
         <ModalActions>
           <ModalButton label={t('action.cancel', language())} onClick={() => setShowProfileModal(false)} />
@@ -1171,7 +1171,7 @@ export function ChirpApp() {
         onClose={() => setDeleteTweetId(null)}
         size="sm"
       >
-        <p>Esta accion no se puede deshacer.</p>
+        <p>{t('chirp.action_irreversible', language())}</p>
         <ModalActions>
           <ModalButton label={t('action.cancel', language())} onClick={() => setDeleteTweetId(null)} />
           <ModalButton label={t('action.delete', language())} tone="danger" onClick={() => void confirmDeleteTweet()} />
@@ -1184,7 +1184,7 @@ export function ChirpApp() {
         onClose={() => setDeleteCommentId(null)}
         size="sm"
       >
-        <p>Esta accion no se puede deshacer.</p>
+        <p>{t('chirp.action_irreversible', language())}</p>
         <ModalActions>
           <ModalButton label={t('action.cancel', language())} onClick={() => setDeleteCommentId(null)} />
           <ModalButton label={t('action.delete', language())} tone="danger" onClick={() => void confirmDeleteComment()} />
