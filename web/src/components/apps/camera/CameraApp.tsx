@@ -1,7 +1,6 @@
 import {
   Show,
   createEffect,
-  createMemo,
   createSignal,
   onCleanup,
   onMount,
@@ -64,17 +63,10 @@ export function CameraApp() {
   const router = useRouter();
   const language = () => getStoredLanguage();
   const [effect, setEffect] = createSignal<CameraEffect>('normal');
-  const [fov, setFov] = createSignal(38);
-  const blur = () => 0;
   const [lastUrl, setLastUrl] = createSignal('');
   const [busy, setBusy] = createSignal(false);
   const [error, setError] = createSignal('');
   const [target, setTarget] = createSignal<CameraTarget>('');
-  const [flash, setFlash] = createSignal(true);
-  const [selfie, setSelfie] = createSignal(false);
-  const [landscape, setLandscape] = createSignal(false);
-  const [quickZooms, setQuickZooms] = createSignal<number[]>([30, 52, 78]);
-  const [videoSupported, setVideoSupported] = createSignal(false);
   const [sessionReady, setSessionReady] = createSignal(false);
   const [isRecording, setIsRecording] = createSignal(false);
   const [blurLevel, setBlurLevel] = createSignal(0);
@@ -86,7 +78,7 @@ export function CameraApp() {
   const [controlsOpen, setControlsOpen] = createSignal(false);
   const [videoMode, setVideoMode] = createSignal(false);
   const [renderer, setRenderer] = createSignal<'webgl' | 'css'>('webgl');
-  const [fovRange, setFovRange] = createSignal({ min: 20, max: 70, default_: 38 });
+  const videoSupported = () => true;
   let canvasRef: HTMLCanvasElement | undefined;
   let gameViewRef: GameView | null = null;
   let longPressTimer: ReturnType<typeof setTimeout> | null = null;
@@ -115,11 +107,6 @@ export function CameraApp() {
     }
   });
 
-  createEffect(() => {
-    if (target() === 'clips' && !landscape()) {
-      setLandscape(true);
-    }
-  });
 
   const closeCamera = async () => {
     await fetchNui('stopCameraSession', {}, true);
@@ -135,38 +122,11 @@ export function CameraApp() {
 
   onMount(async () => {
     const capabilities = await fetchNui<{
-      quickZooms?: number[];
-      video?: boolean;
       renderer?: string;
-      fov?: { min?: number; max?: number; default_?: number };
-    }>('cameraGetCapabilities', {}, { quickZooms: [30, 52, 78], video: false, renderer: 'webgl' });
-    setQuickZooms(
-      (capabilities?.quickZooms || [30, 52, 78])
-        .map((value) => Number(value))
-        .filter((value) => Number.isFinite(value)),
-    );
-    setVideoSupported(capabilities?.video === true);
+    }>('cameraGetCapabilities', {}, { renderer: 'webgl' });
     setRenderer(capabilities?.renderer === 'css' ? 'css' : 'webgl');
-    if (capabilities?.fov) {
-      setFovRange({
-        min: capabilities.fov.min ?? 25,
-        max: capabilities.fov.max ?? 90,
-        default_: capabilities.fov.default_ ?? 38,
-      });
-    }
 
-    await fetchNui(
-      'startCameraSession',
-      {
-        effect: effect(),
-        fov: fov(),
-        blur: blur(),
-        flash: flash(),
-        selfie: selfie(),
-        landscape: landscape(),
-      },
-      true,
-    );
+    await fetchNui('startCameraSession', {}, true);
     setSessionReady(true);
 
     if (canvasRef && !isEnvBrowser()) {
@@ -235,8 +195,6 @@ export function CameraApp() {
     setTemperature(0);
     setVignette(0);
     setEffect('normal');
-    setFov(fovRange().default_);
-    void fetchNui('updateCameraSession', { effect: 'normal', fov: fovRange().default_, blur: 0, flash: flash(), selfie: selfie(), landscape: landscape() }, true);
   };
 
   // Long press shutter to toggle video mode
@@ -316,46 +274,6 @@ export function CameraApp() {
     }
   };
 
-  createEffect(() => {
-    if (!sessionReady()) return;
-    void fetchNui(
-      'updateCameraSession',
-      {
-        effect: effect(),
-        fov: fov(),
-        blur: blur(),
-        flash: flash(),
-        selfie: selfie(),
-        landscape: landscape(),
-      },
-      true,
-    );
-  });
-
-  const toggleLandscape = async () => {
-    const result = await fetchNui<{ success?: boolean; landscape?: boolean }>(
-      'cameraSetLandscape',
-      { enabled: !landscape() },
-      { success: true, landscape: !landscape() },
-    );
-    if (result?.success) {
-      setLandscape(result.landscape === true);
-    }
-  };
-
-  const applyQuickZoom = async (index: number) => {
-    const values = quickZooms();
-    const mockIndex = Math.max(0, Math.min(index - 1, values.length - 1));
-    const mockFov = values[mockIndex] ?? fov();
-    const result = await fetchNui<{ success?: boolean; fov?: number }>(
-      'cameraSetQuickZoom',
-      { index },
-      { success: true, fov: mockFov },
-    );
-    if (result?.success && typeof result.fov === 'number') {
-      setFov(Math.round(result.fov));
-    }
-  };
 
   const takePhoto = async () => {
     if (busy()) return;
@@ -602,44 +520,16 @@ export function CameraApp() {
     setEffect(next);
   };
 
-  const currentZoomLabel = createMemo(() => {
-    const values = quickZooms();
-    if (!values.length) return '1x';
-    const nearest = values.reduce(
-      (acc, value) =>
-        Math.abs(value - fov()) < Math.abs(acc - fov()) ? value : acc,
-      values[0],
-    );
-    return `${(52 / nearest).toFixed(1).replace('.0', '')}x`;
-  });
-
-  const cycleZoom = async () => {
-    const values = quickZooms();
-    if (!values.length) return;
-    let nearestIndex = 0;
-    let nearestDelta = Number.POSITIVE_INFINITY;
-    for (let index = 0; index < values.length; index += 1) {
-      const delta = Math.abs(values[index] - fov());
-      if (delta < nearestDelta) {
-        nearestDelta = delta;
-        nearestIndex = index;
-      }
-    }
-    const nextIndex = (nearestIndex + 1) % values.length;
-    await applyQuickZoom(nextIndex + 1);
-  };
-
   return (
     <div class={styles.app}>
       <div
         class={styles.preview}
-        classList={{ [styles.previewLandscapeShell]: landscape() }}
+        classList={{}}
       >
         <canvas
           ref={canvasRef}
           class={styles.feedLayer}
           classList={{
-            [styles.previewSelfie]: selfie(),
           }}
           style={renderer() === 'css' ? { filter: cssFilter() } : undefined}
         />
@@ -686,23 +576,6 @@ export function CameraApp() {
         <div class={styles.minimalRow}>
           <button
             class={styles.minimalBtn}
-            classList={{ [styles.minimalBtnActive]: flash() }}
-            onClick={() => setFlash((v) => !v)}
-          >
-            {t('camera.flash', language())}
-          </button>
-          <button
-            class={styles.minimalBtn}
-            classList={{ [styles.minimalBtnActive]: selfie() }}
-            onClick={() => setSelfie((v) => !v)}
-          >
-            {t('camera.selfie', language())}
-          </button>
-          <button class={styles.minimalBtn} onClick={() => void cycleZoom()}>
-            {currentZoomLabel()}
-          </button>
-          <button
-            class={styles.minimalBtn}
             classList={{ [styles.minimalBtnActive]: controlsOpen() }}
             onClick={() => setControlsOpen((v) => !v)}
           >
@@ -746,13 +619,6 @@ export function CameraApp() {
                       </span>
                     </button>
                   ))}
-                </div>
-
-                {/* FOV */}
-                <div class={styles.sliderRow}>
-                  <svg class={styles.sliderRowIcon} viewBox="0 0 24 24" fill="none"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                  <input type="range" class={styles.horizontalSlider} min={fovRange().min} max={fovRange().max} step={1} value={fov()} onInput={(e) => { const val = Number(e.currentTarget.value); setFov(val); void fetchNui('updateCameraSession', { effect: effect(), fov: val, blur: blurLevel(), flash: flash(), selfie: selfie(), landscape: landscape() }, true); }} />
-                  <span class={styles.sliderRowValue}>{fov()}</span>
                 </div>
 
                 {/* Blur */}
