@@ -134,7 +134,8 @@ local function StartCameraSession(data)
     -- Delete phone prop from game pool so it doesn't appear in WebGL render
     CleanupPhoneProps()
 
-    -- Enable walk mode so player can move and look around while camera is open
+    -- Camera mode: NUI receives events but no cursor, game input enabled
+    SetNuiFocus(true, false)
     SetNuiFocusKeepInput(true)
 
     -- Start with scripted camera (renders behind NUI transparently)
@@ -193,6 +194,7 @@ local function StartCameraSession(data)
         SetTimecycleModifierStrength(0.0)
         SetPedCurrentWeaponVisible(ped, true, true, true, true)
         Flashlight.SetPhoneFlashlightEnabled(false)
+        SetNuiFocus(true, true)
         SetNuiFocusKeepInput(false)
         Anim.PhonePlayText()
     end)
