@@ -4,7 +4,7 @@
   background:
     radial-gradient(120% 90% at 0% -10%, rgba(240, 148, 51, 0.12), transparent 50%),
     radial-gradient(120% 90% at 100% 0%, rgba(220, 39, 67, 0.12), transparent 46%),
-    linear-gradient(180deg, color-mix(in srgb, var(--surface) 96%, #fbfbfd), color-mix(in srgb, var(--surface-2) 94%, #f3f5f9));
+    linear-gradient(180deg, rgba(var(--surface-rgb), 0.96), rgba(var(--surface-2-rgb), 0.94));
 }
 
 .snapApp {
@@ -191,8 +191,8 @@
   margin-bottom: var(--s-2);
   padding: var(--s-2) var(--s-3);
   border-radius: var(--r-md);
-  background: color-mix(in srgb, var(--warning) 12%, transparent);
-  border: 1px solid color-mix(in srgb, var(--warning) 18%, transparent);
+  background: var(--warning-subtle);
+  border: 1px solid rgba(var(--warning-rgb), 0.18);
   color: var(--warning);
   font-size: var(--fs-footnote);
 }
@@ -1026,7 +1026,7 @@
   }
 
   &:has(.notifyBadge) {
-    background: color-mix(in srgb, var(--tint) 10%, transparent);
+    background: var(--tint-subtle);
     color: var(--tint);
   }
 }
@@ -1160,7 +1160,7 @@
 
 .acceptBtn {
   border-color: var(--success) !important;
-  background: color-mix(in srgb, var(--success) 14%, transparent) !important;
+  background: rgba(var(--success-rgb), 0.14) !important;
   color: var(--success) !important;
 }
 
@@ -1172,7 +1172,7 @@
 
 .notifyBtn {
   border: none;
-  background: color-mix(in srgb, var(--tint) 10%, transparent);
+  background: var(--tint-subtle);
   color: var(--tint);
   width: 36px;
   height: 36px;
@@ -1187,7 +1187,7 @@
   transition: background-color 150ms ease, color 150ms ease;
 
   &:hover {
-    background: color-mix(in srgb, var(--tint) 20%, transparent);
+    background: var(--tint-hover);
   }
 }
 
@@ -1329,7 +1329,7 @@
   transition: background-color 150ms ease, color 150ms ease;
 
   &:hover {
-    background: color-mix(in srgb, var(--tint) 10%, transparent);
+    background: var(--tint-subtle);
   }
 
   &.acceptBtn {
@@ -1337,7 +1337,7 @@
     color: #fff;
 
     &:hover {
-      background: color-mix(in srgb, var(--tint) 85%, black);
+      background: rgba(var(--tint-rgb), 0.85);
     }
   }
 }
@@ -1426,17 +1426,17 @@
     font-weight: 600;
     cursor: pointer;
   transition: background-color 200ms ease, transform 200ms ease, box-shadow 200ms ease;
-    box-shadow: 0 2px 8px color-mix(in srgb, var(--tint) 30%, transparent);
+    box-shadow: 0 2px 8px rgba(var(--tint-rgb), 0.3);
 
     &:hover {
-      background: color-mix(in srgb, var(--tint) 85%, black);
+      background: rgba(var(--tint-rgb), 0.85);
       transform: translateY(-1px);
-      box-shadow: 0 4px 12px color-mix(in srgb, var(--tint) 40%, transparent);
+      box-shadow: 0 4px 12px rgba(var(--tint-rgb), 0.4);
     }
 
     &:active {
       transform: translateY(0);
-      box-shadow: 0 2px 4px color-mix(in srgb, var(--tint) 30%, transparent);
+      box-shadow: 0 2px 4px rgba(var(--tint-rgb), 0.3);
     }
   }
 }

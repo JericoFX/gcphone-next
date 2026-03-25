@@ -324,7 +324,7 @@
   cursor: pointer;
   
   &:hover {
-    background: color-mix(in srgb, var(--tint) 10%, transparent);
+    background: var(--tint-subtle);
   }
 }
 
@@ -482,7 +482,7 @@
   transition: background-color 150ms ease, opacity 150ms ease;
   
   &:hover {
-    background: color-mix(in srgb, var(--tint) 80%, #000);
+    background: rgba(var(--tint-rgb), 0.8);
   }
   
   &:disabled {

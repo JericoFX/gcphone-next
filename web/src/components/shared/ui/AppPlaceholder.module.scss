@@ -3,7 +3,7 @@
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: radial-gradient(120% 100% at 50% 0%, color-mix(in srgb, var(--surface, #fff) 72%, var(--bg, #f2f2f7)), var(--bg, #f2f2f7) 62%);
+  background: radial-gradient(120% 100% at 50% 0%, rgba(var(--surface-rgb), 0.72), var(--bg, #f2f2f7) 62%);
 }
 
 .header {
@@ -22,9 +22,9 @@
   border-radius: 50%;
   background: linear-gradient(
     90deg,
-    color-mix(in srgb, var(--surface, #fff) 70%, var(--bg, #f2f2f7)) 0%,
-    color-mix(in srgb, var(--surface, #fff) 92%, var(--bg, #f2f2f7)) 50%,
-    color-mix(in srgb, var(--surface, #fff) 70%, var(--bg, #f2f2f7)) 100%
+    rgba(var(--surface-rgb), 0.7) 0%,
+    rgba(var(--surface-rgb), 0.92) 50%,
+    rgba(var(--surface-rgb), 0.7) 100%
   );
   background-size: 200% 100%;
   animation: skel 1200ms linear infinite;
@@ -45,9 +45,9 @@
   border-radius: var(--r-sm, 10px);
   background: linear-gradient(
     90deg,
-    color-mix(in srgb, var(--surface, #fff) 70%, var(--bg, #f2f2f7)) 0%,
-    color-mix(in srgb, var(--surface, #fff) 92%, var(--bg, #f2f2f7)) 50%,
-    color-mix(in srgb, var(--surface, #fff) 70%, var(--bg, #f2f2f7)) 100%
+    rgba(var(--surface-rgb), 0.7) 0%,
+    rgba(var(--surface-rgb), 0.92) 50%,
+    rgba(var(--surface-rgb), 0.7) 100%
   );
   background-size: 200% 100%;
   animation: skel 1200ms linear infinite;
@@ -79,9 +79,9 @@
   flex-shrink: 0;
   background: linear-gradient(
     90deg,
-    color-mix(in srgb, var(--surface, #fff) 70%, var(--bg, #f2f2f7)) 0%,
-    color-mix(in srgb, var(--surface, #fff) 92%, var(--bg, #f2f2f7)) 50%,
-    color-mix(in srgb, var(--surface, #fff) 70%, var(--bg, #f2f2f7)) 100%
+    rgba(var(--surface-rgb), 0.7) 0%,
+    rgba(var(--surface-rgb), 0.92) 50%,
+    rgba(var(--surface-rgb), 0.7) 100%
   );
   background-size: 200% 100%;
   animation: skel 1200ms linear infinite;
@@ -100,9 +100,9 @@
   border-radius: var(--r-xs, 8px);
   background: linear-gradient(
     90deg,
-    color-mix(in srgb, var(--surface, #fff) 70%, var(--bg, #f2f2f7)) 0%,
-    color-mix(in srgb, var(--surface, #fff) 92%, var(--bg, #f2f2f7)) 50%,
-    color-mix(in srgb, var(--surface, #fff) 70%, var(--bg, #f2f2f7)) 100%
+    rgba(var(--surface-rgb), 0.7) 0%,
+    rgba(var(--surface-rgb), 0.92) 50%,
+    rgba(var(--surface-rgb), 0.7) 100%
   );
   background-size: 200% 100%;
   animation: skel 1200ms linear infinite;
@@ -136,9 +136,9 @@
   border-radius: var(--r-sm, 10px);
   background: linear-gradient(
     90deg,
-    color-mix(in srgb, var(--surface-2, #f7f7fa) 70%, var(--surface, #fff)) 0%,
-    color-mix(in srgb, var(--surface-2, #f7f7fa) 92%, var(--surface, #fff)) 50%,
-    color-mix(in srgb, var(--surface-2, #f7f7fa) 70%, var(--surface, #fff)) 100%
+    rgba(var(--surface-2-rgb), 0.7) 0%,
+    rgba(var(--surface-2-rgb), 0.92) 50%,
+    rgba(var(--surface-2-rgb), 0.7) 100%
   );
   background-size: 200% 100%;
   animation: skel 1200ms linear infinite;
@@ -150,9 +150,9 @@
   border-radius: var(--r-xs, 8px);
   background: linear-gradient(
     90deg,
-    color-mix(in srgb, var(--surface-2, #f7f7fa) 70%, var(--surface, #fff)) 0%,
-    color-mix(in srgb, var(--surface-2, #f7f7fa) 92%, var(--surface, #fff)) 50%,
-    color-mix(in srgb, var(--surface-2, #f7f7fa) 70%, var(--surface, #fff)) 100%
+    rgba(var(--surface-2-rgb), 0.7) 0%,
+    rgba(var(--surface-2-rgb), 0.92) 50%,
+    rgba(var(--surface-2-rgb), 0.7) 100%
   );
   background-size: 200% 100%;
   animation: skel 1200ms linear infinite;
@@ -167,9 +167,9 @@
   border-radius: 50%;
   background: linear-gradient(
     90deg,
-    color-mix(in srgb, var(--tint, #007aff) 70%, var(--tint, #007aff)) 0%,
-    color-mix(in srgb, var(--tint, #007aff) 92%, var(--tint, #007aff)) 50%,
-    color-mix(in srgb, var(--tint, #007aff) 70%, var(--tint, #007aff)) 100%
+    rgba(var(--tint-rgb), 0.7) 0%,
+    rgba(var(--tint-rgb), 0.92) 50%,
+    rgba(var(--tint-rgb), 0.7) 100%
   );
   background-size: 200% 100%;
   animation: skel 1200ms linear infinite;
@@ -187,9 +187,9 @@
   border-radius: var(--r-xs, 8px);
   background: linear-gradient(
     90deg,
-    color-mix(in srgb, var(--surface, #fff) 70%, var(--bg, #f2f2f7)) 0%,
-    color-mix(in srgb, var(--surface, #fff) 92%, var(--bg, #f2f2f7)) 50%,
-    color-mix(in srgb, var(--surface, #fff) 70%, var(--bg, #f2f2f7)) 100%
+    rgba(var(--surface-rgb), 0.7) 0%,
+    rgba(var(--surface-rgb), 0.92) 50%,
+    rgba(var(--surface-rgb), 0.7) 100%
   );
   background-size: 200% 100%;
   animation: skel 1200ms linear infinite;

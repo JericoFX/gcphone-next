@@ -21,6 +21,6 @@
 }
 
 .warm {
-  background: linear-gradient(180deg, var(--surface), color-mix(in srgb, var(--warning) 6%, var(--surface)));
-  border-color: color-mix(in srgb, var(--warning) 14%, transparent);
+  background: linear-gradient(180deg, var(--surface), rgba(var(--warning-rgb), 0.06));
+  border-color: rgba(var(--warning-rgb), 0.14);
 }

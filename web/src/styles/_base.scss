@@ -70,7 +70,7 @@ select {
 
 .ios-surface-panel {
   background: var(--color-surface-translucent);
-  border: 1px solid color-mix(in srgb, var(--color-border) 88%, transparent);
+  border: 1px solid rgba(var(--border-rgb), 0.1);
   border-radius: var(--radius-xxl);
   box-shadow: var(--shadow-md);
 }

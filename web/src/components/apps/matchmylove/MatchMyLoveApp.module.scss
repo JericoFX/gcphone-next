@@ -146,7 +146,7 @@
   font-size: 10px;
   font-weight: 600;
   color: #fd267a;
-  background: color-mix(in srgb, #fd267a 10%, transparent);
+  background: rgba(253, 38, 122, 0.1);
   white-space: nowrap;
 }
 
@@ -369,7 +369,7 @@
   border-bottom: 1px solid var(--separator);
 
   &:active {
-    background: color-mix(in srgb, var(--text) 5%, var(--surface));
+    background: rgba(var(--text-rgb), 0.05);
   }
 }
 
@@ -845,6 +845,6 @@
   margin-top: var(--s-1);
 
   &:active {
-    background: color-mix(in srgb, var(--danger) 6%, transparent);
+    background: rgba(var(--danger-rgb), 0.06);
   }
 }

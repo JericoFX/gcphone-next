@@ -7,6 +7,6 @@
   min-height: 38px;
   border-radius: var(--r-md);
   background: var(--color-surface-elevated);
-  border: 1px solid color-mix(in srgb, var(--border) 88%, transparent);
+  border: 1px solid rgba(var(--border-rgb), 0.88);
   box-shadow: var(--shadow-sm);
 }

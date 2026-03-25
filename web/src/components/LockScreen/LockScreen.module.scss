@@ -121,7 +121,7 @@
   margin: 0 auto var(--s-2);
   position: relative;
   z-index: 3;
-  transition: background var(--dur-2) var(--ease-standard);
+  transition: background 180ms ease;
 
   &:active {
     background: var(--ls-glass-strong);
@@ -298,8 +298,8 @@
 .widget-flag {
   padding: 2px var(--s-2);
   border-radius: var(--r-pill);
-  background: color-mix(in srgb, var(--danger) 20%, transparent);
-  color: color-mix(in srgb, var(--danger) 60%, rgba(255, 255, 255, 0.9));
+  background: rgba(var(--danger-rgb), 0.2);
+  color: rgba(var(--danger-rgb), 0.6);
   font-size: 10px;
   font-weight: 700;
 }
@@ -359,8 +359,8 @@
   color: var(--ls-text-primary);
   background: var(--ls-glass);
   border: 1px solid var(--ls-glass-border);
-  transition: background var(--dur-2) var(--ease-standard),
-              transform var(--dur-1) var(--ease-standard);
+  transition: background 180ms ease,
+              transform 120ms ease;
 
   &:active {
     background: var(--ls-glass-strong);
@@ -383,8 +383,8 @@
   color: var(--ls-text-primary);
   background: var(--ls-glass);
   border: 1px solid var(--ls-glass-border);
-  transition: background var(--dur-2) var(--ease-standard),
-              transform var(--dur-1) var(--ease-standard);
+  transition: background 180ms ease,
+              transform 120ms ease;
 
   &:active {
     background: var(--ls-glass-strong);
@@ -423,7 +423,7 @@
   color: var(--ls-text-primary);
   background: var(--ls-glass);
   border: 1px solid var(--ls-glass-border);
-  transition: background var(--dur-2) var(--ease-standard);
+  transition: background 180ms ease;
 
   &:active {
     background: var(--ls-glass-strong);
@@ -460,8 +460,8 @@
   height: 7px;
   border-radius: var(--r-pill);
   background: rgba(255, 255, 255, 0.24);
-  transition: width var(--dur-2) var(--ease-standard),
-              background var(--dur-2) var(--ease-standard);
+  transition: width 180ms ease,
+              background 180ms ease;
 }
 
 .dot-btn-active {
@@ -501,7 +501,7 @@
   border-radius: var(--r-lg);
   border: 1px solid var(--ls-glass-border);
   background: var(--ls-glass-strong);
-  transition: background var(--dur-2) var(--ease-standard);
+  transition: background 180ms ease;
 }
 
 .notification-card p {
@@ -619,9 +619,9 @@
   border-radius: 50%;
   border: 1.5px solid rgba(255, 255, 255, 0.6);
   background: rgba(255, 255, 255, 0.15);
-  transition: background var(--dur-2) var(--ease-standard),
-              border-color var(--dur-2) var(--ease-standard),
-              transform var(--dur-1) var(--ease-standard);
+  transition: background 180ms ease,
+              border-color 180ms ease,
+              transform 120ms ease;
 }
 
 .filled {
@@ -633,7 +633,7 @@
 .error-dot {
   background: var(--danger);
   border-color: var(--danger);
-  animation: dot-shake var(--dur-3) var(--ease-standard);
+  animation: dot-shake 260ms ease;
 }
 
 @keyframes dot-shake {
@@ -646,7 +646,7 @@
 
 .error-msg {
   font-size: var(--fs-footnote);
-  color: color-mix(in srgb, var(--danger) 70%, rgba(255, 255, 255, 0.8));
+  color: rgba(var(--danger-rgb), 0.7);
 }
 
 // ---------------------------------------------------------------------------
@@ -676,8 +676,8 @@
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.12),
     var(--shadow-1);
-  transition: background var(--dur-1) var(--ease-standard),
-              transform var(--dur-1) var(--ease-standard);
+  transition: background 120ms ease,
+              transform 120ms ease;
 }
 
 .key:active {
@@ -750,7 +750,7 @@
     rgba(255, 255, 255, 0.1),
     rgba(255, 255, 255, 0.4)
   );
-  transition: height var(--dur-1) var(--ease-standard);
+  transition: height 120ms ease;
 }
 
 .swipe-unlock-handle {
@@ -768,7 +768,7 @@
   box-shadow:
     0 2px 8px rgba(0, 0, 0, 0.15),
     0 0 12px rgba(255, 255, 255, 0.15);
-  transition: box-shadow var(--dur-2) var(--ease-standard);
+  transition: box-shadow 180ms ease;
 
   &:active {
     box-shadow:
@@ -803,9 +803,9 @@
   justify-content: center;
   background: var(--ls-glass);
   border: 1px solid var(--ls-glass-border);
-  transition: background var(--dur-2) var(--ease-standard),
-              transform var(--dur-1) var(--ease-standard),
-              box-shadow var(--dur-2) var(--ease-standard);
+  transition: background 180ms ease,
+              transform 120ms ease,
+              box-shadow 180ms ease;
 
   &:active {
     background: var(--ls-glass-highlight);
@@ -820,9 +820,9 @@
 }
 
 .bottom-btn-active {
-  border-color: color-mix(in srgb, var(--warning) 50%, transparent);
-  background: color-mix(in srgb, var(--warning) 25%, transparent);
-  box-shadow: 0 0 16px color-mix(in srgb, var(--warning) 25%, transparent);
+  border-color: rgba(var(--warning-rgb), 0.5);
+  background: rgba(var(--warning-rgb), 0.25);
+  box-shadow: 0 0 16px rgba(var(--warning-rgb), 0.25);
 }
 
 // ---------------------------------------------------------------------------
@@ -833,25 +833,25 @@
   width: 44px;
   height: 44px;
   border-radius: 50%;
-  color: color-mix(in srgb, var(--danger) 30%, rgba(255, 255, 255, 0.9));
+  color: rgba(var(--danger-rgb), 0.3);
   font-size: 11px;
   font-weight: 700;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   appearance: none;
-  background: color-mix(in srgb, var(--danger) 20%, rgba(0, 0, 0, 0.4));
-  border: 1px solid color-mix(in srgb, var(--danger) 35%, transparent);
+  background: rgba(var(--danger-rgb), 0.2);
+  border: 1px solid rgba(var(--danger-rgb), 0.35);
   box-shadow: var(--shadow-1);
-  transition: background var(--dur-2) var(--ease-standard),
-              transform var(--dur-1) var(--ease-standard),
-              box-shadow var(--dur-2) var(--ease-standard);
+  transition: background 180ms ease,
+              transform 120ms ease,
+              box-shadow 180ms ease;
 }
 
 .sos-btn:active {
-  background: color-mix(in srgb, var(--danger) 35%, rgba(0, 0, 0, 0.4));
+  background: rgba(var(--danger-rgb), 0.35);
   transform: scale(0.93);
-  box-shadow: 0 0 16px color-mix(in srgb, var(--danger) 25%, transparent);
+  box-shadow: 0 0 16px rgba(var(--danger-rgb), 0.25);
 }
 
 .sos-btn:disabled {
@@ -863,17 +863,17 @@
   width: 44px;
   height: 44px;
   border-radius: 50%;
-  color: color-mix(in srgb, var(--success) 30%, rgba(255, 255, 255, 0.9));
+  color: rgba(var(--success-rgb), 0.3);
   font-size: 9px;
   font-weight: 700;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   appearance: none;
-  background: color-mix(in srgb, var(--success) 25%, rgba(0, 0, 0, 0.4));
-  border: 1px solid color-mix(in srgb, var(--success) 35%, transparent);
+  background: rgba(var(--success-rgb), 0.25);
+  border: 1px solid rgba(var(--success-rgb), 0.35);
   box-shadow: var(--shadow-1);
-  transition: background var(--dur-2) var(--ease-standard);
+  transition: background 180ms ease;
 }
 
 // ---------------------------------------------------------------------------
@@ -896,7 +896,7 @@
   width: 100%;
   border-radius: var(--r-2xl);
   border: 1px solid var(--ls-glass-border);
-  background: color-mix(in srgb, rgba(20, 24, 34, 0.94) 84%, transparent);
+  background: rgba(20, 24, 34, 0.79);
   box-shadow: var(--shadow-3);
 }
 
@@ -947,8 +947,8 @@
   color: var(--ls-text-soft);
   background: var(--ls-glass-strong);
   border: 1px solid var(--ls-glass-border);
-  transition: background var(--dur-2) var(--ease-standard),
-              transform var(--dur-1) var(--ease-standard);
+  transition: background 180ms ease,
+              transform 120ms ease;
 
   &:active {
     transform: scale(0.97);
@@ -956,12 +956,12 @@
 }
 
 .emergency-call-btn {
-  background: color-mix(in srgb, var(--success) 85%, rgba(0, 0, 0, 0.2));
+  background: rgba(var(--success-rgb), 0.85);
   color: rgba(0, 0, 0, 0.85);
   border-color: transparent;
 
   &:active {
-    background: color-mix(in srgb, var(--success) 75%, rgba(0, 0, 0, 0.2));
+    background: rgba(var(--success-rgb), 0.75);
   }
 }
 
@@ -982,8 +982,8 @@
   border: 1px solid var(--ls-glass-border);
   color: var(--ls-text-primary);
   font-size: 24px;
-  transition: background var(--dur-1) var(--ease-standard),
-              transform var(--dur-1) var(--ease-standard);
+  transition: background 120ms ease,
+              transform 120ms ease;
 
   &:active {
     background: rgba(255, 255, 255, 0.28);

@@ -64,7 +64,7 @@ export function CameraApp() {
   const router = useRouter();
   const language = () => getStoredLanguage();
   const [effect, setEffect] = createSignal<CameraEffect>('normal');
-  const [fov, setFov] = createSignal(52);
+  const [fov, setFov] = createSignal(38);
   const blur = () => 0;
   const [lastUrl, setLastUrl] = createSignal('');
   const [busy, setBusy] = createSignal(false);
@@ -86,7 +86,7 @@ export function CameraApp() {
   const [controlsOpen, setControlsOpen] = createSignal(false);
   const [videoMode, setVideoMode] = createSignal(false);
   const [renderer, setRenderer] = createSignal<'webgl' | 'css'>('webgl');
-  const [fovRange, setFovRange] = createSignal({ min: 25, max: 90, default_: 52 });
+  const [fovRange, setFovRange] = createSignal({ min: 20, max: 70, default_: 38 });
   let canvasRef: HTMLCanvasElement | undefined;
   let gameViewRef: GameView | null = null;
   let longPressTimer: ReturnType<typeof setTimeout> | null = null;
@@ -151,7 +151,7 @@ export function CameraApp() {
       setFovRange({
         min: capabilities.fov.min ?? 25,
         max: capabilities.fov.max ?? 90,
-        default_: capabilities.fov.default_ ?? 52,
+        default_: capabilities.fov.default_ ?? 38,
       });
     }
 
@@ -172,7 +172,7 @@ export function CameraApp() {
     if (canvasRef && !isEnvBrowser()) {
       try {
         gameViewRef = createGameView(canvasRef);
-        gameViewRef.resize(canvasRef.clientWidth, canvasRef.clientHeight);
+        gameViewRef.resizeByAspect(3 / 4);
       } catch (e) {
         console.warn('[CameraApp] GameRender init failed:', e);
       }
@@ -189,17 +189,26 @@ export function CameraApp() {
     if (longPressTimer) clearTimeout(longPressTimer);
   });
 
-  // Sync WebGL shader uniforms when controls change
+  // Sync WebGL shader uniforms when controls change.
+  // Read all signals FIRST so SolidJS always subscribes, then check gameViewRef.
   createEffect(() => {
-    if (!gameViewRef || renderer() !== 'webgl') return;
-    gameViewRef.setBlur(blurLevel() / 100);
-    gameViewRef.setBrightness(brightness() / 100);
-    gameViewRef.setContrast(contrast() / 100);
-    gameViewRef.setSaturation(saturation() / 100);
-    gameViewRef.setTemperature(temperature() / 100);
-    gameViewRef.setVignette(vignette() / 100);
+    const b = blurLevel();
+    const br = brightness();
+    const co = contrast();
+    const sa = saturation();
+    const te = temperature();
+    const vi = vignette();
+    const ef = effect();
+    const r = renderer();
+    if (!gameViewRef || r !== 'webgl') return;
+    gameViewRef.setBlur(b / 100);
+    gameViewRef.setBrightness(br / 100);
+    gameViewRef.setContrast(co / 100);
+    gameViewRef.setSaturation(sa / 100);
+    gameViewRef.setTemperature(te / 100);
+    gameViewRef.setVignette(vi / 100);
     const effectMap: Record<CameraEffect, number> = { normal: 0, noir: 1, vivid: 2, warm: 3 };
-    gameViewRef.setEffect(effectMap[effect()] ?? 0);
+    gameViewRef.setEffect(effectMap[ef] ?? 0);
   });
 
   // CSS filter fallback string
@@ -633,8 +642,6 @@ export function CameraApp() {
             [styles.previewSelfie]: selfie(),
           }}
           style={renderer() === 'css' ? { filter: cssFilter() } : undefined}
-          width={window.innerWidth}
-          height={window.innerHeight}
         />
 
         {/* Recording indicator */}
@@ -702,6 +709,9 @@ export function CameraApp() {
             {t('camera.controls', language())}
           </button>
         </div>
+
+        {/* Key hint */}
+        <div class={styles.keyHint}>Alt: Caminar</div>
 
         {/* Mode indicator */}
         <div class={styles.modeIndicator} classList={{ [styles.modeVideo]: videoMode() }}>

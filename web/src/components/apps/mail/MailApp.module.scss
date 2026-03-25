@@ -11,9 +11,9 @@
 
 /* ─── Error banner ─── */
 .error {
-  background: color-mix(in srgb, var(--danger) 12%, transparent);
-  border: 1px solid color-mix(in srgb, var(--danger) 35%, transparent);
-  color: color-mix(in srgb, var(--danger) 85%, black);
+  background: var(--danger-subtle);
+  border: 1px solid rgba(var(--danger-rgb), 0.35);
+  color: rgba(var(--danger-rgb), 0.85);
   border-radius: var(--r-md);
   padding: var(--s-3) var(--s-4);
   margin: var(--s-3) var(--s-4) 0;
@@ -213,7 +213,7 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: 0 4px 14px color-mix(in srgb, var(--tint) 35%, transparent);
+  box-shadow: 0 4px 14px rgba(var(--tint-rgb), 0.35);
   z-index: 20;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
@@ -479,9 +479,9 @@
 .composeScroll::-webkit-scrollbar { width: 0; }
 
 .composeError {
-  background: color-mix(in srgb, var(--danger) 12%, transparent);
-  border-bottom: 1px solid color-mix(in srgb, var(--danger) 25%, transparent);
-  color: color-mix(in srgb, var(--danger) 85%, black);
+  background: var(--danger-subtle);
+  border-bottom: 1px solid rgba(var(--danger-rgb), 0.25);
+  color: rgba(var(--danger-rgb), 0.85);
   padding: var(--s-2) var(--s-4);
   font-size: 13px;
   font-weight: 500;
@@ -535,7 +535,7 @@
   align-items: center;
   gap: 4px;
   padding: 3px 8px;
-  background: color-mix(in srgb, var(--tint) 12%, transparent);
+  background: var(--tint-subtle);
   color: var(--tint);
   border-radius: var(--r-xs);
   font-size: 13px;
@@ -743,7 +743,7 @@
 
 .setupInput:focus {
   border-color: var(--tint);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--tint) 20%, transparent);
+  box-shadow: 0 0 0 3px rgba(var(--tint-rgb), 0.2);
 }
 
 .setupDomainPreview {
@@ -778,7 +778,7 @@
 }
 
 .setupBtn:active:not(:disabled) {
-  background: color-mix(in srgb, var(--tint) 85%, black);
+  background: rgba(var(--tint-rgb), 0.85);
 }
 
 @keyframes mailFadeInUp {

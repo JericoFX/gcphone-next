@@ -3,7 +3,7 @@
   height: 36px;
   border: none;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--tint) 10%, transparent);
+  background: var(--tint-subtle);
   color: var(--tint);
   font-size: 20px;
   display: flex;
@@ -14,7 +14,7 @@
   flex-shrink: 0;
 
   &:hover {
-    background: color-mix(in srgb, var(--tint) 20%, transparent);
+    background: var(--tint-hover);
   }
 
   &:active {
@@ -31,7 +31,7 @@
   max-height: 300px;
   background: var(--surface);
   border-radius: 16px;
-  box-shadow: 0 8px 32px color-mix(in srgb, var(--text) 15%, transparent);
+  box-shadow: 0 8px 32px rgba(var(--text-rgb), 0.15);
   border: 1px solid var(--border-subtle);
   overflow: hidden;
   z-index: 1000;
@@ -59,7 +59,7 @@
   }
 
   &::-webkit-scrollbar-thumb {
-    background: color-mix(in srgb, var(--text) 20%, transparent);
+    background: rgba(var(--text-rgb), 0.2);
     border-radius: 3px;
   }
 }
@@ -94,11 +94,11 @@
   justify-content: center;
 
   &:hover {
-    background: color-mix(in srgb, var(--tint) 10%, transparent);
+    background: var(--tint-subtle);
   }
 
   &:active {
-    background: color-mix(in srgb, var(--tint) 20%, transparent);
+    background: var(--tint-hover);
     transform: scale(0.9);
   }
 }

@@ -86,9 +86,9 @@
   cursor: pointer;
   overflow: hidden;
   transition:
-    border-color var(--dur-2) var(--ease-standard),
-    box-shadow var(--dur-2) var(--ease-standard);
-  animation: cardSlideIn var(--dur-3) var(--ease-standard) both;
+    border-color 180ms ease,
+    box-shadow 180ms ease;
+  animation: cardSlideIn 260ms ease both;
 
   &:hover {
     border-color: var(--tint);
@@ -180,7 +180,7 @@
   padding: var(--s-8) var(--s-5);
   color: var(--text-3);
   text-align: center;
-  animation: fadeIn var(--dur-3) var(--ease-standard);
+  animation: fadeIn 260ms ease;
 
   p {
     margin: 0;
@@ -203,8 +203,8 @@
   cursor: pointer;
   box-shadow: var(--shadow-2);
   transition:
-    transform var(--dur-2) var(--ease-standard),
-    box-shadow var(--dur-2) var(--ease-standard);
+    transform 180ms ease,
+    box-shadow 180ms ease;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
 
@@ -225,7 +225,7 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  animation: fadeIn var(--dur-3) var(--ease-standard);
+  animation: fadeIn 260ms ease;
 }
 
 .roomInteriorHeader {
@@ -250,8 +250,8 @@
   font-weight: 600;
   cursor: pointer;
   transition:
-    background-color var(--dur-1) var(--ease-standard),
-    border-color var(--dur-1) var(--ease-standard);
+    background-color 120ms ease,
+    border-color 120ms ease;
 
   &:hover {
     background: var(--bg);
@@ -318,9 +318,9 @@
   cursor: pointer;
   overflow: hidden;
   transition:
-    border-color var(--dur-2) var(--ease-standard),
-    box-shadow var(--dur-2) var(--ease-standard);
-  animation: cardSlideIn var(--dur-3) var(--ease-standard) both;
+    border-color 180ms ease,
+    box-shadow 180ms ease;
+  animation: cardSlideIn 260ms ease both;
 
   &:hover {
     border-color: var(--tint);
@@ -353,8 +353,8 @@
   font-size: 14px;
   cursor: pointer;
   transition:
-    background-color var(--dur-1) var(--ease-standard),
-    color var(--dur-1) var(--ease-standard);
+    background-color 120ms ease,
+    color 120ms ease;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -370,12 +370,12 @@
 
   &.votedUp {
     color: var(--warning);
-    background: color-mix(in srgb, var(--warning) 12%, transparent);
+    background: var(--warning-subtle);
   }
 
   &.votedDown {
     color: var(--tint);
-    background: color-mix(in srgb, var(--tint) 12%, transparent);
+    background: var(--tint-subtle);
   }
 }
 
@@ -434,7 +434,7 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  animation: fadeIn var(--dur-3) var(--ease-standard);
+  animation: fadeIn 260ms ease;
 }
 
 .postThreadScroll {
@@ -556,8 +556,8 @@
   padding: var(--s-2) var(--s-3);
   margin-bottom: var(--s-2);
   margin-left: var(--s-3);
-  animation: cardSlideIn var(--dur-3) var(--ease-standard) both;
-  transition: border-color var(--dur-1) var(--ease-standard);
+  animation: cardSlideIn 260ms ease both;
+  transition: border-color 120ms ease;
 
   &:hover {
     border-left-color: var(--warning);
@@ -601,8 +601,8 @@
   font-family: inherit;
   margin-bottom: var(--s-2);
   transition:
-    border-color var(--dur-1) var(--ease-standard),
-    background-color var(--dur-1) var(--ease-standard);
+    border-color 120ms ease,
+    background-color 120ms ease;
 
   &::placeholder {
     color: var(--text-3);
@@ -646,8 +646,8 @@
   font-weight: 700;
   cursor: pointer;
   transition:
-    opacity var(--dur-1) var(--ease-standard),
-    transform var(--dur-1) var(--ease-standard);
+    opacity 120ms ease,
+    transform 120ms ease;
 
   &:hover {
     opacity: 0.85;
@@ -712,8 +712,8 @@
   resize: vertical;
   font-family: inherit;
   transition:
-    border-color var(--dur-1) var(--ease-standard),
-    background-color var(--dur-1) var(--ease-standard);
+    border-color 120ms ease,
+    background-color 120ms ease;
 
   &::placeholder {
     color: var(--text-3);
@@ -740,8 +740,8 @@
   font-size: 22px;
   cursor: pointer;
   transition:
-    background-color var(--dur-1) var(--ease-standard),
-    border-color var(--dur-1) var(--ease-standard);
+    background-color 120ms ease,
+    border-color 120ms ease;
 
   &:hover {
     background: var(--surface);
@@ -754,7 +754,7 @@
 }
 
 .emojiPresetActive {
-  background: color-mix(in srgb, var(--tint) 14%, transparent);
+  background: var(--tint-hover);
   border-color: var(--tint);
 }
 

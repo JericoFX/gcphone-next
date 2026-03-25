@@ -3,7 +3,7 @@
   display: flex;
   flex-direction: column;
   background:
-    radial-gradient(110% 80% at 50% -8%, color-mix(in srgb, var(--tint) 6%, transparent), transparent 50%),
+    radial-gradient(110% 80% at 50% -8%, rgba(var(--tint-rgb), 0.06), transparent 50%),
     var(--bg);
 }
 
@@ -15,7 +15,7 @@
   gap: var(--s-2);
   padding: 0 var(--s-3);
   border-bottom: 1px solid var(--border);
-  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  background: rgba(var(--surface-rgb), 0.92);
 
   h1 {
     margin: 0;
@@ -36,7 +36,7 @@
   font-size: var(--fs-caption1);
   font-weight: 700;
   cursor: pointer;
-  transition: transform var(--dur-1) var(--ease-standard);
+  transition: transform 120ms ease;
 
   &:active {
     transform: scale(0.92);
@@ -47,7 +47,7 @@
   width: 32px;
   padding: 0;
   color: var(--tint);
-  background: color-mix(in srgb, var(--tint) 10%, transparent);
+  background: var(--tint-subtle);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -64,7 +64,7 @@
   background: var(--tint);
   font-size: 18px;
   width: 32px;
-  box-shadow: 0 4px 12px color-mix(in srgb, var(--tint) 28%, transparent);
+  box-shadow: 0 4px 12px rgba(var(--tint-rgb), 0.28);
 }
 
 .search-row {
@@ -81,14 +81,14 @@
   color: var(--text);
   font-size: var(--fs-footnote);
   outline: none;
-  transition: border-color var(--dur-2) var(--ease-standard);
+  transition: border-color 180ms ease;
 
   &::placeholder {
     color: var(--text-3);
   }
 
   &:focus {
-    border-color: color-mix(in srgb, var(--tint) 50%, var(--border));
+    border-color: rgba(var(--tint-rgb), 0.5);
   }
 }
 
@@ -98,7 +98,7 @@
   gap: var(--s-2);
   margin: 0 var(--s-3);
   padding: var(--s-1);
-  background: color-mix(in srgb, var(--surface-2) 60%, transparent);
+  background: rgba(var(--surface-2-rgb), 0.6);
   border-radius: var(--r-pill);
   border: 1px solid var(--border);
 }
@@ -113,9 +113,9 @@
   font-weight: 600;
   cursor: pointer;
   transition:
-    background var(--dur-2) var(--ease-standard),
-    color var(--dur-2) var(--ease-standard),
-    box-shadow var(--dur-2) var(--ease-standard);
+    background 180ms ease,
+    color 180ms ease,
+    box-shadow 180ms ease;
 }
 
 .active {
@@ -149,9 +149,9 @@
   cursor: pointer;
   white-space: nowrap;
   transition:
-    background var(--dur-2) var(--ease-standard),
-    color var(--dur-2) var(--ease-standard),
-    border-color var(--dur-2) var(--ease-standard);
+    background 180ms ease,
+    color 180ms ease,
+    border-color 180ms ease;
 
   &:active {
     transform: scale(0.95);
@@ -178,9 +178,9 @@
   padding: var(--s-3);
   margin-bottom: var(--s-2);
   transition:
-    transform var(--dur-1) var(--ease-standard),
-    box-shadow var(--dur-2) var(--ease-standard);
-  animation: card-in var(--dur-3) var(--ease-standard) both;
+    transform 120ms ease,
+    box-shadow 180ms ease;
+  animation: card-in 260ms ease both;
 
   &:active {
     transform: scale(0.985);
@@ -240,12 +240,12 @@
     min-height: 30px;
     border: none;
     border-radius: var(--r-sm);
-    background: color-mix(in srgb, var(--tint) 10%, transparent);
+    background: var(--tint-subtle);
     color: var(--tint);
     font-size: var(--fs-caption2);
     font-weight: 700;
     cursor: pointer;
-    transition: transform var(--dur-1) var(--ease-standard);
+    transition: transform 120ms ease;
 
     &:active {
       transform: scale(0.95);
@@ -260,7 +260,7 @@
   background: rgba(0, 0, 0, 0.35);
   display: flex;
   align-items: flex-end;
-  animation: fade-in var(--dur-2) var(--ease-standard);
+  animation: fade-in 180ms ease;
 }
 
 @keyframes fade-in {
@@ -276,7 +276,7 @@
   padding: var(--s-4);
   display: grid;
   gap: var(--s-2);
-  animation: sheet-up var(--dur-3) var(--ease-standard);
+  animation: sheet-up 260ms ease;
 
   h2 {
     margin: 0;
@@ -300,7 +300,7 @@
     }
 
     &:focus {
-      border-color: color-mix(in srgb, var(--tint) 50%, var(--border));
+      border-color: rgba(var(--tint-rgb), 0.5);
       background: var(--surface);
     }
   }
@@ -326,7 +326,7 @@
     min-height: 34px;
     padding: 0 var(--s-3);
     color: var(--tint);
-    background: color-mix(in srgb, var(--tint) 8%, transparent);
+    background: var(--tint-subtle);
     font-size: var(--fs-caption2);
     font-weight: 700;
     cursor: pointer;
@@ -350,11 +350,11 @@
     border-radius: var(--r-sm);
     min-height: 36px;
     color: var(--tint);
-    background: color-mix(in srgb, var(--tint) 10%, transparent);
+    background: var(--tint-subtle);
     font-size: var(--fs-caption1);
     font-weight: 700;
     cursor: pointer;
-    transition: transform var(--dur-1) var(--ease-standard);
+    transition: transform 120ms ease;
 
     &:active {
       transform: scale(0.97);
@@ -365,5 +365,5 @@
 .primary {
   color: #fff !important;
   background: var(--tint) !important;
-  box-shadow: 0 4px 12px color-mix(in srgb, var(--tint) 28%, transparent);
+  box-shadow: 0 4px 12px rgba(var(--tint-rgb), 0.28);
 }

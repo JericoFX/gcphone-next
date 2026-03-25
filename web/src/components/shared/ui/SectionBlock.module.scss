@@ -13,5 +13,5 @@
   background: var(--surface-card);
   border: 1px solid var(--border-subtle);
   overflow: hidden;
-  box-shadow: 0 8px 20px color-mix(in srgb, var(--text) 4%, transparent);
+  box-shadow: 0 8px 20px rgba(var(--text-rgb), 0.04);
 }

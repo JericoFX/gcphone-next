@@ -55,7 +55,7 @@
   color: #fff;
   font-size: var(--fs-caption2);
   font-weight: 600;
-  transition: background var(--dur-1) var(--ease-standard), transform var(--dur-1) var(--ease-standard);
+  transition: background 120ms ease, transform 120ms ease;
 
   &:active {
     background: rgba(255, 255, 255, 0.26);
@@ -101,7 +101,7 @@
   border-radius: var(--r-lg);
   background: var(--surface);
   border: 1px solid var(--border);
-  transition: transform var(--dur-1) var(--ease-standard);
+  transition: transform 120ms ease;
 
   &:active {
     transform: scale(0.98);
@@ -137,10 +137,10 @@
   height: 28px;
   border-radius: var(--r-pill);
   border: none;
-  background: color-mix(in srgb, var(--danger) 12%, transparent);
+  background: var(--danger-subtle);
   display: grid;
   place-items: center;
-  transition: transform var(--dur-1) var(--ease-standard);
+  transition: transform 120ms ease;
 
   img {
     width: 10px;
@@ -185,17 +185,17 @@
 }
 
 .txIn {
-  background: color-mix(in srgb, var(--success) 12%, transparent);
+  background: var(--success-subtle);
   color: var(--success);
 }
 
 .txOut {
-  background: color-mix(in srgb, var(--danger) 12%, transparent);
+  background: var(--danger-subtle);
   color: var(--danger);
 }
 
 .txAdjust {
-  background: color-mix(in srgb, var(--tint) 12%, transparent);
+  background: var(--tint-subtle);
   color: var(--tint);
 }
 
@@ -237,8 +237,8 @@
   gap: var(--s-3);
   padding: var(--s-3);
   border-radius: var(--r-lg);
-  background: color-mix(in srgb, var(--tint) 8%, var(--surface));
-  border: 1px solid color-mix(in srgb, var(--tint) 20%, var(--border));
+  background: var(--tint-subtle);
+  border: 1px solid rgba(var(--tint-rgb), 0.2);
 
   strong {
     display: block;
@@ -275,7 +275,7 @@
   color: var(--tint);
   font-size: var(--fs-caption2);
   font-weight: 600;
-  transition: transform var(--dur-1) var(--ease-standard);
+  transition: transform 120ms ease;
 
   &:active { transform: scale(0.95); }
 }
@@ -311,7 +311,7 @@
   color: var(--text-3);
   font-size: var(--fs-caption1);
   font-weight: 600;
-  transition: all var(--dur-1) var(--ease-standard);
+  transition: all 120ms ease;
 
   span {
     display: block;
@@ -324,7 +324,7 @@
 
 .activeSegment {
   border-color: var(--tint);
-  background: color-mix(in srgb, var(--tint) 10%, var(--surface));
+  background: var(--tint-subtle);
   color: var(--tint);
 }
 
@@ -346,7 +346,7 @@
   border-radius: var(--r-lg);
   background: var(--surface);
   text-align: center;
-  transition: all var(--dur-1) var(--ease-standard);
+  transition: all 120ms ease;
 
   strong {
     font-size: var(--fs-caption2);
@@ -371,8 +371,8 @@
 
 .nearbyCardActive {
   border-color: var(--tint);
-  background: color-mix(in srgb, var(--tint) 10%, var(--surface));
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--tint) 20%, transparent);
+  background: var(--tint-subtle);
+  box-shadow: 0 0 0 1px rgba(var(--tint-rgb), 0.2);
 
   .nearbyAvatar {
     background: var(--tint);
@@ -385,14 +385,14 @@
   width: 36px;
   height: 36px;
   border-radius: var(--r-pill);
-  background: color-mix(in srgb, var(--tint) 12%, var(--surface-2));
+  background: var(--tint-subtle);
   border: 2px solid var(--border);
   display: grid;
   place-items: center;
   font-size: var(--fs-footnote);
   font-weight: 700;
   color: var(--tint);
-  transition: all var(--dur-1) var(--ease-standard);
+  transition: all 120ms ease;
 }
 
 /* ── Option list (contacts, etc.) ── */
@@ -412,7 +412,7 @@
   display: grid;
   gap: 2px;
   text-align: left;
-  transition: all var(--dur-1) var(--ease-standard);
+  transition: all 120ms ease;
 
   strong {
     font-size: var(--fs-caption1);
@@ -432,7 +432,7 @@
 
 .optionCardActive {
   border-color: var(--tint);
-  background: color-mix(in srgb, var(--tint) 8%, var(--surface));
+  background: var(--tint-subtle);
 }
 
 .emptyPicker {
@@ -484,7 +484,7 @@
   color: var(--text-2);
   font-weight: 600;
   font-size: var(--fs-caption2);
-  transition: transform var(--dur-1) var(--ease-standard);
+  transition: transform 120ms ease;
 
   &:active {
     transform: scale(0.96);

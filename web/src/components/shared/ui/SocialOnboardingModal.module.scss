@@ -22,10 +22,10 @@
 
 .error {
   margin: 10px 0 0;
-  border: 1px solid color-mix(in srgb, var(--danger) 30%, transparent);
+  border: 1px solid rgba(var(--danger-rgb), 0.3);
   border-radius: 10px;
   padding: 8px 10px;
-  background: color-mix(in srgb, var(--danger) 8%, var(--surface));
+  background: var(--danger-subtle);
   color: var(--danger);
   font-size: 12px;
 }

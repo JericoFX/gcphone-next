@@ -43,14 +43,14 @@
   display: grid;
   grid-template-columns: 6px 1fr;
   border-radius: 18px;
-  background: color-mix(in srgb, var(--note-color) 86%, var(--surface) 14%);
-  border: 1px solid color-mix(in srgb, var(--note-color) 72%, var(--border-subtle) 28%);
+  background: var(--note-color);
+  border: 1px solid var(--note-color);
   box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
   overflow: hidden;
 }
 
 .card-accent {
-  background: color-mix(in srgb, var(--note-color) 54%, var(--border-subtle) 46%);
+  background: var(--note-color);
 }
 
 .card-body {

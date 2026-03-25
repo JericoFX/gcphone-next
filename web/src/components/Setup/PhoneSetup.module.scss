@@ -194,8 +194,8 @@
 
 .optionCardActive {
   border-color: var(--tint, #007AFF);
-  background: color-mix(in srgb, var(--tint, #007AFF) 8%, var(--surface, #FFFFFF));
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--tint, #007AFF) 20%, transparent);
+  background: var(--tint-subtle);
+  box-shadow: 0 0 0 2px rgba(var(--tint-rgb), 0.2);
 }
 
 /* Form fields - iOS style */
@@ -232,8 +232,8 @@
 }
 
 .field input:focus {
-  border-color: color-mix(in srgb, var(--tint, #007AFF) 60%, var(--border, rgba(0,0,0,.12)));
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--tint, #007AFF) 18%, transparent);
+  border-color: rgba(var(--tint-rgb), 0.6);
+  box-shadow: 0 0 0 3px rgba(var(--tint-rgb), 0.18);
   background: var(--surface, #FFFFFF);
 }
 
@@ -461,8 +461,8 @@
   margin: 0;
   padding: var(--s-2, 8px) var(--s-3, 12px);
   border-radius: var(--r-md, 12px);
-  background: color-mix(in srgb, var(--danger, #FF3B30) 12%, var(--surface, #FFFFFF));
-  border: 1px solid color-mix(in srgb, var(--danger, #FF3B30) 40%, var(--border, rgba(0,0,0,.12)));
+  background: var(--danger-subtle);
+  border: 1px solid rgba(var(--danger-rgb), 0.4);
   color: var(--danger, #FF3B30);
   font-size: var(--fs-caption1, 0.75rem);
   font-weight: 500;
@@ -520,7 +520,7 @@
 }
 
 .secondaryButton:hover {
-  background: color-mix(in srgb, var(--surface-2, #F7F7FA) 92%, black);
+  background: rgba(var(--surface-2-rgb), 0.92);
 }
 
 .secondaryButton:active {
@@ -534,7 +534,7 @@
 }
 
 .primaryButton:hover {
-  background: color-mix(in srgb, var(--tint, #007AFF) 92%, black);
+  background: rgba(var(--tint-rgb), 0.92);
 }
 
 .primaryButton:active {

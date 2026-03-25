@@ -54,41 +54,34 @@ export function SettingsAppearance(props: SettingsAppearanceProps) {
 
   return (
     <div class={styles.content}>
-      {/* Wallpaper preview (large) */}
-      <Show when={props.phoneState.settings.wallpaper}>
-        <div class={styles.wallpaperPreview}>
-          <img src={props.phoneState.settings.wallpaper} alt="" />
-          <span class={styles.wallpaperBadge}>{t('settings.wallpaper_current', props.language()) || 'Actual'}</span>
-        </div>
-      </Show>
-
-      {/* Thumbnails horizontal scroll */}
-      <div class={styles.wallpaperScroll}>
+      {/* Wallpaper grid */}
+      <div class={styles.wpGrid}>
         <For each={wallpapers}>
           {(wp) => (
             <button
-              class={styles.wallpaperThumb}
-              classList={{ [styles.selected]: props.phoneState.settings.wallpaper === wp }}
+              class={styles.wpCard}
+              classList={{ [styles.wpCardActive]: props.phoneState.settings.wallpaper === wp }}
               onClick={() => setWallpaper(wp)}
             >
-              <img src={wp} alt="" />
-              <Show when={props.phoneState.settings.wallpaper === wp}>
-                <span class={styles.thumbCheck}><img src={ICONS.check} alt="" /></span>
-              </Show>
+              <img src={wp} alt="" draggable={false} />
             </button>
           )}
         </For>
-        {/* Random wallpaper */}
-        <button class={styles.wallpaperAction} onClick={randomWallpaper} title={t('settings.random_api', props.language())}>
-          <img src={ICONS.shuffle} alt="" />
+      </div>
+
+      {/* Action buttons row */}
+      <div class={styles.wpActions}>
+        <button class={styles.wpActionBtn} onClick={randomWallpaper}>
+          <img src={ICONS.shuffle} alt="" draggable={false} />
+          <span>Random</span>
         </button>
-        {/* Gallery */}
-        <button class={styles.wallpaperAction} onClick={() => fetchNui('openGallery', { selectWallpaper: true })} title={t('camera.gallery', props.language())}>
-          <img src={ICONS.gallery} alt="" />
+        <button class={styles.wpActionBtn} onClick={() => fetchNui('openGallery', { selectWallpaper: true })}>
+          <img src={ICONS.gallery} alt="" draggable={false} />
+          <span>{t('camera.gallery', props.language()) || 'Galeria'}</span>
         </button>
-        {/* Custom URL */}
-        <button class={styles.wallpaperAction} onClick={() => setShowUrl(!showUrl())} title={t('settings.custom_url', props.language()) || 'URL'}>
-          <span style={{ "font-size": "16px", opacity: "0.5" }}>+</span>
+        <button class={styles.wpActionBtn} onClick={() => setShowUrl(!showUrl())}>
+          <span style={{ "font-size": "14px" }}>+</span>
+          <span>URL</span>
         </button>
       </div>
 

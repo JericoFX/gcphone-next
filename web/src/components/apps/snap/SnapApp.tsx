@@ -133,7 +133,8 @@ export function SnapApp() {
   let liveAudioRetryTimer: number | undefined;
 
   const clearFloatingTimers = () => {
-    clearFloatingTimers();
+    floatingTimers.forEach((timer) => window.clearTimeout(timer));
+    floatingTimers.clear();
   };
 
   const pushLiveMessage = (message: SnapLiveSocketMessage) => {
@@ -176,7 +177,10 @@ export function SnapApp() {
   };
 
   const loadFollowRequests = async () => {
-    await loadFollowRequests();
+    const incoming = await fetchNui<SnapFollowRequest[]>('snapGetPendingFollowRequests', {}, []);
+    const outgoing = await fetchNui<SnapFollowRequest[]>('snapGetSentFollowRequests', {}, []);
+    setPendingRequests(incoming || []);
+    setSentRequests(outgoing || []);
   };
 
   const getPreferredLiveIdentity = () => {

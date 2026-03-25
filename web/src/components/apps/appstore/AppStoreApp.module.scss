@@ -10,8 +10,8 @@
   gap: 4px;
   padding: 12px 14px;
   border-radius: 16px;
-  background: linear-gradient(180deg, var(--surface-overlay), color-mix(in srgb, var(--tint) 6%, var(--surface)));
-  border: 1px solid color-mix(in srgb, var(--tint) 10%, transparent);
+  background: linear-gradient(180deg, var(--surface-overlay), rgba(var(--tint-rgb), 0.06));
+  border: 1px solid rgba(var(--tint-rgb), 0.1);
 }
 
 .heroCard strong {
@@ -53,9 +53,9 @@
   justify-items: start;
   gap: 8px;
   padding: 12px;
-  border: 1px solid color-mix(in srgb, var(--tint) 12%, transparent);
+  border: 1px solid rgba(var(--tint-rgb), 0.12);
   border-radius: 16px;
-  background: linear-gradient(180deg, var(--surface-overlay), color-mix(in srgb, var(--tint) 8%, var(--surface)));
+  background: linear-gradient(180deg, var(--surface-overlay), rgba(var(--tint-rgb), 0.08));
   text-align: left;
 }
 
@@ -85,7 +85,7 @@
 .statusChip {
   padding: 2px 7px;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--tint) 10%, transparent);
+  background: var(--tint-subtle);
   color: var(--tint);
   font-size: 10px;
   font-weight: 700;

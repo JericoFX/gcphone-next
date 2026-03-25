@@ -43,7 +43,7 @@
   cursor: pointer;
   border-left: 4px solid var(--card-accent, var(--text-3));
   transition: background-color 150ms ease, transform 150ms ease, box-shadow 150ms ease;
-  animation: card-in var(--dur-3, 260ms) var(--ease-standard, cubic-bezier(.2, .8, .2, 1)) both;
+  animation: card-in 260ms ease both;
 
   &:hover {
     transform: translateX(2px);
@@ -83,7 +83,7 @@
   height: 48px;
   border-radius: var(--r-sm);
   flex-shrink: 0;
-  background: color-mix(in srgb, var(--card-accent, var(--text-3)) 15%, var(--bg, #f2f2f7));
+  background: rgba(var(--text-rgb), 0.08);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -129,7 +129,7 @@
   border-radius: 6px;
   font-size: 11px;
   font-weight: 600;
-  background: color-mix(in srgb, var(--card-accent, var(--text-3)) 12%, transparent);
+  background: rgba(var(--text-rgb), 0.06);
   color: var(--card-accent, var(--text-3));
 }
 
@@ -197,7 +197,7 @@
   background: var(--bg, #f2f2f7);
   z-index: 200;
   overflow-y: auto;
-  animation: detail-slide-up var(--dur-3, 260ms) var(--ease-standard, cubic-bezier(.2, .8, .2, 1));
+  animation: detail-slide-up 260ms ease;
 }
 
 @keyframes detail-slide-up {
@@ -228,7 +228,7 @@
   padding: 56px var(--s-4) 40px;
   text-align: center;
   color: #fff;
-  background: linear-gradient(135deg, var(--detail-accent, var(--text-3)), color-mix(in srgb, var(--detail-accent, var(--text-3)) 70%, #000));
+  background: linear-gradient(135deg, var(--detail-accent, var(--text-3)), rgba(var(--text-rgb), 0.7));
   position: relative;
 }
 
@@ -314,12 +314,12 @@
   font-weight: 600;
 
   &.valid {
-    background: color-mix(in srgb, var(--success) 12%, transparent);
+    background: var(--success-subtle);
     color: var(--success);
   }
 
   &.expiredBadge {
-    background: color-mix(in srgb, var(--danger) 12%, transparent);
+    background: var(--danger-subtle);
     color: var(--danger);
   }
 }
@@ -365,7 +365,7 @@
 
   &.danger {
     color: var(--danger);
-    border-color: color-mix(in srgb, var(--danger) 20%, var(--border));
+    border-color: rgba(var(--danger-rgb), 0.2);
   }
 }
 
@@ -456,7 +456,7 @@
   z-index: 250;
   display: flex;
   flex-direction: column;
-  animation: detail-slide-up var(--dur-3, 260ms) var(--ease-standard, cubic-bezier(.2, .8, .2, 1));
+  animation: detail-slide-up 260ms ease;
 }
 
 .wizardHeader {
@@ -589,7 +589,7 @@
 
   &.selected {
     border-color: var(--type-accent, var(--tint));
-    background: color-mix(in srgb, var(--type-accent, var(--tint)) 8%, var(--surface, #fff));
+    background: var(--tint-subtle);
   }
 }
 
@@ -683,7 +683,7 @@
   background: var(--bg, #f2f2f7);
   z-index: 200;
   overflow-y: auto;
-  animation: detail-slide-up var(--dur-3, 260ms) var(--ease-standard, cubic-bezier(.2, .8, .2, 1));
+  animation: detail-slide-up 260ms ease;
 }
 
 .closeBtn {
@@ -718,11 +718,11 @@
   text-align: center;
 
   &.valid {
-    background: linear-gradient(135deg, var(--success), color-mix(in srgb, var(--success) 80%, black));
+    background: linear-gradient(135deg, var(--success), rgba(var(--success-rgb), 0.8));
   }
 
   &.invalid {
-    background: linear-gradient(135deg, var(--danger), color-mix(in srgb, var(--danger) 80%, black));
+    background: linear-gradient(135deg, var(--danger), rgba(var(--danger-rgb), 0.8));
   }
 }
 

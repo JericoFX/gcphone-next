@@ -1,9 +1,13 @@
 let YouTube = null;
 try {
-  YouTube = require('youtube-sr').default;
+  YouTube = require('./node_modules/youtube-sr').default || require('youtube-sr').default;
 } catch (e) {
-  YouTube = null;
-  console.warn('[gcphone] youtube-sr not installed — music search disabled');
+  try {
+    YouTube = require('youtube-sr').default;
+  } catch (e2) {
+    YouTube = null;
+    console.warn('[gcphone] youtube-sr not installed — music search disabled');
+  }
 }
 
 exports('youtubeSearch', async (query, maxResults) => {

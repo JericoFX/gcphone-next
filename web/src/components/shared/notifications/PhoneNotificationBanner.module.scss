@@ -21,7 +21,7 @@
   width: calc(100% - 18px);
   min-height: 46px;
   border-radius: var(--r-lg);
-  background: color-mix(in srgb, var(--surface) 96%, transparent);
+  background: rgba(var(--surface-rgb), 0.96);
   color: var(--text);
   display: flex;
   align-items: center;
@@ -29,7 +29,7 @@
   padding: var(--s-2) var(--s-3);
   text-align: left;
   box-shadow: var(--shadow-2), inset 0 0 0 1px rgba(255, 255, 255, 0.68);
-  animation: peek-in 220ms var(--ease-standard);
+  animation: peek-in 220ms ease;
 }
 
 :global(.theme-dark) .peek-card {
@@ -60,7 +60,7 @@
   width: 24px;
   height: 24px;
   border-radius: var(--r-xs);
-  background: linear-gradient(180deg, color-mix(in srgb, var(--tint) 88%, var(--surface)), var(--tint));
+  background: linear-gradient(180deg, rgba(var(--tint-rgb), 0.88), var(--tint));
   color: #fff;
   display: flex;
   align-items: center;

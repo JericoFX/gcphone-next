@@ -5,14 +5,14 @@
   margin: 8px 12px 12px;
   padding: 12px 14px;
   border-radius: 16px;
-  background: color-mix(in srgb, var(--tint) 8%, transparent);
-  border: 1px solid color-mix(in srgb, var(--tint) 14%, transparent);
+  background: var(--tint-subtle);
+  border: 1px solid rgba(var(--tint-rgb), 0.14);
   color: var(--text);
 }
 
 .warning {
-  background: color-mix(in srgb, var(--warning) 12%, transparent);
-  border-color: color-mix(in srgb, var(--warning) 18%, transparent);
+  background: var(--warning-subtle);
+  border-color: rgba(var(--warning-rgb), 0.18);
 }
 
 .icon {

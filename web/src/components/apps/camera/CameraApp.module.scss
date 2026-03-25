@@ -3,34 +3,52 @@
   position: relative;
   width: 100%;
   height: 100%;
-  background: transparent;
+  background: #000;
   overflow: hidden;
   display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
-// Preview area (center)
+// Preview area
 .preview {
   position: relative;
-  flex: 1;
+  width: 100%;
   height: 100%;
-  background: transparent;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
 }
 
 .previewLandscapeShell {
   .feedLayer {
-    transform: rotate(90deg) scale(1.25);
+    transform: rotate(90deg);
   }
 }
 
 // Feed layer (camera view canvas)
+// Feed layer (camera view canvas)
 .feedLayer {
+  max-height: 100%;
+  display: block;
+}
+
+// Key hint (Alt to walk)
+.keyHint {
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: filter 0.3s ease;
+  top: 50px;
+  right: 8px;
+  z-index: 20;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.5);
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  pointer-events: none;
 }
 
 // Effect previews

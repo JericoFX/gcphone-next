@@ -2,7 +2,7 @@
   display: flex;
   flex-direction: column;
   background:
-    radial-gradient(120% 80% at 50% -10%, color-mix(in srgb, var(--tint) 6%, var(--bg)), transparent 50%),
+    radial-gradient(120% 80% at 50% -10%, rgba(var(--tint-rgb), 0.06), transparent 50%),
     var(--bg);
 }
 
@@ -52,7 +52,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: opacity var(--dur-1) var(--ease-standard);
+  transition: opacity 120ms ease;
 
   img {
     width: 16px;
@@ -90,15 +90,15 @@
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
-  transition: background var(--dur-1) var(--ease-standard), border-color var(--dur-1) var(--ease-standard), color var(--dur-1) var(--ease-standard);
+  transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
 
   &:active {
     transform: scale(0.96);
   }
 
   &.active {
-    background: color-mix(in srgb, var(--tint) 10%, var(--surface));
-    border-color: color-mix(in srgb, var(--tint) 30%, var(--border));
+    background: var(--tint-subtle);
+    border-color: rgba(var(--tint-rgb), 0.3);
     color: var(--tint);
   }
 }
@@ -146,8 +146,8 @@
   border: 1px solid var(--border);
   border-radius: var(--r-lg);
   cursor: pointer;
-  transition: background var(--dur-1) var(--ease-standard), transform var(--dur-1) var(--ease-standard);
-  animation: svc-card-in var(--dur-3) var(--ease-standard) both;
+  transition: background 120ms ease, transform 120ms ease;
+  animation: svc-card-in 260ms ease both;
 
   &:hover {
     background: var(--surface-2);
@@ -167,7 +167,7 @@
   width: 44px;
   height: 44px;
   border-radius: var(--r-pill);
-  background: linear-gradient(135deg, color-mix(in srgb, var(--tint) 80%, #fff), var(--tint));
+  background: linear-gradient(135deg, rgba(var(--tint-rgb), 0.8), var(--tint));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -213,7 +213,7 @@
 .categoryBadge {
   display: inline-block;
   padding: 2px 8px;
-  background: color-mix(in srgb, var(--tint) 10%, transparent);
+  background: var(--tint-subtle);
   color: var(--tint);
   font-size: 10px;
   font-weight: 700;
@@ -283,7 +283,7 @@
   font-weight: 300;
   cursor: pointer;
   box-shadow: var(--shadow-2);
-  transition: transform var(--dur-1) var(--ease-standard);
+  transition: transform 120ms ease;
   z-index: 100;
 
   &:hover {
@@ -312,7 +312,7 @@
   height: 32px;
   border: none;
   border-radius: 50%;
-  background: color-mix(in srgb, var(--text) 8%, transparent);
+  background: rgba(var(--text-rgb), 0.08);
   color: var(--text-2);
   cursor: pointer;
   z-index: 10;
@@ -327,7 +327,7 @@
   }
 
   &:hover {
-    background: color-mix(in srgb, var(--text) 14%, transparent);
+    background: rgba(var(--text-rgb), 0.14);
   }
 }
 
@@ -348,7 +348,7 @@
   width: 56px;
   height: 56px;
   border-radius: 50%;
-  background: linear-gradient(135deg, color-mix(in srgb, var(--tint) 80%, #fff), var(--tint));
+  background: linear-gradient(135deg, rgba(var(--tint-rgb), 0.8), var(--tint));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -384,7 +384,7 @@
   align-items: center;
   gap: 5px;
   padding: 3px 10px;
-  background: color-mix(in srgb, var(--tint) 10%, transparent);
+  background: var(--tint-subtle);
   color: var(--tint);
   font-size: 11px;
   font-weight: 700;
@@ -472,7 +472,7 @@
   font-size: 14px;
   font-weight: 700;
   cursor: pointer;
-  transition: transform var(--dur-1) var(--ease-standard);
+  transition: transform 120ms ease;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -527,7 +527,7 @@
     cursor: pointer;
     color: var(--border);
     padding: 0;
-    transition: color var(--dur-1) var(--ease-standard), transform var(--dur-1) var(--ease-standard);
+    transition: color 120ms ease, transform 120ms ease;
 
     &.filled {
       color: var(--warning);
@@ -548,7 +548,7 @@
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
-  transition: opacity var(--dur-1) var(--ease-standard);
+  transition: opacity 120ms ease;
 
   &:disabled {
     opacity: 0.4;
@@ -594,7 +594,7 @@
   font-size: 15px;
   font-weight: 700;
   cursor: pointer;
-  transition: opacity var(--dur-1) var(--ease-standard);
+  transition: opacity 120ms ease;
 
   &:hover {
     opacity: 0.85;
@@ -631,7 +631,7 @@
     color: var(--text);
     font-size: 14px;
     outline: none;
-    transition: border-color var(--dur-1) var(--ease-standard);
+    transition: border-color 120ms ease;
 
     &::placeholder {
       color: var(--text-3);
@@ -669,23 +669,23 @@
     font-size: 12px;
     font-weight: 600;
     cursor: pointer;
-    transition: background var(--dur-1) var(--ease-standard), color var(--dur-1) var(--ease-standard), border-color var(--dur-1) var(--ease-standard);
+    transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
 
     &.activeOnline {
-      background: color-mix(in srgb, var(--success) 10%, var(--surface));
-      border-color: color-mix(in srgb, var(--success) 30%, var(--border));
+      background: var(--success-subtle);
+      border-color: rgba(var(--success-rgb), 0.3);
       color: var(--success);
     }
 
     &.activeOffline {
-      background: color-mix(in srgb, var(--text-3) 8%, var(--surface));
+      background: rgba(var(--text-rgb), 0.04);
       border-color: var(--border);
       color: var(--text-3);
     }
 
     &.activeBusy {
-      background: color-mix(in srgb, var(--warning) 10%, var(--surface));
-      border-color: color-mix(in srgb, var(--warning) 30%, var(--border));
+      background: var(--warning-subtle);
+      border-color: rgba(var(--warning-rgb), 0.3);
       color: var(--warning);
     }
   }
@@ -707,7 +707,7 @@
   font-size: 14px;
   font-weight: 700;
   cursor: pointer;
-  transition: opacity var(--dur-1) var(--ease-standard);
+  transition: opacity 120ms ease;
 
   &:hover {
     opacity: 0.85;
@@ -718,13 +718,13 @@
   padding: var(--s-3) var(--s-4);
   border: none;
   border-radius: var(--r-lg);
-  background: color-mix(in srgb, var(--danger) 8%, var(--surface));
+  background: var(--danger-subtle);
   color: var(--danger);
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
 
   &:hover {
-    background: color-mix(in srgb, var(--danger) 14%, var(--surface));
+    background: rgba(var(--danger-rgb), 0.14);
   }
 }

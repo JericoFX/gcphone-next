@@ -90,11 +90,11 @@
   transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease, opacity 150ms ease, transform 150ms ease, box-shadow 150ms ease;
   
   &:hover {
-    background: color-mix(in srgb, var(--warning) 6%, var(--surface));
+    background: rgba(var(--warning-rgb), 0.06);
   }
 
   &.active {
-    background: color-mix(in srgb, var(--warning) 14%, var(--surface));
+    background: rgba(var(--warning-rgb), 0.14);
     border-color: rgba(255, 149, 0, 0.28);
     color: var(--warning);
   }
@@ -400,7 +400,7 @@
   align-items: center;
   gap: 6px;
   padding: 6px 12px;
-  background: color-mix(in srgb, var(--warning) 14%, var(--surface));
+  background: rgba(var(--warning-rgb), 0.14);
   color: var(--warning);
   font-size: 13px;
   font-weight: 600;
@@ -738,7 +738,7 @@
   aspect-ratio: 1;
   border: 1px dashed rgba(255, 149, 0, 0.28);
   border-radius: 12px;
-  background: color-mix(in srgb, var(--warning) 6%, var(--surface));
+  background: rgba(var(--warning-rgb), 0.06);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -752,6 +752,6 @@
   
   &:hover {
     border-color: var(--warning);
-    background: color-mix(in srgb, var(--warning) 14%, var(--surface));
+    background: rgba(var(--warning-rgb), 0.14);
   }
 }

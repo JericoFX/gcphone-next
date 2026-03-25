@@ -15,8 +15,8 @@
   margin: var(--s-3, 12px) var(--s-3, 12px) 0;
   padding: var(--s-3, 12px);
   border-radius: var(--r-sm, 10px);
-  background: color-mix(in srgb, var(--warning, #ff9500) 10%, var(--surface, #ffffff));
-  border: 1px solid color-mix(in srgb, var(--warning, #ff9500) 30%, var(--border, rgba(0, 0, 0, 0.12)));
+  background: var(--warning-subtle);
+  border: 1px solid rgba(var(--warning-rgb), 0.3);
 }
 
 .disclaimerText {
@@ -421,7 +421,7 @@
   appearance: none;
 
   &:active:not(:disabled) {
-    background: color-mix(in srgb, var(--tint, #007aff) 8%, var(--surface, #ffffff));
+    background: var(--tint-subtle);
   }
 
   &:disabled {
@@ -434,7 +434,7 @@
     height: 48px;
     object-fit: cover;
     border-radius: var(--r-xs, 8px);
-    background: color-mix(in srgb, var(--surface-2, #f7f7fa) 80%, var(--bg, #f2f2f7));
+    background: rgba(var(--surface-2-rgb), 0.8);
   }
 }
 

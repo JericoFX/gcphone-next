@@ -58,7 +58,7 @@
 
   &:hover {
     border-color: var(--tint);
-    background: color-mix(in srgb, var(--tint) 5%, transparent);
+    background: rgba(var(--tint-rgb), 0.05);
   }
 }
 

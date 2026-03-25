@@ -5,7 +5,7 @@
   right: 12px;
   background-color: var(--surface);
   border-radius: 12px;
-  box-shadow: 0 4px 12px color-mix(in srgb, var(--text) 15%, transparent);
+  box-shadow: 0 4px 12px rgba(var(--text-rgb), 0.15);
   padding: 12px;
   display: flex;
   align-items: center;
@@ -103,7 +103,7 @@
       color: white;
 
       &:hover {
-        background-color: color-mix(in srgb, var(--success) 88%, black);
+        background-color: rgba(var(--success-rgb), 0.88);
       }
     }
     

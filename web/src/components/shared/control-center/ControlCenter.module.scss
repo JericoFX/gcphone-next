@@ -46,7 +46,7 @@
   display: flex;
   flex-direction: column;
   color: var(--cc-text);
-  animation: sheet-drop var(--dur-3) var(--ease-standard);
+  animation: sheet-drop 260ms ease;
   touch-action: pan-y;
   overflow-y: auto;
   overflow-x: hidden;
@@ -117,8 +117,8 @@
   color: var(--cc-text);
   cursor: pointer;
   transition:
-    transform var(--dur-1) var(--ease-standard),
-    background var(--dur-2) var(--ease-standard);
+    transform 120ms ease,
+    background 180ms ease;
 
   &:active {
     transform: scale(0.96);
@@ -129,7 +129,7 @@
 .connectivity-tile-active {
   background: var(--tint);
   color: #fff;
-  box-shadow: 0 4px 14px color-mix(in srgb, var(--tint) 40%, transparent);
+  box-shadow: 0 4px 14px rgba(var(--tint-rgb), 0.4);
 
   .tile-icon {
     background: rgba(255, 255, 255, 0.24);
@@ -189,8 +189,8 @@
   place-items: center;
   cursor: pointer;
   transition:
-    transform var(--dur-1) var(--ease-standard),
-    background var(--dur-2) var(--ease-standard);
+    transform 120ms ease,
+    background 180ms ease;
 
   img {
     width: 20px;
@@ -207,7 +207,7 @@
 
 .quick-tile-active {
   background: var(--tint);
-  box-shadow: 0 6px 16px color-mix(in srgb, var(--tint) 40%, transparent);
+  box-shadow: 0 6px 16px rgba(var(--tint-rgb), 0.4);
   border-color: transparent;
 
   img {
@@ -362,7 +362,7 @@
   font-size: var(--fs-caption1);
   font-weight: 700;
   color: #fff;
-  background: color-mix(in srgb, var(--danger) 72%, transparent);
+  background: rgba(var(--danger-rgb), 0.72);
   pointer-events: none;
   opacity: 0;
   transition: opacity 120ms ease;
@@ -392,7 +392,7 @@
   gap: 2px;
   border: 1px solid var(--cc-glass-border);
   cursor: pointer;
-  transition: transform 180ms var(--ease-standard);
+  transition: transform 180ms ease;
   touch-action: pan-y;
   will-change: transform;
 
@@ -456,7 +456,7 @@
   font-size: var(--fs-footnote);
   font-weight: 700;
   cursor: pointer;
-  transition: transform var(--dur-1) var(--ease-standard);
+  transition: transform 120ms ease;
 
   &:active {
     transform: scale(0.97);
@@ -528,7 +528,7 @@
     box-shadow:
       0 1px 3px rgba(0, 0, 0, 0.3),
       0 2px 6px rgba(0, 0, 0, 0.15);
-    transition: transform var(--dur-1) var(--ease-standard);
+    transition: transform 120ms ease;
 
     &:active {
       transform: scale(0.92);
@@ -602,11 +602,11 @@
 /* ── Swipe dismiss animations ── */
 
 .swipe-dismiss-left {
-  animation: swipe-out-left 220ms var(--ease-standard) forwards;
+  animation: swipe-out-left 220ms ease forwards;
 }
 
 .swipe-dismiss-right {
-  animation: swipe-out-right 220ms var(--ease-standard) forwards;
+  animation: swipe-out-right 220ms ease forwards;
 }
 
 @keyframes swipe-out-left {

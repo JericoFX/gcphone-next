@@ -110,7 +110,7 @@
 
 .fab:hover {
   transform: scale(1.08);
-  background-color: color-mix(in srgb, var(--tint), black 15%);
+  background-color: rgba(var(--tint-rgb), 0.85);
 }
 
 .fab:active {

@@ -279,11 +279,11 @@ Config.Camera = {
         z = 0.96,
     },
     Fov = {
-        Min = 25.0,
-        Max = 90.0,
-        Default = 52.0,
+        Min = 20.0,
+        Max = 70.0,
+        Default = 38.0,
     },
-    QuickZooms = { 30.0, 52.0, 78.0 },
+    QuickZooms = { 25.0, 38.0, 52.0 },
     Freeze = {
         Enabled = true,
         MaxDistance = 8.0,

@@ -26,8 +26,8 @@
   margin: var(--s-2) var(--s-3);
   padding: var(--s-2) var(--s-3);
   border-radius: var(--r-md);
-  background: color-mix(in srgb, var(--success) 12%, var(--surface));
-  border: 1px solid color-mix(in srgb, var(--success) 25%, var(--border));
+  background: var(--success-subtle);
+  border: 1px solid rgba(var(--success-rgb), 0.25);
   color: var(--success);
   font-size: var(--fs-caption1);
   font-weight: 600;
@@ -48,16 +48,16 @@
   overflow: hidden;
   border: 1px solid var(--border);
   box-shadow: var(--shadow-1);
-  animation: cardIn var(--dur-3) var(--ease-standard) both;
+  animation: settingsCardIn 200ms ease both;
 }
 
-@keyframes cardIn {
+@keyframes settingsCardIn {
   from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
 .dangerGroup {
-  border-color: color-mix(in srgb, var(--danger) 20%, var(--border));
+  border-color: rgba(var(--danger-rgb), 0.2);
 }
 
 /* ── Cell ── */
@@ -81,7 +81,7 @@
   &.pressable {
     cursor: pointer;
     &:active {
-      background: color-mix(in srgb, var(--surface-3) 50%, transparent);
+      opacity: 0.7;
     }
   }
 }
@@ -178,12 +178,12 @@
 
 /* ── Icon backgrounds ── */
 
-.iconBlue { background: color-mix(in srgb, var(--tint) 16%, rgba(120, 120, 128, 0.08)) !important; }
-.iconOrange { background: color-mix(in srgb, #ff9500 16%, rgba(120, 120, 128, 0.08)) !important; }
-.iconRed { background: color-mix(in srgb, var(--danger) 16%, rgba(120, 120, 128, 0.08)) !important; }
-.iconGreen { background: color-mix(in srgb, var(--success) 16%, rgba(120, 120, 128, 0.08)) !important; }
-.iconPurple { background: color-mix(in srgb, #5856d6 16%, rgba(120, 120, 128, 0.08)) !important; }
-.iconGray { background: color-mix(in srgb, #8e8e93 16%, rgba(120, 120, 128, 0.08)) !important; }
+.iconBlue { background: var(--tint-hover) !important; }
+.iconOrange { background: var(--warning-subtle) !important; }
+.iconRed { background: var(--danger-subtle) !important; }
+.iconGreen { background: var(--success-subtle) !important; }
+.iconPurple { background: rgba(88, 86, 214, 0.16) !important; }
+.iconGray { background: rgba(142, 142, 147, 0.16) !important; }
 
 /* ── Switch ── */
 
@@ -195,7 +195,7 @@
   background: rgba(120, 120, 128, 0.16);
   border: 1px solid var(--border);
   cursor: pointer;
-  transition: background var(--dur-2) var(--ease-standard), border-color var(--dur-2) var(--ease-standard);
+  transition: background 180ms ease, border-color 180ms ease;
   flex: 0 0 auto;
 
   &.switchActive {
@@ -213,7 +213,7 @@
   border-radius: 50%;
   background: #fff;
   box-shadow: var(--shadow-1);
-  transition: transform var(--dur-2) var(--ease-standard);
+  transition: transform 180ms ease;
 
   .switchActive & {
     transform: translateX(20px);
@@ -225,7 +225,7 @@
 .inlineExpander {
   max-height: 0;
   overflow: hidden;
-  transition: max-height var(--dur-3) var(--ease-standard);
+  transition: max-height 260ms ease;
 
   &.expanderOpen {
     overflow: visible;
@@ -265,7 +265,7 @@
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: color-mix(in srgb, var(--tint) 14%, transparent);
+  background: var(--tint-hover);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -287,112 +287,71 @@
    APPEARANCE
    ══════════════════════════════════════ */
 
-/* Wallpaper Preview (large) */
-.wallpaperPreview {
+/* Wallpaper grid — simple 3-col tap-to-select */
+.wpGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  padding: 0 0 var(--s-2);
+}
+
+.wpCard {
   position: relative;
-  aspect-ratio: 9 / 14;
-  border-radius: var(--r-xl);
+  aspect-ratio: 9 / 16;
+  border-radius: var(--r-md);
   overflow: hidden;
-  box-shadow: var(--shadow-2);
+  border: 2px solid transparent;
+  cursor: pointer;
+  background: var(--surface-2);
+  padding: 0;
+
+  &:active { opacity: 0.8; }
+
+  &.wpCardActive {
+    border-color: var(--tint);
+    box-shadow: 0 0 0 1px var(--tint);
+  }
 
   img {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    transition: opacity 200ms ease;
-  }
-
-  &::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(transparent 60%, rgba(0, 0, 0, 0.4));
+    display: block;
     pointer-events: none;
   }
 }
 
-.wallpaperBadge {
-  position: absolute;
-  bottom: var(--s-2);
-  left: var(--s-2);
-  z-index: 1;
-  padding: 2px 8px;
-  border-radius: var(--r-sm);
-  background: rgba(0, 0, 0, 0.5);
-  color: #fff;
-  font-size: var(--fs-caption2);
-  font-weight: 600;
-}
-
-/* Wallpaper Thumbnails (horizontal scroll) */
-.wallpaperScroll {
+/* Action buttons row */
+.wpActions {
   display: flex;
-  gap: var(--s-2);
-  padding: var(--s-2) var(--s-3);
-  overflow-x: auto;
-  scroll-snap-type: x mandatory;
-  -webkit-overflow-scrolling: touch;
-
-  &::-webkit-scrollbar { display: none; }
+  gap: 6px;
+  padding: 0 0 var(--s-2);
 }
 
-.wallpaperThumb {
-  flex: 0 0 48px;
-  aspect-ratio: 9 / 19;
-  border: 2px solid transparent;
+.wpActionBtn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 36px;
   border-radius: var(--r-md);
-  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-2);
+  font-size: var(--fs-caption1);
+  font-weight: 600;
   cursor: pointer;
-  scroll-snap-align: start;
-  position: relative;
-  transition: border-color var(--dur-2) var(--ease-standard);
+  padding: 0 8px;
 
-  &.selected {
-    border-color: var(--tint);
+  &:active {
+    background: var(--surface-3);
   }
 
   img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-}
-
-.thumbCheck {
-  position: absolute;
-  top: 2px;
-  right: 2px;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: var(--tint);
-  display: grid;
-  place-items: center;
-
-  img {
-    width: 8px;
-    height: 8px;
-    filter: brightness(10);
-  }
-}
-
-.wallpaperAction {
-  flex: 0 0 48px;
-  aspect-ratio: 9 / 19;
-  border: 1px dashed var(--border);
-  border-radius: var(--r-md);
-  display: grid;
-  place-items: center;
-  cursor: pointer;
-  background: var(--surface-2);
-  transition: background var(--dur-2) var(--ease-standard);
-
-  &:active { background: var(--surface-3); }
-
-  img {
-    width: 18px;
-    height: 18px;
-    opacity: 0.5;
+    width: 14px;
+    height: 14px;
+    opacity: 0.6;
   }
 }
 
@@ -413,7 +372,7 @@
     color: var(--text);
     outline: none;
 
-    &:focus { border-color: color-mix(in srgb, var(--tint) 50%, var(--border)); }
+    &:focus { border-color: rgba(var(--tint-rgb), 0.5); }
     &::placeholder { color: var(--text-3); }
   }
 
@@ -447,10 +406,10 @@
   width: 100%;
   text-align: left;
   cursor: pointer;
-  transition: background var(--dur-1) ease;
+  transition: background 120ms ease;
 
   &:last-child { border-bottom: none; }
-  &:active { background: color-mix(in srgb, var(--surface-3) 50%, transparent); }
+  &:active { opacity: 0.7; }
 
   &.selected .inlineOptionName { color: var(--tint); }
 }
@@ -492,10 +451,10 @@
   width: 100%;
   text-align: left;
   cursor: pointer;
-  transition: background var(--dur-1) ease;
+  transition: background 120ms ease;
 
   &:last-child { border-bottom: none; }
-  &:active { background: color-mix(in srgb, var(--surface-3) 50%, transparent); }
+  &:active { opacity: 0.7; }
   &.selected .profileName { color: var(--tint); }
 }
 
@@ -540,12 +499,12 @@
   padding: var(--s-2) var(--s-3);
   padding-left: calc(var(--s-3) + 32px + var(--s-2));
   border-bottom: 1px solid var(--separator);
-  transition: background var(--dur-1) ease;
+  transition: background 120ms ease;
 
   &:last-child { border-bottom: none; }
 
   &.playing {
-    background: color-mix(in srgb, var(--tint) 8%, transparent);
+    background: rgba(0, 122, 255, 0.08);
   }
 }
 
@@ -576,7 +535,7 @@
   display: grid;
   place-items: center;
   cursor: pointer;
-  transition: background var(--dur-1) ease;
+  transition: background 120ms ease;
 
   &:active { background: rgba(120, 120, 128, 0.24); }
 }
@@ -604,7 +563,7 @@
   outline: none;
   width: calc(100% - var(--s-3) * 2);
 
-  &:focus { border-color: color-mix(in srgb, var(--tint) 50%, var(--border)); }
+  &:focus { border-color: rgba(var(--tint-rgb), 0.5); }
   &::placeholder { color: var(--text-3); }
 }
 
@@ -645,11 +604,11 @@
   height: 14px;
   border-radius: 50%;
   background: rgba(120, 120, 128, 0.24);
-  transition: all 150ms var(--ease-standard);
+  transition: all 150ms ease;
 
   &.filled {
     background: var(--text);
-    animation: dotBounce 150ms var(--ease-standard);
+    animation: dotBounce 150ms ease;
   }
 }
 
@@ -677,7 +636,7 @@
   font-weight: 400;
   color: var(--text);
   cursor: pointer;
-  transition: all var(--dur-1) var(--ease-standard);
+  transition: all 120ms ease;
   box-shadow: var(--shadow-1);
 
   &:active {
@@ -695,7 +654,7 @@
   cursor: pointer;
   display: grid;
   place-items: center;
-  transition: background var(--dur-1) ease;
+  transition: background 120ms ease;
 
   &:active { background: rgba(120, 120, 128, 0.24); }
 }
@@ -726,14 +685,14 @@
   text-align: center;
 
   &.ok {
-    background: color-mix(in srgb, var(--success) 12%, var(--surface));
-    border: 1px solid color-mix(in srgb, var(--success) 40%, var(--border));
+    background: var(--success-subtle);
+    border: 1px solid rgba(var(--success-rgb), 0.4);
     color: var(--success);
   }
 
   &.error {
-    background: color-mix(in srgb, var(--danger) 12%, var(--surface));
-    border: 1px solid color-mix(in srgb, var(--danger) 40%, var(--border));
+    background: var(--danger-subtle);
+    border: 1px solid rgba(var(--danger-rgb), 0.4);
     color: var(--danger);
     animation: shake 300ms ease;
   }
@@ -754,7 +713,7 @@
   align-items: center;
   padding: var(--s-2) var(--s-3);
   border-bottom: 1px solid var(--separator);
-  animation: cardIn var(--dur-3) var(--ease-standard) both;
+  animation: settingsCardIn 200ms ease both;
 
   &:last-child { border-bottom: none; }
 }
@@ -865,14 +824,14 @@
   text-align: center;
 
   &.success {
-    background: color-mix(in srgb, var(--success) 12%, var(--surface));
-    border: 1px solid color-mix(in srgb, var(--success) 40%, var(--border));
+    background: var(--success-subtle);
+    border: 1px solid rgba(var(--success-rgb), 0.4);
     color: var(--success);
   }
 
   &.error {
-    background: color-mix(in srgb, var(--danger) 12%, var(--surface));
-    border: 1px solid color-mix(in srgb, var(--danger) 40%, var(--border));
+    background: var(--danger-subtle);
+    border: 1px solid rgba(var(--danger-rgb), 0.4);
     color: var(--danger);
   }
 }
@@ -928,7 +887,7 @@
 
   &.copiable {
     cursor: pointer;
-    &:active { background: color-mix(in srgb, var(--surface-3) 50%, transparent); }
+    &:active { opacity: 0.7; }
   }
 }
 

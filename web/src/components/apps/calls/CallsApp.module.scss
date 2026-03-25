@@ -14,7 +14,7 @@
   background: linear-gradient(
     180deg,
     var(--surface-overlay),
-    color-mix(in srgb, var(--surface-overlay) 96%, transparent)
+    var(--surface-overlay)
   );
   border-bottom: 1px solid var(--separator);
 }
@@ -23,7 +23,7 @@
   width: 40px;
   height: 40px;
   border: none;
-  background: color-mix(in srgb, var(--tint) 12%, transparent);
+  background: var(--tint-subtle);
   font-size: 28px;
   color: var(--tint);
   display: flex;
@@ -32,7 +32,7 @@
   cursor: pointer;
 
   &:hover {
-    background-color: color-mix(in srgb, var(--tint) 12%, transparent);
+    background-color: rgba(var(--tint-rgb), 0.12);
     border-radius: 50%;
   }
 }
@@ -161,7 +161,7 @@
   border-radius: 12px;
   background: var(--surface);
   border: 1px solid var(--border);
-  animation: ios18-rise-in var(--dur-2) var(--ease-standard);
+  animation: ios18-rise-in 180ms ease;
 
   &:hover {
     background-color: var(--surface-2);
@@ -261,7 +261,7 @@
   font-size: 30px;
   line-height: 1;
   box-shadow: var(--shadow-3);
-  animation: ios18-pop-in var(--dur-2) var(--ease-standard);
+  animation: ios18-pop-in 180ms ease;
 }
 
 .tab {
@@ -629,7 +629,7 @@
     color: var(--text);
     box-shadow:
       0 8px 20px rgba(22, 40, 72, 0.1),
-      inset 0 0 0 1px color-mix(in srgb, var(--surface) 50%, transparent);
+      inset 0 0 0 1px rgba(var(--surface-rgb), 0.5);
     cursor: pointer;
     transition:
       transform 120ms ease,

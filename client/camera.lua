@@ -130,6 +130,13 @@ local function StartCameraSession(data)
     PhoneState.cameraActive = true
     SetPedCurrentWeaponVisible(ped, false, true, true, true)
 
+    -- Hide phone prop so it doesn't appear in the WebGL game render
+    -- Delete phone prop from game pool so it doesn't appear in WebGL render
+    CleanupPhoneProps()
+
+    -- Enable walk mode so player can move and look around while camera is open
+    SetNuiFocusKeepInput(true)
+
     -- Start with scripted camera (renders behind NUI transparently)
     CameraWalk.StartAdvancedPhoneCamera({
         fov = cameraSession.fov,
@@ -186,6 +193,7 @@ local function StartCameraSession(data)
         SetTimecycleModifierStrength(0.0)
         SetPedCurrentWeaponVisible(ped, true, true, true, true)
         Flashlight.SetPhoneFlashlightEnabled(false)
+        SetNuiFocusKeepInput(false)
         Anim.PhonePlayText()
     end)
 

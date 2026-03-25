@@ -2,7 +2,7 @@
   display: flex;
   flex-direction: column;
   background:
-    radial-gradient(120% 80% at 50% -10%, color-mix(in srgb, var(--success) 8%, var(--bg)), transparent 50%),
+    radial-gradient(120% 80% at 50% -10%, rgba(var(--success-rgb), 0.08), transparent 50%),
     var(--bg);
 }
 
@@ -47,7 +47,7 @@
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--r-lg);
-  animation: cr-card-in var(--dur-3) var(--ease-standard) both;
+  animation: cr-card-in 260ms ease both;
 }
 
 @keyframes cr-card-in {
@@ -72,10 +72,10 @@
   color: var(--text);
   font-size: var(--fs-footnote);
   outline: none;
-  transition: border-color var(--dur-1) var(--ease-standard);
+  transition: border-color 120ms ease;
 
   &:focus {
-    border-color: color-mix(in srgb, var(--success) 50%, var(--border));
+    border-color: rgba(var(--success-rgb), 0.5);
   }
 }
 
@@ -88,14 +88,14 @@
 .gpsBtn {
   min-height: 38px;
   padding: 0 var(--s-3);
-  border: 1px solid color-mix(in srgb, var(--success) 30%, var(--border));
+  border: 1px solid rgba(var(--success-rgb), 0.3);
   border-radius: var(--r-md);
-  background: color-mix(in srgb, var(--success) 8%, var(--surface));
+  background: var(--success-subtle);
   color: var(--success);
   font-size: var(--fs-caption1);
   font-weight: 700;
   white-space: nowrap;
-  transition: transform var(--dur-1) var(--ease-standard);
+  transition: transform 120ms ease;
 
   &:active {
     transform: scale(0.96);
@@ -107,9 +107,9 @@
   align-items: center;
   justify-content: space-between;
   padding: var(--s-3);
-  background: color-mix(in srgb, var(--success) 6%, var(--surface-2));
+  background: rgba(var(--success-rgb), 0.06);
   border-radius: var(--r-md);
-  border: 1px solid color-mix(in srgb, var(--success) 15%, var(--border));
+  border: 1px solid rgba(var(--success-rgb), 0.15);
 }
 
 .priceLabel {
@@ -136,12 +136,12 @@
   min-height: 44px;
   border: none;
   border-radius: var(--r-lg);
-  background: linear-gradient(135deg, var(--success), color-mix(in srgb, var(--success) 90%, #fff));
+  background: linear-gradient(135deg, var(--success), rgba(var(--success-rgb), 0.9));
   color: #fff;
   font-size: var(--fs-footnote);
   font-weight: 700;
   letter-spacing: 0.01em;
-  transition: transform var(--dur-1) var(--ease-standard);
+  transition: transform 120ms ease;
 
   &:active {
     transform: scale(0.97);
@@ -156,13 +156,13 @@
 .cancelBtn {
   width: 100%;
   min-height: 40px;
-  border: 1px solid color-mix(in srgb, var(--danger) 30%, var(--border));
+  border: 1px solid rgba(var(--danger-rgb), 0.3);
   border-radius: var(--r-lg);
-  background: color-mix(in srgb, var(--danger) 6%, var(--surface));
+  background: rgba(var(--danger-rgb), 0.06);
   color: var(--danger);
   font-size: var(--fs-footnote);
   font-weight: 700;
-  transition: transform var(--dur-1) var(--ease-standard);
+  transition: transform 120ms ease;
 
   &:active {
     transform: scale(0.97);
@@ -183,7 +183,7 @@
 .spinner {
   width: 48px;
   height: 48px;
-  border: 3px solid color-mix(in srgb, var(--success) 20%, transparent);
+  border: 3px solid rgba(var(--success-rgb), 0.2);
   border-top-color: var(--success);
   border-radius: 50%;
   animation: cr-spin 1s linear infinite;
@@ -220,14 +220,14 @@
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--r-lg);
-  animation: cr-card-in var(--dur-3) var(--ease-standard) both;
+  animation: cr-card-in 260ms ease both;
 }
 
 .driverAvatar {
   width: 48px;
   height: 48px;
   border-radius: var(--r-pill);
-  background: linear-gradient(135deg, var(--success), color-mix(in srgb, var(--success) 90%, #fff));
+  background: linear-gradient(135deg, var(--success), rgba(var(--success-rgb), 0.9));
   display: grid;
   place-items: center;
   flex-shrink: 0;
@@ -265,7 +265,7 @@
   font-size: 11px;
   font-weight: 700;
   border-radius: var(--r-pill);
-  background: color-mix(in srgb, var(--warning) 10%, transparent);
+  background: var(--warning-subtle);
   color: var(--warning);
 }
 
@@ -295,14 +295,14 @@
   border-radius: 50%;
   background: var(--border);
   border: 2px solid var(--border);
-  transition: all var(--dur-2) var(--ease-standard);
+  transition: all 180ms ease;
   z-index: 1;
 }
 
 .stepActive .stepDot {
   background: var(--success);
   border-color: var(--success);
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--success) 15%, transparent);
+  box-shadow: 0 0 0 4px rgba(var(--success-rgb), 0.15);
 }
 
 .stepCompleted .stepDot {
@@ -348,13 +348,13 @@
 
 .actionBtn {
   min-height: 38px;
-  border: 1px solid color-mix(in srgb, var(--success) 30%, var(--border));
+  border: 1px solid rgba(var(--success-rgb), 0.3);
   border-radius: var(--r-md);
-  background: color-mix(in srgb, var(--success) 8%, var(--surface));
+  background: var(--success-subtle);
   color: var(--success);
   font-size: var(--fs-caption1);
   font-weight: 700;
-  transition: transform var(--dur-1) var(--ease-standard);
+  transition: transform 120ms ease;
 
   &:active {
     transform: scale(0.96);
@@ -366,11 +366,11 @@
   min-height: 44px;
   border: none;
   border-radius: var(--r-lg);
-  background: linear-gradient(135deg, var(--success), color-mix(in srgb, var(--success) 90%, #fff));
+  background: linear-gradient(135deg, var(--success), rgba(var(--success-rgb), 0.9));
   color: #fff;
   font-size: var(--fs-footnote);
   font-weight: 700;
-  transition: transform var(--dur-1) var(--ease-standard);
+  transition: transform 120ms ease;
 
   &:active {
     transform: scale(0.97);
@@ -387,7 +387,7 @@
   border: 1px solid var(--border);
   border-radius: var(--r-lg);
   text-align: center;
-  animation: cr-card-in var(--dur-3) var(--ease-standard) both;
+  animation: cr-card-in 260ms ease both;
 }
 
 .completeIcon {
@@ -440,7 +440,7 @@
   font-size: 28px;
   cursor: pointer;
   opacity: 0.3;
-  transition: all var(--dur-1) var(--ease-standard);
+  transition: all 120ms ease;
   padding: 0;
 
   &:active {
@@ -467,7 +467,7 @@
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--r-lg);
-  animation: cr-card-in var(--dur-3) var(--ease-standard) both;
+  animation: cr-card-in 260ms ease both;
 }
 
 .profileInfo {
@@ -513,7 +513,7 @@
   border-radius: 14px;
   background: var(--border);
   cursor: pointer;
-  transition: background var(--dur-2) var(--ease-standard);
+  transition: background 180ms ease;
   padding: 0;
 
   &::after {
@@ -526,7 +526,7 @@
     border-radius: 50%;
     background: #fff;
     box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-    transition: transform var(--dur-2) var(--ease-standard);
+    transition: transform 180ms ease;
   }
 }
 
@@ -549,12 +549,12 @@
 }
 
 .onlineBadge {
-  background: color-mix(in srgb, var(--success) 10%, transparent);
+  background: var(--success-subtle);
   color: var(--success);
 }
 
 .offlineBadge {
-  background: color-mix(in srgb, var(--text-3) 10%, transparent);
+  background: rgba(var(--text-rgb), 0.05);
   color: var(--text-3);
 }
 
@@ -567,7 +567,7 @@
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--r-lg);
-  animation: cr-card-in var(--dur-3) var(--ease-standard) both;
+  animation: cr-card-in 260ms ease both;
 }
 
 .requestCardHeader {
@@ -598,11 +598,11 @@
   min-height: 40px;
   border: none;
   border-radius: var(--r-lg);
-  background: linear-gradient(135deg, var(--success), color-mix(in srgb, var(--success) 90%, #fff));
+  background: linear-gradient(135deg, var(--success), rgba(var(--success-rgb), 0.9));
   color: #fff;
   font-size: var(--fs-footnote);
   font-weight: 700;
-  transition: transform var(--dur-1) var(--ease-standard);
+  transition: transform 120ms ease;
 
   &:active {
     transform: scale(0.97);
@@ -618,7 +618,7 @@
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--r-lg);
-  animation: cr-card-in var(--dur-3) var(--ease-standard) both;
+  animation: cr-card-in 260ms ease both;
 }
 
 .registrationTitle {
@@ -665,11 +665,11 @@
   min-height: 38px;
   border: none;
   border-radius: var(--r-md);
-  background: linear-gradient(135deg, var(--success), color-mix(in srgb, var(--success) 90%, #fff));
+  background: linear-gradient(135deg, var(--success), rgba(var(--success-rgb), 0.9));
   color: #fff;
   font-size: var(--fs-caption1);
   font-weight: 700;
-  transition: transform var(--dur-1) var(--ease-standard);
+  transition: transform 120ms ease;
 
   &:active {
     transform: scale(0.96);
@@ -691,7 +691,7 @@
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--r-lg);
-  animation: cr-card-in var(--dur-3) var(--ease-standard) both;
+  animation: cr-card-in 260ms ease both;
 }
 
 .historyCardInfo {
@@ -753,9 +753,9 @@
 .mapCloseBtn {
   min-height: 32px;
   padding: 0 var(--s-3);
-  border: 1px solid color-mix(in srgb, var(--danger) 30%, var(--border));
+  border: 1px solid rgba(var(--danger-rgb), 0.3);
   border-radius: var(--r-md);
-  background: color-mix(in srgb, var(--danger) 6%, var(--surface));
+  background: rgba(var(--danger-rgb), 0.06);
   color: var(--danger);
   font-size: var(--fs-caption1);
   font-weight: 700;
@@ -775,9 +775,9 @@
   justify-content: center;
   padding: var(--s-2) var(--s-3);
   border-radius: var(--r-md);
-  background: color-mix(in srgb, var(--success) 8%, var(--surface));
-  border: 1px solid color-mix(in srgb, var(--success) 20%, var(--border));
-  animation: cr-card-in var(--dur-3) var(--ease-standard) both;
+  background: var(--success-subtle);
+  border: 1px solid rgba(var(--success-rgb), 0.2);
+  animation: cr-card-in 260ms ease both;
 
   span {
     font-size: var(--fs-caption1);
@@ -787,8 +787,8 @@
 }
 
 .driverCountZero {
-  background: color-mix(in srgb, var(--danger) 6%, var(--surface));
-  border-color: color-mix(in srgb, var(--danger) 20%, var(--border));
+  background: rgba(var(--danger-rgb), 0.06);
+  border-color: rgba(var(--danger-rgb), 0.2);
 
   span {
     color: var(--danger);

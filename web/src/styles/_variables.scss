@@ -5,7 +5,7 @@
   --phone-screen-bottom: 100px;
 
   --color-primary: var(--tint, #007aff);
-  --color-primary-dark: color-mix(in srgb, var(--tint, #007aff) 86%, #003b7a);
+  --color-primary-dark: rgba(var(--tint-rgb), 0.86);
   --color-background: var(--bg, #f2f2f7);
   --color-surface: var(--surface, #ffffff);
   --color-surface-dark: var(--surface-2, #f7f7fa);

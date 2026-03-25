@@ -35,7 +35,7 @@
   gap: var(--s-1);
   padding: var(--s-1) var(--s-3);
   border-radius: var(--r-pill);
-  background: color-mix(in srgb, var(--surface) 80%, var(--bg));
+  background: rgba(var(--surface-rgb), 0.8);
   border: 1px solid var(--border);
 
   strong {
@@ -67,7 +67,7 @@
   display: grid;
   place-items: center;
   cursor: pointer;
-  transition: transform var(--dur-1) var(--ease-standard);
+  transition: transform 120ms ease;
 
   &:active {
     transform: scale(0.9);
@@ -111,9 +111,9 @@
   box-shadow: var(--shadow-1);
   cursor: pointer;
   transition:
-    transform var(--dur-1) var(--ease-standard),
-    background var(--dur-2) var(--ease-standard),
-    border-color var(--dur-2) var(--ease-standard);
+    transform 120ms ease,
+    background 180ms ease,
+    border-color 180ms ease;
 
   &:active {
     transform: scale(0.97);
@@ -149,8 +149,8 @@
 }
 
 .toggle-active {
-  background: color-mix(in srgb, var(--tint) 10%, var(--surface));
-  border-color: color-mix(in srgb, var(--tint) 24%, var(--border));
+  background: var(--tint-subtle);
+  border-color: rgba(var(--tint-rgb), 0.24);
 
   .toggle-icon {
     opacity: 0.85;
@@ -199,9 +199,9 @@
   box-shadow: var(--shadow-1);
   cursor: pointer;
   transition:
-    transform var(--dur-1) var(--ease-standard),
-    box-shadow var(--dur-2) var(--ease-standard);
-  animation: card-in var(--dur-3) var(--ease-standard) both;
+    transform 120ms ease,
+    box-shadow 180ms ease;
+  animation: card-in 260ms ease both;
 
   &:active {
     transform: scale(0.985);
@@ -209,11 +209,11 @@
 }
 
 .card-unread {
-  border-color: color-mix(in srgb, var(--tint) 28%, var(--border));
+  border-color: rgba(var(--tint-rgb), 0.28);
   box-shadow:
     var(--shadow-1),
-    0 0 0 1px color-mix(in srgb, var(--tint) 8%, transparent);
-  background: color-mix(in srgb, var(--tint) 3%, var(--surface));
+    0 0 0 1px rgba(var(--tint-rgb), 0.08);
+  background: rgba(var(--tint-rgb), 0.03);
 }
 
 @keyframes card-in {
@@ -234,8 +234,8 @@
   width: 36px;
   height: 36px;
   border-radius: var(--r-sm);
-  background: color-mix(in srgb, var(--surface-2) 80%, var(--bg));
-  border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+  background: rgba(var(--surface-2-rgb), 0.8);
+  border: 1px solid rgba(var(--border-rgb), 0.6);
   display: grid;
   place-items: center;
   flex-shrink: 0;
@@ -256,7 +256,7 @@
   border-radius: var(--r-pill);
   background: var(--tint);
   border: 2px solid var(--surface);
-  animation: dot-pop var(--dur-3) var(--ease-standard);
+  animation: dot-pop 260ms ease;
 }
 
 @keyframes dot-pop {
@@ -331,11 +331,11 @@
   min-height: 24px;
   font-size: 10px;
   font-weight: 700;
-  background: color-mix(in srgb, var(--tint) 10%, transparent);
+  background: var(--tint-subtle);
   color: var(--tint);
   cursor: pointer;
   white-space: nowrap;
-  transition: transform var(--dur-1) var(--ease-standard);
+  transition: transform 120ms ease;
 
   &:active {
     transform: scale(0.92);
@@ -348,11 +348,11 @@
   height: 28px;
   border: none;
   border-radius: var(--r-pill);
-  background: color-mix(in srgb, var(--danger) 10%, transparent);
+  background: var(--danger-subtle);
   display: grid;
   place-items: center;
   cursor: pointer;
-  transition: transform var(--dur-1) var(--ease-standard);
+  transition: transform 120ms ease;
 
   img {
     width: 14px;
@@ -373,8 +373,8 @@
   gap: var(--s-2);
   padding: var(--s-3);
   border-radius: var(--r-lg);
-  background: color-mix(in srgb, var(--danger) 8%, var(--surface));
-  border: 1px solid color-mix(in srgb, var(--danger) 24%, var(--border));
+  background: var(--danger-subtle);
+  border: 1px solid rgba(var(--danger-rgb), 0.24);
 
   img {
     width: 16px;
@@ -413,7 +413,7 @@
   width: 48px;
   height: 48px;
   border-radius: var(--r-lg);
-  background: color-mix(in srgb, var(--surface-2) 80%, var(--bg));
+  background: rgba(var(--surface-2-rgb), 0.8);
   border: 1px solid var(--border);
   display: grid;
   place-items: center;

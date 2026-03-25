@@ -11,8 +11,8 @@
 .statusBanner {
   padding: 10px 12px;
   border-radius: 14px;
-  background: color-mix(in srgb, var(--tint) 12%, transparent);
-  border: 1px solid color-mix(in srgb, var(--tint) 22%, transparent);
+  background: var(--tint-subtle);
+  border: 1px solid rgba(var(--tint-rgb), 0.22);
   color: var(--tint);
   font-size: 12px;
   font-weight: 600;
@@ -101,7 +101,7 @@
 .actions .primary,
 .liveChatInputRow button,
 .liveScaleformPanel button {
-  background: linear-gradient(135deg, var(--tint), color-mix(in srgb, var(--tint) 80%, var(--success)));
+  background: linear-gradient(135deg, var(--tint), rgba(var(--tint-rgb), 0.8));
   color: #fff;
 }
 
@@ -173,7 +173,7 @@
 .liveRailThumb {
   position: relative;
   height: 100px;
-  background: linear-gradient(135deg, var(--tint), color-mix(in srgb, var(--tint) 80%, var(--success)));
+  background: linear-gradient(135deg, var(--tint), rgba(var(--tint-rgb), 0.8));
 }
 
 .liveRailThumb img,
@@ -264,7 +264,7 @@
 
 .cardLiveBadge {
   justify-self: start;
-  background: color-mix(in srgb, var(--danger) 10%, transparent);
+  background: var(--danger-subtle);
   color: var(--danger);
 }
 
@@ -527,6 +527,6 @@
 }
 
 .fab {
-  background: linear-gradient(135deg, var(--tint), color-mix(in srgb, var(--tint) 80%, var(--success)));
+  background: linear-gradient(135deg, var(--tint), rgba(var(--tint-rgb), 0.8));
   color: #fff;
 }

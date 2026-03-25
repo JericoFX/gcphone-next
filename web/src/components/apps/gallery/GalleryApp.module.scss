@@ -39,8 +39,8 @@
   font-size: 12px;
   font-weight: 700;
   color: var(--tint);
-  background: color-mix(in srgb, var(--tint) 8%, var(--surface));
-  border: 1px solid color-mix(in srgb, var(--tint) 16%, var(--border));
+  background: var(--tint-subtle);
+  border: 1px solid rgba(var(--tint-rgb), 0.16);
 }
 
 .grid {
@@ -79,7 +79,7 @@
   &.selected {
     outline: 2px solid var(--tint);
     outline-offset: 1px;
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--tint) 12%, transparent);
+    box-shadow: 0 0 0 3px rgba(var(--tint-rgb), 0.12);
   }
 }
 
@@ -197,7 +197,7 @@
   font-size: var(--fs-footnote);
   font-weight: 700;
   cursor: pointer;
-  box-shadow: 0 8px 20px color-mix(in srgb, var(--tint) 30%, transparent);
+  box-shadow: 0 8px 20px rgba(var(--tint-rgb), 0.3);
 }
 
 .nfc-dismiss-btn {

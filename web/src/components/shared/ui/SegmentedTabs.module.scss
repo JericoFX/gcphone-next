@@ -23,5 +23,5 @@
 .active {
   background: var(--surface);
   color: var(--text);
-  box-shadow: 0 6px 14px color-mix(in srgb, var(--text) 8%, transparent);
+  box-shadow: 0 6px 14px rgba(var(--text-rgb), 0.08);
 }

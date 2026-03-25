@@ -1,17 +1,9 @@
 /**
  * GameRender — Renders the FiveM game view into an HTML <canvas> element
- * with real-time post-processing (blur, brightness, contrast, color grading)
- * and video recording support.
+ * with real-time post-processing and video recording support.
  *
- * Based on:
- *  - citizenfx/fivem cfx-ui app.component.ts (createGameView)
- *    https://github.com/citizenfx/fivem/blob/538f9cc/ext/cfx-ui/src/app/app.component.ts#L50-L71
- *  - liquiad's React adaptation
- *    https://gist.github.com/liquiad/f4952575cbff31f923d19b342b4d25f8
- *
- * Uses the CfxTexture WebGL hook — a special texParameterf sequence on
- * TEXTURE_WRAP_T that tells the FiveM NUI runtime to bind the live game
- * render target to a standard WebGL texture.  No external dependencies.
+ * Uses full-screen canvas with gl.viewport() offset to crop the 16:9
+ * game framebuffer into a portrait phone frame.
  */
 
 // ── GLSL Shaders ────────────────────────────────────────
@@ -29,17 +21,16 @@ const FRAGMENT_SHADER = `
 precision mediump float;
 varying vec2 v_uv;
 uniform sampler2D external_texture;
-uniform float u_blur;        // 0.0 - 1.0
-uniform float u_brightness;  // default 1.0
-uniform float u_contrast;    // default 1.0
-uniform float u_saturation;  // default 1.0, 0=gray, >1=vivid
-uniform float u_temperature; // -1.0 cool/blue .. +1.0 warm/orange
-uniform float u_vignette;    // 0.0=off, 1.0=strong
-uniform int u_effect;        // 0=normal 1=noir 2=vivid 3=warm
-uniform vec2 u_resolution;   // canvas width, height
+uniform float u_blur;
+uniform float u_brightness;
+uniform float u_contrast;
+uniform float u_saturation;
+uniform float u_temperature;
+uniform float u_vignette;
+uniform int u_effect;
+uniform vec2 u_resolution;
 
 void main() {
-  // ── 9-tap box blur ──
   vec2 texel = u_blur * 3.0 / u_resolution;
   vec4 color = vec4(0.0);
   for (int x = -1; x <= 1; x++) {
@@ -49,35 +40,25 @@ void main() {
   }
   color /= 9.0;
 
-  // ── Brightness ──
   color.rgb *= u_brightness;
-
-  // ── Contrast ──
   color.rgb = (color.rgb - 0.5) * u_contrast + 0.5;
 
-  // ── Saturation ──
   float lum = dot(color.rgb, vec3(0.299, 0.587, 0.114));
   color.rgb = mix(vec3(lum), color.rgb, u_saturation);
 
-  // ── Temperature ──
   color.r += u_temperature * 0.1;
   color.b -= u_temperature * 0.1;
 
-  // ── Color grading ──
   if (u_effect == 1) {
-    // Noir — desaturate + slight contrast boost
-    float lumNoir = dot(color.rgb, vec3(0.299, 0.587, 0.114));
-    color.rgb = vec3(lumNoir) * 1.08;
+    float lumN = dot(color.rgb, vec3(0.299, 0.587, 0.114));
+    color.rgb = vec3(lumN) * 1.08;
   } else if (u_effect == 2) {
-    // Vivid — extra saturation boost
-    float lumVivid = dot(color.rgb, vec3(0.299, 0.587, 0.114));
-    color.rgb = mix(vec3(lumVivid), color.rgb, 1.4) * 1.05;
+    float lumV = dot(color.rgb, vec3(0.299, 0.587, 0.114));
+    color.rgb = mix(vec3(lumV), color.rgb, 1.4) * 1.05;
   } else if (u_effect == 3) {
-    // Warm — shift to warm tones
     color.rgb = mix(color.rgb, color.rgb * vec3(1.15, 1.05, 0.85), 0.5);
   }
 
-  // ── Vignette ──
   float dist = distance(v_uv, vec2(0.5));
   color.rgb *= 1.0 - u_vignette * smoothstep(0.3, 0.85, dist);
 
@@ -121,6 +102,7 @@ function createTexture(gl: WebGLRenderingContext): WebGLTexture {
 }
 
 function createBuffers(gl: WebGLRenderingContext) {
+  // Full-range UVs. The crop is done via gl.viewport() offset.
   const vertexBuff = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuff);
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
@@ -170,7 +152,7 @@ export interface GameView {
   canvas: HTMLCanvasElement;
   gl: WebGLRenderingContext;
   animationFrame: number | undefined;
-  resize: (width: number, height: number) => void;
+  resizeByAspect: (aspect: number) => void;
   pause: () => void;
   resume: () => void;
   destroy: () => void;
@@ -203,6 +185,10 @@ export function createGameView(canvas: HTMLCanvasElement): GameView {
   let paused = false;
   let recorder: MediaRecorder | null = null;
   let recordStartTime = 0;
+  let viewportX = 0;
+  let viewportY = 0;
+  let viewportW = window.innerWidth;
+  let viewportH = window.innerHeight;
 
   // Setup
   const tex = createTexture(gl);
@@ -221,7 +207,6 @@ export function createGameView(canvas: HTMLCanvasElement): GameView {
   gl.uniform1f(uTemperature, 0.0);
   gl.uniform1f(uVignette, 0.0);
   gl.uniform1i(uEffect, 0);
-  gl.uniform2f(uResolution, canvas.width || window.innerWidth, canvas.height || window.innerHeight);
 
   // Attributes
   gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuff);
@@ -232,14 +217,45 @@ export function createGameView(canvas: HTMLCanvasElement): GameView {
   gl.vertexAttribPointer(tloc, 2, gl.FLOAT, false, 0, 0);
   gl.enableVertexAttribArray(tloc);
 
-  gl.viewport(0, 0, canvas.width, canvas.height);
+  // Initial resize to full screen
+  const screenW = window.innerWidth;
+  const screenH = window.innerHeight;
+  canvas.width = screenW;
+  canvas.height = screenH;
+  gl.viewport(0, 0, screenW, screenH);
+  gl.uniform2f(uResolution, screenW, screenH);
 
   // ── Render loop ──
   function render() {
     if (paused) return;
+    gl.viewport(viewportX, viewportY, viewportW, viewportH);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     gl.finish();
     gameView.animationFrame = requestAnimationFrame(render);
+  }
+
+  /**
+   * Calculates target dimensions from aspect ratio, then computes a viewport
+   * offset to center-crop the full-screen game render into portrait.
+   */
+  function resize(targetW: number, targetH: number) {
+    const winW = window.innerWidth;
+    const winH = window.innerHeight;
+
+    // Scale target to fit within the window
+    const scale = Math.min(winW / targetW, winH / targetH);
+    const scaledW = targetW * scale;
+    const scaledH = targetH * scale;
+
+    // Viewport offset centers the crop
+    viewportX = (scaledW - winW) / 2;
+    viewportY = (scaledH - winH) / 2;
+    viewportW = winW;
+    viewportH = winH;
+
+    canvas.width = targetW;
+    canvas.height = targetH;
+    gl.uniform2f(uResolution, targetW, targetH);
   }
 
   // ── GameView object ──
@@ -248,11 +264,21 @@ export function createGameView(canvas: HTMLCanvasElement): GameView {
     gl,
     animationFrame: undefined,
 
-    resize(width: number, height: number) {
-      gl.viewport(0, 0, width, height);
-      gl.canvas.width = width;
-      gl.canvas.height = height;
-      gl.uniform2f(uResolution, width, height);
+    /**
+     * Resize by aspect ratio.
+     * For portrait phone camera: pass 3/4. For landscape: pass 16/9.
+     */
+    resizeByAspect(aspect: number) {
+      const winW = window.innerWidth;
+      const winH = window.innerHeight;
+      let w = winH * aspect;
+      let h = winW / aspect;
+      if (w > winW) {
+        w = winW;
+      } else {
+        h = winH;
+      }
+      resize(w, h);
     },
 
     pause() {
@@ -318,17 +344,15 @@ export function createGameView(canvas: HTMLCanvasElement): GameView {
 
       const videoStream = canvas.captureStream(fps);
 
-      // Try to capture microphone audio
       let audioStream: MediaStream | null = null;
       try {
         audioStream = await navigator.mediaDevices.getUserMedia({
           audio: { autoGainControl: false, noiseSuppression: false, echoCancellation: false },
         });
       } catch {
-        // No mic available — record video only
+        // No mic available
       }
 
-      // Combine video + audio into one stream
       const tracks = [...videoStream.getVideoTracks()];
       if (audioStream) {
         tracks.push(...audioStream.getAudioTracks());
@@ -351,7 +375,6 @@ export function createGameView(canvas: HTMLCanvasElement): GameView {
         const duration = Date.now() - recordStartTime;
         const blob = new Blob(chunks, { type: 'video/webm' });
         recorder = null;
-        // Stop mic tracks
         if (audioStream) {
           audioStream.getTracks().forEach((t) => t.stop());
         }

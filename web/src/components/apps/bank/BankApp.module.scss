@@ -8,11 +8,11 @@
 
 .balanceSection {
   padding: var(--s-4);
-  background: linear-gradient(135deg, var(--success) 0%, color-mix(in srgb, var(--success) 80%, #1a6b2e) 100%);
+  background: linear-gradient(135deg, var(--success) 0%, rgba(var(--success-rgb), 0.8) 100%);
   margin: var(--s-4) var(--s-4) 0;
   border-radius: var(--r-xl);
   color: white;
-  box-shadow: 0 8px 24px color-mix(in srgb, var(--success) 30%, transparent);
+  box-shadow: 0 8px 24px rgba(var(--success-rgb), 0.3);
   flex-shrink: 0;
 }
 
@@ -48,7 +48,7 @@
   font-size: var(--fs-footnote);
   font-weight: 700;
   cursor: pointer;
-  transition: transform var(--dur-1) var(--ease-standard), background var(--dur-2) var(--ease-standard);
+  transition: transform 120ms ease, background 180ms ease;
 
   &:active {
     transform: scale(0.96);
@@ -80,7 +80,7 @@
   gap: var(--s-1);
   margin-bottom: var(--s-3);
   padding: var(--s-1);
-  background: color-mix(in srgb, var(--surface-2) 80%, var(--bg));
+  background: rgba(var(--surface-2-rgb), 0.8);
   border-radius: var(--r-pill);
   border: 1px solid var(--border);
   flex-shrink: 0;
@@ -96,8 +96,8 @@
     font-weight: 600;
     cursor: pointer;
     transition:
-      background var(--dur-2) var(--ease-standard),
-      color var(--dur-2) var(--ease-standard);
+      background 180ms ease,
+      color 180ms ease;
   }
 }
 
@@ -123,7 +123,7 @@
   justify-content: space-between;
   padding: var(--s-3) var(--s-4);
   border-bottom: 1px solid var(--separator);
-  animation: tx-in var(--dur-3) var(--ease-standard) both;
+  animation: tx-in 260ms ease both;
 
   &:last-child {
     border-bottom: none;
@@ -210,7 +210,7 @@
   justify-content: center;
   z-index: 1000;
   padding: var(--s-4);
-  animation: fade-in var(--dur-2) var(--ease-standard);
+  animation: fade-in 180ms ease;
 }
 
 @keyframes fade-in {
@@ -226,7 +226,7 @@
   width: 100%;
   max-width: 320px;
   box-shadow: var(--shadow-3);
-  animation: modal-up var(--dur-3) var(--ease-standard);
+  animation: modal-up 260ms ease;
 }
 
 @keyframes modal-up {
@@ -263,10 +263,10 @@
     background: var(--surface-2);
     color: var(--text);
     outline: none;
-    transition: border-color var(--dur-2) var(--ease-standard);
+    transition: border-color 180ms ease;
 
     &:focus {
-      border-color: color-mix(in srgb, var(--success) 50%, var(--border));
+      border-color: rgba(var(--success-rgb), 0.5);
       background: var(--surface);
     }
 
@@ -292,7 +292,7 @@
   font-size: var(--fs-footnote);
   font-weight: 700;
   cursor: pointer;
-  transition: transform var(--dur-1) var(--ease-standard);
+  transition: transform 120ms ease;
 
   &:active {
     transform: scale(0.97);
@@ -309,8 +309,8 @@
   font-size: var(--fs-footnote);
   font-weight: 700;
   cursor: pointer;
-  box-shadow: 0 4px 12px color-mix(in srgb, var(--success) 28%, transparent);
-  transition: transform var(--dur-1) var(--ease-standard);
+  box-shadow: 0 4px 12px rgba(var(--success-rgb), 0.28);
+  transition: transform 120ms ease;
 
   &:active {
     transform: scale(0.97);

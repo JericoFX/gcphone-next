@@ -71,6 +71,26 @@
   --success: #34c759;
   --warning: #ff9500;
   --focus: rgba(0, 122, 255, 0.35);
+  --hover-bg: rgba(0, 0, 0, 0.04);
+  --active-bg: rgba(0, 0, 0, 0.08);
+  --tint-subtle: rgba(0, 122, 255, 0.1);
+  --tint-hover: rgba(0, 122, 255, 0.16);
+  --danger-subtle: rgba(255, 59, 48, 0.1);
+  --success-subtle: rgba(52, 199, 89, 0.1);
+  --warning-subtle: rgba(255, 149, 0, 0.1);
+
+  --tint-rgb: 0, 122, 255;
+  --tint-2-rgb: 10, 132, 255;
+  --danger-rgb: 255, 59, 48;
+  --success-rgb: 52, 199, 89;
+  --warning-rgb: 255, 149, 0;
+  --surface-rgb: 255, 255, 255;
+  --surface-2-rgb: 247, 247, 250;
+  --surface-3-rgb: 239, 239, 244;
+  --bg-rgb: 242, 242, 247;
+  --text-rgb: 17, 17, 17;
+  --border-rgb: 0, 0, 0;
+  --separator-rgb: 0, 0, 0;
 
   --kbd: rgba(0, 0, 0, 0.08);
   --kbd-border: rgba(0, 0, 0, 0.14);
@@ -107,6 +127,27 @@
     --success: #30d158;
     --warning: #ff9f0a;
     --focus: rgba(10, 132, 255, 0.42);
+    --hover-bg: rgba(255, 255, 255, 0.06);
+    --active-bg: rgba(255, 255, 255, 0.1);
+    --tint-subtle: rgba(10, 132, 255, 0.12);
+    --tint-hover: rgba(10, 132, 255, 0.2);
+    --danger-subtle: rgba(255, 69, 58, 0.12);
+    --success-subtle: rgba(48, 209, 88, 0.12);
+    --warning-subtle: rgba(255, 159, 10, 0.12);
+
+    --tint-rgb: 10, 132, 255;
+    --tint-2-rgb: 100, 210, 255;
+    --danger-rgb: 255, 69, 58;
+    --success-rgb: 48, 209, 88;
+    --warning-rgb: 255, 159, 10;
+    --surface-rgb: 28, 28, 30;
+    --surface-2-rgb: 44, 44, 46;
+    --surface-3-rgb: 58, 58, 60;
+    --bg-rgb: 0, 0, 0;
+    --text-rgb: 255, 255, 255;
+    --border-rgb: 255, 255, 255;
+    --separator-rgb: 84, 84, 88;
+
     --kbd: rgba(255, 255, 255, 0.1);
     --kbd-border: rgba(255, 255, 255, 0.14);
     --selection: rgba(10, 132, 255, 0.26);
@@ -134,6 +175,25 @@
   --success: #34c759;
   --warning: #ff9500;
   --focus: rgba(0, 122, 255, 0.35);
+  --hover-bg: rgba(0, 0, 0, 0.04);
+  --active-bg: rgba(0, 0, 0, 0.08);
+  --tint-subtle: rgba(0, 122, 255, 0.1);
+  --tint-hover: rgba(0, 122, 255, 0.16);
+  --danger-subtle: rgba(255, 59, 48, 0.1);
+  --success-subtle: rgba(52, 199, 89, 0.1);
+  --warning-subtle: rgba(255, 149, 0, 0.1);
+  --tint-rgb: 0, 122, 255;
+  --tint-2-rgb: 10, 132, 255;
+  --danger-rgb: 255, 59, 48;
+  --success-rgb: 52, 199, 89;
+  --warning-rgb: 255, 149, 0;
+  --surface-rgb: 255, 255, 255;
+  --surface-2-rgb: 247, 247, 250;
+  --surface-3-rgb: 239, 239, 244;
+  --bg-rgb: 242, 242, 247;
+  --text-rgb: 17, 17, 17;
+  --border-rgb: 0, 0, 0;
+  --separator-rgb: 0, 0, 0;
   --kbd: rgba(0, 0, 0, 0.08);
   --kbd-border: rgba(0, 0, 0, 0.14);
   --selection: rgba(0, 122, 255, 0.18);
@@ -184,6 +244,25 @@
   --success: #30d158;
   --warning: #ff9f0a;
   --focus: rgba(10, 132, 255, 0.42);
+  --hover-bg: rgba(255, 255, 255, 0.06);
+  --active-bg: rgba(255, 255, 255, 0.1);
+  --tint-subtle: rgba(10, 132, 255, 0.12);
+  --tint-hover: rgba(10, 132, 255, 0.2);
+  --danger-subtle: rgba(255, 69, 58, 0.12);
+  --success-subtle: rgba(48, 209, 88, 0.12);
+  --warning-subtle: rgba(255, 159, 10, 0.12);
+  --tint-rgb: 10, 132, 255;
+  --tint-2-rgb: 100, 210, 255;
+  --danger-rgb: 255, 69, 58;
+  --success-rgb: 48, 209, 88;
+  --warning-rgb: 255, 159, 10;
+  --surface-rgb: 28, 28, 30;
+  --surface-2-rgb: 44, 44, 46;
+  --surface-3-rgb: 58, 58, 60;
+  --bg-rgb: 0, 0, 0;
+  --text-rgb: 255, 255, 255;
+  --border-rgb: 255, 255, 255;
+  --separator-rgb: 84, 84, 88;
   --kbd: rgba(255, 255, 255, 0.1);
   --kbd-border: rgba(255, 255, 255, 0.14);
   --selection: rgba(10, 132, 255, 0.26);
@@ -297,8 +376,8 @@
   border-radius: var(--r-pill);
   background: rgba(120, 120, 128, 0.16);
   transition:
-    background var(--dur-2) var(--ease-standard),
-    border-color var(--dur-2) var(--ease-standard);
+    background 180ms ease,
+    border-color 180ms ease;
 }
 
 .ios18-switch__thumb {
@@ -310,7 +389,7 @@
   border-radius: var(--r-pill);
   background: #fff;
   box-shadow: var(--shadow-1);
-  transition: transform var(--dur-2) var(--ease-standard);
+  transition: transform 180ms ease;
 }
 
 .ios18-switch[aria-checked='true'] {
@@ -338,7 +417,7 @@
   flex-direction: column;
   background: radial-gradient(
     120% 100% at 50% 0%,
-    color-mix(in srgb, var(--surface) 72%, var(--bg)),
+    rgba(var(--surface-rgb), 0.72),
     var(--bg) 62%
   );
   font-family: var(--font-sans);
@@ -356,8 +435,8 @@
   padding: 0 12px;
   background: linear-gradient(
     180deg,
-    color-mix(in srgb, var(--surface) 92%, transparent),
-    color-mix(in srgb, var(--surface-2) 90%, transparent)
+    rgba(var(--surface-rgb), 0.92),
+    rgba(var(--surface-2-rgb), 0.9)
   );
   border-bottom: 1px solid var(--separator);
 }
@@ -386,9 +465,9 @@
   gap: 8px;
   cursor: pointer;
   transition:
-    transform var(--dur-1) var(--ease-standard),
-    box-shadow var(--dur-2) var(--ease-standard),
-    background var(--dur-2) var(--ease-standard);
+    transform 120ms ease,
+    box-shadow 180ms ease,
+    background 180ms ease;
 }
 
 .ios-icon-btn {
@@ -563,8 +642,8 @@
   padding: 10px 12px;
   outline: none;
   transition:
-    border-color var(--dur-2) var(--ease-standard),
-    box-shadow var(--dur-2) var(--ease-standard);
+    border-color 180ms ease,
+    box-shadow 180ms ease;
 }
 
 .ios-input::placeholder,
@@ -580,8 +659,8 @@
 .ios18-input:focus,
 .ios18-textarea:focus,
 .ios18-select:focus {
-  border-color: color-mix(in srgb, var(--tint) 60%, var(--border));
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--tint) 18%, transparent);
+  border-color: rgba(var(--tint-rgb), 0.6);
+  box-shadow: 0 0 0 4px rgba(var(--tint-rgb), 0.18);
 }
 
 .ios-chip,
@@ -591,19 +670,19 @@
   align-items: center;
   gap: 6px;
   border-radius: var(--r-pill);
-  border: 1px solid color-mix(in srgb, var(--tint) 30%, var(--border));
+  border: 1px solid rgba(var(--tint-rgb), 0.3);
   padding: 0 12px;
   font-size: var(--fs-caption1);
   font-weight: 700;
   letter-spacing: 0.01em;
   background: linear-gradient(
     180deg,
-    color-mix(in srgb, var(--tint) 20%, transparent),
-    color-mix(in srgb, var(--tint) 10%, transparent)
+    rgba(var(--tint-rgb), 0.2),
+    rgba(var(--tint-rgb), 0.1)
   );
-  color: color-mix(in srgb, var(--tint) 88%, #fff 12%);
+  color: rgba(var(--tint-rgb), 0.88);
   box-shadow:
-    0 4px 10px color-mix(in srgb, var(--tint) 18%, transparent),
+    0 4px 10px rgba(var(--tint-rgb), 0.18),
     inset 0 1px 0 rgba(255, 255, 255, 0.35);
 }
 
@@ -614,19 +693,19 @@
 }
 
 .ios18-motion-rise {
-  animation: ios18-rise-in var(--dur-3) var(--ease-standard);
+  animation: ios18-rise-in 260ms ease;
 }
 
 .ios18-motion-pop {
-  animation: ios18-pop-in var(--dur-2) var(--ease-standard);
+  animation: ios18-pop-in 180ms ease;
 }
 
 .ios18-motion-sheet {
-  animation: ios18-sheet-up var(--dur-3) var(--ease-standard);
+  animation: ios18-sheet-up 260ms ease;
 }
 
 .ios18-stagger > * {
-  animation: ios18-rise-in var(--dur-3) var(--ease-standard);
+  animation: ios18-rise-in 260ms ease;
 }
 
 .ios18-stagger > *:nth-child(2) {
@@ -692,8 +771,8 @@
 }
 
 .ios18-material {
-  background: color-mix(in srgb, var(--surface) 84%, transparent);
-  border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+  background: rgba(var(--surface-rgb), 0.84);
+  border: 1px solid rgba(var(--border-rgb), 0.8);
 }
 
 .ios18-tabs {
@@ -724,9 +803,9 @@
   border-radius: var(--r-sm);
   background: linear-gradient(
     90deg,
-    color-mix(in srgb, var(--surface) 70%, var(--bg)) 0%,
-    color-mix(in srgb, var(--surface) 92%, var(--bg)) 50%,
-    color-mix(in srgb, var(--surface) 70%, var(--bg)) 100%
+    rgba(var(--surface-rgb), 0.7) 0%,
+    rgba(var(--surface-rgb), 0.92) 50%,
+    rgba(var(--surface-rgb), 0.7) 100%
   );
   background-size: 200% 100%;
   animation: ios18-skel 1200ms linear infinite;

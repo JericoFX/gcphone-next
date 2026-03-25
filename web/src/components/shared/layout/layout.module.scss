@@ -14,7 +14,7 @@
 
 .header {
   flex-shrink: 0;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--surface) 92%, transparent), color-mix(in srgb, var(--surface-2) 88%, transparent));
+  background: linear-gradient(180deg, rgba(var(--surface-rgb), 0.92), rgba(var(--surface-2-rgb), 0.88));
   border-bottom: 1px solid var(--separator, rgba(0, 0, 0, 0.1));
   
   &.transparent {
@@ -49,7 +49,7 @@
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
-  background: radial-gradient(120% 100% at 50% 0%, color-mix(in srgb, var(--surface) 72%, var(--bg)), var(--bg) 62%);
+  background: radial-gradient(120% 100% at 50% 0%, rgba(var(--surface-rgb), 0.72), var(--bg) 62%);
   
   &.paddingNone {
     padding: 0;
@@ -63,7 +63,7 @@
 .footer {
   flex-shrink: 0;
   padding: 0;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--surface) 92%, transparent), color-mix(in srgb, var(--surface-2) 90%, transparent));
+  background: linear-gradient(180deg, rgba(var(--surface-rgb), 0.92), rgba(var(--surface-2-rgb), 0.9));
   border-top: 1px solid var(--separator);
 
   &.transparent {
@@ -166,7 +166,7 @@
   display: flex;
   gap: 0;
   padding: 0;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--surface-2) 96%, transparent), color-mix(in srgb, var(--surface-3) 92%, transparent));
+  background: linear-gradient(180deg, rgba(var(--surface-2-rgb), 0.96), rgba(var(--surface-3-rgb), 0.92));
   border-top: 1px solid var(--separator);
   flex-shrink: 0;
 }
@@ -186,7 +186,7 @@
   font-size: var(--fs-caption1);
   font-weight: 600;
   cursor: pointer;
-  transition: color var(--dur-2) var(--ease-standard);
+  transition: color 180ms ease;
   position: relative;
 
   &::after {
@@ -198,14 +198,14 @@
     height: 3px;
     border-radius: var(--r-pill);
     background: transparent;
-    transition: background var(--dur-2) var(--ease-standard);
+    transition: background 180ms ease;
   }
 
   &.tabActive {
     color: var(--tint);
 
     &::after {
-      background: color-mix(in srgb, var(--tint) 82%, var(--surface));
+      background: rgba(var(--tint-rgb), 0.82);
     }
   }
 
@@ -253,5 +253,5 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 12px color-mix(in srgb, var(--danger) 22%, transparent);
+  box-shadow: 0 4px 12px rgba(var(--danger-rgb), 0.22);
 }

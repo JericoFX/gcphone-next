@@ -86,12 +86,12 @@
   font-size: var(--fs-caption2);
   font-weight: 700;
   color: #fff;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--tint) 62%, transparent), color-mix(in srgb, var(--tint-2) 48%, transparent));
+  background: linear-gradient(180deg, rgba(var(--tint-rgb), 0.62), rgba(var(--tint-2-rgb), 0.48));
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   box-shadow:
     inset 0 0.5px 0 rgba(255, 255, 255, 0.26),
-    0 2px 10px color-mix(in srgb, var(--tint) 30%, transparent);
+    0 2px 10px rgba(var(--tint-rgb), 0.3);
   transition: filter 140ms ease;
 
   &:active {

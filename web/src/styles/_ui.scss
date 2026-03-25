@@ -11,7 +11,7 @@
   font-weight: 700;
   color: #fff;
   background: var(--tint, #007AFF);
-  transition: transform var(--dur-1, 120ms) var(--ease-standard), filter var(--dur-2, 180ms) ease, opacity var(--dur-2, 180ms) ease;
+  transition: transform var(--dur-1, 120ms) ease, filter var(--dur-2, 180ms) ease, opacity var(--dur-2, 180ms) ease;
 
   &:active {
     transform: translateY(1px);
@@ -27,7 +27,7 @@
 
 .k-btn-tonal {
   color: var(--tint, #007AFF);
-  background: color-mix(in srgb, var(--tint, #007AFF) 12%, transparent);
+  background: var(--tint-subtle);
 }
 
 .k-list {
