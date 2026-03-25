@@ -48,7 +48,7 @@
 .sheet {
   width: 100%;
   height: 100%;
-  padding: var(--s-3);
+  padding: var(--s-4);
   display: flex;
   flex-direction: column;
   color: var(--cc-text);
@@ -113,8 +113,7 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  aspect-ratio: 1 / 1;
-  max-height: 80px;
+  min-height: 64px;
   border: none;
   border-radius: var(--r-xl);
   background: var(--cc-tile);
@@ -132,24 +131,24 @@
 }
 
 .grid-tile-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: var(--r-pill);
-  background: rgba(255, 255, 255, 0.1);
+  width: 36px;
+  height: 36px;
+  border-radius: var(--r-lg);
+  background: rgba(255, 255, 255, 0.15);
   display: grid;
   place-items: center;
   flex-shrink: 0;
 
   img {
-    width: 16px;
-    height: 16px;
+    width: 20px;
+    height: 20px;
     filter: brightness(0) invert(1);
     opacity: 0.9;
   }
 }
 
 .grid-tile-label {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
   color: var(--cc-text-soft);
   white-space: nowrap;
@@ -241,9 +240,9 @@
     background 180ms ease;
 
   img {
-    width: 20px;
-    height: 20px;
-    opacity: 0.85;
+    width: 22px;
+    height: 22px;
+    opacity: 0.9;
     filter: brightness(0) invert(1);
   }
 
@@ -278,7 +277,7 @@
 .slider-module {
   border-radius: var(--r-xl);
   background: var(--cc-tile);
-  padding: var(--s-3);
+  padding: var(--s-3) var(--s-4);
   display: grid;
   gap: var(--s-2);
 }
@@ -525,8 +524,8 @@
 }
 
 .close-btn {
-  background: var(--tint);
-  color: #fff;
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.9);
 }
 
 /* ── Animation ── */

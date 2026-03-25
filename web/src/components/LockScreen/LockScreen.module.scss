@@ -579,7 +579,7 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--s-3);
-  z-index: 4;
+  z-index: 50;
 }
 
 .expand-keypad-btn {
@@ -875,7 +875,7 @@
 .imei-modal-overlay {
   position: absolute;
   inset: 0;
-  z-index: 4;
+  z-index: 50;
   display: grid;
   place-items: end center;
   padding: var(--s-3);
@@ -1022,7 +1022,7 @@
 .tap-unlock-btn {
   position: absolute;
   inset: 0;
-  z-index: 4;
+  z-index: 50;
   background: transparent;
   border: none;
   cursor: pointer;

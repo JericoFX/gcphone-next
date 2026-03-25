@@ -469,11 +469,11 @@ export function LockScreen() {
         <button class={styles.bottomBtn} onClick={openCameraQuickAction}>
           <img src="./img/icons_ios/camera.svg" alt="" draggable={false} />
         </button>
-        <Show when={!hasPinSet()}>
-          <button class={styles.tapUnlockBtn} onClick={() => { phoneActions.unlockDirect(); finalizeUnlock(); }} />
-        </Show>
         <button class={styles.sosBtn} onClick={() => setEmergencySheetOpen(true)}>SOS</button>
       </div>
+      <Show when={!hasPinSet()}>
+        <button class={styles.tapUnlockBtn} onClick={() => { phoneActions.unlockDirect(); finalizeUnlock(); }} />
+      </Show>
     </div>
   );
 }
