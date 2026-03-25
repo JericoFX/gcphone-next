@@ -114,7 +114,7 @@ export function PhoneNotificationBanner(props: Props) {
               <button
                 class={styles.close}
                 type="button"
-                aria-label="Descartar notificacion"
+                aria-label={t('control.close', getStoredLanguage())}
                 onClick={(event) => {
                   event.stopPropagation();
                   notificationsActions.dismissCurrent();
