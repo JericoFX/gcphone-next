@@ -19,6 +19,7 @@ import { SheetIntro } from '../../shared/ui/SheetIntro';
 import { SocialOnboardingModal, type SocialOnboardingPayload } from '../../shared/ui/SocialOnboardingModal';
 import { AppFAB, AppScaffold } from '../../shared/layout';
 import { useLiveFlashlight } from '../../../hooks/useLiveFlashlight';
+import { useNotifications } from '../../../store/notifications';
 import { getStoredLanguage, t } from '../../../i18n';
 import type { NewsArticle, NewsScaleform, MockLiveMessage, LiveJoinResponse, NewsProfile, LiveReaction } from './NewsTypes';
 import { articleMediaUrl, isLiveArticle, articleAuthor, buildClockTime, NEWS_MOCK_USERS, NEWS_MOCK_LINES, LIVE_REACTIONS } from './NewsTypes';
@@ -59,6 +60,11 @@ export function NewsApp() {
   const [scaleTicker, setScaleTicker] = createSignal('Desarrollo en curso...');
   const [statusMessage, setStatusMessage] = createSignal('');
   const liveFlashlight = useLiveFlashlight();
+  const [, notificationsActions] = useNotifications();
+  const [expandedArticle, setExpandedArticle] = createSignal<number | null>(null);
+  const [articleComments, setArticleComments] = createSignal<Array<{ id: number; author: string; text: string; time: string }>>([]);
+  const [commentInput, setCommentInput] = createSignal('');
+  const [selectedArticle, setSelectedArticle] = createSignal<NewsArticle | null>(null);
 
   let stopNewsMock: (() => void) | undefined;
 
@@ -253,8 +259,18 @@ export function NewsApp() {
     },
   });
 
-  useNuiCustomEvent('gcphone:news:newArticle', () => {
+  useNuiCustomEvent<NewsArticle | null>('gcphone:news:newArticle', (article) => {
     void load();
+    if (article && (article as any).breaking) {
+      notificationsActions.receive({
+        appId: 'news',
+        title: '🔴 ULTIMO MOMENTO',
+        message: sanitizeText(article.title || '', 100),
+        priority: 'high',
+        route: 'news',
+        durationMs: 6000,
+      });
+    }
   });
 
   useNuiCustomEvent<NewsArticle>('gcphone:news:liveStarted', (article) => {
@@ -408,7 +424,33 @@ export function NewsApp() {
   const media = useMediaAttachment({ onAttached: (url) => setMediaUrl(url) });
 
   const viewArticle = async (articleId: number) => {
+    const article = articles().find((a) => a.id === articleId);
+    if (article) {
+      setSelectedArticle(article);
+      void toggleComments(articleId);
+    }
     await fetchNui('newsViewArticle', { articleId });
+  };
+
+  const toggleComments = async (articleId: number) => {
+    if (expandedArticle() === articleId) {
+      setExpandedArticle(null);
+      setArticleComments([]);
+      return;
+    }
+    setExpandedArticle(articleId);
+    const result = await fetchNui<Array<{ id: number; author: string; text: string; time: string }>>('newsGetComments', { articleId }, []);
+    setArticleComments(result || []);
+  };
+
+  const postComment = async () => {
+    const text = commentInput().trim();
+    const articleId = expandedArticle();
+    if (!text || !articleId) return;
+    await fetchNui('newsPostComment', { articleId, text });
+    setCommentInput('');
+    const result = await fetchNui<Array<{ id: number; author: string; text: string; time: string }>>('newsGetComments', { articleId }, []);
+    setArticleComments(result || []);
   };
 
   const deleteArticle = async (articleId: number) => {
@@ -638,7 +680,55 @@ export function NewsApp() {
   const activeLiveMedia = createMemo(() => articleMediaUrl(activeLive()));
 
   return (
-    <AppScaffold title={t('news.title', language())} subtitle={t('news.subtitle', language())} onBack={() => router.goBack()}>
+    <AppScaffold title={t('news.title', language())} subtitle={t('news.subtitle', language())} onBack={() => { if (selectedArticle()) { setSelectedArticle(null); setExpandedArticle(null); setArticleComments([]); } else { router.goBack(); } }}>
+      {/* Article Detail View */}
+      <Show when={selectedArticle()}>
+        {(article) => (
+          <div class={styles.articleDetail}>
+            <Show when={articleMediaUrl(article())}>
+              <Show when={resolveMediaType(articleMediaUrl(article())) === 'image'}>
+                <img class={styles.articleDetailMedia} src={articleMediaUrl(article())} alt="" />
+              </Show>
+            </Show>
+            <div class={styles.articleDetailBody}>
+              <div class={styles.articleDetailMeta}>
+                <span>{articleAuthor(article())}</span>
+                <span>{article().created_at ? timeAgo(article().created_at!) : ''}</span>
+                <span class={styles.articleDetailCategory}>{article().category || 'general'}</span>
+              </div>
+              <h2 class={styles.articleDetailTitle}>{article().title}</h2>
+              <p class={styles.articleDetailContent}>{article().content}</p>
+            </div>
+            <div class={styles.commentsSection}>
+              <h4>{t('news.comments', language()) || 'Comentarios'}</h4>
+              <For each={articleComments()}>
+                {(comment) => (
+                  <div class={styles.commentItem}>
+                    <strong>{comment.author}</strong>
+                    <span>{comment.text}</span>
+                    <small>{comment.time ? timeAgo(comment.time) : ''}</small>
+                  </div>
+                )}
+              </For>
+              <Show when={articleComments().length === 0}>
+                <div class={styles.commentEmpty}>{t('news.no_comments', language()) || 'Sin comentarios'}</div>
+              </Show>
+              <div class={styles.commentInputRow}>
+                <input
+                  type="text"
+                  placeholder={t('news.write_comment', language()) || 'Escribe un comentario...'}
+                  value={commentInput()}
+                  onInput={(e) => setCommentInput(e.currentTarget.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && void postComment()}
+                />
+                <button onClick={() => void postComment()}>➤</button>
+              </div>
+            </div>
+          </div>
+        )}
+      </Show>
+
+      <Show when={!selectedArticle()}>
       <div class={styles.newsApp}>
         <Show when={statusMessage()}>
           <div class={styles.statusBanner}>{statusMessage()}</div>
@@ -722,8 +812,39 @@ export function NewsApp() {
                   </Show>
                 </Show>
                 <p>{article.content}</p>
-                <small>{article.category || 'general'}</small>
-                <button class={styles.deleteBtn} onClick={(event) => { event.stopPropagation(); void deleteArticle(article.id); }}>{t('action.delete', language())}</button>
+                <div class={styles.cardFooter}>
+                  <small>{article.category || 'general'}</small>
+                  <button class={styles.commentToggle} onClick={(e) => { e.stopPropagation(); void toggleComments(article.id); }}>
+                    💬 {t('news.comments', language()) || 'Comentarios'}
+                  </button>
+                  <button class={styles.deleteBtn} onClick={(event) => { event.stopPropagation(); void deleteArticle(article.id); }}>{t('action.delete', language())}</button>
+                </div>
+                <Show when={expandedArticle() === article.id}>
+                  <div class={styles.commentsSection} onClick={(e) => e.stopPropagation()}>
+                    <For each={articleComments()}>
+                      {(comment) => (
+                        <div class={styles.commentItem}>
+                          <strong>{comment.author}</strong>
+                          <span>{comment.text}</span>
+                          <small>{comment.time ? timeAgo(comment.time) : ''}</small>
+                        </div>
+                      )}
+                    </For>
+                    <Show when={articleComments().length === 0}>
+                      <div class={styles.commentEmpty}>{t('news.no_comments', language()) || 'Sin comentarios'}</div>
+                    </Show>
+                    <div class={styles.commentInputRow}>
+                      <input
+                        type="text"
+                        placeholder={t('news.write_comment', language()) || 'Escribe un comentario...'}
+                        value={commentInput()}
+                        onInput={(e) => setCommentInput(e.currentTarget.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && void postComment()}
+                      />
+                      <button onClick={() => void postComment()}>➤</button>
+                    </div>
+                  </div>
+                </Show>
               </article>
             )}
           </For>
@@ -945,6 +1066,7 @@ export function NewsApp() {
           onClose={() => setShowOnboarding(false)}
         />
       </div>
+      </Show>
     </AppScaffold>
   );
 }

@@ -24,7 +24,8 @@
   width: var(--phone-shell-width);
   height: var(--phone-shell-height);
   pointer-events: auto;
-  transform-origin: bottom right;
+  transform-origin: top right;
+  transform: scale(1.25);
   filter: drop-shadow(0 20px 38px rgba(3, 8, 18, 0.42));
 }
 

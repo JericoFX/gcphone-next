@@ -30,15 +30,18 @@ export function WeatherApp() {
   const [gameMinute, setGameMinute] = createSignal(0);
   const [now, setNow] = createSignal(new Date());
 
+  const isNight = createMemo(() => gameHour() < 6 || gameHour() >= 20);
+
   const weatherIcon = createMemo(() => {
     const c = condition().toLowerCase();
+    const night = isNight();
     if (c.includes('lluv') || c.includes('rain')) return '🌧️';
     if (c.includes('torment') || c.includes('thunder')) return '⛈️';
     if (c.includes('niev') || c.includes('snow') || c.includes('ventis') || c.includes('blizzard')) return '🌨️';
     if (c.includes('niebla') || c.includes('fog') || c.includes('smog')) return '🌫️';
-    if (c.includes('nubl') || c.includes('cloud') || c.includes('cubiert') || c.includes('overcast')) return '☁️';
-    if (c.includes('despej') || c.includes('clear') || c.includes('despe')) return '☀️';
-    return '🌤️';
+    if (c.includes('nubl') || c.includes('cloud') || c.includes('cubiert') || c.includes('overcast')) return night ? '☁️' : '☁️';
+    if (c.includes('despej') || c.includes('clear') || c.includes('despe')) return night ? '🌙' : '☀️';
+    return night ? '🌙' : '🌤️';
   });
 
   const updatedLabel = createMemo(() => formatTime(now(), language(), { hour: '2-digit', minute: '2-digit' }));
@@ -77,7 +80,7 @@ export function WeatherApp() {
       onBack={() => router.goBack()}
       bodyPadding='none'
       transparent
-      bodyClass={styles.body}
+      bodyClass={`${styles.body} ${isNight() ? styles.bodyNight : ''}`}
     >
       <ScreenState loading={loading()} empty={false} emptyTitle={t('weather.empty_title', language())} emptyDescription={t('weather.empty_desc', language())}>
         <div class={styles.screen}>

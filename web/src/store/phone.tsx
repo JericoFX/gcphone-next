@@ -33,6 +33,9 @@ interface PhoneContextValue {
     setMessageTone: (tone: string) => void;
     setVolume: (volume: number) => void;
     setTheme: (theme: 'auto' | 'light' | 'dark') => void;
+    setAccentColor: (color: string) => void;
+    setFontSize: (size: string) => void;
+    setPhoneCase: (phoneCase: string) => void;
     setLanguage: (language: 'es' | 'en' | 'pt' | 'fr') => void;
     setAudioProfile: (audioProfile: 'normal' | 'street' | 'vehicle' | 'silent') => void;
     setLockCode: (code: string) => void;
@@ -65,6 +68,9 @@ const defaultSettings: PhoneSettings = {
   theme: 'light',
   language: 'es',
   audioProfile: 'normal',
+  accentColor: window.localStorage.getItem('gcphone:accentColor') || 'blue',
+  fontSize: window.localStorage.getItem('gcphone:fontSize') || 'default',
+  phoneCase: window.localStorage.getItem('gcphone:phoneCase') || 'default',
   streamerMode: false
 };
 
@@ -360,6 +366,21 @@ export const PhoneProvider: ParentComponent = (props) => {
       if (isReadOnly()) return;
       setState('settings', 'theme', theme);
       fetchNui('setTheme', { theme });
+    },
+    setAccentColor: (color: string) => {
+      if (isReadOnly()) return;
+      setState('settings', 'accentColor', color);
+      window.localStorage.setItem('gcphone:accentColor', color);
+    },
+    setFontSize: (size: string) => {
+      if (isReadOnly()) return;
+      setState('settings', 'fontSize', size);
+      window.localStorage.setItem('gcphone:fontSize', size);
+    },
+    setPhoneCase: (phoneCase: string) => {
+      if (isReadOnly()) return;
+      setState('settings', 'phoneCase', phoneCase);
+      window.localStorage.setItem('gcphone:phoneCase', phoneCase);
     },
     setLanguage: (language: 'es' | 'en' | 'pt' | 'fr') => {
       if (isReadOnly()) return;

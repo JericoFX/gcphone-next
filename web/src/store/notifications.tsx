@@ -5,6 +5,20 @@ import { sanitizeText } from '../utils/sanitize';
 import { fetchNui } from '../utils/fetchNui';
 import type { PhoneNotification } from '../types';
 
+export type FocusModeId = 'off' | 'personal' | 'work' | 'driving' | 'sleep';
+
+export interface FocusModeConfig {
+  allowedApps: string[];
+  autoReply?: string;
+}
+
+const DEFAULT_FOCUS_CONFIGS: Record<string, FocusModeConfig> = {
+  personal: { allowedApps: ['messages', 'calls', 'mail'], autoReply: '' },
+  work: { allowedApps: ['calls', 'mail', 'messages', 'notes'], autoReply: '' },
+  driving: { allowedApps: ['calls', 'maps'], autoReply: '' },
+  sleep: { allowedApps: ['calls'], autoReply: '' },
+};
+
 interface NotificationsState {
   queue: PhoneNotification[];
   history: PhoneNotification[];
@@ -12,6 +26,8 @@ interface NotificationsState {
   doNotDisturb: boolean;
   airplaneMode: boolean;
   silentMode: boolean;
+  focusMode: FocusModeId;
+  focusModeConfigs: Record<string, FocusModeConfig>;
   brightness: number;
   controlCenterOpen: boolean;
   notificationCenterOpen: boolean;
@@ -30,6 +46,9 @@ interface NotificationsActions {
   setDoNotDisturb: (value: boolean) => void;
   setAirplaneMode: (value: boolean) => void;
   setSilentMode: (value: boolean) => void;
+  setFocusMode: (mode: FocusModeId) => void;
+  cycleFocusMode: () => void;
+  updateFocusModeConfig: (mode: string, config: Partial<FocusModeConfig>) => void;
   setBrightness: (value: number) => void;
   toggleControlCenter: () => void;
   setControlCenterOpen: (value: boolean) => void;
@@ -115,6 +134,14 @@ export const NotificationsProvider: ParentComponent = (props) => {
   const persistedMutedAppsRaw = window.localStorage.getItem('gcphone:mutedApps');
   const persistedMutedApps = normalizeMutedApps(persistedMutedAppsRaw ? safeJsonParse(persistedMutedAppsRaw) : null);
 
+  const persistedFocusMode = (window.localStorage.getItem('gcphone:focusMode') || 'off') as FocusModeId;
+  const persistedFocusConfigs = (() => {
+    const raw = window.localStorage.getItem('gcphone:focusModeConfigs');
+    if (!raw) return { ...DEFAULT_FOCUS_CONFIGS };
+    const parsed = safeJsonParse(raw);
+    return parsed && typeof parsed === 'object' ? { ...DEFAULT_FOCUS_CONFIGS, ...parsed } : { ...DEFAULT_FOCUS_CONFIGS };
+  })();
+
   const [state, setState] = createStore<NotificationsState>({
     queue: [],
     history: [],
@@ -122,6 +149,8 @@ export const NotificationsProvider: ParentComponent = (props) => {
     doNotDisturb: false,
     airplaneMode: false,
     silentMode: false,
+    focusMode: persistedFocusMode,
+    focusModeConfigs: persistedFocusConfigs,
     brightness: 1,
     controlCenterOpen: false,
     notificationCenterOpen: false,
@@ -166,6 +195,11 @@ export const NotificationsProvider: ParentComponent = (props) => {
       if (state.mutedApps.includes(next.appId) && next.priority !== 'high') return;
 
       if (state.doNotDisturb && next.priority !== 'high') return;
+
+      if (state.focusMode !== 'off' && next.priority !== 'high') {
+        const config = state.focusModeConfigs[state.focusMode];
+        if (config && !config.allowedApps.includes(next.appId)) return;
+      }
 
       setState('history', (current) => [next, ...current.filter((item) => item.id !== next.id)].slice(0, MAX_HISTORY));
 
@@ -245,6 +279,21 @@ export const NotificationsProvider: ParentComponent = (props) => {
     setSilentMode: (value) => {
       setState('silentMode', !!value);
     },
+    setFocusMode: (mode: FocusModeId) => {
+      setState('focusMode', mode);
+      window.localStorage.setItem('gcphone:focusMode', mode);
+    },
+    cycleFocusMode: () => {
+      const modes: FocusModeId[] = ['off', 'personal', 'work', 'driving', 'sleep'];
+      const current = modes.indexOf(state.focusMode);
+      const next = modes[(current + 1) % modes.length];
+      setState('focusMode', next);
+      window.localStorage.setItem('gcphone:focusMode', next);
+    },
+    updateFocusModeConfig: (mode: string, config: Partial<FocusModeConfig>) => {
+      setState('focusModeConfigs', mode, (prev) => ({ ...prev, ...config }));
+      window.localStorage.setItem('gcphone:focusModeConfigs', JSON.stringify(state.focusModeConfigs));
+    },
     setBrightness: (value) => {
       const next = Math.max(0.4, Math.min(1.2, Number(value) || 1));
       setState('brightness', next);
@@ -306,6 +355,13 @@ export const NotificationsProvider: ParentComponent = (props) => {
 
   useNuiCustomEvent<Partial<PhoneNotification>>('phone:notification', (payload) => {
     actions.receive(payload || {});
+  });
+
+  useNuiCustomEvent<{ mode?: string }>('phone:focusMode', (payload) => {
+    const mode = payload?.mode;
+    if (mode === 'off' || mode === 'personal' || mode === 'work' || mode === 'driving' || mode === 'sleep') {
+      actions.setFocusMode(mode);
+    }
   });
 
   createEffect(() => {

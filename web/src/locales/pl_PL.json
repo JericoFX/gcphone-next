@@ -68,6 +68,7 @@
     "lock.unlock_device": "Odblokuj Gcphone-Next",
     "lock.pin_incorrect": "Bledny PIN ({attempts})",
     "lock.swipe_up": "Przesun w gore aby odblokowac",
+    "lock.tap_to_unlock": "Dotknij aby odblokowac",
     "lock.notifications": "Powiadomienia",
     "lock.no_notifications": "Brak powiadomien",
     "lock.device_info": "Info urzadzenia",

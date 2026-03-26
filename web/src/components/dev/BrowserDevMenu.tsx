@@ -1,5 +1,5 @@
 import { Show, createSignal, onCleanup, onMount } from 'solid-js';
-import { mockContacts, mockMessages, mockPhoneInit, mockShowPhone } from '../../utils/debugData';
+import { mockContacts, mockMessages, mockPhoneInit, mockPhoneSetup, mockShowPhone, mockHidePhone, mockNotification, mockMiniApp, mockAirDrop, mockTyping } from '../../utils/debugData';
 import { isEnvBrowser } from '../../utils/misc';
 
 const panelStyle = {
@@ -52,10 +52,15 @@ export function BrowserDevMenu() {
       <div style={panelStyle}>
         <strong>gcphone Browser Dev</strong>
         <span>Ctrl+Shift+D</span>
-        <button style={buttonStyle} onClick={() => mockPhoneInit()}>Mock initPhone</button>
-        <button style={buttonStyle} onClick={() => mockShowPhone()}>Mock showPhone</button>
+        <button style={buttonStyle} onClick={() => mockPhoneInit()}>Show Phone</button>
+        <button style={buttonStyle} onClick={() => mockPhoneSetup()}>Setup Wizard</button>
+        <button style={buttonStyle} onClick={() => mockHidePhone()}>Hide Phone</button>
+        <button style={buttonStyle} onClick={() => mockNotification()}>Notification (hidden)</button>
         <button style={buttonStyle} onClick={() => mockContacts()}>Mock contacts</button>
         <button style={buttonStyle} onClick={() => mockMessages()}>Mock messages</button>
+        <button style={buttonStyle} onClick={() => mockMiniApp()}>Mock MiniApp</button>
+        <button style={buttonStyle} onClick={() => mockAirDrop()}>Mock AirDrop</button>
+        <button style={buttonStyle} onClick={() => mockTyping()}>Mock Typing</button>
       </div>
     </Show>
   );

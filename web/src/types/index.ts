@@ -74,6 +74,10 @@ export interface PhoneSettings {
   theme: 'auto' | 'light' | 'dark';
   language?: AppLanguage;
   audioProfile?: 'normal' | 'street' | 'vehicle' | 'silent';
+  accentColor?: string;
+  fontSize?: string;
+  phoneCase?: string;
+  carplayEnabled?: boolean;
   streamerMode?: boolean;
 }
 

@@ -6,7 +6,7 @@ import type { PhoneSetupPayload } from '../../types';
 import { languages } from '../apps/settings/settingsShared';
 import styles from './PhoneSetup.module.scss';
 
-const STEP_LABELS = ['setup.step.language', 'setup.step.security', 'setup.step.identity', 'Resumen'] as const;
+const STEP_LABELS = ['setup.step.language', 'setup.step.security', 'setup.step.identity', 'setup.step.summary', 'setup.step.theme'] as const;
 
 function sanitizeUsername(value: string) {
   return value.toLowerCase().replace(/\s+/g, '').replace(/[^a-z0-9._-]/g, '').slice(0, 32);
@@ -339,45 +339,44 @@ export function PhoneSetup() {
           </Show>
 
           <Show when={step() === 3}>
-            <>
-              <section class={styles.section}>
-                <div class={styles.sectionHeader}>
-                  <h3>{copy().summaryTitle}</h3>
-                  <p>{copy().summaryDesc}</p>
-                </div>
+            <section class={styles.section}>
+              <div class={styles.sectionHeader}>
+                <h3>{copy().summaryTitle}</h3>
+                <p>{copy().summaryDesc}</p>
+              </div>
+              <div class={styles.summaryGrid}>
+                <div class={styles.summaryRow}><span>{copy().reviewLanguage}</span><strong>{selectedLanguageLabel()}</strong></div>
+                <div class={styles.summaryRow}><span>{copy().reviewPin}</span><strong>{copy().hiddenPin}</strong></div>
+                <Show when={mailEnabled()}>
+                  <div class={styles.summaryRow}><span>{copy().reviewMail}</span><strong>{mailAlias()}@{mailDomain()}</strong></div>
+                </Show>
+                <div class={styles.summaryRow}><span>{copy().reviewSnap}</span><strong>{snapUsername()}</strong></div>
+                <div class={styles.summaryRow}><span>{copy().reviewChirp}</span><strong>{chirpUsername()}</strong></div>
+                <div class={styles.summaryRow}><span>{copy().reviewClips}</span><strong>{clipsUsername()}</strong></div>
+              </div>
+            </section>
+          </Show>
 
-                <div class={styles.summaryGrid}>
-                  <div class={styles.summaryRow}><span>{copy().reviewLanguage}</span><strong>{selectedLanguageLabel()}</strong></div>
-                  <div class={styles.summaryRow}><span>{copy().reviewPin}</span><strong>{copy().hiddenPin}</strong></div>
-                  <Show when={mailEnabled()}>
-                    <div class={styles.summaryRow}><span>{copy().reviewMail}</span><strong>{mailAlias()}@{mailDomain()}</strong></div>
-                  </Show>
-                  <div class={styles.summaryRow}><span>{copy().reviewSnap}</span><strong>{snapUsername()}</strong></div>
-                  <div class={styles.summaryRow}><span>{copy().reviewChirp}</span><strong>{chirpUsername()}</strong></div>
-                  <div class={styles.summaryRow}><span>{copy().reviewClips}</span><strong>{clipsUsername()}</strong></div>
+          <Show when={step() === 4}>
+            <section class={styles.section}>
+              <div class={styles.sectionHeader}>
+                <h3>{t('setup.theme.title', currentLanguage()) || 'Tema'}</h3>
+                <p>{t('setup.theme.description', currentLanguage()) || 'Elige como se ve tu telefono'}</p>
+              </div>
+              <div class={styles.themePicker}>
+                <div class={styles.themePreview}>
+                  <PhonePreviewSvg theme={theme()} />
                 </div>
-              </section>
-
-              <section class={styles.section}>
-                <div class={styles.sectionHeader}>
-                  <h3>{t('setup.theme.title', currentLanguage()) || 'Tema'}</h3>
-                  <p>{t('setup.theme.description', currentLanguage()) || 'Elige como se ve tu telefono'}</p>
+                <div class={`ios-segment ${styles.themeSegment}`}>
+                  <button class="ios-segment-btn" classList={{ 'ios-segment-btn-active': theme() === 'light' }} onClick={() => setTheme('light')}>Light</button>
+                  <button class="ios-segment-btn" classList={{ 'ios-segment-btn-active': theme() === 'dark' }} onClick={() => setTheme('dark')}>Dark</button>
+                  <button class="ios-segment-btn" classList={{ 'ios-segment-btn-active': theme() === 'auto' }} onClick={() => setTheme('auto')}>Auto</button>
                 </div>
-                <div class={styles.themePicker}>
-                  <div class={styles.themePreview}>
-                    <PhonePreviewSvg theme={theme()} />
-                  </div>
-                  <div class={`ios-segment ${styles.themeSegment}`}>
-                    <button class="ios-segment-btn" classList={{ 'ios-segment-btn-active': theme() === 'light' }} onClick={() => setTheme('light')}>Light</button>
-                    <button class="ios-segment-btn" classList={{ 'ios-segment-btn-active': theme() === 'dark' }} onClick={() => setTheme('dark')}>Dark</button>
-                    <button class="ios-segment-btn" classList={{ 'ios-segment-btn-active': theme() === 'auto' }} onClick={() => setTheme('auto')}>Auto</button>
-                  </div>
-                  <p class={styles.themeHint}>
-                    {t('setup.theme.auto_hint', currentLanguage()) || 'Auto usa el tema del sistema'}
-                  </p>
-                </div>
-              </section>
-            </>
+                <p class={styles.themeHint}>
+                  {t('setup.theme.auto_hint', currentLanguage()) || 'Auto usa el tema del sistema'}
+                </p>
+              </div>
+            </section>
           </Show>
 
           <Show when={error()}>

@@ -4,6 +4,13 @@
     linear-gradient(180deg, #65b9ff 0%, #4a8df7 45%, #355dc9 100%);
 }
 
+.body-night {
+  background:
+    radial-gradient(80% 60% at 30% 20%, rgba(255, 255, 255, 0.04), transparent 50%),
+    radial-gradient(40% 30% at 70% 15%, rgba(200, 220, 255, 0.06), transparent 60%),
+    linear-gradient(180deg, #0a0e1a 0%, #111b33 40%, #1a2744 100%);
+}
+
 .screen {
   min-height: 100%;
   position: relative;
@@ -19,6 +26,21 @@
     radial-gradient(42% 28% at 82% 12%, rgba(255, 242, 165, 0.42), transparent 75%),
     linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent 30%);
   pointer-events: none;
+
+  .body-night & {
+    background:
+      radial-gradient(3px 3px at 15% 10%, rgba(255, 255, 255, 0.7), transparent 2px),
+      radial-gradient(2px 2px at 35% 22%, rgba(255, 255, 255, 0.5), transparent 2px),
+      radial-gradient(2px 2px at 55% 8%, rgba(255, 255, 255, 0.6), transparent 2px),
+      radial-gradient(3px 3px at 75% 18%, rgba(255, 255, 255, 0.4), transparent 2px),
+      radial-gradient(2px 2px at 90% 5%, rgba(255, 255, 255, 0.5), transparent 2px),
+      radial-gradient(2px 2px at 25% 35%, rgba(255, 255, 255, 0.3), transparent 2px),
+      radial-gradient(3px 3px at 65% 30%, rgba(255, 255, 255, 0.4), transparent 2px),
+      radial-gradient(2px 2px at 45% 42%, rgba(255, 255, 255, 0.35), transparent 2px),
+      radial-gradient(2px 2px at 85% 38%, rgba(255, 255, 255, 0.3), transparent 2px),
+      radial-gradient(2px 2px at 10% 45%, rgba(255, 255, 255, 0.25), transparent 2px),
+      radial-gradient(40% 30% at 70% 15%, rgba(180, 200, 255, 0.06), transparent 60%);
+  }
 }
 
 .hero {

@@ -13,6 +13,7 @@ import { parseSharedContactMessage } from '../../../utils/contactShare';
 import { uiPrompt } from '../../../utils/uiDialog';
 import { uiAlert } from '../../../utils/uiAlert';
 import { getPlayerCoords, formatLocationMessage } from '../../../utils/playerLocation';
+import { useInternalEvent } from '../../../utils/internalEvents';
 import { ActionSheet } from '../../shared/ui/ActionSheet';
 import { InlineNotice } from '../../shared/ui/InlineNotice';
 import { LetterAvatar } from '../../shared/ui/LetterAvatar';
@@ -109,7 +110,27 @@ export function MessagesApp() {
   const [routeConversationName, setRouteConversationName] = createSignal('');
   const [replyTo, setReplyTo] = createSignal<{ id: number; snippet: string; sender: string } | null>(null);
   const [forwardPayload, setForwardPayload] = createSignal<SharePayload | null>(null);
+  const [remoteTyping, setRemoteTyping] = createSignal<string | null>(null);
+  let typingTimeout: number | undefined;
+  let typingDebounce: number | undefined;
   const language = () => phoneState.settings.language || 'es';
+
+  const handleTypingInput = (value: string) => {
+    setMessageInput(value);
+    const convo = selectedConversation();
+    if (!convo || !value) return;
+    if (typingDebounce) return;
+    typingDebounce = window.setTimeout(() => { typingDebounce = undefined; }, 1500);
+    void fetchNui('messageTyping', { to: convo });
+  };
+
+  useInternalEvent<{ from?: string }>('messages:remoteTyping', (detail) => {
+    if (!detail?.from) return;
+    if (detail.from !== selectedConversation()) return;
+    setRemoteTyping(detail.from);
+    if (typingTimeout) clearTimeout(typingTimeout);
+    typingTimeout = window.setTimeout(() => setRemoteTyping(null), 3000);
+  });
 
   const getMediaUrl = (msg: any): string | undefined => sanitizeMediaUrl(msg.mediaUrl || msg.media_url) || undefined;
   const isReadOnly = createMemo(() => phoneState.accessMode === 'foreign-readonly');
@@ -406,7 +427,8 @@ export function MessagesApp() {
           messages={getConversationMessages()}
           messageInput={messageInput()}
           attachmentUrl={attachmentUrl()}
-          onInput={setMessageInput}
+          onInput={handleTypingInput}
+          isTyping={remoteTyping() !== null}
           onSend={sendMessage}
           onSendVoice={sendVoiceMessage}
           onRecordVoice={recordAndSendVoice}
@@ -624,6 +646,7 @@ function ConversationView(props: {
   readOnly?: boolean;
   readOnlyOwnerName?: string;
   myNumber?: string;
+  isTyping?: boolean;
 }) {
   const router = useRouter();
   const language = () => getStoredLanguage();
@@ -754,6 +777,13 @@ function ConversationView(props: {
             </div>
           )}
         </For>
+        <Show when={props.isTyping}>
+          <div class={styles.typingIndicator}>
+            <span class={styles.typingDot} />
+            <span class={styles.typingDot} />
+            <span class={styles.typingDot} />
+          </div>
+        </Show>
         <div ref={messagesEnd} />
       </div>
 

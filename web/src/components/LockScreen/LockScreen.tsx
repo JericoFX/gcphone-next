@@ -472,7 +472,9 @@ export function LockScreen() {
         <button class={styles.sosBtn} onClick={() => setEmergencySheetOpen(true)}>SOS</button>
       </div>
       <Show when={!hasPinSet()}>
-        <button class={styles.tapUnlockBtn} onClick={() => { phoneActions.unlockDirect(); finalizeUnlock(); }} />
+        <button class={styles.tapUnlockBtn} onClick={() => { phoneActions.unlockDirect(); finalizeUnlock(); }}>
+          <span class={styles.tapUnlockLabel}>{t('lock.tap_to_unlock', language())}</span>
+        </button>
       </Show>
     </div>
   );

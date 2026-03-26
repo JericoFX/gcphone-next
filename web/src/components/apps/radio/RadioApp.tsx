@@ -177,7 +177,6 @@ export function RadioApp() {
 
   const connectToLiveKit = async (roomName: string, isHost: boolean) => {
     if (isEnvBrowser()) {
-      // Verified: isEnvBrowser() returns true when window.invokeNative is absent (browser dev mode)
       await new Promise(r => setTimeout(r, 300));
       setLivekitConnected(true);
       if (isHost) setMuted(false);

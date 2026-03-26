@@ -3411,6 +3411,29 @@ export async function handleBrowserNui<T = unknown>(eventName: string, data?: un
     return { success: true } as T;
   }
 
+  if (eventName === 'messageTyping') {
+    return {} as T;
+  }
+
+  if (eventName === 'gcphone:respondShare') {
+    return { success: true } as T;
+  }
+
+  if (eventName === 'gcphone:miniAppCallback') {
+    return { ok: true } as T;
+  }
+
+  if (eventName === 'newsGetComments') {
+    return [
+      { id: 1, author: 'Carlos', text: 'Gran articulo!', time: new Date().toISOString() },
+      { id: 2, author: 'Ana', text: 'Muy informativo', time: new Date().toISOString() },
+    ] as T;
+  }
+
+  if (eventName === 'newsPostComment') {
+    return { success: true } as T;
+  }
+
   return undefined;
 }
 import { emitInternalEvent } from '../utils/internalEvents';

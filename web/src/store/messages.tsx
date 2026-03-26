@@ -3,6 +3,7 @@ import { createStore } from 'solid-js/store';
 import { fetchNui } from '../utils/fetchNui';
 import { useNuiCustomEvent } from '../utils/useNui';
 import { sanitizeMediaUrl, sanitizePhone, sanitizeText } from '../utils/sanitize';
+import { emitInternalEvent } from '../utils/internalEvents';
 import type { Message } from '../types';
 
 interface MessagesState {
@@ -214,6 +215,11 @@ export const MessagesProvider: ParentComponent = (props) => {
     );
   });
   
+  useNuiCustomEvent<{ from?: string }>('messageTyping', (data) => {
+    if (!data?.from) return;
+    emitInternalEvent('messages:remoteTyping', { from: data.from });
+  });
+
   onMount(() => {
     actions.fetch();
   });

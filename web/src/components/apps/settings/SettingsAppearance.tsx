@@ -20,6 +20,34 @@ const themeOptions = [
   { id: 'dark', icon: '' },
 ] as const;
 
+const phoneCases = [
+  { id: 'default', preview: '#1c1c1e' },
+  { id: 'silver', preview: 'linear-gradient(135deg, #c0c0c0, #e8e8e8)' },
+  { id: 'gold', preview: 'linear-gradient(135deg, #c5a55a, #e8d48b)' },
+  { id: 'rosegold', preview: 'linear-gradient(135deg, #b76e79, #e8b4b8)' },
+  { id: 'midnight', preview: '#0a0a0f' },
+  { id: 'red', preview: '#c0272d' },
+  { id: 'blue', preview: '#1a4b8c' },
+  { id: 'green', preview: '#2d6a4f' },
+];
+
+const accentColors = [
+  { id: 'blue', hex: '#007aff' },
+  { id: 'purple', hex: '#af52de' },
+  { id: 'pink', hex: '#ff2d55' },
+  { id: 'red', hex: '#ff3b30' },
+  { id: 'orange', hex: '#ff9500' },
+  { id: 'green', hex: '#34c759' },
+  { id: 'teal', hex: '#5ac8fa' },
+];
+
+const fontSizes = [
+  { id: 'small', preview: '12px', label: { es: 'Pequeno', en: 'Small', fr: 'Petit', de: 'Klein', pt: 'Pequeno', ru: 'Маленький', pl: 'Maly', it: 'Piccolo' } },
+  { id: 'default', preview: '14px', label: { es: 'Normal', en: 'Default', fr: 'Normal', de: 'Normal', pt: 'Normal', ru: 'Обычный', pl: 'Domyslny', it: 'Normale' } },
+  { id: 'large', preview: '16px', label: { es: 'Grande', en: 'Large', fr: 'Grand', de: 'Gross', pt: 'Grande', ru: 'Большой', pl: 'Duzy', it: 'Grande' } },
+  { id: 'xl', preview: '18px', label: { es: 'Extra Grande', en: 'Extra Large', fr: 'Tres grand', de: 'Sehr gross', pt: 'Extra grande', ru: 'Огромный', pl: 'Bardzo duzy', it: 'Extra grande' } },
+] as const;
+
 const themeNames: Record<string, Record<string, string>> = {
   light: { es: 'Claro', en: 'Light', fr: 'Clair', de: 'Hell', pt: 'Claro', ru: 'Светлая', pl: 'Jasny', it: 'Chiaro' },
   dark:  { es: 'Oscuro', en: 'Dark', fr: 'Sombre', de: 'Dunkel', pt: 'Escuro', ru: 'Тёмная', pl: 'Ciemny', it: 'Scuro' },
@@ -104,6 +132,71 @@ export function SettingsAppearance(props: SettingsAppearanceProps) {
                 {themeNames[opt.id]?.[props.language()] || themeNames[opt.id]?.en || opt.id}
               </span>
               <Show when={props.phoneState.settings.theme === opt.id}>
+                <CheckIcon />
+              </Show>
+            </button>
+          )}
+        </For>
+      </div>
+
+      {/* Phone Case */}
+      <SectionHeader title={t('settings.phone_case', props.language()) || 'Funda'} />
+      <div style={{ display: 'flex', gap: '8px', padding: '4px 0 8px', 'flex-wrap': 'wrap' }}>
+        <For each={phoneCases}>
+          {(pc) => (
+            <button
+              style={{
+                width: '36px',
+                height: '36px',
+                'border-radius': '8px',
+                border: (props.phoneState.settings.phoneCase || 'default') === pc.id ? '2px solid var(--tint)' : '1px solid var(--border)',
+                background: pc.preview,
+                cursor: 'pointer',
+                transition: 'transform 120ms ease',
+                transform: (props.phoneState.settings.phoneCase || 'default') === pc.id ? 'scale(1.12)' : 'scale(1)',
+              }}
+              onClick={() => props.phoneActions.setPhoneCase(pc.id)}
+              aria-label={pc.id}
+            />
+          )}
+        </For>
+      </div>
+
+      {/* Accent Color */}
+      <SectionHeader title={t('settings.accent_color', props.language()) || 'Color de acento'} />
+      <div style={{ display: 'flex', gap: '10px', padding: '4px 0 8px', 'flex-wrap': 'wrap' }}>
+        <For each={accentColors}>
+          {(color) => (
+            <button
+              style={{
+                width: '36px',
+                height: '36px',
+                'border-radius': '50%',
+                border: props.phoneState.settings.accentColor === color.id ? '3px solid var(--text)' : '2px solid var(--border)',
+                background: color.hex,
+                cursor: 'pointer',
+                transition: 'transform 120ms ease',
+                transform: props.phoneState.settings.accentColor === color.id ? 'scale(1.15)' : 'scale(1)',
+              }}
+              onClick={() => props.phoneActions.setAccentColor(color.id)}
+              aria-label={color.id}
+            />
+          )}
+        </For>
+      </div>
+
+      {/* Font Size */}
+      <SectionHeader title={t('settings.font_size', props.language()) || 'Tamano de texto'} />
+      <div class="ios18-list">
+        <For each={fontSizes}>
+          {(size) => (
+            <button
+              class="ios18-cell"
+              style={{ cursor: 'pointer' }}
+              onClick={() => props.phoneActions.setFontSize(size.id)}
+            >
+              <span class="ios18-cell__title" style={{ 'font-size': size.preview }}>{size.label[props.language()] || size.label.en}</span>
+              <Show when={(props.phoneState.settings.fontSize || 'default') === size.id}>
                 <CheckIcon />
               </Show>
             </button>

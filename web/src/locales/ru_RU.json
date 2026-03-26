@@ -68,6 +68,7 @@
     "lock.unlock_device": "Разблокировать Gcphone-Next",
     "lock.pin_incorrect": "Неверный PIN ({attempts})",
     "lock.swipe_up": "Проведите вверх для разблокировки",
+    "lock.tap_to_unlock": "Нажмите для разблокировки",
     "lock.notifications": "Уведомления",
     "lock.no_notifications": "Нет уведомлений",
     "lock.device_info": "Инфо устройства",

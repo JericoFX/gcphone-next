@@ -68,6 +68,7 @@
     "lock.unlock_device": "Gcphone-Next entsperren",
     "lock.pin_incorrect": "Falscher PIN ({attempts})",
     "lock.swipe_up": "Nach oben wischen zum Entsperren",
+    "lock.tap_to_unlock": "Tippen zum Entsperren",
     "lock.notifications": "Benachrichtigungen",
     "lock.no_notifications": "Keine Benachrichtigungen",
     "lock.device_info": "Gerateinfo",

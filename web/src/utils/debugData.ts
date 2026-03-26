@@ -1,4 +1,5 @@
 import { isEnvBrowser } from './misc';
+import { emitInternalEvent } from './internalEvents';
 
 interface DebugEvent<T = unknown> {
   action: string;
@@ -22,36 +23,69 @@ export function debugData<P>(events: DebugEvent<P>[], timer = 1000): void {
   }
 }
 
+const MOCK_PHONE_DATA = {
+  phoneNumber: '555-1234',
+  wallpaper: './img/background/back001.jpg',
+  ringtone: 'call_1',
+  callRingtone: 'call_1',
+  notificationTone: 'notif_1',
+  messageTone: 'msg_1',
+  volume: 0.5,
+  lockCode: '',
+  theme: 'light',
+  language: 'es',
+  audioProfile: 'normal',
+  framework: 'qbcore',
+  imei: 'MOCK-1234-5678',
+  deviceOwnerName: 'Demo Player',
+  useLockScreen: false,
+};
+
 export function mockPhoneInit() {
-  debugData([
-    {
-      action: 'initPhone',
-      data: {
-        phoneNumber: '555-1234',
-        wallpaper: './img/background/back001.jpg',
-        ringtone: 'ring.ogg',
-        volume: 0.5,
-        lockCode: '1234',
-        theme: 'light'
-      }
-    }
-  ], 100);
+  if (!isEnvBrowser()) return;
+  setTimeout(() => {
+    emitInternalEvent('phone:init', MOCK_PHONE_DATA);
+    setTimeout(() => emitInternalEvent('phone:show', MOCK_PHONE_DATA), 50);
+  }, 100);
+}
+
+export function mockPhoneSetup() {
+  if (!isEnvBrowser()) return;
+  const setupData = {
+    ...MOCK_PHONE_DATA,
+    requiresSetup: true,
+    useLockScreen: false,
+  };
+  setTimeout(() => {
+    emitInternalEvent('phone:init', setupData);
+    setTimeout(() => emitInternalEvent('phone:show', setupData), 50);
+  }, 100);
 }
 
 export function mockShowPhone() {
-  debugData([
-    {
-      action: 'showPhone',
-      data: {
-        phoneNumber: '555-1234',
-        wallpaper: './img/background/back001.jpg',
-        ringtone: 'ring.ogg',
-        volume: 0.5,
-        lockCode: '1234',
-        theme: 'light'
-      }
-    }
-  ], 100);
+  if (!isEnvBrowser()) return;
+  setTimeout(() => emitInternalEvent('phone:show', MOCK_PHONE_DATA), 100);
+}
+
+export function mockHidePhone() {
+  if (!isEnvBrowser()) return;
+  setTimeout(() => emitInternalEvent('phone:hide', {}), 100);
+}
+
+export function mockNotification() {
+  if (!isEnvBrowser()) return;
+  setTimeout(() => {
+    emitInternalEvent('phone:notification', {
+      id: `notif_${Date.now()}`,
+      appId: 'messages',
+      title: 'Maria Garcia',
+      message: 'Hey! Donde estas? Te estoy esperando en el parque.',
+      icon: '💬',
+      durationMs: 5000,
+      priority: 'normal',
+      route: 'messages',
+    });
+  }, 100);
 }
 
 export function mockContacts() {
@@ -106,4 +140,46 @@ export function mockMessages() {
       ]
     }
   ], 350);
+}
+
+export function mockMiniApp() {
+  if (!isEnvBrowser()) return;
+
+  setTimeout(() => {
+    emitInternalEvent('gcphone:openMiniApp', {
+      title: 'Menu del Restaurante',
+      url: 'https://picsum.photos/300/400',
+      height: 300,
+      resourceName: 'mock-restaurant',
+      options: [
+        { id: 'order_burger', label: 'Hamburguesa - $150', icon: '🍔', tone: 'default' },
+        { id: 'order_pizza', label: 'Pizza - $200', icon: '🍕', tone: 'default' },
+        { id: 'order_drink', label: 'Bebida - $50', icon: '🥤', tone: 'primary' },
+        { id: 'cancel', label: 'Cancelar', icon: '❌', tone: 'danger' },
+      ],
+      callbackEvent: 'gcphone:miniAppCallback',
+    });
+  }, 100);
+}
+
+export function mockAirDrop() {
+  if (!isEnvBrowser()) return;
+
+  setTimeout(() => {
+    emitInternalEvent('gcphone:incomingShare', {
+      fromServerId: 2,
+      fromName: 'Carlos Mendoza',
+      type: 'photo',
+      label: 'Foto de la escena',
+      requestId: `req_${Date.now()}`,
+    });
+  }, 100);
+}
+
+export function mockTyping() {
+  if (!isEnvBrowser()) return;
+
+  setTimeout(() => {
+    emitInternalEvent('messages:remoteTyping', { from: '555-5678' });
+  }, 100);
 }

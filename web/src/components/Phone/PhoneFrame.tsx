@@ -29,6 +29,21 @@ import styles from './PhoneFrame.module.scss';
 
 type AppRoute = string;
 
+const PHONE_CASE_COLORS: Record<string, { body: string; border: string; inner: string }> = {
+  default:  { body: '#1C1C1E', border: '#0E1420', inner: '#3A465A' },
+  silver:   { body: '#C0C0C0', border: '#8A8A8A', inner: '#D8D8D8' },
+  gold:     { body: '#C5A55A', border: '#8B7340', inner: '#E8D48B' },
+  rosegold: { body: '#B76E79', border: '#8A4F58', inner: '#E8B4B8' },
+  midnight: { body: '#0A0A0F', border: '#000000', inner: '#1A1A2E' },
+  red:      { body: '#C0272D', border: '#7A1A1E', inner: '#E04850' },
+  blue:     { body: '#1A4B8C', border: '#0E2E5A', inner: '#3A6FB0' },
+  green:    { body: '#2D6A4F', border: '#1A4030', inner: '#4A9A70' },
+};
+
+function phoneCaseColors(caseId?: string) {
+  return PHONE_CASE_COLORS[caseId || 'default'] || PHONE_CASE_COLORS.default;
+}
+
 function normalizeRoute(route: string): string {
   if (!route) return 'home';
   if (route.startsWith('messages')) return 'messages';
@@ -472,11 +487,22 @@ export const PhoneFrame: ParentComponent & { Router: () => JSX.Element } = (
           </LiveActivityProvider>
         </RouterContext.Provider>
       </div>
-      <img
-        class={styles.phoneFrame}
-        src='./img/phone/frame-clean.svg'
-        alt='frame'
-      />
+      {(() => {
+        const c = phoneCaseColors(phoneState.settings.phoneCase);
+        return (
+          <svg class={styles.phoneFrame} width="350" height="766" viewBox="0 0 350 766" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <mask id="screen-hole">
+                <rect width="350" height="766" fill="white"/>
+                <rect x="7" y="7" width="336" height="752" rx="34" fill="black"/>
+              </mask>
+            </defs>
+            <rect width="350" height="766" rx="39" fill={c.body} mask="url(#screen-hole)"/>
+            <rect x="1" y="1" width="348" height="764" rx="38" stroke={c.border} stroke-width="2"/>
+            <rect x="7" y="7" width="336" height="752" rx="34" stroke={c.inner} stroke-width="1.5"/>
+          </svg>
+        );
+      })()}
     </div>
   );
 };
@@ -485,6 +511,17 @@ function Router() {
   const phoneState = usePhoneState();
   const { currentRoute, direction, openApps } = useRouter();
   const routeLanguage = () => phoneState.settings.language || 'es';
+  const [leavingRoute, setLeavingRoute] = createSignal<string | null>(null);
+  let lastRoute = currentRoute();
+
+  createEffect(() => {
+    const current = currentRoute();
+    if (current !== lastRoute) {
+      setLeavingRoute(lastRoute);
+      lastRoute = current;
+      window.setTimeout(() => setLeavingRoute(null), 350);
+    }
+  });
 
   const renderRoute = (route: AppRoute) => {
     if (route === 'home') return <HomeScreen />;
@@ -516,12 +553,16 @@ function Router() {
           <div
             class={styles.routeView}
             classList={{
-              [styles.routeVisible]: currentRoute() === route,
-              [styles.routeHidden]: currentRoute() !== route,
+              [styles.routeVisible]: currentRoute() === route || leavingRoute() === route,
+              [styles.routeHidden]: currentRoute() !== route && leavingRoute() !== route,
               [styles.routeForward]:
                 currentRoute() === route && direction() === 'forward',
               [styles.routeBack]:
                 currentRoute() === route && direction() === 'back',
+              [styles.routeLeaveForward]:
+                leavingRoute() === route && direction() === 'forward',
+              [styles.routeLeaveBack]:
+                leavingRoute() === route && direction() === 'back',
               [styles.routeTransparent]: route === 'camera',
             }}
           >

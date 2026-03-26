@@ -5,6 +5,9 @@ import { LockScreen } from './components/LockScreen/LockScreen';
 import { PhoneSetup } from './components/Setup/PhoneSetup';
 import { ContactRequestNotification } from './components/shared/ContactRequest/ContactRequest';
 import { PhoneNotificationBanner } from './components/shared/notifications/PhoneNotificationBanner';
+import { IncomingShareModal } from './components/shared/ui/IncomingShareModal';
+import { MiniAppModal } from './components/shared/ui/MiniAppModal';
+import { CarPlayOverlay } from './components/shared/ui/CarPlayOverlay';
 import { PhoneAudioController } from './components/system/PhoneAudioController';
 import { fetchNui } from './utils/fetchNui';
 import { setNuiAuthToken } from './utils/fetchNui';
@@ -29,7 +32,7 @@ interface MusicNotificationState {
 }
 
 function PhoneContent() {
-  const [phoneState] = usePhone();
+  const [phoneState, phoneActions] = usePhone();
   const [notifications, notificationsActions] = useNotifications();
   const [prefersDark, setPrefersDark] = createSignal(false);
 
@@ -90,6 +93,10 @@ function PhoneContent() {
     });
   });
 
+  useInternalEvent('phone:lockPhone', () => {
+    phoneActions.lock();
+  });
+
   useInternalEvent<{ active?: boolean; listening?: boolean; peerId?: string | null }>('gcphone:nearbyVoiceState', (detail) => {
     const peerId = typeof detail?.peerId === 'string' ? detail.peerId.trim() : '';
 
@@ -132,6 +139,38 @@ function PhoneContent() {
     window.localStorage.setItem('gcphone:language', lang);
   });
 
+  const ACCENT_COLORS: Record<string, { tint: string; tintRgb: string; tint2: string }> = {
+    blue:   { tint: '#007aff', tintRgb: '0, 122, 255', tint2: '#0a84ff' },
+    purple: { tint: '#af52de', tintRgb: '175, 82, 222', tint2: '#bf5af2' },
+    pink:   { tint: '#ff2d55', tintRgb: '255, 45, 85', tint2: '#ff375f' },
+    red:    { tint: '#ff3b30', tintRgb: '255, 59, 48', tint2: '#ff453a' },
+    orange: { tint: '#ff9500', tintRgb: '255, 149, 0', tint2: '#ff9f0a' },
+    green:  { tint: '#34c759', tintRgb: '52, 199, 89', tint2: '#30d158' },
+    teal:   { tint: '#5ac8fa', tintRgb: '90, 200, 250', tint2: '#64d2ff' },
+  };
+
+  const FONT_SCALES: Record<string, string> = {
+    small: '0.88',
+    default: '1',
+    large: '1.12',
+    xl: '1.24',
+  };
+
+  createEffect(() => {
+    const accent = phoneState.settings.accentColor || 'blue';
+    const fontSize = phoneState.settings.fontSize || 'default';
+    const root = document.querySelector('.gcphone-app') as HTMLElement | null;
+    if (!root) return;
+
+    const colors = ACCENT_COLORS[accent] || ACCENT_COLORS.blue;
+    root.style.setProperty('--tint', colors.tint);
+    root.style.setProperty('--tint-rgb', colors.tintRgb);
+    root.style.setProperty('--tint-2', colors.tint2);
+
+    const scale = FONT_SCALES[fontSize] || '1';
+    document.documentElement.style.setProperty('--text-scale', scale);
+  });
+
   return (
     <div class="gcphone-app" classList={{ [themeClass()]: true }}>
       <Show when={phoneState.visible}>
@@ -141,6 +180,9 @@ function PhoneContent() {
               <>
                 <PhoneFrame.Router />
                 <ContactRequestNotification />
+                <IncomingShareModal />
+                <MiniAppModal />
+                <CarPlayOverlay />
               </>
             }>
               <PhoneSetup />

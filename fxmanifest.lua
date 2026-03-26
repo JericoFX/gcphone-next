@@ -32,6 +32,8 @@ files {
     'client/proximity.lua',
     'client/location_tracking.lua',
     'client/phone_drop.lua',
+    'client/miniapp.lua',
+    'client/carplay.lua',
     'client/music.lua',
     'client/txadmin.lua',
     'client/garage.lua',

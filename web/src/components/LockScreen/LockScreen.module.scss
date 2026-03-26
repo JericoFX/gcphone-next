@@ -1021,9 +1021,23 @@
 
 .tap-unlock-btn {
   position: absolute;
-  inset: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 120px;
   z-index: 50;
   background: transparent;
   border: none;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tap-unlock-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.7);
+  letter-spacing: 0.02em;
+  animation: swipe-pulse 2s ease-in-out infinite;
 }

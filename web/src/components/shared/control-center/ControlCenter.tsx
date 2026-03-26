@@ -5,7 +5,32 @@ import { usePhone } from '../../../store/phone';
 import { APP_BY_ID } from '../../../config/apps';
 import { appName, formatDate, t } from '../../../i18n';
 import { useInternalEvent, emitInternalEvent } from '../../../utils/internalEvents';
+import type { FocusModeId } from '../../../store/notifications';
 import styles from './ControlCenter.module.scss';
+
+const FOCUS_MODE_ICONS: Record<FocusModeId, string> = {
+  off: './img/icons_ios/ui-moon.svg',
+  personal: './img/icons_ios/ui-moon.svg',
+  work: './img/icons_ios/ui-briefcase.svg',
+  driving: './img/icons_ios/ui-car.svg',
+  sleep: './img/icons_ios/ui-moon.svg',
+};
+
+const FOCUS_MODE_LABELS: Record<FocusModeId, Record<string, string>> = {
+  off: { es: 'Enfoque', en: 'Focus', fr: 'Concentration', de: 'Fokus', pt: 'Foco', ru: 'Фокус', pl: 'Skupienie', it: 'Focus' },
+  personal: { es: 'Personal', en: 'Personal', fr: 'Personnel', de: 'Persoenlich', pt: 'Pessoal', ru: 'Личный', pl: 'Osobisty', it: 'Personale' },
+  work: { es: 'Trabajo', en: 'Work', fr: 'Travail', de: 'Arbeit', pt: 'Trabalho', ru: 'Работа', pl: 'Praca', it: 'Lavoro' },
+  driving: { es: 'Conduccion', en: 'Driving', fr: 'Conduite', de: 'Fahren', pt: 'Dirigindo', ru: 'Вождение', pl: 'Jazda', it: 'Guida' },
+  sleep: { es: 'Dormir', en: 'Sleep', fr: 'Sommeil', de: 'Schlafen', pt: 'Dormir', ru: 'Сон', pl: 'Sen', it: 'Sonno' },
+};
+
+function focusModeIcon(mode: FocusModeId): string {
+  return FOCUS_MODE_ICONS[mode] || FOCUS_MODE_ICONS.off;
+}
+
+function focusModeLabel(mode: FocusModeId, lang: string): string {
+  return FOCUS_MODE_LABELS[mode]?.[lang] || FOCUS_MODE_LABELS[mode]?.en || 'Focus';
+}
 
 export function ControlCenter() {
   const [notifications, notificationsActions] = useNotifications();
@@ -423,15 +448,15 @@ export function ControlCenter() {
               <button
                 class={styles.gridTile}
                 classList={{
-                  [styles.gridTileActive]: notifications.doNotDisturb,
-                  [styles.gridTilePurple]: notifications.doNotDisturb,
+                  [styles.gridTileActive]: notifications.focusMode !== 'off',
+                  [styles.gridTilePurple]: notifications.focusMode !== 'off',
                 }}
-                onClick={() => notificationsActions.setDoNotDisturb(!notifications.doNotDisturb)}
+                onClick={() => notificationsActions.cycleFocusMode()}
               >
                 <span class={styles.gridTileIcon}>
-                  <img src="./img/icons_ios/ui-moon.svg" alt="" draggable={false} />
+                  <img src={focusModeIcon(notifications.focusMode)} alt="" draggable={false} />
                 </span>
-                <span class={styles.gridTileLabel}>{t('control.dnd', language())}</span>
+                <span class={styles.gridTileLabel}>{focusModeLabel(notifications.focusMode, language())}</span>
               </button>
 
               <button

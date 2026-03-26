@@ -14,6 +14,10 @@ import { VirtualList } from '../../shared/ui/VirtualList';
 import type { WaveChatGroup, WaveChatInvite, WaveChatGroupMessage } from './WaveChatTypes';
 import styles from './WaveChatApp.module.scss';
 
+function highlightMentions(text: string, getContactName: (num: string) => string): string {
+  return text.replace(/@(\S+)/g, '<span style="color: var(--tint); font-weight: 600;">@$1</span>');
+}
+
 interface SelectableContact {
   display: string;
   number: string;
@@ -112,13 +116,18 @@ export function WaveChatGroupsTab(props: {
           </Show>
           <For each={props.selectedGroupMessages()}>
             {(msg) => (
-              <div class={styles.groupMsgRow}>
-                <div class={styles.groupMsgMeta}>
-                  <strong>{msg.sender_number ? props.getContactName(msg.sender_number) : t('wavechat.unknown_user', language())}</strong>
-                  <span>{timeAgo(msg.created_at)}</span>
-                </div>
+              <div
+                class={styles.groupMsgRow}
+                classList={{ [styles.groupMsgSystem]: (msg as any).is_system === true }}
+              >
+                <Show when={!(msg as any).is_system}>
+                  <div class={styles.groupMsgMeta}>
+                    <strong>{msg.sender_number ? props.getContactName(msg.sender_number) : t('wavechat.unknown_user', language())}</strong>
+                    <span>{timeAgo(msg.created_at)}</span>
+                  </div>
+                </Show>
                 <Show when={msg.message}>
-                  <span>{msg.message}</span>
+                  <span innerHTML={highlightMentions(msg.message || '', props.getContactName)} />
                 </Show>
                 <Show when={msg.media_url}>
                   {(mediaUrl) => {

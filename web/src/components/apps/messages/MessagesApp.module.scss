@@ -712,3 +712,84 @@
   object-fit: cover;
   border-radius: 6px;
 }
+
+// Typing indicator
+.typing-indicator {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 14px;
+  margin: 4px 12px;
+  background: var(--surface);
+  border-radius: 18px 18px 18px 6px;
+  width: fit-content;
+  max-width: 64px;
+}
+
+.typing-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text-2);
+  animation: typingBounce 1.4s ease-in-out infinite;
+
+  &:nth-child(2) { animation-delay: 0.2s; }
+  &:nth-child(3) { animation-delay: 0.4s; }
+}
+
+@keyframes typingBounce {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+  30% { transform: translateY(-6px); opacity: 1; }
+}
+
+// Bubble effects
+.bubble-slam {
+  animation: bubbleSlam 400ms cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+.bubble-loud {
+  animation: bubbleLoud 350ms ease-out forwards;
+}
+
+.bubble-gentle {
+  animation: bubbleGentle 600ms ease forwards;
+}
+
+.bubble-invisible {
+  position: relative;
+  overflow: hidden;
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-conic-gradient(
+      var(--surface) 0% 25%,
+      rgba(var(--text-rgb), 0.15) 0% 50%
+    ) 0 0 / 8px 8px;
+    border-radius: inherit;
+    pointer-events: none;
+    transition: opacity 300ms ease;
+  }
+
+  &.bubble-revealed::after {
+    opacity: 0;
+  }
+}
+
+@keyframes bubbleSlam {
+  0% { transform: scale(1.6); opacity: 0.5; }
+  60% { transform: scale(0.9); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes bubbleLoud {
+  0% { transform: scale(1.15) rotate(-1deg); }
+  50% { transform: scale(1.05) rotate(0.5deg); }
+  100% { transform: scale(1) rotate(0deg); }
+}
+
+@keyframes bubbleGentle {
+  0% { opacity: 0; transform: scale(0.8); }
+  100% { opacity: 1; transform: scale(1); }
+}

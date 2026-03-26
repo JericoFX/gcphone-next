@@ -36,6 +36,32 @@ interface MusicStatePayload {
 
 const DEFAULT_THUMB = './img/icons_ios/music.svg';
 
+interface PlaylistTrack {
+  url: string;
+  videoId?: string;
+  title: string;
+  thumbnail?: string;
+}
+
+interface Playlist {
+  id: string;
+  name: string;
+  tracks: PlaylistTrack[];
+}
+
+function loadPlaylists(): Playlist[] {
+  try {
+    const raw = window.localStorage.getItem('gcphone:musicPlaylists');
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch { return []; }
+}
+
+function savePlaylists(playlists: Playlist[]) {
+  window.localStorage.setItem('gcphone:musicPlaylists', JSON.stringify(playlists));
+}
+
 export function MusicApp() {
   const router = useRouter();
   const [phoneState] = usePhone();
@@ -63,6 +89,13 @@ export function MusicApp() {
   );
   const [showUrlSection, setShowUrlSection] = createSignal(false);
   const [currentThumb, setCurrentThumb] = createSignal('');
+  const [tab, setTab] = createSignal<'player' | 'playlists'>('player');
+  const [playlists, setPlaylists] = createSignal<Playlist[]>(loadPlaylists());
+  const [selectedPlaylist, setSelectedPlaylist] = createSignal<string | null>(null);
+  const [queue, setQueue] = createSignal<PlaylistTrack[]>([]);
+  const [queueIndex, setQueueIndex] = createSignal(0);
+  const [shuffleMode, setShuffleMode] = createSignal(false);
+  const [repeatMode, setRepeatMode] = createSignal<'off' | 'all' | 'one'>('off');
 
   const stateLabel = createMemo(() => {
     if (isPaused()) return 'Pausado';
@@ -299,8 +332,105 @@ export function MusicApp() {
     }
   };
 
+  const createPlaylist = (name: string) => {
+    const id = `pl_${Date.now()}`;
+    const updated = [...playlists(), { id, name, tracks: [] }];
+    setPlaylists(updated);
+    savePlaylists(updated);
+    setSelectedPlaylist(id);
+  };
+
+  const deletePlaylist = (id: string) => {
+    const updated = playlists().filter((p) => p.id !== id);
+    setPlaylists(updated);
+    savePlaylists(updated);
+    if (selectedPlaylist() === id) setSelectedPlaylist(null);
+  };
+
+  const addTrackToPlaylist = (playlistId: string, track: PlaylistTrack) => {
+    const updated = playlists().map((p) => {
+      if (p.id !== playlistId) return p;
+      if (p.tracks.some((t) => t.url === track.url || (t.videoId && t.videoId === track.videoId))) return p;
+      return { ...p, tracks: [...p.tracks, track] };
+    });
+    setPlaylists(updated);
+    savePlaylists(updated);
+  };
+
+  const removeTrackFromPlaylist = (playlistId: string, trackIndex: number) => {
+    const updated = playlists().map((p) => {
+      if (p.id !== playlistId) return p;
+      return { ...p, tracks: p.tracks.filter((_, i) => i !== trackIndex) };
+    });
+    setPlaylists(updated);
+    savePlaylists(updated);
+  };
+
+  const playPlaylist = (playlist: Playlist, startIndex = 0) => {
+    if (playlist.tracks.length === 0) return;
+    let tracks = [...playlist.tracks];
+    if (shuffleMode()) {
+      tracks = tracks.sort(() => Math.random() - 0.5);
+    }
+    setQueue(tracks);
+    setQueueIndex(startIndex);
+    void playTrackFromQueue(tracks[startIndex]);
+  };
+
+  const playTrackFromQueue = async (track: PlaylistTrack) => {
+    setBusyAction(true);
+    await fetchNui('musicPlay', {
+      ...(track.videoId ? { videoId: track.videoId } : { url: track.url }),
+      title: track.title,
+      volume: applyAudioProfile(volume() / 100),
+      distance: distance(),
+      private: privateMode(),
+    });
+    setNowPlaying(track.title);
+    persistNowPlaying(track.title);
+    setCurrentThumb(track.thumbnail || '');
+    setIsPlaying(true);
+    setIsPaused(false);
+    setBusyAction(false);
+  };
+
+  const playNext = () => {
+    if (queue().length === 0) return;
+    let next = queueIndex() + 1;
+    if (repeatMode() === 'one') {
+      void playTrackFromQueue(queue()[queueIndex()]);
+      return;
+    }
+    if (next >= queue().length) {
+      if (repeatMode() === 'all') next = 0;
+      else return;
+    }
+    setQueueIndex(next);
+    void playTrackFromQueue(queue()[next]);
+  };
+
+  const playPrev = () => {
+    if (queue().length === 0) return;
+    const prev = Math.max(0, queueIndex() - 1);
+    setQueueIndex(prev);
+    void playTrackFromQueue(queue()[prev]);
+  };
+
+  const activePlaylist = () => playlists().find((p) => p.id === selectedPlaylist());
+
   return (
     <AppScaffold title={t('music.title', language())} onBack={() => router.goBack()} bodyClass={styles.content}>
+      {/* Tab bar */}
+      <div class={styles.tabBar}>
+        <button class={styles.tabBtn} classList={{ [styles.tabBtnActive]: tab() === 'player' }} onClick={() => setTab('player')}>
+          {t('music.now_playing', language()) || 'Reproductor'}
+        </button>
+        <button class={styles.tabBtn} classList={{ [styles.tabBtnActive]: tab() === 'playlists' }} onClick={() => setTab('playlists')}>
+          Playlists
+        </button>
+      </div>
+
+      <Show when={tab() === 'player'}>
       {/* Disclaimer */}
       <Show when={!disclaimerDismissed()}>
         <div class={styles.disclaimer}>
@@ -450,16 +580,23 @@ export function MusicApp() {
         <div class={styles.results}>
           <For each={results()}>
             {(item) => (
-              <button class={styles.track} onClick={() => playFromResult(item)} disabled={busyAction()}>
-                <img src={item.thumbnail || DEFAULT_THUMB} alt={item.title} loading="lazy" />
-                <div class={styles.trackMeta}>
+              <div class={styles.track}>
+                <img src={item.thumbnail || DEFAULT_THUMB} alt={item.title} loading="lazy" onClick={() => playFromResult(item)} />
+                <div class={styles.trackMeta} onClick={() => playFromResult(item)}>
                   <div class={styles.trackTitle}>{item.title}</div>
                   <div class={styles.trackChannel}>{item.channel || t('music.channel_unnamed', language())}</div>
                 </div>
-                <div class={styles.trackPlayBtn}>
+                <Show when={playlists().length > 0}>
+                  <button class={styles.trackAddBtn} onClick={() => {
+                    const pl = playlists()[0];
+                    addTrackToPlaylist(pl.id, { url: `https://youtube.com/watch?v=${item.videoId}`, videoId: item.videoId, title: item.title, thumbnail: item.thumbnail });
+                    setStatus(`Agregado a "${pl.name}"`);
+                  }}>+</button>
+                </Show>
+                <div class={styles.trackPlayBtn} onClick={() => playFromResult(item)}>
                   <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
                 </div>
-              </button>
+              </div>
             )}
           </For>
         </div>
@@ -492,6 +629,73 @@ export function MusicApp() {
             </button>
           </div>
         </div>
+      </Show>
+
+      {/* Queue controls */}
+      <Show when={queue().length > 0}>
+        <div class={styles.divider} />
+        <div class={styles.queueControls}>
+          <button class={styles.queueBtn} onClick={playPrev} disabled={queueIndex() === 0 && repeatMode() !== 'all'}>⏮</button>
+          <span class={styles.queueInfo}>{queueIndex() + 1}/{queue().length}</span>
+          <button class={styles.queueBtn} onClick={playNext} disabled={queueIndex() >= queue().length - 1 && repeatMode() !== 'all'}>⏭</button>
+          <button class={styles.queueBtn} classList={{ [styles.queueBtnActive]: shuffleMode() }} onClick={() => setShuffleMode(!shuffleMode())}>🔀</button>
+          <button class={styles.queueBtn} classList={{ [styles.queueBtnActive]: repeatMode() !== 'off' }} onClick={() => setRepeatMode(repeatMode() === 'off' ? 'all' : repeatMode() === 'all' ? 'one' : 'off')}>
+            {repeatMode() === 'one' ? '🔂' : '🔁'}
+          </button>
+        </div>
+      </Show>
+      </Show>
+
+      {/* Playlists Tab */}
+      <Show when={tab() === 'playlists'}>
+        <Show when={!selectedPlaylist()} fallback={
+          <div class={styles.playlistDetail}>
+            <div class={styles.playlistDetailHeader}>
+              <button class={styles.backLink} onClick={() => setSelectedPlaylist(null)}>← Playlists</button>
+              <h3>{activePlaylist()?.name}</h3>
+              <button class={styles.playAllBtn} disabled={!activePlaylist()?.tracks.length} onClick={() => activePlaylist() && playPlaylist(activePlaylist()!)}>
+                ▶ {t('music.play_all', language()) || 'Reproducir todo'}
+              </button>
+            </div>
+            <Show when={activePlaylist()?.tracks.length === 0}>
+              <div class={styles.emptyPlaylist}>{t('music.empty_playlist', language()) || 'Playlist vacia. Busca canciones y agregalas.'}</div>
+            </Show>
+            <div class={styles.results}>
+              <For each={activePlaylist()?.tracks || []}>
+                {(track, i) => (
+                  <div class={styles.track}>
+                    <img src={track.thumbnail || DEFAULT_THUMB} alt={track.title} loading="lazy" />
+                    <div class={styles.trackMeta} onClick={() => { setTab('player'); void playTrackFromQueue(track); }}>
+                      <div class={styles.trackTitle}>{track.title}</div>
+                    </div>
+                    <button class={styles.trackRemoveBtn} onClick={() => removeTrackFromPlaylist(selectedPlaylist()!, i())}>✕</button>
+                  </div>
+                )}
+              </For>
+            </div>
+          </div>
+        }>
+          <div class={styles.playlistsList}>
+            <button class={styles.createPlaylistBtn} onClick={() => {
+              const name = prompt('Nombre de la playlist:');
+              if (name?.trim()) createPlaylist(name.trim());
+            }}>
+              + {t('music.new_playlist', language()) || 'Nueva Playlist'}
+            </button>
+            <For each={playlists()}>
+              {(pl) => (
+                <div class={styles.playlistCard} onClick={() => setSelectedPlaylist(pl.id)}>
+                  <div class={styles.playlistCardIcon}>🎵</div>
+                  <div class={styles.playlistCardMeta}>
+                    <strong>{pl.name}</strong>
+                    <span>{pl.tracks.length} {pl.tracks.length === 1 ? 'cancion' : 'canciones'}</span>
+                  </div>
+                  <button class={styles.playlistDeleteBtn} onClick={(e) => { e.stopPropagation(); deletePlaylist(pl.id); }}>✕</button>
+                </div>
+              )}
+            </For>
+          </div>
+        </Show>
       </Show>
     </AppScaffold>
   );

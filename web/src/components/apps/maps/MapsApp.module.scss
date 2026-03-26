@@ -67,6 +67,20 @@
   min-height: 300px;
 }
 
+:global(.theme-dark) .mapCanvas :global(.leaflet-image-layer) {
+  filter: invert(1) hue-rotate(180deg) brightness(0.95) contrast(1.1);
+}
+
+@media (prefers-color-scheme: dark) {
+  .mapCanvas :global(.leaflet-image-layer) {
+    filter: invert(1) hue-rotate(180deg) brightness(0.95) contrast(1.1);
+  }
+
+  :global(.theme-light) .mapCanvas :global(.leaflet-image-layer) {
+    filter: none;
+  }
+}
+
 .mapMarker {
   background: transparent !important;
   border: none !important;
@@ -132,7 +146,7 @@
 .fabOverlay {
   position: fixed;
   inset: 0;
-  background: var(--surface-overlay);
+  background: rgba(0, 0, 0, 0.4);
   z-index: 999;
 }
 
@@ -153,6 +167,7 @@
   gap: 12px;
   padding: 14px 18px;
   background: var(--surface);
+  color: var(--text);
   border: 1px solid var(--border);
   border-radius: var(--r-xl);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
