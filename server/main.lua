@@ -74,6 +74,19 @@ end
 
 local Bridge = require 'server.bridge'
 
+do
+    local fw = Config.Framework or 'unknown'
+    print('')
+    print('^4  ___  ___  ___  _                        _  _           _   ^7')
+    print('^4 / __|/ __|| _ \\| |_   ___  _ _   ___    | \\| | ___ __ _| |_ ^7')
+    print('^4| (_ | (__ |  _/| \' \\ / _ \\| \' \\ / -_)   | .` |/ -_)\\ \\ /|  _|^7')
+    print('^4 \\___|\\___||_|  |_||_|\\___/|_||_|\\___|   |_|\\_|\\___|/_\\_\\ \\__|^7')
+    print('')
+    print(string.format('^2  v%s ^7| ^5By JericoFX ^7| ^3Core: %s^7', Version, fw))
+    print('')
+    CheckRemoteVersion()
+end
+
 ---@alias GCPhoneNotificationPriority 'low'|'normal'|'high'
 
 ---@class GCPhoneNotificationPayload

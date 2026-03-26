@@ -296,6 +296,7 @@
     "documents.full_name": "Full name",
     "documents.optional": "Optional",
     "documents.select": "Select document",
+    "documents.search": "Search documents...",
     "clock.title": "Clock",
     "clock.my_alarms": "My alarms",
     "clock.timer": "Timer",
@@ -987,11 +988,9 @@
     "attachment.from_gallery": "Choose from gallery",
     "attachment.take_photo": "Take photo with camera",
     "attachment.paste_url": "Paste media URL",
-
     "action.edit": "Edit",
     "action.change": "Change",
     "action.reset": "Reset",
-
     "appstore.add": "Add",
     "appstore.available": "Available",
     "appstore.featured": "Featured",
@@ -999,15 +998,12 @@
     "appstore.in_menu": "In menu",
     "appstore.on_home": "On home",
     "appstore.open": "Open",
-
     "bank.filter_all": "All",
     "bank.filter_in": "Received",
     "bank.filter_out": "Sent",
     "bank.invoice_error": "Could not pay the invoice",
     "bank.transfer_error": "Could not complete the transfer",
-
     "clips.following": "Following",
-
     "clock.subtitle": "Time and timer",
     "clock.tab_clock": "Clock",
     "clock.tab_timer": "Timer",
@@ -1017,9 +1013,7 @@
     "clock.start": "Start",
     "clock.stop": "Stop",
     "clock.pause": "Pause",
-
     "control.silent": "Silent",
-
     "maps.subtitle": "GPS and locations",
     "maps.hint_tap": "Tap the map to mark a point and share it.",
     "maps.markers_cleared": "Manual markers cleared.",
@@ -1044,7 +1038,6 @@
     "maps.error.pick_number": "You must choose or enter a number",
     "maps.error.invalid_number": "Invalid number",
     "maps.error.pick_group": "Choose a WaveChat group",
-
     "notes.empty_title": "No notes",
     "notes.empty_desc": "Create your first note with the + button.",
     "notes.editing": "EDITING",
@@ -1059,14 +1052,10 @@
     "notes.words": "words",
     "notes.lines": "lines",
     "notes.shared_note": "Shared note",
-
     "notifications.unread": "unread",
-
     "phone.stolen_title": "Phone reported stolen",
     "phone.foreign_readonly": "Read only",
-
     "settings.wallpaper_changed": "Wallpaper updated",
-
     "time.now": "now",
     "time.ago": "ago",
     "time.unit.year": "year",
@@ -1075,18 +1064,15 @@
     "time.unit.day": "day",
     "time.unit.hour": "hour",
     "time.unit.minute": "minute",
-
     "wallet.select_recipient": "Select recipient",
     "wallet.pending_requests": "Pending requests",
     "wallet.awaiting": "Awaiting",
-
     "garage.request_error": "Could not request the vehicle",
     "garage.vehicle_on_way": "Your vehicle is waiting, follow the GPS.",
     "garage.gps_set": "GPS set",
     "garage.go_to_impound": "GPS to impound",
     "garage.gps_to_vehicle": "GPS to vehicle",
     "garage.impound": "Impound",
-
     "common.cancel": "Cancel",
     "common.save": "Save",
     "common.delete": "Delete",
@@ -1096,7 +1082,6 @@
     "common.search": "Search",
     "common.update": "Update",
     "common.register": "Register",
-
     "services.title": "Services",
     "services.subtitle": "Find professionals",
     "services.tab.browse": "Browse",
@@ -1134,7 +1119,6 @@
     "services.delete_title": "Delete service",
     "services.rating_count": "{count} ratings",
     "services.sending_rating": "Sending...",
-
     "clips.upload_title": "Upload Clip",
     "clips.record": "Record",
     "clips.gallery": "Gallery",
@@ -1153,7 +1137,6 @@
     "clips.avatar_url_prompt": "Avatar URL:",
     "clips.avatar_url_title": "Avatar",
     "clips.account_error": "Could not create the account.",
-
     "yellowpages.tab.browse": "Browse",
     "yellowpages.tab.my": "My listings",
     "yellowpages.category.other": "Other",
@@ -1174,7 +1157,6 @@
     "yellowpages.form.category": "Category",
     "yellowpages.form.photos": "Photos ({count}/5)",
     "yellowpages.title_required": "Title is required",
-
     "cityride.tab.passenger": "Passenger",
     "cityride.tab.driver": "Driver",
     "cityride.status.requested": "Requested",
@@ -1239,7 +1221,6 @@
     "cityride.select_map": "Select {target}",
     "cityride.map_pickup": "pickup",
     "cityride.map_dest": "destination",
-
     "market.title": "Market Pro",
     "market.search_placeholder": "Search products, services",
     "market.tab.public": "Public",
@@ -1264,11 +1245,9 @@
     "market.url_prompt_title": "Attach in market",
     "market.url_invalid": "Invalid URL or unsupported format",
     "market.seller": "Seller",
-
     "wallet.pay_bank_btn": "Pay with bank",
     "wallet.pay_cash_btn": "Pay cash",
     "wallet.player": "Player",
-
     "settings.pin.confirm_current": "Confirm your current PIN",
     "settings.pin.enter_current": "Enter your current PIN",
     "settings.pin.enter_new": "Enter new PIN",
@@ -1289,10 +1268,8 @@
     "settings.notifications_disabled": "Muted",
     "settings.auto_reply": "Auto-reply",
     "settings.auto_reply_placeholder": "Write your auto-reply message...",
-
     "documents.creating": "Creating...",
     "documents.create_btn": "Create document",
-
     "wavechat.add_contact": "Add contact",
     "wavechat.save_contact": "Save to contacts",
     "wavechat.contact_saved": "Contact saved",
