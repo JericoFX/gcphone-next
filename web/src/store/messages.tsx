@@ -38,6 +38,8 @@ type MessagesStore = [MessagesState, MessagesActions];
 
 const MessagesContext = createContext<MessagesStore>();
 
+const MAX_MESSAGES = 2000;
+
 function countUnread(messages: Message[]) {
   let unread = 0;
   for (const msg of messages) {
@@ -173,20 +175,21 @@ export const MessagesProvider: ParentComponent = (props) => {
   };
   
   useNuiCustomEvent<Message>('messageSent', (message) => {
-    setState('messages', messages => [...messages, message]);
+    setState('messages', messages => [...messages, message].slice(-MAX_MESSAGES));
   });
-  
+
   useNuiCustomEvent<Message>('messageReceived', (message) => {
     batch(() => {
-      setState('messages', messages => [...messages, message]);
+      setState('messages', messages => [...messages, message].slice(-MAX_MESSAGES));
       setState('unreadCount', prev => prev + 1);
     });
   });
-  
+
   useNuiCustomEvent<Message[]>('messagesUpdated', (messages) => {
+    const list = Array.isArray(messages) ? messages.slice(-MAX_MESSAGES) : [];
     batch(() => {
-      setState('messages', messages);
-      setState('unreadCount', countUnread(messages));
+      setState('messages', list);
+      setState('unreadCount', countUnread(list));
     });
   });
 

@@ -67,6 +67,7 @@ export function NewsApp() {
   const [selectedArticle, setSelectedArticle] = createSignal<NewsArticle | null>(null);
 
   let stopNewsMock: (() => void) | undefined;
+  let reactionTimers: number[] = [];
 
   const refreshScaleform = async (articleId: number) => {
     const sf = await fetchNui<NewsScaleform | null>('newsGetScaleform', { articleId }, null);
@@ -220,9 +221,11 @@ export function NewsApp() {
 
     const id = Date.now() + Math.floor(Math.random() * 1000);
     setLiveReactions((prev) => [...prev.slice(-5), { id, emoji }]);
-    window.setTimeout(() => {
+    const timer = window.setTimeout(() => {
       setLiveReactions((prev) => prev.filter((entry) => entry.id !== id));
+      reactionTimers = reactionTimers.filter((t) => t !== timer);
     }, 1600);
+    reactionTimers.push(timer);
   };
 
   createEffect(() => {
@@ -234,6 +237,8 @@ export function NewsApp() {
   });
 
   onCleanup(() => {
+    reactionTimers.forEach((t) => window.clearTimeout(t));
+    reactionTimers = [];
     void leaveJoinedLive();
   });
 
@@ -333,9 +338,11 @@ export function NewsApp() {
 
     const id = Date.now() + Math.floor(Math.random() * 1000);
     setLiveReactions((prev) => [...prev.slice(-5), { id, emoji: reaction }]);
-    window.setTimeout(() => {
+    const timer = window.setTimeout(() => {
       setLiveReactions((prev) => prev.filter((entry) => entry.id !== id));
+      reactionTimers = reactionTimers.filter((t) => t !== timer);
     }, 1600);
+    reactionTimers.push(timer);
   });
 
   useNuiCustomEvent<{ articleId?: number; messageId?: string }>('gcphone:news:liveMessageRemoved', (payload) => {

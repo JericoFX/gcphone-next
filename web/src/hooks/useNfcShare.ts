@@ -25,6 +25,7 @@ const DEFAULT_ERRORS: Record<string, string> = {
 };
 
 const NFC_COOLDOWN_MS = 10000;
+const NFC_MAX_ENTRIES = 50;
 const lastShareByTarget = new Map<number, number>();
 
 export function useNfcShare(options: UseNfcShareOptions): UseNfcShareReturn {
@@ -55,6 +56,12 @@ export function useNfcShare(options: UseNfcShareOptions): UseNfcShareReturn {
 
     if (result?.success) {
       lastShareByTarget.set(targetServerId, Date.now());
+      if (lastShareByTarget.size > NFC_MAX_ENTRIES) {
+        const oldest = [...lastShareByTarget.entries()]
+          .sort((a, b) => a[1] - b[1])
+          .slice(0, lastShareByTarget.size - NFC_MAX_ENTRIES);
+        for (const [key] of oldest) lastShareByTarget.delete(key);
+      }
     }
 
     if (result?.success) {

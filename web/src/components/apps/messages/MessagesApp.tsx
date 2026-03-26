@@ -1,4 +1,4 @@
-import { createMemo, createSelector, createSignal, For, Show, createEffect, onMount } from 'solid-js';
+import { createMemo, createSelector, createSignal, For, Show, createEffect, onMount, onCleanup } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { useMessages } from '../../../store/messages';
 import { useContacts } from '../../../store/contacts';
@@ -130,6 +130,11 @@ export function MessagesApp() {
     setRemoteTyping(detail.from);
     if (typingTimeout) clearTimeout(typingTimeout);
     typingTimeout = window.setTimeout(() => setRemoteTyping(null), 3000);
+  });
+
+  onCleanup(() => {
+    if (typingDebounce) clearTimeout(typingDebounce);
+    if (typingTimeout) clearTimeout(typingTimeout);
   });
 
   const getMediaUrl = (msg: any): string | undefined => sanitizeMediaUrl(msg.mediaUrl || msg.media_url) || undefined;
@@ -573,6 +578,12 @@ function AudioPlayerBubble(props: { audioData: string; duration?: number }) {
   const [playing, setPlaying] = createSignal(false);
   const [progress, setProgress] = createSignal(0);
   let audioRef: HTMLAudioElement | undefined;
+  let blobUrl: string | undefined;
+
+  const onTimeUpdate = () => {
+    if (audioRef && audioRef.duration > 0) setProgress(audioRef.currentTime / audioRef.duration);
+  };
+  const onEnded = () => { setPlaying(false); setProgress(0); };
 
   const play = () => {
     if (!audioRef) {
@@ -587,12 +598,11 @@ function AudioPlayerBubble(props: { audioData: string; duration?: number }) {
           { type: 'audio/webm' }
         );
         src = URL.createObjectURL(blob);
+        blobUrl = src;
       }
       audioRef = new Audio(src);
-      audioRef.addEventListener('timeupdate', () => {
-        if (audioRef && audioRef.duration > 0) setProgress(audioRef.currentTime / audioRef.duration);
-      });
-      audioRef.addEventListener('ended', () => { setPlaying(false); setProgress(0); });
+      audioRef.addEventListener('timeupdate', onTimeUpdate);
+      audioRef.addEventListener('ended', onEnded);
     }
     if (playing()) {
       audioRef.pause();
@@ -602,6 +612,16 @@ function AudioPlayerBubble(props: { audioData: string; duration?: number }) {
       setPlaying(true);
     }
   };
+
+  onCleanup(() => {
+    if (audioRef) {
+      audioRef.removeEventListener('timeupdate', onTimeUpdate);
+      audioRef.removeEventListener('ended', onEnded);
+      audioRef.pause();
+      audioRef.src = '';
+    }
+    if (blobUrl) URL.revokeObjectURL(blobUrl);
+  });
 
   return (
     <div class={styles.audioBubble} onClick={play}>

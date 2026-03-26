@@ -116,6 +116,7 @@ export function SnapApp() {
   const [postMode, setPostMode] = createSignal<'post' | 'story'>('post');
 
   let floatingTimers = new Map<string, number>();
+  let reactionTimers: number[] = [];
   let liveParticipantTracks = new Map<string, MediaTrackEntry[]>();
   let liveVideoHost: HTMLDivElement | undefined;
   let stopSnapMockFeed: (() => void) | undefined;
@@ -141,9 +142,15 @@ export function SnapApp() {
 
   const pushLiveReaction = (reaction: SnapLiveReaction) => {
     setLiveReactions((prev) => [...prev.slice(-10), reaction]);
-    window.setTimeout(() => {
+    const timer = window.setTimeout(() => {
       setLiveReactions((prev) => prev.filter((entry) => entry.id !== reaction.id));
+      reactionTimers = reactionTimers.filter((t) => t !== timer);
     }, 2600);
+    if (reactionTimers.length >= 32) {
+      const expired = reactionTimers.splice(0, reactionTimers.length - 31);
+      expired.forEach((t) => window.clearTimeout(t));
+    }
+    reactionTimers.push(timer);
   };
 
   const updateLiveViewerCount = (liveId: number, viewers: number) => {
@@ -581,6 +588,8 @@ export function SnapApp() {
 
   onCleanup(() => {
     clearFloatingTimers();
+    reactionTimers.forEach((t) => window.clearTimeout(t));
+    reactionTimers = [];
     if (liveAudioRetryTimer) {
       window.clearTimeout(liveAudioRetryTimer);
       liveAudioRetryTimer = undefined;

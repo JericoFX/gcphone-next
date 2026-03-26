@@ -16,23 +16,27 @@ export function FloatingMessage(props: Props) {
   const [isExpiring, setIsExpiring] = createSignal(false);
   
   let expireTimer: number;
-  
+  let fadeTimer: number;
+
   onMount(() => {
     // Start expiration timer
     const duration = props.duration || 5000;
-    
+
     expireTimer = window.setTimeout(() => {
       setIsExpiring(true);
-      window.setTimeout(() => {
+      fadeTimer = window.setTimeout(() => {
         setIsVisible(false);
         props.onExpire(props.id);
       }, 400);
     }, duration);
   });
-  
+
   onCleanup(() => {
     if (expireTimer) {
       window.clearTimeout(expireTimer);
+    }
+    if (fadeTimer) {
+      window.clearTimeout(fadeTimer);
     }
   });
   

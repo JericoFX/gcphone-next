@@ -71,6 +71,7 @@ const MAX_QUEUE = 20;
 const MAX_HISTORY = 40;
 const DEFAULT_TILE_ORDER = ['airplane', 'dnd', 'silent', 'gps', 'preview'];
 const MAX_MUTED_APPS = 40;
+const MAX_READ_AT_ENTRIES = 100;
 
 function safeJsonParse(value: string) {
   try {
@@ -330,7 +331,18 @@ export const NotificationsProvider: ParentComponent = (props) => {
     markAppAsRead: (appId: string) => {
       const key = sanitizeText(appId, 24);
       if (!key) return;
-      setState('readAtByApp', key, Date.now());
+      const entries = Object.keys(state.readAtByApp);
+      if (entries.length >= MAX_READ_AT_ENTRIES && !(key in state.readAtByApp)) {
+        const sorted = entries.sort((a, b) => (state.readAtByApp[a] || 0) - (state.readAtByApp[b] || 0));
+        const pruned = { ...state.readAtByApp };
+        for (let i = 0; i < sorted.length - MAX_READ_AT_ENTRIES + 1; i++) {
+          delete pruned[sorted[i]];
+        }
+        pruned[key] = Date.now();
+        setState('readAtByApp', pruned);
+      } else {
+        setState('readAtByApp', key, Date.now());
+      }
     },
     getUnreadCount: (appId: string) => {
       const key = sanitizeText(appId, 24);

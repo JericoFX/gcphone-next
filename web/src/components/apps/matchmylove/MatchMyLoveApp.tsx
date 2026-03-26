@@ -97,6 +97,7 @@ export function MatchMyLoveApp() {
   const [socketReady, setSocketReady] = createSignal(false);
   const [peerTyping, setPeerTyping] = createSignal(false);
   let typingTimeout: number | undefined;
+  let matchOverlayTimer: number | undefined;
 
   // Profile form state
   const [formName, setFormName] = createSignal('');
@@ -266,7 +267,8 @@ export function MatchMyLoveApp() {
       if ('matched' in result && result.matched) {
         setMatchedName(card.display_name);
         setShowMatchOverlay(true);
-        setTimeout(() => setShowMatchOverlay(false), 2500);
+        if (matchOverlayTimer) window.clearTimeout(matchOverlayTimer);
+        matchOverlayTimer = window.setTimeout(() => setShowMatchOverlay(false), 2500);
         loadMatches();
       }
     }
@@ -325,6 +327,7 @@ export function MatchMyLoveApp() {
   onCleanup(() => {
     disconnectMmlSocket();
     if (typingTimeout) window.clearTimeout(typingTimeout);
+    if (matchOverlayTimer) window.clearTimeout(matchOverlayTimer);
   });
 
   async function openChat(match: Match) {

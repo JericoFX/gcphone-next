@@ -6,6 +6,14 @@ type CacheEntry<T> = {
 };
 
 const memoryCache = new Map<string, CacheEntry<unknown>>();
+const CACHE_MAX_SIZE = 200;
+
+function pruneExpired() {
+  const now = Date.now();
+  for (const [key, entry] of memoryCache) {
+    if (now > entry.expiresAt) memoryCache.delete(key);
+  }
+}
 
 export function useAppCache(prefix: string) {
   const [version, setVersion] = createSignal(0);
@@ -23,6 +31,7 @@ export function useAppCache(prefix: string) {
   };
 
   const set = <T>(key: string, value: T, ttlMs = 30000) => {
+    if (memoryCache.size >= CACHE_MAX_SIZE) pruneExpired();
     memoryCache.set(buildKey(key), {
       value,
       expiresAt: Date.now() + Math.max(1000, ttlMs),

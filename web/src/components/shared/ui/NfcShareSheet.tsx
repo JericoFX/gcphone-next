@@ -41,6 +41,7 @@ export function NfcShareSheet(props: NfcShareSheetProps) {
 
   createEffect(() => {
     if (props.open) {
+      if (pollTimer) window.clearInterval(pollTimer);
       setScanning(true);
       setScanCount(0);
       setPlayers([]);

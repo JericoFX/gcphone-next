@@ -206,9 +206,11 @@ export function ClipsApp() {
     }
   };
 
+  let doubleTapTimer: number | undefined;
   const handleDoubleTap = (clipId: number) => {
     setLikeAnimation(clipId);
-    setTimeout(() => setLikeAnimation(null), 1000);
+    if (doubleTapTimer) window.clearTimeout(doubleTapTimer);
+    doubleTapTimer = window.setTimeout(() => setLikeAnimation(null), 1000);
     const clip = clipById().get(clipId);
     if (clip && !clip.liked) void toggleLike(clipId);
   };
@@ -388,7 +390,10 @@ export function ClipsApp() {
     videoRefs.forEach((v) => { v.pause(); v.currentTime = 0; });
   };
 
-  onCleanup(stopAllVideos);
+  onCleanup(() => {
+    stopAllVideos();
+    if (doubleTapTimer) window.clearTimeout(doubleTapTimer);
+  });
 
   return (
     <div class={styles.root}>

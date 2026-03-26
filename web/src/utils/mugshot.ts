@@ -1,8 +1,11 @@
 import { fetchNui } from './fetchNui';
 
 let pendingResolve: ((base64: string) => void) | null = null;
+let listenerInstalled = false;
 
 export function setupMugshotListener() {
+  if (listenerInstalled) return;
+  listenerInstalled = true;
   window.addEventListener('message', (event) => {
     if (event.data?.action !== 'convertMugshot') return;
     const url = event.data.url as string;

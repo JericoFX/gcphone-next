@@ -110,6 +110,7 @@ export function LockScreen() {
   };
 
   onMount(() => {
+    if (timer) clearInterval(timer);
     timer = window.setInterval(() => setCurrentTime(new Date()), 1000);
     setMusicState(readStoredMusicSession());
 

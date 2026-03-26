@@ -80,6 +80,7 @@ export interface PhoneSettings {
   carplayEnabled?: boolean;
   playerName?: string;
   streamerMode?: boolean;
+  phoneScale?: number;
 }
 
 export type PhoneFramework = 'esx' | 'qbcore' | 'qbox' | 'unknown';

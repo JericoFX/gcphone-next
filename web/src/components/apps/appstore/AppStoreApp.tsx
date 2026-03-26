@@ -44,6 +44,7 @@ export function AppStoreApp() {
   const [error, setError] = createSignal<string | null>(null);
   const [installingId, setInstallingId] = createSignal<string | null>(null);
   const [progress, setProgress] = createSignal(0);
+  let installResetTimer: number | undefined;
 
   usePhoneKeyHandler({
     Backspace: () => {
@@ -95,11 +96,16 @@ export function AppStoreApp() {
     if (isInstalledOnHome(id)) phoneActions.moveApp(id, 'home', 'menu');
     else phoneActions.moveApp(id, 'menu', 'home');
 
-    setTimeout(() => {
+    if (installResetTimer) window.clearTimeout(installResetTimer);
+    installResetTimer = window.setTimeout(() => {
       setInstallingId(null);
       setProgress(0);
     }, 180);
   };
+
+  onCleanup(() => {
+    if (installResetTimer) window.clearTimeout(installResetTimer);
+  });
 
   const installedCount = createMemo(() => filteredApps().filter((app) => isInstalledOnHome(app.id)).length);
   const availableCount = createMemo(() => filteredApps().filter((app) => !isInstalledOnHome(app.id)).length);
