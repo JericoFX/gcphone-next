@@ -224,7 +224,7 @@ export function WaveChatGroupsTab(props: {
                     />
                     <div class={styles.groupChecklistInfo}>
                       <strong>{contact.display}</strong>
-                      <span>{formatPhoneNumber(contact.number, props.framework || 'unknown')}</span>
+                      <span>{formatPhoneNumber(contact.number, (props.framework || 'unknown') as 'esx' | 'qbcore' | 'qbox' | 'unknown')}</span>
                     </div>
                   </label>
                 );

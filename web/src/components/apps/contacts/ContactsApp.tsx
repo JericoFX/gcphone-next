@@ -638,8 +638,8 @@ export function ContactsApp() {
         }}
         actions={[
           { label: 'Compartir NFC', tone: 'primary' as const, onClick: () => nfcShare.open() },
-          { label: t('messages.title', language()), onClick: () => setShareChannel('messages') },
-          { label: 'WaveChat', onClick: () => setShareChannel('wavechat') },
+          { label: t('messages.title', language()), onClick: () => { setShareChannel('messages'); } },
+          { label: 'WaveChat', onClick: () => { setShareChannel('wavechat'); } },
         ]}
       />
 

@@ -82,7 +82,7 @@ export function ControlCenter() {
   }
 
   async function syncFlashlightState() {
-    const result = await fetchNui<{ enabled?: boolean }>('cameraGetFlashlightSettings', {}, { enabled: false });
+    const result = await fetchNui<{ enabled?: boolean; brightness?: number }>('cameraGetFlashlightSettings', {}, { enabled: false });
     setFlashlightEnabled(result?.enabled === true);
     if (typeof result?.brightness === "number") setFlashlightBrightness(Math.round(result.brightness));
   }

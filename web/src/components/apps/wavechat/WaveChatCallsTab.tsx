@@ -20,7 +20,7 @@ export function WaveChatCallsTab(props: {
           <div class={styles.callItem}>
             <div class={styles.callDirection}>{call.incoming ? t('wavechat.incoming', language()) : t('wavechat.outgoing', language())}</div>
             <div class={styles.info}>
-              <div class={styles.name}>{call.hidden ? t('wavechat.private', language()) : formatPhoneNumber(call.num, props.framework || 'unknown')}</div>
+              <div class={styles.name}>{call.hidden ? t('wavechat.private', language()) : formatPhoneNumber(call.num, (props.framework || 'unknown') as 'esx' | 'qbcore' | 'qbox' | 'unknown')}</div>
               <div class={styles.previewText}>{timeAgo(call.time)}</div>
             </div>
             <button class={styles.statusBtn} onClick={() => fetchNui('startCall', { phoneNumber: call.num })}>{t('wavechat.call', language())}</button>

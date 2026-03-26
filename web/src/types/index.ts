@@ -78,6 +78,7 @@ export interface PhoneSettings {
   fontSize?: string;
   phoneCase?: string;
   carplayEnabled?: boolean;
+  playerName?: string;
   streamerMode?: boolean;
 }
 
@@ -138,6 +139,8 @@ export interface PhoneState {
   accessMode?: 'own' | 'foreign-readonly' | 'foreign-full';
   accessOwnerName?: string;
   accessPhoneId?: string;
+  playerName?: string;
+  resourceVersion?: string;
 }
 
 export interface PhoneNotification {
