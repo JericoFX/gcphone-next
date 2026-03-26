@@ -329,10 +329,19 @@ export const PhoneFrame: ParentComponent & { Router: () => JSX.Element } = (
     if (resolve) resolve(value);
   };
 
+  const phoneScale = () => {
+    const s = phoneState.settings.phoneScale;
+    return typeof s === 'number' ? Math.max(0.7, Math.min(1, s)) : 1;
+  };
+
   return (
     <div
       class={styles.phoneWrapper}
-      style={browserMode ? { right: '20px', bottom: '20px' } : undefined}
+      style={{
+        ...(browserMode ? { right: '20px', bottom: '20px' } : {}),
+        transform: `scale(${phoneScale()})`,
+        'transform-origin': 'bottom right',
+      }}
     >
       <div
         class={styles.phoneScreen}

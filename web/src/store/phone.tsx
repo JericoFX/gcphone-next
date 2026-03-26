@@ -39,6 +39,7 @@ interface PhoneContextValue {
     setLanguage: (language: 'es' | 'en' | 'pt' | 'fr') => void;
     setAudioProfile: (audioProfile: 'normal' | 'street' | 'vehicle' | 'silent') => void;
     setLockCode: (code: string) => void;
+    setPhoneScale: (scale: number) => void;
     setSwipeUnlock: (enabled: boolean) => void;
     setScreenLockEnabled: (enabled: boolean) => void;
     unlockDirect: () => void;
@@ -81,6 +82,13 @@ function readSwipeUnlockPreference() {
 function readScreenLockPreference() {
   const stored = window.localStorage.getItem('gcphone:screenLockEnabled');
   return stored !== '0';
+}
+
+function readPhoneScalePreference(): number {
+  const stored = window.localStorage.getItem('gcphone:phoneScale');
+  if (!stored) return 1;
+  const val = parseFloat(stored);
+  return isNaN(val) ? 1 : Math.max(0.7, Math.min(1, val));
 }
 
 const defaultFeatureFlags: PhoneFeatureFlags = {
@@ -403,6 +411,11 @@ export const PhoneProvider: ParentComponent = (props) => {
       setState('settings', 'lockCode', code);
       fetchNui('setLockCode', { code });
     },
+    setPhoneScale: (scale: number) => {
+      const clamped = Math.max(0.7, Math.min(1, Math.round(scale * 100) / 100));
+      setState('settings', 'phoneScale', clamped);
+      window.localStorage.setItem('gcphone:phoneScale', String(clamped));
+    },
     setSwipeUnlock: (enabled: boolean) => {
       if (isReadOnly()) return;
       const next = enabled === true;
@@ -446,6 +459,7 @@ export const PhoneProvider: ParentComponent = (props) => {
           lockCode: '',
           swipeUnlock: readSwipeUnlockPreference(),
           screenLockEnabled: readScreenLockPreference(),
+          phoneScale: readPhoneScalePreference(),
           theme: response.theme || defaultSettings.theme,
           language: normalizeLanguage(response.language || defaultSettings.language),
           audioProfile: response.audioProfile || defaultSettings.audioProfile,
@@ -532,6 +546,7 @@ export const PhoneProvider: ParentComponent = (props) => {
           lockCode: '',
           swipeUnlock: readSwipeUnlockPreference(),
           screenLockEnabled: readScreenLockPreference(),
+          phoneScale: readPhoneScalePreference(),
           theme: data.theme || defaultSettings.theme,
           language: normalizeLanguage(data.language || window.localStorage.getItem('gcphone:language')),
           audioProfile: data.audioProfile || defaultSettings.audioProfile,

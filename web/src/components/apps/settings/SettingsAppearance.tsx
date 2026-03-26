@@ -118,6 +118,24 @@ export function SettingsAppearance(props: SettingsAppearanceProps) {
         </div>
       </Show>
 
+      {/* Phone Size */}
+      <SectionHeader title={t('settings.phone_size', props.language()) || 'Tamano del telefono'} />
+      <div class="ios18-list">
+        <div class="ios18-cell" style={{ 'flex-direction': 'column', 'align-items': 'stretch', gap: '8px' }}>
+          <div style={{ display: 'flex', 'justify-content': 'space-between', 'align-items': 'center' }}>
+            <span class="ios18-cell__title">{Math.round((props.phoneState.settings.phoneScale ?? 1) * 100)}%</span>
+          </div>
+          <input
+            class={styles.slider}
+            type="range"
+            min={70}
+            max={100}
+            value={Math.round((props.phoneState.settings.phoneScale ?? 1) * 100)}
+            onInput={(e) => props.phoneActions.setPhoneScale(Number(e.currentTarget.value) / 100)}
+          />
+        </div>
+      </div>
+
       {/* Theme */}
       <SectionHeader title={t('settings.theme', props.language()) || 'Theme'} />
       <div class="ios18-list">
