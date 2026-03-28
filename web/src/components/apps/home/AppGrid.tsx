@@ -66,8 +66,8 @@ export function AppGrid(props: AppGridProps) {
             <div
               class={styles.slot}
               classList={{
-                [styles['drop-target']]: drag.hoverIndex() === index() && !drag.mergeTarget(),
-                [styles['merge-target']]: drag.mergeTarget() === itemId,
+                [styles.dropTarget]: drag.hoverIndex() === index() && !drag.mergeTarget(),
+                [styles.mergeTarget]: drag.mergeTarget() === itemId,
               }}
               data-grid-item={itemId}
             >
