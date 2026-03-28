@@ -7,7 +7,7 @@ export interface Folder {
   color: string;
 }
 
-export type WidgetType = 'maps' | 'nowPlaying' | 'contacts' | 'notes' | 'chirp' | 'clock';
+export type WidgetType = 'maps' | 'nowPlaying' | 'contacts' | 'notes' | 'chirp' | 'clock' | 'weather' | 'bank' | 'gallery' | 'radio';
 export type WidgetSize = 'sm' | 'md' | 'lg';
 
 export interface WidgetInstance {
@@ -34,6 +34,10 @@ export const WIDGET_DEFINITIONS: Record<WidgetType, { name: string; icon: string
   notes: { name: 'Notes', icon: './img/icons_ios/notes.svg', sizes: ['sm', 'md'] },
   chirp: { name: 'Chirp', icon: './img/icons_ios/chirp.svg', sizes: ['md', 'lg'] },
   clock: { name: 'Clock', icon: './img/icons_ios/clock.svg', sizes: ['sm', 'md'] },
+  weather: { name: 'Weather', icon: './img/icons_ios/weather.svg', sizes: ['sm', 'md'] },
+  bank: { name: 'Bank', icon: './img/icons_ios/bank.svg', sizes: ['sm', 'md'] },
+  gallery: { name: 'Gallery', icon: './img/icons_ios/gallery.svg', sizes: ['sm', 'md'] },
+  radio: { name: 'Radio', icon: './img/icons_ios/radio.svg', sizes: ['sm', 'md'] },
 };
 
 export const MAX_FOLDERS = 8;
