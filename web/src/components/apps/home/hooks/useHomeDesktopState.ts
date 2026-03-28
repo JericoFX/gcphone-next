@@ -6,8 +6,16 @@ export function useHomeDesktopState(language: () => string) {
   const [desktopPage, setDesktopPage] = createSignal(0);
   const [currentTime, setCurrentTime] = createSignal(new Date());
   const [musicNowPlaying, setMusicNowPlaying] = createSignal('');
+  const [radioStation, setRadioStation] = createSignal('');
+  const [bankBalance, setBankBalance] = createSignal('');
 
   let timer: number | undefined;
+
+  const refreshLocalStorage = () => {
+    setMusicNowPlaying(window.localStorage.getItem('gcphone:musicNowPlaying') || t('home.music_idle', language()));
+    setRadioStation(window.localStorage.getItem('gcphone:radioStation') || '');
+    setBankBalance(window.localStorage.getItem('gcphone:bankBalance') || '');
+  };
 
   onMount(() => {
     const savedPage = Number(window.localStorage.getItem('gcphone:desktopPage') || '0');
@@ -17,16 +25,14 @@ export function useHomeDesktopState(language: () => string) {
       setCurrentTime(new Date());
     }, 1000);
 
-    setMusicNowPlaying(window.localStorage.getItem('gcphone:musicNowPlaying') || t('home.music_idle', language()));
+    refreshLocalStorage();
   });
 
   createEffect(() => {
     window.localStorage.setItem('gcphone:desktopPage', String(desktopPage()));
   });
 
-  useWindowEvent<StorageEvent>('storage', () => {
-    setMusicNowPlaying(window.localStorage.getItem('gcphone:musicNowPlaying') || t('home.music_idle', language()));
-  });
+  useWindowEvent<StorageEvent>('storage', refreshLocalStorage);
 
   onCleanup(() => {
     if (timer) clearInterval(timer);
@@ -37,5 +43,7 @@ export function useHomeDesktopState(language: () => string) {
     desktopPage,
     setDesktopPage,
     musicNowPlaying,
+    radioStation,
+    bankBalance,
   };
 }

@@ -15,13 +15,14 @@ interface WidgetCardProps {
 
 export function WidgetCard(props: WidgetCardProps) {
   const router = useRouter();
-  const { currentTime, musicNowPlaying } = useHomeDesktopState(props.language);
+  const { currentTime, musicNowPlaying, radioStation, bankBalance } = useHomeDesktopState(props.language);
   const def = () => WIDGET_DEFINITIONS[props.widget.type];
   const handleClick = () => {
     if (props.editing) return;
     const routeMap: Record<string, string> = {
       maps: 'maps', nowPlaying: 'music', contacts: 'contacts',
       notes: 'notes', chirp: 'chirp', clock: 'clock',
+      weather: 'weather', bank: 'bank', gallery: 'gallery', radio: 'radio',
     };
     const route = routeMap[props.widget.type];
     if (route) router.navigate(route);
@@ -58,6 +59,22 @@ export function WidgetCard(props: WidgetCardProps) {
       </Show>
       <Show when={props.widget.type === 'clock'}>
         <strong>{formatDateI18n(currentTime(), props.language(), { hour: '2-digit', minute: '2-digit' })}</strong>
+      </Show>
+      <Show when={props.widget.type === 'weather'}>
+        <strong>{t('home.widget_weather', props.language()) || 'Weather'}</strong>
+        <small>{t('home.widget_weather_hint', props.language()) || 'Current conditions'}</small>
+      </Show>
+      <Show when={props.widget.type === 'bank'}>
+        <strong>{bankBalance() || t('home.widget_bank', props.language()) || 'Balance'}</strong>
+        <small>{t('home.widget_bank_hint', props.language()) || 'Available balance'}</small>
+      </Show>
+      <Show when={props.widget.type === 'gallery'}>
+        <strong>{t('home.widget_gallery', props.language()) || 'Photos'}</strong>
+        <small>{t('home.widget_gallery_hint', props.language()) || 'Recent photos'}</small>
+      </Show>
+      <Show when={props.widget.type === 'radio'}>
+        <strong>{radioStation() || t('home.widget_radio', props.language()) || 'Radio'}</strong>
+        <small>{t('home.widget_radio_hint', props.language()) || 'Now playing'}</small>
       </Show>
       <Show when={props.editing}>
         <span class={styles.removeBadge} onClick={(e) => { e.stopPropagation(); props.onRemove(); }}>&#x2212;</span>
