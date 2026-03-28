@@ -31,13 +31,14 @@ export function AppIcon(props: AppIconProps) {
         if (!props.editing) props.onClick();
       }}
     >
-      <img
-        class={styles.iconImg}
-        style={{ 'border-radius': borderRadius() }}
-        src={props.icon}
-        alt={appName(props.id, props.name, props.language())}
-        draggable={false}
-      />
+      <div class={styles.iconWrap} style={{ 'border-radius': borderRadius() }}>
+        <img
+          class={styles.iconImg}
+          src={props.icon}
+          alt={appName(props.id, props.name, props.language())}
+          draggable={false}
+        />
+      </div>
       <span class={styles.appName}>{appName(props.id, props.name, props.language())}</span>
       <Show when={props.editing}>
         <span class={styles.removeBadge}>&#x2212;</span>
