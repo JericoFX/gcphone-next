@@ -1,0 +1,102 @@
+.app-icon {
+  position: relative;
+  width: 84px;
+  min-height: 94px;
+  height: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding-top: 2px;
+  background: transparent;
+  border: none;
+  color: #fff;
+  transition: transform 170ms cubic-bezier(0.2, 0.8, 0.2, 1), filter 170ms ease;
+  touch-action: none;
+  user-select: none;
+
+  .icon-img {
+    width: 62px;
+    height: 62px;
+    margin-bottom: 5px;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.28), 0 1px 3px rgba(0, 0, 0, 0.15);
+    transition: transform 200ms cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 200ms ease;
+    &.icon-squircle { border-radius: 16px; }
+    &.icon-circle { border-radius: 50%; }
+    &.icon-rounded { border-radius: 8px; }
+    &.icon-square { border-radius: 0; }
+  }
+
+  &:active .icon-img {
+    transform: scale(0.92);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.15);
+  }
+
+  .app-name {
+    display: block;
+    margin-top: 0;
+    font-size: 11px;
+    line-height: 1.25;
+    font-weight: 600;
+    text-align: center;
+    color: #fff;
+    max-width: 80px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    letter-spacing: 0.01em;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.7), 0 0 12px rgba(0, 0, 0, 0.3);
+  }
+
+  .badge {
+    position: absolute;
+    top: -1px;
+    right: 8px;
+    min-width: 19px;
+    height: 19px;
+    border-radius: 10px;
+    background: var(--danger);
+    font-size: 11px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 5px;
+    text-shadow: none;
+    box-shadow: 0 2px 6px rgba(255, 59, 48, 0.4), inset 0 0.5px 0 rgba(255, 255, 255, 0.2);
+    border: 1.5px solid rgba(0, 0, 0, 0.15);
+  }
+
+  .remove-badge {
+    position: absolute;
+    top: 0;
+    left: 8px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 59, 48, 0.85);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    text-shadow: none;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  }
+}
+
+.dragging {
+  transform: scale(1.08) rotate(1deg);
+  filter: drop-shadow(0 12px 20px rgba(0, 0, 0, 0.4));
+  z-index: 100;
+}
+
+.jiggle {
+  animation: jiggle 260ms ease-in-out infinite alternate;
+}
+
+@keyframes jiggle {
+  from { transform: rotate(-1.2deg); }
+  to { transform: rotate(1.2deg); }
+}
