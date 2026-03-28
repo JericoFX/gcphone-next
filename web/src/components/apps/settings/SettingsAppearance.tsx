@@ -203,6 +203,55 @@ export function SettingsAppearance(props: SettingsAppearanceProps) {
         </For>
       </div>
 
+      {/* Icon Shape */}
+      <SectionHeader title={t('settings.icon_shape', props.language()) || 'Forma de iconos'} />
+      <div style={{ display: 'flex', gap: '12px', padding: '4px 0 8px', 'flex-wrap': 'wrap' }}>
+        <For each={[
+          { id: 'squircle', radius: '12px', label: { es: 'Squircle', en: 'Squircle' } },
+          { id: 'circle', radius: '50%', label: { es: 'Circulo', en: 'Circle' } },
+          { id: 'rounded', radius: '6px', label: { es: 'Redondeado', en: 'Rounded' } },
+          { id: 'square', radius: '0', label: { es: 'Cuadrado', en: 'Square' } },
+        ] as const}>
+          {(shape) => (
+            <button
+              style={{
+                display: 'flex',
+                'flex-direction': 'column',
+                'align-items': 'center',
+                gap: '4px',
+                background: 'transparent',
+                border: 'none',
+                cursor: 'pointer',
+              }}
+              onClick={() => props.phoneActions.setIconShape(shape.id)}
+            >
+              <div
+                style={{
+                  width: '40px',
+                  height: '40px',
+                  'border-radius': shape.radius,
+                  background: (props.phoneState.settings.iconShape || 'squircle') === shape.id
+                    ? 'var(--tint)'
+                    : 'linear-gradient(135deg, #007aff, #5856d6)',
+                  border: (props.phoneState.settings.iconShape || 'squircle') === shape.id
+                    ? '2px solid var(--text)'
+                    : '1px solid var(--border)',
+                  transition: 'transform 120ms ease',
+                  transform: (props.phoneState.settings.iconShape || 'squircle') === shape.id ? 'scale(1.12)' : 'scale(1)',
+                }}
+              />
+              <span style={{
+                'font-size': '10px',
+                color: (props.phoneState.settings.iconShape || 'squircle') === shape.id ? 'var(--tint)' : 'var(--text-2)',
+                'font-weight': '600',
+              }}>
+                {shape.label[props.language()] || shape.label.en}
+              </span>
+            </button>
+          )}
+        </For>
+      </div>
+
       {/* Font Size */}
       <SectionHeader title={t('settings.font_size', props.language()) || 'Tamano de texto'} />
       <div class="ios18-list">
