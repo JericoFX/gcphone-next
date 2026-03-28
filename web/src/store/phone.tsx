@@ -12,6 +12,8 @@ import { normalizeAppLanguage } from '../utils/misc';
 import type { AppLanguage } from '../i18n';
 import { useNuiCustomEvent } from '../utils/useNui';
 import type { AppLayout, PhoneFeatureFlags, PhoneFramework, PhoneSettings, PhoneSetupPayload, PhoneState, PhoneSetupState } from '../types';
+import type { Folder, WidgetLayout, WidgetType, WidgetSize, IconShape } from '../types/home';
+import { DEFAULT_WIDGET_LAYOUT, MAX_FOLDERS, MAX_APPS_PER_FOLDER, MAX_WIDGETS, PINNED_APP_IDS } from '../types/home';
 import { APP_IDS, DEFAULT_HOME_APPS, DEFAULT_MENU_APPS } from '../config/apps';
 import { isEnvBrowser } from '../utils/misc';
 
@@ -48,6 +50,19 @@ interface PhoneContextValue {
     saveAppLayout: () => Promise<void>;
     reorderApp: (target: 'home' | 'menu', appId: string, targetIndex: number) => void;
     moveApp: (appId: string, from: 'home' | 'menu', to: 'home' | 'menu', targetIndex?: number) => void;
+    createFolder: (name: string, apps: string[], color: string) => string;
+    updateFolder: (folderId: string, updates: Partial<Pick<Folder, 'name' | 'color' | 'apps'>>) => void;
+    deleteFolder: (folderId: string) => void;
+    addAppToFolder: (folderId: string, appId: string) => void;
+    removeAppFromFolder: (folderId: string, appId: string) => void;
+    mergeTwoAppsIntoFolder: (appId1: string, appId2: string) => string;
+    setIconShape: (shape: IconShape) => void;
+    loadWidgetLayout: () => Promise<void>;
+    saveWidgetLayout: () => Promise<void>;
+    addWidget: (type: WidgetType, size: WidgetSize) => void;
+    removeWidget: (widgetId: string) => void;
+    reorderWidget: (widgetId: string, targetIndex: number) => void;
+    resizeWidget: (widgetId: string, size: WidgetSize) => void;
   };
 }
 
@@ -72,7 +87,8 @@ const defaultSettings: PhoneSettings = {
   accentColor: window.localStorage.getItem('gcphone:accentColor') || 'blue',
   fontSize: window.localStorage.getItem('gcphone:fontSize') || 'default',
   phoneCase: window.localStorage.getItem('gcphone:phoneCase') || 'default',
-  streamerMode: false
+  streamerMode: false,
+  iconShape: window.localStorage.getItem('gcphone:iconShape') as IconShape || 'squircle',
 };
 
 function readSwipeUnlockPreference() {
@@ -168,6 +184,13 @@ function normalizeLayout(layout?: Partial<AppLayout> | null, enabledApps: string
   const used = new Set<string>();
 
   for (const id of home) {
+    if (id.startsWith('folder:')) {
+      if (!used.has(id)) {
+        uniqueHome.push(id);
+        used.add(id);
+      }
+      continue;
+    }
     if (!APP_IDS.includes(id) || !available.has(id) || used.has(id)) continue;
     uniqueHome.push(id);
     used.add(id);
@@ -177,6 +200,13 @@ function normalizeLayout(layout?: Partial<AppLayout> | null, enabledApps: string
     if (!APP_IDS.includes(id) || !available.has(id) || used.has(id)) continue;
     uniqueMenu.push(id);
     used.add(id);
+  }
+
+  const folders = Array.isArray(layout?.folders) ? layout.folders : [];
+  for (const folder of folders) {
+    for (const appId of folder.apps) {
+      used.add(appId);
+    }
   }
 
   for (const id of APP_IDS) {
@@ -195,7 +225,8 @@ function normalizeLayout(layout?: Partial<AppLayout> | null, enabledApps: string
 
   return {
     home: orderedHome,
-    menu: filteredMenu
+    menu: filteredMenu,
+    folders: folders,
   };
 }
 
@@ -259,6 +290,7 @@ export const PhoneProvider: ParentComponent = (props) => {
     accessMode: 'own',
     accessOwnerName: undefined,
     accessPhoneId: undefined,
+    widgetLayout: { ...DEFAULT_WIDGET_LAYOUT },
   });
 
   const setLayout = (layout?: Partial<AppLayout> | null, enabledApps = state.enabledApps) => {
@@ -522,9 +554,145 @@ export const PhoneProvider: ParentComponent = (props) => {
       });
 
       void actions.saveAppLayout();
-    }
+    },
+    createFolder: (name: string, apps: string[], color: string): string => {
+      if (isReadOnly()) return '';
+      const folders = state.appLayout.folders || [];
+      if (folders.length >= MAX_FOLDERS) return '';
+      const id = crypto.randomUUID();
+      const validApps = apps.filter(a => !PINNED_APP_IDS.includes(a as typeof PINNED_APP_IDS[number])).slice(0, MAX_APPS_PER_FOLDER);
+      const folder: Folder = { id, name, apps: validApps, color };
+      setState('appLayout', 'folders', [...folders, folder]);
+      setState('appLayout', 'home', (current) => {
+        const next = current.filter(item => !validApps.includes(item));
+        const firstIdx = current.findIndex(item => validApps.includes(item));
+        const insertAt = firstIdx >= 0 ? Math.min(firstIdx, next.length) : next.length;
+        next.splice(insertAt, 0, `folder:${id}`);
+        return next;
+      });
+      void actions.saveAppLayout();
+      return id;
+    },
+    updateFolder: (folderId: string, updates: Partial<Pick<Folder, 'name' | 'color' | 'apps'>>) => {
+      if (isReadOnly()) return;
+      const folders = state.appLayout.folders || [];
+      const idx = folders.findIndex(f => f.id === folderId);
+      if (idx === -1) return;
+      setState('appLayout', 'folders', idx, (current) => ({
+        ...current,
+        ...(updates.name !== undefined ? { name: updates.name } : {}),
+        ...(updates.color !== undefined ? { color: updates.color } : {}),
+        ...(updates.apps !== undefined ? { apps: updates.apps.slice(0, MAX_APPS_PER_FOLDER) } : {}),
+      }));
+      void actions.saveAppLayout();
+    },
+    deleteFolder: (folderId: string) => {
+      if (isReadOnly()) return;
+      const folders = state.appLayout.folders || [];
+      const folder = folders.find(f => f.id === folderId);
+      if (!folder) return;
+      setState('appLayout', 'home', (current) => {
+        const ref = `folder:${folderId}`;
+        const idx = current.indexOf(ref);
+        const next = current.filter(item => item !== ref);
+        if (idx >= 0) {
+          next.splice(idx, 0, ...folder.apps);
+        } else {
+          next.push(...folder.apps);
+        }
+        return next;
+      });
+      setState('appLayout', 'folders', folders.filter(f => f.id !== folderId));
+      void actions.saveAppLayout();
+    },
+    addAppToFolder: (folderId: string, appId: string) => {
+      if (isReadOnly()) return;
+      if (PINNED_APP_IDS.includes(appId as typeof PINNED_APP_IDS[number])) return;
+      const folders = state.appLayout.folders || [];
+      const idx = folders.findIndex(f => f.id === folderId);
+      if (idx === -1) return;
+      if (folders[idx].apps.length >= MAX_APPS_PER_FOLDER) return;
+      if (folders[idx].apps.includes(appId)) return;
+      setState('appLayout', 'folders', idx, 'apps', (apps) => [...apps, appId]);
+      setState('appLayout', 'home', (current) => current.filter(item => item !== appId));
+      void actions.saveAppLayout();
+    },
+    removeAppFromFolder: (folderId: string, appId: string) => {
+      if (isReadOnly()) return;
+      const folders = state.appLayout.folders || [];
+      const idx = folders.findIndex(f => f.id === folderId);
+      if (idx === -1) return;
+      setState('appLayout', 'folders', idx, 'apps', (apps) => apps.filter(a => a !== appId));
+      setState('appLayout', 'home', (current) => {
+        const ref = `folder:${folderId}`;
+        const refIdx = current.indexOf(ref);
+        const next = [...current];
+        next.splice(refIdx + 1, 0, appId);
+        return next;
+      });
+      const updatedFolder = state.appLayout.folders?.[idx];
+      if (updatedFolder && updatedFolder.apps.length === 0) {
+        actions.deleteFolder(folderId);
+      } else {
+        void actions.saveAppLayout();
+      }
+    },
+    mergeTwoAppsIntoFolder: (appId1: string, appId2: string): string => {
+      if (isReadOnly()) return '';
+      if (PINNED_APP_IDS.includes(appId1 as typeof PINNED_APP_IDS[number])) return '';
+      if (PINNED_APP_IDS.includes(appId2 as typeof PINNED_APP_IDS[number])) return '';
+      return actions.createFolder('New Folder', [appId1, appId2], 'blue');
+    },
+    setIconShape: (shape: IconShape) => {
+      if (isReadOnly()) return;
+      setState('settings', 'iconShape', shape);
+      window.localStorage.setItem('gcphone:iconShape', shape);
+    },
+    loadWidgetLayout: async () => {
+      const layout = await fetchNui<WidgetLayout | null>('getWidgetLayout', {});
+      if (layout && Array.isArray(layout.widgets)) {
+        setState('widgetLayout', layout);
+      }
+    },
+    saveWidgetLayout: async () => {
+      if (isReadOnly()) return;
+      await fetchNui('setWidgetLayout', { layout: state.widgetLayout });
+    },
+    addWidget: (type: WidgetType, size: WidgetSize) => {
+      if (isReadOnly()) return;
+      const current = state.widgetLayout?.widgets || [];
+      if (current.length >= MAX_WIDGETS) return;
+      const id = crypto.randomUUID();
+      setState('widgetLayout', 'widgets', [...current, { id, type, size }]);
+      void actions.saveWidgetLayout();
+    },
+    removeWidget: (widgetId: string) => {
+      if (isReadOnly()) return;
+      setState('widgetLayout', 'widgets', (ws) => ws.filter(w => w.id !== widgetId));
+      void actions.saveWidgetLayout();
+    },
+    reorderWidget: (widgetId: string, targetIndex: number) => {
+      if (isReadOnly()) return;
+      setState('widgetLayout', 'widgets', (current) => {
+        const next = [...current];
+        const fromIdx = next.findIndex(w => w.id === widgetId);
+        if (fromIdx === -1) return current;
+        const [item] = next.splice(fromIdx, 1);
+        const clamped = Math.max(0, Math.min(targetIndex, next.length));
+        next.splice(clamped, 0, item);
+        return next;
+      });
+      void actions.saveWidgetLayout();
+    },
+    resizeWidget: (widgetId: string, size: WidgetSize) => {
+      if (isReadOnly()) return;
+      setState('widgetLayout', 'widgets', (ws) =>
+        ws.map(w => w.id === widgetId ? { ...w, size } : w)
+      );
+      void actions.saveWidgetLayout();
+    },
   };
-  
+
   useNuiCustomEvent<PhonePayload>('phone:init', (data) => {
     const flags = normalizeFeatureFlags(data?.featureFlags);
     const enabledApps = ensureRequiredEnabledApps(Array.isArray(data?.enabledApps) && data.enabledApps.length > 0
@@ -656,6 +824,7 @@ export const PhoneProvider: ParentComponent = (props) => {
   onMount(() => {
     fetchNui('nuiReady', {}, true);
     void actions.loadAppLayout();
+    void actions.loadWidgetLayout();
     if (isEnvBrowser()) {
       setState('locked', false);
     }
