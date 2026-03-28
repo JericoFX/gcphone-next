@@ -23,7 +23,7 @@ const FOLDER_COLORS: Record<string, string> = {
 };
 
 export function FolderIcon(props: FolderIconProps) {
-  const { className } = useIconPack();
+  const { borderRadius } = useIconPack();
   const previewApps = () => props.folder.apps.slice(0, 4);
   const bgColor = () => FOLDER_COLORS[props.folder.color] || FOLDER_COLORS.blue;
 
@@ -39,8 +39,8 @@ export function FolderIcon(props: FolderIconProps) {
       }}
     >
       <div
-        class={`${styles.preview} ${className()}`}
-        style={{ background: bgColor() }}
+        class={styles.preview}
+        style={{ background: bgColor(), 'border-radius': borderRadius() }}
       >
         <For each={[0, 1, 2, 3]}>
           {(i) => {

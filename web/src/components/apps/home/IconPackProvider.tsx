@@ -2,16 +2,16 @@ import { createContext, useContext, ParentComponent, createMemo } from 'solid-js
 import { usePhoneState } from '../../../store/phone';
 import type { IconShape } from '../../../types/home';
 
-const ICON_SHAPE_CLASS: Record<IconShape, string> = {
-  squircle: 'icon-squircle',
-  circle: 'icon-circle',
-  rounded: 'icon-rounded',
-  square: 'icon-square',
+const ICON_SHAPE_RADIUS: Record<IconShape, string> = {
+  squircle: '16px',
+  circle: '50%',
+  rounded: '8px',
+  square: '0px',
 };
 
 interface IconPackContextValue {
   shape: () => IconShape;
-  className: () => string;
+  borderRadius: () => string;
 }
 
 const IconPackContext = createContext<IconPackContextValue>();
@@ -19,10 +19,10 @@ const IconPackContext = createContext<IconPackContextValue>();
 export const IconPackProvider: ParentComponent = (props) => {
   const state = usePhoneState();
   const shape = createMemo<IconShape>(() => (state.settings.iconShape as IconShape) || 'squircle');
-  const className = createMemo(() => ICON_SHAPE_CLASS[shape()]);
+  const borderRadius = createMemo(() => ICON_SHAPE_RADIUS[shape()]);
 
   return (
-    <IconPackContext.Provider value={{ shape, className }}>
+    <IconPackContext.Provider value={{ shape, borderRadius }}>
       {props.children}
     </IconPackContext.Provider>
   );

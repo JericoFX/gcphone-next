@@ -16,7 +16,7 @@ interface AppIconProps {
 }
 
 export function AppIcon(props: AppIconProps) {
-  const { className } = useIconPack();
+  const { borderRadius } = useIconPack();
 
   return (
     <button
@@ -32,7 +32,8 @@ export function AppIcon(props: AppIconProps) {
       }}
     >
       <img
-        class={`${styles.iconImg} ${className()}`}
+        class={styles.iconImg}
+        style={{ 'border-radius': borderRadius() }}
         src={props.icon}
         alt={appName(props.id, props.name, props.language())}
         draggable={false}
