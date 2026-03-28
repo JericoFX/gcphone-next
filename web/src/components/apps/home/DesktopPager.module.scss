@@ -1,0 +1,31 @@
+.pager {
+  position: relative; z-index: 2; width: 100%;
+  display: flex; align-items: center; justify-content: center;
+  gap: var(--s-2); padding: 4px 10px 18px;
+}
+.page-btn {
+  width: 28px; height: 28px; border: none; border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.12), 0 2px 6px rgba(0, 0, 0, 0.1);
+  color: #fff; font-size: 16px; display: inline-flex; align-items: center; justify-content: center;
+  transition: background 140ms ease;
+  &:active { background: rgba(255, 255, 255, 0.18); }
+  img { width: 13px; height: 13px; object-fit: contain; }
+}
+.page-dots {
+  padding: 6px 14px; border-radius: 999px; background: rgba(255, 255, 255, 0.06);
+  box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.1), 0 2px 6px rgba(0, 0, 0, 0.08);
+  display: flex; align-items: center; gap: 6px;
+}
+.dot {
+  width: 6px; height: 6px; border-radius: 999px; background: rgba(255, 255, 255, 0.32);
+  transition: width 220ms cubic-bezier(0.2, 0.8, 0.2, 1), background 220ms ease;
+}
+.active-dot {
+  width: 20px; background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.2);
+}
+.widget-dot {
+  background: rgba(var(--tint-rgb), 0.6);
+  &.active-dot { background: rgba(var(--tint-rgb), 0.92); box-shadow: 0 0 8px rgba(var(--tint-rgb), 0.3); }
+}
