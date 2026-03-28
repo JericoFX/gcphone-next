@@ -1,0 +1,18 @@
+.widget-page {
+  position: relative; z-index: 2; display: flex; flex-direction: column;
+  gap: var(--s-2); padding: var(--s-2) var(--s-3); overflow-y: auto; flex: 1;
+}
+.widget-row { display: flex; gap: var(--s-2); }
+.widget-row > * { flex: 1; }
+.empty {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: var(--s-2); min-height: 200px; color: rgba(210, 228, 255, 0.5); font-size: var(--fs-footnote);
+}
+.add-btn {
+  width: 100%; min-height: 44px; border: 1.5px dashed rgba(255, 255, 255, 0.2);
+  border-radius: var(--r-lg); background: transparent; color: rgba(210, 228, 255, 0.6);
+  font-size: var(--fs-footnote); font-weight: 600;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  transition: background 140ms ease, border-color 140ms ease;
+  &:active { background: rgba(255, 255, 255, 0.06); border-color: rgba(255, 255, 255, 0.3); }
+}
