@@ -1,4 +1,5 @@
 import type { AppLanguage } from '../i18n';
+import type { Folder, IconShape, WidgetLayout } from './home';
 
 export interface Contact {
   id: number;
@@ -81,6 +82,7 @@ export interface PhoneSettings {
   playerName?: string;
   streamerMode?: boolean;
   phoneScale?: number;
+  iconShape?: IconShape;
 }
 
 export type PhoneFramework = 'esx' | 'qbcore' | 'qbox' | 'unknown';
@@ -142,6 +144,7 @@ export interface PhoneState {
   accessPhoneId?: string;
   playerName?: string;
   resourceVersion?: string;
+  widgetLayout?: WidgetLayout;
 }
 
 export interface PhoneNotification {
@@ -161,6 +164,7 @@ export interface PhoneNotification {
 export interface AppLayout {
   home: string[];
   menu: string[];
+  folders?: Folder[];
 }
 
 export interface GalleryPhoto {
