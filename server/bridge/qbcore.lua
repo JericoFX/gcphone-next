@@ -16,7 +16,6 @@ CreateThread(function()
         Core = exports['qb-core']:GetCoreObject()
         Framework = 'qbcore'
     elseif framework == 'qbox' then
-        Core = exports.qbx_core
         Framework = 'qbox'
     end
 
@@ -49,6 +48,9 @@ local function GetFramework()
 end
 
 local function GetPlayer(source)
+    if Framework == 'qbox' then
+        return exports.qbx_core:GetPlayer(source)
+    end
     if not Core then return nil end
     return Core.Functions.GetPlayer(source)
 end
@@ -115,8 +117,17 @@ local function GetJob(source)
 end
 
 local function GetSourceFromIdentifier(identifier)
-    if not Core or not identifier then return nil end
+    if not identifier then return nil end
 
+    if Framework == 'qbox' then
+        local player = exports.qbx_core:GetPlayerByCitizenId(identifier)
+        if player and player.PlayerData then
+            return tonumber(player.PlayerData.source)
+        end
+        return nil
+    end
+
+    if not Core then return nil end
     local players = Core.Functions.GetPlayers()
     for _, src in pairs(players) do
         local player = Core.Functions.GetPlayer(src)
@@ -139,6 +150,10 @@ local function GetFrameworkPhoneNumber(source, identifier)
     return GetQBPhoneFromPlayer(player)
 end
 
+local function SetFrameworkPhoneNumber(_source, _identifier, _phoneNumber)
+    return true
+end
+
 local function GetPhoneNumber(identifier)
     if not identifier then return nil end
 
@@ -154,7 +169,12 @@ end
 local function GetIdentifierByPhone(phoneNumber)
     if not phoneNumber then return nil end
 
-    if Core then
+    if Framework == 'qbox' then
+        local player = exports.qbx_core:GetPlayerByPhone(phoneNumber)
+        if player and player.PlayerData then
+            return player.PlayerData.citizenid
+        end
+    elseif Core then
         if Core.Functions.GetPlayerByPhone then
             local player = Core.Functions.GetPlayerByPhone(phoneNumber)
             if player and player.PlayerData then
@@ -189,6 +209,7 @@ return {
     GetJob = GetJob,
     GetSourceFromIdentifier = GetSourceFromIdentifier,
     GetFrameworkPhoneNumber = GetFrameworkPhoneNumber,
+    SetFrameworkPhoneNumber = SetFrameworkPhoneNumber,
     GetPhoneNumber = GetPhoneNumber,
     GetIdentifierByPhone = GetIdentifierByPhone,
 }
