@@ -344,7 +344,11 @@ lib.callback.register('gcphone:unlockDroppedPhone', function(source, data)
         return { success = false, error = 'TOO_FAR' }
     end
 
-    if not pin:match('^%d%d%d%d$') then
+    local setup = Config.Phone and Config.Phone.Setup or {}
+    local minPinLen = tonumber(setup.MinPinLength) or 4
+    local maxPinLen = tonumber(setup.MaxPinLength) or 6
+    if maxPinLen < minPinLen then maxPinLen = minPinLen end
+    if not pin:match('^%d+$') or #pin < minPinLen or #pin > maxPinLen then
         return { success = false, error = 'INVALID_PIN_FORMAT' }
     end
 

@@ -41,7 +41,7 @@ export function SettingsSystem(props: SettingsSystemProps) {
             </div>
             <div style={{ display: 'flex', 'flex-direction': 'column', gap: '1px' }}>
               <span class="ios18-cell__title">
-                {t('settings.share_location', props.language()) || 'Ubicacion en vivo'}
+                {t('settings.share_location', props.language())}
               </span>
               <span class="ios18-cell__subtitle">
                 {props.liveLocationEnabled()

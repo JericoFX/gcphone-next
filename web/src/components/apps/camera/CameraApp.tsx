@@ -231,40 +231,46 @@ export function CameraApp() {
             removeActivity('recording');
             setBusy(true);
             try {
-              // Get upload config from server (URL, headers, field name)
               const uploadCfg = await fetchNui<{
                 url?: string; field?: string; headers?: Record<string, string>;
-                successPath?: string; errorPath?: string;
+                successPath?: string; useProxy?: boolean;
               }>('getVideoUploadConfig', {}, { url: '', field: 'file' });
 
-              if (!uploadCfg?.url) {
+              let videoUrl: string | undefined;
+
+              if (uploadCfg?.useProxy) {
+                const reader = new FileReader();
+                const base64 = await new Promise<string>((resolve) => {
+                  reader.onloadend = () => resolve((reader.result as string).split(',')[1] || '');
+                  reader.readAsDataURL(blob);
+                });
+                const proxyResult = await fetchNui<{ url?: string; error?: string }>(
+                  'proxyUpload', { base64, filename: 'video.webm', contentType: 'video/webm' }, { error: 'PROXY_FAILED' }
+                );
+                videoUrl = proxyResult?.url;
+              } else if (uploadCfg?.url) {
+                const headers = new Headers();
+                if (uploadCfg.headers) {
+                  for (const [k, v] of Object.entries(uploadCfg.headers)) headers.append(k, v);
+                }
+                const formData = new FormData();
+                formData.append(uploadCfg.field || 'file', blob, 'video.webm');
+                const resp = await fetch(uploadCfg.url, { method: 'POST', headers, body: formData });
+                if (!resp.ok) throw new Error(`Upload failed: ${resp.status}`);
+                const json = await resp.json();
+                if (uploadCfg.successPath) {
+                  let obj: unknown = json;
+                  for (const key of uploadCfg.successPath.split('.')) {
+                    obj = (obj as Record<string, unknown>)?.[key];
+                  }
+                  videoUrl = typeof obj === 'string' ? obj : undefined;
+                } else {
+                  videoUrl = json?.url || json?.data?.url || json?.link;
+                }
+              } else {
                 setError(t('camera.error.upload_not_configured', language()));
                 setBusy(false);
                 return;
-              }
-
-              // Upload directly from NUI to the external API
-              const headers = new Headers();
-              if (uploadCfg.headers) {
-                for (const [k, v] of Object.entries(uploadCfg.headers)) headers.append(k, v);
-              }
-              const formData = new FormData();
-              formData.append(uploadCfg.field || 'file', blob, 'video.webm');
-
-              const resp = await fetch(uploadCfg.url, { method: 'POST', headers, body: formData });
-              if (!resp.ok) throw new Error(`Upload failed: ${resp.status}`);
-              const json = await resp.json();
-
-              // Extract URL from response using configured path
-              let videoUrl: string | undefined;
-              if (uploadCfg.successPath) {
-                let obj: unknown = json;
-                for (const key of uploadCfg.successPath.split('.')) {
-                  obj = (obj as Record<string, unknown>)?.[key];
-                }
-                videoUrl = typeof obj === 'string' ? obj : undefined;
-              } else {
-                videoUrl = json?.url || json?.data?.url || json?.link;
               }
 
               if (videoUrl) {

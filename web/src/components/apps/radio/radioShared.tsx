@@ -68,5 +68,6 @@ export function getCategoryIcon(category: string): string {
 }
 
 export function getCategoryLabel(category: string, language: string): string {
-  return t('radio.category.' + category, language) || category;
+  const v = t('radio.category.' + category, language);
+  return v === 'radio.category.' + category ? category : v;
 }

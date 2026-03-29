@@ -3,6 +3,7 @@ import { fetchNui } from '@/utils/fetchNui';
 import { sanitizeMediaUrl } from '@/utils/sanitize';
 import { uiPrompt } from '@/utils/uiDialog';
 import { uiAlert } from '@/utils/uiAlert';
+import { getStoredLanguage, t } from '../i18n';
 
 export interface UseMediaAttachmentOptions {
   onAttached?: (url: string) => void;
@@ -60,7 +61,7 @@ export function useMediaAttachment(options: UseMediaAttachmentOptions = {}) {
   };
 
   const attachByUrl = async () => {
-    const input = await uiPrompt('Pega URL de imagen, video o audio', { title: 'Adjuntar' });
+    const input = await uiPrompt(t('media.paste_url', getStoredLanguage()), { title: t('media.attach', getStoredLanguage()) });
     if (!input?.trim()) return false;
 
     const nextUrl = sanitizeMediaUrl(input.trim());
@@ -71,8 +72,8 @@ export function useMediaAttachment(options: UseMediaAttachmentOptions = {}) {
       return true;
     }
 
-    uiAlert('URL invalida o formato no permitido');
-    options.onError?.('URL invalida');
+    uiAlert(t('media.invalid_url', getStoredLanguage()));
+    options.onError?.(t('media.invalid_url_short', getStoredLanguage()));
     return false;
   };
 

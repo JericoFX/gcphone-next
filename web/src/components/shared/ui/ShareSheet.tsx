@@ -142,7 +142,7 @@ export function ShareSheet(props: ShareSheetProps) {
       <div class={styles.overlay} onClick={close}>
         <div class={styles.sheet} onClick={(e) => e.stopPropagation()}>
           <Show when={step() === 'destinations'}>
-            <div class={styles.title}>{t('action.share', language()) || 'Compartir'}</div>
+            <div class={styles.title}>{t('action.share', language())}</div>
             <div class={styles.list}>
               <For each={destinations()}>
                 {(dest) => (

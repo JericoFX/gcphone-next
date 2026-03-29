@@ -641,6 +641,11 @@ end)
 lib.callback.register('gcphone:radio:musicDuck', function(source, data)
     local stationId = tonumber(type(data) == 'table' and data.stationId or nil)
     if not stationId then return { success = false } end
+    local station = ActiveStations[stationId]
+    if not station then return { success = false } end
+    if station.hostSource ~= source and not station.listeners[source] then
+        return { success = false }
+    end
     TriggerClientEvent('gcphone:radio:musicDucked', -1, { stationId = stationId, ducked = true })
     return { success = true }
 end)
@@ -648,6 +653,11 @@ end)
 lib.callback.register('gcphone:radio:musicUnduck', function(source, data)
     local stationId = tonumber(type(data) == 'table' and data.stationId or nil)
     if not stationId then return { success = false } end
+    local station = ActiveStations[stationId]
+    if not station then return { success = false } end
+    if station.hostSource ~= source and not station.listeners[source] then
+        return { success = false }
+    end
     TriggerClientEvent('gcphone:radio:musicDucked', -1, { stationId = stationId, ducked = false })
     return { success = true }
 end)

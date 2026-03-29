@@ -40,8 +40,7 @@ export function RadioCreate(props: RadioCreateProps) {
             class="ios18-input"
             type="text"
             placeholder={
-              t('radio.form.name_placeholder', props.language()) ||
-              'Nombre de la estacion'
+              t('radio.form.name_placeholder', props.language())
             }
             value={props.formName()}
             onInput={(e) => {

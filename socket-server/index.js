@@ -3,6 +3,11 @@ import jwt from 'jsonwebtoken';
 
 const port = Number(process.env.PORT || 3001);
 const jwtSecret = process.env.JWT_SECRET || '';
+
+if (!jwtSecret || jwtSecret.length < 16) {
+  console.error('[gcphone-socket] FATAL: JWT_SECRET must be set and at least 16 characters');
+  process.exit(1);
+}
 const snapLiveRooms = new Map();
 const snapLiveRoomLastActive = new Map();
 const SNAP_ROOM_IDLE_TTL_MS = 3600000; // 1 hour

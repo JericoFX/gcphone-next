@@ -272,7 +272,7 @@ export function GalleryApp() {
       subject: 'Foto adjunta',
       attachmentUrl: mediaUrl,
       attachmentType: 'image',
-      attachmentName: 'Foto de galeria',
+      attachmentName: t('gallery.photo_caption', language()),
     });
   };
 
@@ -283,7 +283,7 @@ export function GalleryApp() {
     notificationsActions.receive({
       appId: 'gallery',
       title: t('app.gallery', language()),
-      message: 'Foto guardada en galeria',
+      message: t('gallery.photo_saved', language()),
       priority: 'normal',
     });
   };
@@ -520,8 +520,8 @@ export function GalleryApp() {
           </div>
         </div>
         <ModalActions>
-          <ModalButton label="Cancelar" onClick={() => { setShowAlbumCreate(false); setAlbumName(''); }} />
-          <ModalButton label="Crear" tone="primary" onClick={() => void createAlbum()} disabled={!albumName().trim()} />
+          <ModalButton label={t('action.cancel', language())} onClick={() => { setShowAlbumCreate(false); setAlbumName(''); }} />
+          <ModalButton label={t('gallery.create', language())} tone="primary" onClick={() => void createAlbum()} disabled={!albumName().trim()} />
         </ModalActions>
       </Modal>
     </AppScaffold>

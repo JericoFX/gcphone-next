@@ -107,7 +107,7 @@ export function ControlCenter() {
         notificationsActions.receive({
           appId: 'maps',
           title: 'GPS',
-          message: 'Ubicacion en tiempo real desactivada',
+          message: t('control.gps_disabled', language()),
           priority: 'normal',
         });
       }
@@ -123,7 +123,7 @@ export function ControlCenter() {
       notificationsActions.receive({
         appId: 'maps',
         title: 'GPS',
-        message: 'Necesitas al menos un contacto para compartir ubicacion',
+        message: t('control.gps_need_contact', language()),
         priority: 'normal',
       });
       return;
@@ -141,7 +141,7 @@ export function ControlCenter() {
       notificationsActions.receive({
         appId: 'maps',
         title: 'GPS',
-        message: 'Ubicacion en tiempo real activada cada 10s',
+        message: t('control.gps_enabled', language()),
         priority: 'normal',
         route: 'maps',
         data: { action: 'my-location' },
@@ -152,7 +152,7 @@ export function ControlCenter() {
     notificationsActions.receive({
       appId: 'maps',
       title: 'GPS',
-      message: startResult?.error || 'No se pudo activar el GPS',
+      message: startResult?.error || t('control.gps_failed', language()),
       priority: 'normal',
     });
   }

@@ -1,5 +1,6 @@
 import { Show } from 'solid-js';
 import type { LiveActivity } from '../../../store/liveActivity';
+import { getStoredLanguage, t } from '../../../i18n';
 import styles from './DynamicIsland.module.scss';
 
 interface IslandCallProps {
@@ -13,7 +14,7 @@ export function IslandCall(props: IslandCallProps) {
         <span class={`${styles.badge} ${styles.badgeCall}`}>📞</span>
         <div style={{ flex: '1', 'min-width': '0' }}>
           <div class={styles.expandedTitle}>{props.activity.title}</div>
-          <div class={styles.expandedSubtitle}>{props.activity.subtitle || 'Llamada en curso'}</div>
+          <div class={styles.expandedSubtitle}>{props.activity.subtitle || t('calls.call_in_progress', getStoredLanguage())}</div>
         </div>
       </div>
       <div class={styles.expandedControls}>

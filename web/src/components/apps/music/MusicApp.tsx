@@ -81,7 +81,7 @@ export function MusicApp() {
   const [volume, setVolume] = createSignal(15);
   const [distance, setDistance] = createSignal(15);
   const [busyAction, setBusyAction] = createSignal(false);
-  const [status, setStatus] = createSignal('Busca una pista y reproduccela para toda la zona.');
+  const [status, setStatus] = createSignal(t('music.status_idle', language()));
   const [catalogEnabled, setCatalogEnabled] = createSignal(true);
   const [privateMode, setPrivateMode] = createSignal(false);
   const [disclaimerDismissed, setDisclaimerDismissed] = createSignal(
@@ -248,7 +248,7 @@ export function MusicApp() {
     setCurrentThumb(track.thumbnail || '');
     setIsPlaying(true);
     setIsPaused(false);
-    setStatus('Transmitiendo para jugadores cercanos.');
+    setStatus(t('music.broadcasting', language()));
     setBusyAction(false);
   };
 
@@ -257,7 +257,7 @@ export function MusicApp() {
     if (!url) return;
 
     setBusyAction(true);
-    setStatus('Enviando URL al servidor...');
+    setStatus(t('music.sending_url', language()));
 
     await fetchNui('musicPlay', {
       url,
@@ -272,7 +272,7 @@ export function MusicApp() {
     setCurrentThumb('');
     setIsPlaying(true);
     setIsPaused(false);
-    setStatus('Transmitiendo para jugadores cercanos.');
+    setStatus(t('music.broadcasting', language()));
     setBusyAction(false);
   };
 
@@ -280,7 +280,7 @@ export function MusicApp() {
     setBusyAction(true);
     await fetchNui('musicPause');
     setIsPaused(true);
-    setStatus('Pausado.');
+    setStatus(t('music.paused', language()));
     setBusyAction(false);
   };
 
@@ -677,10 +677,10 @@ export function MusicApp() {
         }>
           <div class={styles.playlistsList}>
             <button class={styles.createPlaylistBtn} onClick={() => {
-              const name = prompt('Nombre de la playlist:');
+              const name = prompt(t('music.playlist_name_prompt', language()));
               if (name?.trim()) createPlaylist(name.trim());
             }}>
-              + {t('music.new_playlist', language()) || 'Nueva Playlist'}
+              + {t('music.new_playlist', language())}
             </button>
             <For each={playlists()}>
               {(pl) => (

@@ -30,6 +30,11 @@ export function WidgetPicker(props: WidgetPickerProps) {
   const [expanded, setExpanded] = createSignal<WidgetType | null>(null);
   const [selectedSize, setSelectedSize] = createSignal<Record<string, WidgetSize>>({});
 
+  const tr = (key: string, fallback: string) => {
+    const v = t(key, props.language());
+    return v === key ? fallback : v;
+  };
+
   const getSize = (type: WidgetType): WidgetSize =>
     selectedSize()[type] || WIDGET_DEFINITIONS[type].sizes[0];
 
@@ -56,7 +61,7 @@ export function WidgetPicker(props: WidgetPickerProps) {
         {/* Header */}
         <div class={styles.header}>
           <span />
-          <strong>{t('home.widgets', props.language()) || 'Widgets'}</strong>
+          <strong>{tr('home.widgets', 'Widgets')}</strong>
           <button class={styles.closeBtn} onClick={props.onClose}>
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
               <path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
@@ -73,7 +78,7 @@ export function WidgetPicker(props: WidgetPickerProps) {
           <input
             class={styles.searchInput}
             type="text"
-            placeholder={t('home.search_widgets', props.language()) || 'Search Widgets'}
+            placeholder={tr('home.search_widgets', 'Search Widgets')}
             value={search()}
             onInput={(e) => setSearch(e.currentTarget.value)}
           />
@@ -81,7 +86,7 @@ export function WidgetPicker(props: WidgetPickerProps) {
 
         {/* Widget list */}
         <div class={styles.list}>
-          <For each={filtered()} fallback={<div class={styles.empty}>{t('home.no_widgets', props.language()) || 'No widgets found'}</div>}>
+          <For each={filtered()} fallback={<div class={styles.empty}>{tr('home.no_widgets', 'No widgets found')}</div>}>
             {(type) => {
               const def = WIDGET_DEFINITIONS[type];
               const isExpanded = () => expanded() === type;
@@ -131,7 +136,7 @@ export function WidgetPicker(props: WidgetPickerProps) {
 
                       {/* Add button */}
                       <button class={styles.addBtn} onClick={() => addWidget(type)}>
-                        {t('home.add_widget', props.language()) || 'Add Widget'}
+                        {tr('home.add_widget', 'Add Widget')}
                       </button>
                     </div>
                   </Show>

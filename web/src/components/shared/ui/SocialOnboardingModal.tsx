@@ -1,5 +1,6 @@
 import { createEffect, createSignal } from 'solid-js';
 import { FormField, FormTextarea, Modal, ModalActions, ModalButton } from './Modal';
+import { getStoredLanguage, t } from '../../../i18n';
 import styles from './SocialOnboardingModal.module.scss';
 
 interface SocialOnboardingPayload {
@@ -63,12 +64,12 @@ export function SocialOnboardingModal(props: SocialOnboardingModalProps) {
     const normalizedBio = bio().trim().slice(0, 180);
 
     if (normalizedUsername.length < 3) {
-      setError('El usuario debe tener al menos 3 caracteres validos.');
+      setError(t('social.username_min_chars', getStoredLanguage()));
       return;
     }
 
     if (!normalizedDisplayName) {
-      setError('Ingresa un nombre visible.');
+      setError(t('social.display_name_required', getStoredLanguage()));
       return;
     }
 
@@ -84,7 +85,7 @@ export function SocialOnboardingModal(props: SocialOnboardingModalProps) {
     });
 
     const ok = typeof result === 'boolean' ? result : result.ok;
-    const reason = typeof result === 'boolean' ? '' : (result.error || 'No se pudo crear la cuenta.');
+    const reason = typeof result === 'boolean' ? '' : (result.error || t('social.account_create_failed', getStoredLanguage()));
 
     if (!ok) {
       setError(reason || 'No se pudo crear la cuenta.');

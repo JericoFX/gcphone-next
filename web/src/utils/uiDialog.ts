@@ -1,4 +1,5 @@
 import { emitInternalEvent } from './internalEvents';
+import { getStoredLanguage, t } from '../i18n';
 
 type DialogRequest = {
   type: 'prompt' | 'confirm';
@@ -13,7 +14,7 @@ export function uiPrompt(message: string, options?: { title?: string; placeholde
   return new Promise<string | null>((resolve) => {
     const payload: DialogRequest = {
       type: 'prompt',
-      title: options?.title || 'Entrada',
+      title: options?.title || t('common.input', getStoredLanguage()),
       message,
       placeholder: options?.placeholder,
       defaultValue: options?.defaultValue,
@@ -28,7 +29,7 @@ export function uiConfirm(message: string, options?: { title?: string }) {
   return new Promise<boolean>((resolve) => {
     const payload: DialogRequest = {
       type: 'confirm',
-      title: options?.title || 'Confirmar',
+      title: options?.title || t('common.confirm', getStoredLanguage()),
       message,
       resolve: (value) => resolve(value === true),
     };

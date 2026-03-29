@@ -55,9 +55,9 @@ export function NewsApp() {
   const [profileAvatar, setProfileAvatar] = createSignal('');
   const [profileBio, setProfileBio] = createSignal('');
   const [scalePreset, setScalePreset] = createSignal<NewsScaleform['preset']>('breaking');
-  const [scaleHeadline, setScaleHeadline] = createSignal('ULTIMO MOMENTO');
-  const [scaleSubtitle, setScaleSubtitle] = createSignal('Cobertura en vivo');
-  const [scaleTicker, setScaleTicker] = createSignal('Desarrollo en curso...');
+  const [scaleHeadline, setScaleHeadline] = createSignal(t('news.breaking', language()));
+  const [scaleSubtitle, setScaleSubtitle] = createSignal(t('news.live_coverage', language()));
+  const [scaleTicker, setScaleTicker] = createSignal(t('news.developing', language()));
   const [statusMessage, setStatusMessage] = createSignal('');
   const liveFlashlight = useLiveFlashlight();
   const [, notificationsActions] = useNotifications();
@@ -73,9 +73,9 @@ export function NewsApp() {
     const sf = await fetchNui<NewsScaleform | null>('newsGetScaleform', { articleId }, null);
     if (!sf) return;
     setScalePreset((sf.preset || 'breaking') as NewsScaleform['preset']);
-    setScaleHeadline(sanitizeText(sf.headline || '', 80) || 'ULTIMO MOMENTO');
-    setScaleSubtitle(sanitizeText(sf.subtitle || '', 120) || 'Cobertura en vivo');
-    setScaleTicker(sanitizeText(sf.ticker || '', 180) || 'Desarrollo en curso...');
+    setScaleHeadline(sanitizeText(sf.headline || '', 80) || t('news.breaking', language()));
+    setScaleSubtitle(sanitizeText(sf.subtitle || '', 120) || t('news.live_coverage', language()));
+    setScaleTicker(sanitizeText(sf.ticker || '', 180) || t('news.developing', language()));
   };
 
   const syncActiveLive = (nextArticles: NewsArticle[], nextLiveArticles: NewsArticle[]) => {
@@ -297,9 +297,9 @@ export function NewsApp() {
     const nextId = Number(payload?.articleId || activeLive()?.id || 0);
     if (nextId > 0 && payload?.scaleform) {
       setScalePreset((payload.scaleform.preset || 'breaking') as NewsScaleform['preset']);
-      setScaleHeadline(sanitizeText(payload.scaleform.headline || '', 80) || 'ULTIMO MOMENTO');
-      setScaleSubtitle(sanitizeText(payload.scaleform.subtitle || '', 120) || 'Cobertura en vivo');
-      setScaleTicker(sanitizeText(payload.scaleform.ticker || '', 180) || 'Desarrollo en curso...');
+      setScaleHeadline(sanitizeText(payload.scaleform.headline || '', 80) || t('news.breaking', language()));
+      setScaleSubtitle(sanitizeText(payload.scaleform.subtitle || '', 120) || t('news.live_coverage', language()));
+      setScaleTicker(sanitizeText(payload.scaleform.ticker || '', 180) || t('news.developing', language()));
       return;
     }
     if (nextId > 0) {
@@ -473,14 +473,14 @@ export function NewsApp() {
       liveFlashlight.setPanelOpen(false);
       await liveFlashlight.turnOff();
       setLiveArticleId(null);
-      setStatusMessage('Live finalizado');
+      setStatusMessage(t('news.live_ended', language()));
       closeLiveViewer();
       await load();
       return;
     }
 
-    const nextTitle = sanitizeText(title(), 200) || 'Transmision en vivo';
-    const nextContent = sanitizeText(content(), 3000) || 'Cobertura en vivo';
+    const nextTitle = sanitizeText(title(), 200) || t('news.live_broadcast', language());
+    const nextContent = sanitizeText(content(), 3000) || t('news.live_coverage', language());
     const nextCategory = sanitizeText(category(), 30) || 'general';
 
     const result = await fetchNui<{ success?: boolean; articleId?: number }>('newsStartLive', {
@@ -780,7 +780,7 @@ export function NewsApp() {
                       <span class={styles.liveRailBadge}>{Number(article.live_viewers || 0) || (article.id === -1 ? 12 : 1)} viendo</span>
                     </div>
                     <div class={styles.liveRailBody}>
-                      <strong>{sanitizeText(article.title || '', 90) || 'Cobertura en vivo'}</strong>
+                      <strong>{sanitizeText(article.title || '', 90) || t('news.live_coverage', language())}</strong>
                       <span>{articleAuthor(article)}</span>
                     </div>
                   </button>
@@ -972,11 +972,11 @@ export function NewsApp() {
               <div class={styles.liveStageOverlay}>
                 <div class={styles.liveBadge}>{activeLiveStatus()}</div>
                 <div class={styles.liveStageText}>
-                  <strong>{sanitizeText(scaleHeadline(), 80) || sanitizeText(activeLive()?.title || '', 80) || 'ULTIMO MOMENTO'}</strong>
-                  <span>{sanitizeText(scaleSubtitle(), 120) || sanitizeText(activeLive()?.content || '', 120) || 'Cobertura en vivo'}</span>
+                  <strong>{sanitizeText(scaleHeadline(), 80) || sanitizeText(activeLive()?.title || '', 80) || t('news.breaking', language())}</strong>
+                  <span>{sanitizeText(scaleSubtitle(), 120) || sanitizeText(activeLive()?.content || '', 120) || t('news.live_coverage', language())}</span>
                   <p>{sanitizeText(activeLive()?.content || '', 180)}</p>
                 </div>
-                <div class={styles.liveTicker}>{sanitizeText(scaleTicker(), 180) || 'Desarrollo en curso...'}</div>
+                <div class={styles.liveTicker}>{sanitizeText(scaleTicker(), 180) || t('news.developing', language())}</div>
               </div>
 
               <div class={styles.liveFloatingLayer}>
@@ -1003,8 +1003,8 @@ export function NewsApp() {
             <Show when={liveChatOpen()}>
               <aside class={styles.liveChatPanel}>
                 <div class={styles.liveChatHeader}>
-                  <strong>Chat y control</strong>
-                  <span>{sanitizeText(activeLive()?.title || '', 80) || 'Cobertura en vivo'}</span>
+                  <strong>{t('news.chat_control', language())}</strong>
+                  <span>{sanitizeText(activeLive()?.title || '', 80) || t('news.live_coverage', language())}</span>
                 </div>
 
                 <Show when={canEditActiveLive()}>

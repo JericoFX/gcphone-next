@@ -1,5 +1,6 @@
 import { For, Show, createEffect, createSignal, onCleanup } from 'solid-js';
 import { fetchNui } from '../../../utils/fetchNui';
+import { getStoredLanguage, t } from '../../../i18n';
 import styles from './NfcShareSheet.module.scss';
 
 interface NearbyPlayer {
@@ -84,8 +85,8 @@ export function NfcShareSheet(props: NfcShareSheetProps) {
         <div class={styles.sheet} onClick={(e) => e.stopPropagation()}>
           <div class={styles.header}>
             <div class={styles.grabber} />
-            <h3>{props.title || 'Compartir NFC'}</h3>
-            <span class={styles.subtitle}>Personas cerca de ti</span>
+            <h3>{props.title || t('nfc.share_title', getStoredLanguage())}</h3>
+            <span class={styles.subtitle}>{t('nfc.nearby_people', getStoredLanguage())}</span>
           </div>
 
           {/* Radar */}
@@ -95,7 +96,7 @@ export function NfcShareSheet(props: NfcShareSheetProps) {
               <div class={styles.ring} style={{ width: '66%', height: '66%' }} />
               <div class={styles.ring} style={{ width: '33%', height: '33%' }} />
               <div class={styles.sweep} classList={{ [styles.sweepActive]: props.open }} />
-              <div class={styles.centerDot}>Tu</div>
+              <div class={styles.centerDot}>{t('nfc.you', getStoredLanguage())}</div>
             </div>
 
             {/* Player dots on radar */}

@@ -193,7 +193,7 @@ export function NotesApp() {
             },
           },
           {
-            label: 'Compartir',
+            label: t('action.share', language()),
             onClick: () => {
               const note = ctxMenu.item();
               if (note) shareNote(note);

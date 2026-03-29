@@ -14,7 +14,7 @@ import { setNuiAuthToken } from './utils/fetchNui';
 import { isEnvBrowser } from './utils/misc';
 import { setupBrowserMock } from './mock/browserMock';
 import { BrowserDevMenu } from './components/dev/BrowserDevMenu';
-import { localeTagFromLanguage } from './i18n';
+import { localeTagFromLanguage, t } from './i18n';
 import { setLiveKitRemoteAudioPriority, setLiveKitRemoteAudioVolume } from './utils/livekit';
 import { useWindowEvent } from './hooks';
 import { emitInternalEvent, useInternalEvent } from './utils/internalEvents';
@@ -86,7 +86,7 @@ function PhoneContent() {
     notificationsActions.receive({
       id: `ui-alert-${Date.now()}`,
       appId: 'system',
-      title: detail?.title || 'Aviso',
+      title: detail?.title || t('common.notice', phoneState.settings.language),
       message,
       durationMs: 3200,
       priority: 'normal',

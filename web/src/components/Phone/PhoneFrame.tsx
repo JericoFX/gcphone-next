@@ -10,6 +10,7 @@ import {
   Suspense,
   createUniqueId,
   createEffect,
+  onCleanup,
 } from 'solid-js';
 import type { JSX } from 'solid-js';
 import { usePhone, usePhoneState } from '../../store/phone';
@@ -20,7 +21,7 @@ import { ControlCenter } from '../shared/control-center/ControlCenter';
 import { DynamicIsland } from '../shared/DynamicIsland/DynamicIsland';
 import { useNotifications } from '../../store/notifications';
 import { APP_BY_ID } from '../../config/apps';
-import { appName } from '../../i18n';
+import { appName, t } from '../../i18n';
 import { isEnvBrowser } from '../../utils/misc';
 import { useWindowEvent } from '../../hooks';
 import { useInternalEvent, emitInternalEvent } from '../../utils/internalEvents';
@@ -289,7 +290,7 @@ export const PhoneFrame: ParentComponent & { Router: () => JSX.Element } = (
     dialogResolve = detail.resolve;
     setDialogType(detail.type === 'prompt' ? 'prompt' : 'confirm');
     setDialogTitle(
-      detail.title || (detail.type === 'prompt' ? 'Entrada' : 'Confirmar'),
+      detail.title || (detail.type === 'prompt' ? t('common.input', currentLanguage()) : t('common.confirm', currentLanguage())),
     );
     setDialogMessage(detail.message);
     setDialogPlaceholder(detail.placeholder || '');
@@ -334,12 +335,24 @@ export const PhoneFrame: ParentComponent & { Router: () => JSX.Element } = (
     return typeof s === 'number' ? Math.max(0.7, Math.min(1, s)) : 1;
   };
 
+  const [viewportScale, setViewportScale] = createSignal(1);
+  const updateViewportScale = () => {
+    const shellH = 1000;
+    const fit = Math.min(1, window.innerHeight / shellH);
+    setViewportScale(fit);
+  };
+  updateViewportScale();
+  window.addEventListener('resize', updateViewportScale);
+  onCleanup(() => window.removeEventListener('resize', updateViewportScale));
+
+  const effectiveScale = () => Math.min(phoneScale(), viewportScale());
+
   return (
     <div
       class={styles.phoneWrapper}
       style={{
         ...(browserMode ? { right: '20px', bottom: '20px' } : {}),
-        transform: `scale(${phoneScale()})`,
+        transform: `scale(${effectiveScale()})`,
         'transform-origin': 'bottom right',
       }}
     >

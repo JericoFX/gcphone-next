@@ -66,9 +66,9 @@ export function CallsApp() {
         void startCall(entry.number, entry.name);
       } else {
         void (async () => {
-          const result = await uiPrompt(`Asignar marcado rapido al ${key}`, {
-            title: 'Marcado Rapido',
-            placeholder: 'Numero de telefono',
+          const result = await uiPrompt(t('calls.assign_speed_dial', language(), { key }), {
+            title: t('calls.speed_dial', language()),
+            placeholder: t('calls.phone_number_placeholder', language()),
           });
           if (result && result.trim()) {
             const sanitized = sanitizePhone(result.trim());
@@ -241,8 +241,8 @@ export function CallsApp() {
     if (notifications.airplaneMode) {
       notificationsActions.receive({
         appId: 'calls',
-        title: 'Modo avion activo',
-        message: 'Desactiva modo avion para realizar llamadas',
+        title: t('calls.airplane_active', language()),
+        message: t('calls.airplane_disable', language()),
         icon: '📵',
         durationMs: 2800,
       });
@@ -250,7 +250,7 @@ export function CallsApp() {
     }
 
     if (isReadOnly()) {
-      notificationsActions.receive({ appId: 'calls', title: 'Solo lectura', message: 'No puedes llamar desde un telefono ajeno', icon: '🔒', durationMs: 2200 });
+      notificationsActions.receive({ appId: 'calls', title: t('calls.readonly_title', language()), message: t('calls.readonly_no_call', language()), icon: '🔒', durationMs: 2200 });
       return;
     }
 
@@ -259,8 +259,8 @@ export function CallsApp() {
     if (result?.error === 'AIRPLANE_MODE_CALL_BLOCKED') {
       notificationsActions.receive({
         appId: 'calls',
-        title: 'Modo avion activo',
-        message: 'Desactiva modo avion para realizar llamadas',
+        title: t('calls.airplane_active', language()),
+        message: t('calls.airplane_disable', language()),
         icon: '📵',
         durationMs: 2800,
       });
@@ -270,8 +270,8 @@ export function CallsApp() {
     if (result?.error === 'TARGET_AIRPLANE_MODE') {
       notificationsActions.receive({
         appId: 'calls',
-        title: 'No disponible',
-        message: 'El destinatario no puede recibir llamadas en este momento',
+        title: t('calls.target_unavailable', language()),
+        message: t('calls.target_unavailable_desc', language()),
         icon: '📵',
         durationMs: 2800,
       });
@@ -281,8 +281,8 @@ export function CallsApp() {
     if (result?.error === 'RATE_LIMIT') {
       notificationsActions.receive({
         appId: 'calls',
-        title: 'Espera un momento',
-        message: 'Estas intentando llamar demasiado rapido',
+        title: t('calls.rate_limit', language()),
+        message: t('calls.rate_limit_desc', language()),
         icon: '⏳',
         durationMs: 2200,
       });
@@ -379,7 +379,7 @@ export function CallsApp() {
           removeTrack(participantIdentity, trackSid);
         },
         onCallTimeout: () => {
-          setVideoStatus('Limite de tiempo alcanzado');
+          setVideoStatus(t('calls.video_timeout', language()));
           resetCallUi();
         },
       });
@@ -416,8 +416,8 @@ export function CallsApp() {
     }));
     setInCall(true);
     setActivity('call', {
-      title: incoming.displayName || incoming.transmitterNum || incoming.receiverNum || 'Llamada',
-      subtitle: 'Llamada en curso',
+      title: incoming.displayName || incoming.transmitterNum || incoming.receiverNum || t('calls.call_label', language()),
+      subtitle: t('calls.call_in_progress', language()),
       icon: './img/icons_ios/calls.svg',
       onStop: () => void endCall(),
       onNavigate: () => router.navigate('calls'),
@@ -429,8 +429,8 @@ export function CallsApp() {
     setCallInfo((prev) => ({ ...(prev || {}), ...accepted }));
     setInCall(true);
     setActivity('call', {
-      title: accepted.displayName || accepted.receiverNum || accepted.transmitterNum || 'Llamada',
-      subtitle: 'Llamada en curso',
+      title: accepted.displayName || accepted.receiverNum || accepted.transmitterNum || t('calls.call_label', language()),
+      subtitle: t('calls.call_in_progress', language()),
       icon: './img/icons_ios/calls.svg',
       onStop: () => void endCall(),
       onNavigate: () => router.navigate('calls'),

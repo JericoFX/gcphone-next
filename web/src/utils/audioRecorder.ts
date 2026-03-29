@@ -112,16 +112,29 @@ export async function startAudioRecording(
 }
 
 /**
- * Upload an audio blob to an external API (fivemanage, etc.)
+ * Upload an audio blob via server proxy or direct (for custom providers).
  * Returns the URL of the uploaded file, or null on failure.
  */
 export async function uploadAudioBlob(
   blob: Blob,
-  config: { url: string; field: string; headers?: Record<string, string> },
+  config: { url?: string; field?: string; headers?: Record<string, string>; useProxy?: boolean },
+  fetchNuiFn?: <T>(event: string, data: unknown, fallback: T) => Promise<T>,
 ): Promise<string | null> {
-  if (!config.url) return null;
-
   try {
+    if (config.useProxy && fetchNuiFn) {
+      const reader = new FileReader();
+      const base64 = await new Promise<string>((resolve) => {
+        reader.onloadend = () => resolve((reader.result as string).split(',')[1] || '');
+        reader.readAsDataURL(blob);
+      });
+      const result = await fetchNuiFn<{ url?: string; error?: string }>(
+        'proxyUpload', { base64, filename: 'voice.webm', contentType: 'audio/webm' }, { error: 'PROXY_FAILED' }
+      );
+      return result?.url || null;
+    }
+
+    if (!config.url) return null;
+
     const headers = new Headers();
     if (config.headers) {
       for (const [k, v] of Object.entries(config.headers)) headers.append(k, v);
@@ -134,7 +147,6 @@ export async function uploadAudioBlob(
     if (!resp.ok) return null;
 
     const json = await resp.json();
-    // Try common response paths
     return json?.data?.url || json?.url || json?.link || null;
   } catch {
     return null;

@@ -113,8 +113,8 @@ export function SettingsSound(props: SettingsSoundProps) {
                   <IconImage src={profile.icon} class={styles.settingsIconImg} />
                 </div>
                 <div style={{ display: 'flex', 'flex-direction': 'column', gap: '1px' }}>
-                  <span class="ios18-cell__title">{profile.name}</span>
-                  <span class="ios18-cell__subtitle">{profile.desc}</span>
+                  <span class="ios18-cell__title">{t(profile.nameKey, props.language())}</span>
+                  <span class="ios18-cell__subtitle">{t(profile.descKey, props.language())}</span>
                 </div>
               </div>
               <Show when={props.phoneState.settings.audioProfile === profile.id}>

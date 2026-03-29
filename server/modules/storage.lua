@@ -217,19 +217,75 @@ lib.callback.register('gcphone:storage:getUploadConfig', function(source, data)
     if not identifier then return nil end
 
     local mediaType = type(data) == 'table' and data.mediaType or 'image'
-    local provider, url, field, headers, successPath = ResolveUploadConfig(mediaType)
+    local provider, url, field, _headers, successPath = ResolveUploadConfig(mediaType)
 
     if provider == 'server_folder' and mediaType ~= 'image' then
         return { url = '', field = '', error = 'server_folder only supports images' }
+    end
+
+    if provider == 'fivemanage' then
+        return { provider = provider, useProxy = true, field = field, successPath = successPath }
     end
 
     return {
         provider = provider,
         url = url,
         field = field,
-        headers = headers,
         successPath = successPath,
     }
+end)
+
+lib.callback.register('gcphone:storage:proxyUpload', function(source, data)
+    local identifier = Bridge.GetIdentifier(source)
+    if not identifier then return { error = 'INVALID_SOURCE' } end
+
+    if type(data) ~= 'table' or type(data.base64) ~= 'string' or data.base64 == '' then
+        return { error = 'INVALID_DATA' }
+    end
+
+    if Utils.HitRateLimit(source, 'proxyUpload', 5000, 3) then
+        return { error = 'RATE_LIMITED' }
+    end
+
+    local provider = GetProvider()
+    local token = GetProviderToken()
+
+    if provider ~= 'fivemanage' or not token then
+        return { error = 'PROVIDER_NOT_CONFIGURED' }
+    end
+
+    local filename = Utils.SafeText(data.filename or 'upload', 100) or 'upload'
+    local contentType = Utils.SafeText(data.contentType or 'application/octet-stream', 60) or 'application/octet-stream'
+
+    local boundary = 'gcphone' .. tostring(os.time()) .. tostring(math.random(100000, 999999))
+    local decoded = data.base64
+
+    local body = '--' .. boundary .. '\r\n'
+        .. 'Content-Disposition: form-data; name="file"; filename="' .. filename .. '"\r\n'
+        .. 'Content-Type: ' .. contentType .. '\r\n'
+        .. 'Content-Transfer-Encoding: base64\r\n\r\n'
+        .. decoded .. '\r\n'
+        .. '--' .. boundary .. '--\r\n'
+
+    local p = promise.new()
+    PerformHttpRequest(FIVEMANAGE_ENDPOINT, function(statusCode, responseBody)
+        if statusCode >= 200 and statusCode < 300 and responseBody then
+            local ok, parsed = pcall(json.decode, responseBody)
+            if ok and parsed then
+                local uploadedUrl = parsed.data and parsed.data.url or parsed.url or ''
+                p:resolve({ url = uploadedUrl })
+            else
+                p:resolve({ error = 'PARSE_ERROR' })
+            end
+        else
+            p:resolve({ error = 'UPLOAD_FAILED_' .. tostring(statusCode) })
+        end
+    end, 'POST', body, {
+        ['Authorization'] = token,
+        ['Content-Type'] = 'multipart/form-data; boundary=' .. boundary,
+    })
+
+    return Citizen.Await(p)
 end)
 
 lib.callback.register('gcphone:storage:capturePhoto', function(source)

@@ -5,7 +5,7 @@
       <stop offset="1" stop-color="#ff3b7d"/>
     </linearGradient>
   </defs>
-  <rect x="8" y="8" width="112" height="112" rx="26" fill="url(#g)"/>
+  <rect width="128" height="128" fill="url(#g)"/>
   <path d="M48 39h26v10H58v20c0 8-6 14-14 14s-14-6-14-14 6-14 14-14c1 0 2 0 4 1V39z" fill="#fff"/>
   <path d="M74 39c2 7 8 12 16 13v10c-7-1-12-4-16-8v-15z" fill="#fff"/>
 </svg>

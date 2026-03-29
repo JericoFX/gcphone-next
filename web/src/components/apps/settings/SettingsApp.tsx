@@ -67,7 +67,7 @@ export function SettingsApp() {
       setLiveLocationInterval(10);
       if (state.active) {
         setActivity('location', {
-          title: t('settings.live_location', language()) || 'Ubicacion en vivo',
+          title: t('settings.live_location', language()),
           subtitle: `Cada 10 seg`,
           icon: './img/icons_ios/ui-location.svg',
           onStop: () => void toggleLiveLocation(),
@@ -111,7 +111,7 @@ export function SettingsApp() {
       setLiveLocationEnabled(true);
       setLiveLocationStatus(t('settings.live_enabled_every', language(), { seconds: liveLocationInterval() }));
       setActivity('location', {
-        title: t('settings.live_location', language()) || 'Ubicacion en vivo',
+        title: t('settings.live_location', language()),
         subtitle: `Cada ${liveLocationInterval()} seg`,
         icon: './img/icons_ios/ui-location.svg',
         onStop: () => void toggleLiveLocation(),

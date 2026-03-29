@@ -308,8 +308,7 @@ export function MessagesApp() {
     const number = selectedConversation();
     if (!number) return;
 
-    // Get upload config from server
-    const config = await fetchNui<{ url?: string; field?: string; headers?: Record<string, string> }>(
+    const config = await fetchNui<{ url?: string; field?: string; headers?: Record<string, string>; useProxy?: boolean }>(
       'getAudioUploadConfig', {}, { url: '', field: 'file' }
     );
 
@@ -319,12 +318,13 @@ export function MessagesApp() {
       async (recording) => {
         let audioUrl: string | null = null;
 
-        if (config?.url) {
+        if (config?.useProxy || config?.url) {
           audioUrl = await uploadAudioBlob(recording.blob, {
             url: config.url,
             field: config.field || 'file',
             headers: config.headers,
-          });
+            useProxy: config.useProxy,
+          }, fetchNui);
         }
 
         if (audioUrl) {
@@ -362,13 +362,13 @@ export function MessagesApp() {
     const result = await fetchNui<{ success?: boolean; balance?: number; error?: string }>('walletChatTransfer', {
       targetPhone: number,
       amount,
-      title: 'Pago via chat',
+      title: t('messages.payment_title', language()),
     });
     if (result?.success) {
-      await messagesActions.send({ phoneNumber: number, message: `[Pago enviado: $${amount}]` });
-      uiAlert(`Pago de $${amount} enviado`);
+      await messagesActions.send({ phoneNumber: number, message: `[${t('messages.payment_sent', language())}: $${amount}]` });
+      uiAlert(t('messages.payment_success', language(), { amount: String(amount) }));
     } else {
-      uiAlert(result?.error === 'INSUFFICIENT_FUNDS' ? 'Fondos insuficientes' : 'Error al enviar pago');
+      uiAlert(result?.error === 'INSUFFICIENT_FUNDS' ? t('messages.insufficient_funds', language()) : t('messages.payment_error', language()));
     }
   };
 
@@ -917,7 +917,7 @@ function ConversationView(props: {
         actions={[
           ...(!props.readOnly ? [
             {
-              label: 'Responder',
+              label: t('messages.reply_action', language()),
               tone: 'primary' as const,
               onClick: () => {
                 const msg = selectedMessage();
@@ -927,7 +927,7 @@ function ConversationView(props: {
               },
             },
             {
-              label: 'Reenviar',
+              label: t('messages.forward', language()),
               tone: 'default' as const,
               onClick: () => {
                 const msg = selectedMessage();

@@ -1,4 +1,5 @@
 import { createSignal, createMemo, For, Show } from 'solid-js';
+import { Portal } from 'solid-js/web';
 import { usePhone } from '../../../store/phone';
 import { WidgetCard } from './WidgetCard';
 import { WidgetPicker } from './WidgetPicker';
@@ -38,9 +39,9 @@ export function WidgetPage(props: WidgetPageProps) {
     <div class={styles.widgetPage}>
       <Show when={widgets().length === 0}>
         <div class={styles.empty}>
-          <span>{t('home.no_widgets', props.language()) || 'No widgets added'}</span>
+          <span>{(() => { const v = t('home.no_widgets', props.language()); return v === 'home.no_widgets' ? 'No widgets added' : v; })()}</span>
           <button class={styles.addBtn} onClick={() => setShowPicker(true)}>
-            + {t('home.add_widget', props.language()) || 'Add Widget'}
+            + {(() => { const v = t('home.add_widget', props.language()); return v === 'home.add_widget' ? 'Add Widget' : v; })()}
           </button>
         </div>
       </Show>
@@ -64,12 +65,14 @@ export function WidgetPage(props: WidgetPageProps) {
 
       <Show when={props.editing && canAdd() && widgets().length > 0}>
         <button class={styles.addBtn} onClick={() => setShowPicker(true)}>
-          + {t('home.add_widget', props.language()) || 'Add Widget'}
+          + {(() => { const v = t('home.add_widget', props.language()); return v === 'home.add_widget' ? 'Add Widget' : v; })()}
         </button>
       </Show>
 
       <Show when={showPicker()}>
-        <WidgetPicker language={props.language} onClose={() => setShowPicker(false)} />
+        <Portal mount={document.querySelector('[class*="phone-screen"]') || document.body}>
+          <WidgetPicker language={props.language} onClose={() => setShowPicker(false)} />
+        </Portal>
       </Show>
     </div>
   );

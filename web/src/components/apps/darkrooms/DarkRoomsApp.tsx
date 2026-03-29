@@ -694,7 +694,7 @@ export function DarkRoomsApp() {
         
         <ModalActions>
           <ModalButton label={t('action.cancel', language())} onClick={() => setShowCreateRoom(false)} />
-          <ModalButton label="Crear" onClick={() => void createRoom()} tone="primary" />
+          <ModalButton label={t('darkrooms.create', language())} onClick={() => void createRoom()} tone="primary" />
         </ModalActions>
       </Modal>
 

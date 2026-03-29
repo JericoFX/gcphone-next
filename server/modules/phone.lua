@@ -328,8 +328,15 @@ local function SafeMailAlias(value)
     return alias
 end
 
+local ALLOWED_USERNAME_TABLES = {
+    phone_snap_accounts = true,
+    phone_chirp_accounts = true,
+    phone_clips_accounts = true,
+}
+
 local function UsernameExists(tableName, username, identifier)
     if not username then return true end
+    if not ALLOWED_USERNAME_TABLES[tableName] then return false end
     local sql = string.format('SELECT 1 FROM `%s` WHERE username = ? AND identifier != ? LIMIT 1', tableName)
     return MySQL.scalar.await(sql, { username, identifier or '' }) ~= nil
 end

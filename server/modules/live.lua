@@ -22,6 +22,7 @@ end
 RegisterNetEvent('gcphone:live:create')
 AddEventHandler('gcphone:live:create', function(clipId, avatar)
     local source = source
+    if Utils.HitRateLimit(source, 'live_create', 5000, 2) then return end
     local identifier = Bridge.GetIdentifier(source)
 
     if not identifier then return end
@@ -39,10 +40,11 @@ AddEventHandler('gcphone:live:create', function(clipId, avatar)
     TriggerClientEvent('gcphone:live:created', source, clipId)
 end)
 
--- Join live room
+-- Join live room (public streams, no access restriction by design)
 RegisterNetEvent('gcphone:live:join')
 AddEventHandler('gcphone:live:join', function(clipId)
     local source = source
+    if Utils.HitRateLimit(source, 'live_join', 2000, 3) then return end
     local live = ActiveLives[clipId]
 
     if not live then return end
@@ -86,6 +88,7 @@ end)
 RegisterNetEvent('gcphone:live:message')
 AddEventHandler('gcphone:live:message', function(clipId, content)
     local source = source
+    if Utils.HitRateLimit(source, 'live_message', 1000, 5) then return end
     local live = ActiveLives[clipId]
 
     if not live then return end
@@ -130,6 +133,7 @@ end)
 RegisterNetEvent('gcphone:live:reaction')
 AddEventHandler('gcphone:live:reaction', function(clipId, reaction)
     local source = source
+    if Utils.HitRateLimit(source, 'live_reaction', 500, 8) then return end
     local live = ActiveLives[clipId]
 
     if not live then return end

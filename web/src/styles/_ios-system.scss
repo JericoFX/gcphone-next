@@ -833,20 +833,6 @@ button.ios-row {
   }
 }
 
-@media (max-width: 1200px), (max-height: 860px) {
-  :root {
-    --phone-shell-width: 470px;
-    --phone-shell-height: 940px;
-    --phone-screen-width: 318px;
-    --phone-screen-height: 718px;
-    --phone-screen-left: 43px;
-    --phone-screen-bottom: 150px;
-    --phone-frame-width: 344px;
-    --phone-frame-height: 742px;
-    --phone-frame-left: 32px;
-    --phone-frame-top: 79px;
-  }
-}
 
 @media (prefers-reduced-motion: reduce) {
   * {

@@ -418,10 +418,10 @@ export function GarageApp() {
                     <span class={styles.actionIcon}>&#128176;</span>
                     <div class={styles.actionBody}>
                       <span class={styles.actionLabel}>
-                        {t('garage.pay_bail', language()) || 'Pagar Fianza'}
+                        {t('garage.pay_bail', language())}
                       </span>
                       <span class={styles.actionSub}>
-                        {t('garage.pay_bail_desc', language()) || 'Pagar para recuperar el vehiculo'}
+                        {t('garage.pay_bail_desc', language())}
                       </span>
                     </div>
                     <span class={styles.actionChevron}>

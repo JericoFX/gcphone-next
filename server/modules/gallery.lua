@@ -19,13 +19,21 @@ lib.callback.register('gcphone:savePhoto', function(source, data)
     local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false end
 
-    if not data.url then
-        return false, 'No photo URL provided'
+    local rawUrl = type(data) == 'table' and data.url or nil
+    if not rawUrl then return false, 'No photo URL provided' end
+
+    local url = Utils.SafeText(rawUrl, 500)
+    if not url or not url:match('^https?://') then
+        return false, 'INVALID_URL'
     end
+
+    local VALID_MEDIA_TYPES = { image = true, video = true }
+    local mediaType = type(data.type) == 'string' and data.type or 'image'
+    if not VALID_MEDIA_TYPES[mediaType] then mediaType = 'image' end
 
     local id = MySQL.insert.await(
         'INSERT INTO phone_gallery (identifier, url, type) VALUES (?, ?, ?)',
-        { identifier, data.url, data.type or 'image' }
+        { identifier, url, mediaType }
     )
 
     return true, id

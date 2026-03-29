@@ -598,10 +598,10 @@ export function WaveChatApp() {
       return;
     }
 
-    const uploadConfig = await fetchNui<{ url?: string; field?: string; headers?: Record<string, string> }>(
+    const uploadConfig = await fetchNui<{ url?: string; field?: string; headers?: Record<string, string>; useProxy?: boolean }>(
       'getAudioUploadConfig', {}, { url: '', field: 'file' }
     );
-    if (!uploadConfig?.url) {
+    if (!uploadConfig?.url && !uploadConfig?.useProxy) {
       uiAlert(t('wavechat.storage_unconfigured', language()));
       return;
     }
@@ -618,17 +618,31 @@ export function WaveChatApp() {
         setUploadingVoice(true);
         try {
           const blob = new Blob(chunks, { type: 'audio/webm' });
-          const headers = new Headers();
-          if (uploadConfig.headers) {
-            for (const [k, v] of Object.entries(uploadConfig.headers)) headers.append(k, v);
-          }
-          const formData = new FormData();
-          formData.append(uploadConfig.field || 'file', blob, 'voice-note.webm');
+          let uploadedUrl: string | undefined;
 
-          const response = await fetch(uploadConfig.url, { method: 'POST', headers, body: formData });
-          if (!response.ok) throw new Error('upload_failed');
-          const payload = await response.json();
-          const uploadedUrl = sanitizeMediaUrl(payload?.data?.url || payload?.url || payload?.link);
+          if (uploadConfig.useProxy) {
+            const reader = new FileReader();
+            const base64 = await new Promise<string>((resolve) => {
+              reader.onloadend = () => resolve((reader.result as string).split(',')[1] || '');
+              reader.readAsDataURL(blob);
+            });
+            const proxyResult = await fetchNui<{ url?: string; error?: string }>(
+              'proxyUpload', { base64, filename: 'voice-note.webm', contentType: 'audio/webm' }, { error: 'PROXY_FAILED' }
+            );
+            uploadedUrl = sanitizeMediaUrl(proxyResult?.url);
+          } else {
+            const headers = new Headers();
+            if (uploadConfig.headers) {
+              for (const [k, v] of Object.entries(uploadConfig.headers)) headers.append(k, v);
+            }
+            const formData = new FormData();
+            formData.append(uploadConfig.field || 'file', blob, 'voice-note.webm');
+            const response = await fetch(uploadConfig.url!, { method: 'POST', headers, body: formData });
+            if (!response.ok) throw new Error('upload_failed');
+            const payload = await response.json();
+            uploadedUrl = sanitizeMediaUrl(payload?.data?.url || payload?.url || payload?.link);
+          }
+
           if (uploadedUrl) {
             setAttachmentUrl(uploadedUrl);
           } else {

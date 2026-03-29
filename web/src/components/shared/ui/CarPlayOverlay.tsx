@@ -2,6 +2,7 @@ import { Show, createSignal } from 'solid-js';
 import { useNuiCustomEvent } from '../../../utils/useNui';
 import { usePhoneState } from '../../../store/phone';
 import { emitInternalEvent } from '../../../utils/internalEvents';
+import { t } from '../../../i18n';
 import styles from './CarPlayOverlay.module.scss';
 
 export function CarPlayOverlay() {
@@ -20,11 +21,13 @@ export function CarPlayOverlay() {
     emitInternalEvent('phone:openRoute', { route, data: {} });
   };
 
+  const language = () => phoneState.settings.language || 'es';
+
   const apps = [
-    { icon: './img/icons_ios/map.svg', label: 'Mapa', route: 'maps' },
-    { icon: './img/icons_ios/music.svg', label: 'Musica', route: 'music' },
-    { icon: './img/icons_ios/calls.svg', label: 'Llamar', route: 'calls' },
-    { icon: './img/icons_ios/messages.svg', label: 'Mensajes', route: 'messages' },
+    { icon: './img/icons_ios/map.svg', labelKey: 'carplay.map', route: 'maps' },
+    { icon: './img/icons_ios/music.svg', labelKey: 'carplay.music', route: 'music' },
+    { icon: './img/icons_ios/calls.svg', labelKey: 'carplay.call', route: 'calls' },
+    { icon: './img/icons_ios/messages.svg', labelKey: 'carplay.messages', route: 'messages' },
   ];
 
   return (
@@ -38,7 +41,7 @@ export function CarPlayOverlay() {
           {apps.map((app) => (
             <button class={styles.tile} onClick={() => openApp(app.route)}>
               <img src={app.icon} alt="" draggable={false} />
-              <span>{app.label}</span>
+              <span>{t(app.labelKey, language())}</span>
             </button>
           ))}
         </div>

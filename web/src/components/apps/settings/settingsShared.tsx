@@ -55,10 +55,10 @@ export const languages = [
 ];
 
 export const audioProfiles = [
-  { id: 'normal', name: 'Normal', desc: 'Uso general', icon: ICONS.normal },
-  { id: 'street', name: 'Calle', desc: 'Exterior ruidoso', icon: ICONS.street },
-  { id: 'vehicle', name: 'Vehículo', desc: 'En movimiento', icon: ICONS.vehicle },
-  { id: 'silent', name: 'Silencio', desc: 'Sin sonido', icon: ICONS.silent },
+  { id: 'normal', nameKey: 'setup.audio.normal.label', descKey: 'setup.audio.normal.meta', icon: ICONS.normal },
+  { id: 'street', nameKey: 'setup.audio.street.label', descKey: 'setup.audio.street.meta', icon: ICONS.street },
+  { id: 'vehicle', nameKey: 'setup.audio.vehicle.label', descKey: 'setup.audio.vehicle.meta', icon: ICONS.vehicle },
+  { id: 'silent', nameKey: 'setup.audio.silent.label', descKey: 'setup.audio.silent.meta', icon: ICONS.silent },
 ];
 
 export const PIN_LENGTH = 4;
