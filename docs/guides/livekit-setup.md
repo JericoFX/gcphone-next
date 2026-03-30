@@ -15,6 +15,7 @@ LiveKit provides the WebRTC backend for video calls in gcphone-next. It runs as 
 
 ## Requirements
 
+- **Node.js 18+** on the FiveM server machine
 - **Docker + Docker Compose** on the machine hosting LiveKit
 - Firewall ports open on the host:
   - **TCP 7880** -- LiveKit signal / WebSocket
@@ -22,6 +23,20 @@ LiveKit provides the WebRTC backend for video calls in gcphone-next. It runs as 
   - **UDP 50000-50100** -- RTC media
 
 If you do not want Docker, you can install the `livekit-server` binary directly and run Redis separately. For quick local testing, LiveKit supports `livekit-server --dev` mode.
+
+### Server-Side JS Dependencies
+
+The server-side JavaScript bridge that generates LiveKit tokens requires npm packages. Install them before starting your FiveM server:
+
+```bash
+cd server/js
+npm install
+```
+
+This installs:
+- **livekit-server-sdk** `^2.14.0` -- Token generation for WebRTC auth
+- **youtube-sr** `^4.3.11` -- YouTube search for the Music app
+- **jsonwebtoken** `^9.0.2` -- JWT signing for Socket.IO auth
 
 ## Setup Scripts
 

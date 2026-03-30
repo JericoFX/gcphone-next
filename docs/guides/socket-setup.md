@@ -4,27 +4,34 @@ title: Socket.IO Setup
 
 # Socket.IO Setup
 
-gcphone-next includes an optional Socket.IO integration for real-time chat functionality. This is separate from the standard message system and provides lower-latency communication when enabled.
+gcphone-next uses a Socket.IO server for all real-time chat functionality. This is a **required** component -- WaveChat, SnapLive, and MatchMyLove depend on it and have no fallback.
 
 ## What Socket.IO Provides
 
-- Real-time bidirectional communication between the phone NUI and a dedicated chat server
+- Real-time bidirectional communication between the phone NUI and the chat server
 - JWT-authenticated connections (tokens are generated server-side)
-- Lower latency for chat messages compared to the standard NUI callback flow
-
-## When to Enable
-
-Socket.IO is **disabled by default** and is entirely optional. Enable it only if:
-
-- You are running a dedicated Socket.IO server alongside your FiveM server
-- You want real-time chat features beyond what the default message system provides
-- You have the infrastructure to maintain an additional service
-
-If you do not need real-time chat, leave it disabled. The standard message system works without it.
+- WaveChat group chat with typing indicators and message persistence
+- SnapLive streaming chat with reactions, viewer counts, and moderation
+- MatchMyLove real-time dating chat between matched players
+- Per-identifier rate limiting that persists across reconnections
 
 ## Dependencies
 
-The Socket.IO server dependencies (`socket.io`, `jsonwebtoken`, `sql.js`) are included in `socket-server/node_modules/`. No additional installation is required.
+The Socket.IO server requires Node.js and the following npm packages:
+
+- **socket.io** `^4.8.1` -- WebSocket server
+- **jsonwebtoken** `^9.0.2` -- JWT authentication
+
+### Installation
+
+```bash
+cd socket-server
+npm install
+```
+
+This installs all dependencies listed in `socket-server/package.json`. You **must** run this before starting your FiveM server.
+
+> **Important:** If you skip this step, the Socket.IO server will fail to start with module-not-found errors. All real-time chat features (WaveChat, SnapLive, MatchMyLove) will be non-functional.
 
 ## Config.lua
 
@@ -67,6 +74,37 @@ setr gcphone_socket_jwt_secret "YOUR_JWT_SECRET"
 | `INVALID_SOCKET_HOST_SCHEME` | `gcphone_socket_host` does not start with `ws://` or `wss://` |
 | Connection refused | Verify the Socket.IO server is running and the port is accessible |
 | Authentication failures | Ensure `gcphone_socket_jwt_secret` matches the secret on your Socket.IO server |
+
+## Starting the Socket.IO Server
+
+The Socket.IO server runs as a standalone Node.js process alongside your FiveM server:
+
+```bash
+cd socket-server
+JWT_SECRET="your-secret-here" node index.js
+```
+
+Or set environment variables:
+
+| Variable | Required | Description |
+|---|---|---|
+| `JWT_SECRET` | Yes | JWT signing secret (min 16 characters). Must match `gcphone_socket_jwt_secret` in `server.cfg`. |
+| `PORT` | No | Port to listen on (default: `3001`). |
+| `CORS_ORIGINS` | No | Comma-separated allowed origins (default: `*`). |
+
+The server will exit with an error if `JWT_SECRET` is missing or shorter than 16 characters.
+
+## Features Powered by Socket.IO
+
+When enabled, the Socket.IO server handles real-time communication for:
+
+| Feature | Description |
+|---|---|
+| **WaveChat** | Group chat rooms with typing indicators, message persistence, and media sharing |
+| **SnapLive** | Live streaming chat with reactions, viewer counts, and moderation (mute/delete) |
+| **MatchMyLove** | Dating app real-time chat between matched players |
+
+All features include per-identifier rate limiting that persists across reconnections.
 
 ## Security Notes
 

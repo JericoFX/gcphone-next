@@ -19,7 +19,7 @@ Fork of [gcphone](https://github.com/manueljlz/gcphone) by manueljlz — fully r
 - **30+ apps**: Contacts, Messages, Calls, Chirp, Snap, Clips, Mail, Bank, Wallet, Documents, Gallery, Garage, Music, News, Dark Rooms, Yellow Pages, WaveChat, Notes, Weather, Maps, Clock, Camera, Notifications, Radio, Services, MatchMyLove, CityRide, and more
 - **SolidJS NUI** with iOS 18-inspired design
 - **LiveKit WebRTC** video/voice calls
-- **Socket.IO** real-time messaging (optional)
+- **Socket.IO** real-time messaging
 - **Native audio** system with custom AWC sounds
 - **QBCore, QBox, and ESX** framework support via bridge pattern
 - **ox_inventory** optional phone item requirement
@@ -38,7 +38,7 @@ Fork of [gcphone](https://github.com/manueljlz/gcphone) by manueljlz — fully r
 | Client | Lua 5.4, ox_lib |
 | NUI | SolidJS, TypeScript, Vite, SCSS |
 | Calls | LiveKit (WebRTC) |
-| Chat | Socket.IO (optional) |
+| Chat | Socket.IO |
 | Audio | GTA V AWC native sounds |
 
 ## Requirements
@@ -48,6 +48,8 @@ Fork of [gcphone](https://github.com/manueljlz/gcphone) by manueljlz — fully r
 - [oxmysql](https://github.com/overextended/oxmysql)
 - [gcphone_sounds](https://github.com/JericoFX/gcphone_sounds) (native audio bank)
 - QBCore, QBox, or ESX framework
+- **Node.js 18+** (for server-side JS: LiveKit tokens, YouTube search)
+- **Bun** (for building the NUI frontend)
 
 ## Quick Start
 
@@ -60,13 +62,23 @@ cd gcphone-next/web
 bun install
 bun run build
 
-# 3. Add to server.cfg
+# 3. Install server-side JS dependencies (required)
+cd ../server/js
+npm install          # installs livekit-server-sdk, youtube-sr, jsonwebtoken
+
+# 4. Install Socket.IO server dependencies (required)
+cd ../../socket-server
+npm install          # installs socket.io, jsonwebtoken
+
+# 5. Add to server.cfg
 ensure oxmysql
 ensure ox_lib
 ensure qb-core          # or es_extended
 ensure gcphone_sounds
 ensure gcphone-next
 ```
+
+> **Note:** Steps 3 and 4 are both **required**. Step 3 handles LiveKit token generation and YouTube search for the Music app (`youtube-sr`). Step 4 installs the Socket.IO server that powers real-time chat for WaveChat, SnapLive, and MatchMyLove -- there is no fallback without it.
 
 ## Configuration
 
@@ -75,10 +87,34 @@ ensure gcphone-next
 Use the interactive PowerShell wizard to configure LiveKit automatically:
 
 ```powershell
+# Option A: Run the PowerShell script directly
 powershell -ExecutionPolicy Bypass -File tools\livekit\setup-livekit.ps1
+
+# Option B: Double-click the BAT wrapper (runs the same PowerShell wizard)
+tools\livekit\setup-livekit.bat
 ```
 
-The wizard generates `.env`, `livekit.yaml`, start/stop scripts, and prints the exact convars for your `server.cfg`. See [LiveKit Setup Guide](docs/guides/livekit-setup.md) for full details.
+The wizard detects/installs Docker, prompts for connection settings (IP, ports, API keys, TURN/TLS), configures Windows Firewall rules, and optionally creates an auto-start scheduled task. It generates:
+
+- `tools/livekit/.env` -- environment variables for Docker Compose
+- `tools/livekit/livekit.yaml` -- LiveKit server configuration
+- `tools/livekit/start-livekit.bat` -- start the Docker Compose stack
+- `tools/livekit/stop-livekit.bat` -- stop the Docker Compose stack
+
+After setup, it prints the exact `server.cfg` convars to copy. See [LiveKit Setup Guide](docs/guides/livekit-setup.md) for full details.
+
+### Tools & Scripts
+
+All automation scripts live in `tools/livekit/`:
+
+| File | Type | Description |
+|------|------|-------------|
+| `setup-livekit.ps1` | PowerShell | Full interactive setup wizard (recommended) |
+| `setup-livekit.bat` | BAT | Wrapper that launches the PowerShell wizard |
+| `start-livekit.bat` | BAT | Starts Docker Compose stack (LiveKit + Redis) |
+| `stop-livekit.bat` | BAT | Stops Docker Compose stack |
+
+See [Tools & Scripts Guide](docs/guides/tools-scripts.md) for detailed documentation on each script.
 
 ### server.cfg
 
@@ -90,7 +126,7 @@ setr livekit_api_secret "YOUR_SECRET"
 setr livekit_room_prefix "gcphone"
 setr livekit_max_call_duration "300"
 
-# Socket.IO (optional - for real-time chat)
+# Socket.IO (required - real-time chat)
 setr gcphone_socket_host "ws://YOUR_SERVER_IP:3001"
 setr gcphone_socket_jwt_secret "YOUR_SECRET"
 ```
@@ -127,7 +163,16 @@ cd docs
 npx vitepress dev
 ```
 
-See [docs/index.md](docs/index.md) for the documentation index.
+| Guide | Description |
+|-------|-------------|
+| [docs/index.md](docs/index.md) | Documentation index |
+| [docs/guides/livekit-setup.md](docs/guides/livekit-setup.md) | LiveKit WebRTC video calls setup |
+| [docs/guides/socket-setup.md](docs/guides/socket-setup.md) | Socket.IO real-time chat setup (required) |
+| [docs/guides/tools-scripts.md](docs/guides/tools-scripts.md) | PowerShell and BAT automation scripts |
+| [docs/guides/adding-app.md](docs/guides/adding-app.md) | How to scaffold a new phone app |
+| [docs/guides/framework-bridge.md](docs/guides/framework-bridge.md) | Framework bridge pattern |
+| [docs/api/exports.md](docs/api/exports.md) | Full server & client exports reference |
+| [docs/api/hooks.md](docs/api/hooks.md) | Hook system for external resources |
 
 ## Boot Order
 

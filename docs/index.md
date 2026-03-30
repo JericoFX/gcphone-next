@@ -4,7 +4,7 @@ title: gcphone-next
 
 # gcphone-next
 
-**gcphone-next** is a modernized FiveM phone resource built with SolidJS for the NUI layer and Lua for client/server logic. It uses ox_lib and oxmysql as its foundation libraries, and integrates LiveKit for WebRTC video calls and Socket.IO for optional real-time chat.
+**gcphone-next** is a modernized FiveM phone resource built with SolidJS for the NUI layer and Lua for client/server logic. It uses ox_lib and oxmysql as its foundation libraries, and integrates LiveKit for WebRTC video calls and Socket.IO for real-time chat.
 
 This project is a fork of [gcphone](https://github.com/manueljlz/gcphone) by manueljlz, restructured with a modular architecture, a fully rewritten frontend, and many new features.
 
@@ -42,7 +42,7 @@ Additional capabilities:
 | Styling | SCSS Modules (iOS 18 design system) |
 | Libraries | ox_lib, oxmysql |
 | Video Calls | LiveKit (self-hosted WebRTC SFU) |
-| Real-time Chat | Socket.IO (optional) |
+| Real-time Chat | Socket.IO |
 | Database | MySQL/MariaDB via oxmysql with auto-migrations |
 | Package Manager | Bun (for web build) |
 
@@ -61,7 +61,8 @@ The active framework is set via `Config.Framework` in `shared/config.lua`. Only 
 - [Getting Started](/getting-started) -- Installation, configuration, and first boot
 - [Adding an App](/guides/adding-app) -- How to scaffold a new phone app
 - [LiveKit Setup](/guides/livekit-setup) -- Self-host WebRTC video calls
-- [Socket.IO Setup](/guides/socket-setup) -- Optional real-time chat server
+- [Socket.IO Setup](/guides/socket-setup) -- Real-time chat server setup
+- [Tools & Scripts](/guides/tools-scripts) -- PowerShell and BAT automation scripts
 - [Framework Bridge](/guides/framework-bridge) -- How the framework abstraction works
 
 ## Requirements at a Glance
