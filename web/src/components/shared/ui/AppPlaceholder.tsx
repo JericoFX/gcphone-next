@@ -1,4 +1,4 @@
-import { Show } from 'solid-js';
+import { For, Show, createMemo } from 'solid-js';
 import styles from './AppPlaceholder.module.scss';
 
 export interface AppPlaceholderProps {
@@ -13,6 +13,15 @@ export function AppPlaceholder(props: AppPlaceholderProps) {
   const rows = () => props.rows || 6;
   const showHeader = () => props.showHeader !== false;
   const showTabs = () => props.showTabs || false;
+
+  const rowWidths = createMemo(() =>
+    Array.from({ length: rows() }, () => ({
+      line: 60 + Math.random() * 30,
+      short: 30 + Math.random() * 40,
+    })),
+  );
+
+  const tabIndices = [0, 1, 2, 3];
 
   return (
     <div classList={{ [styles.placeholder]: true, [props.class || '']: !!props.class }}>
@@ -29,25 +38,29 @@ export function AppPlaceholder(props: AppPlaceholderProps) {
       </Show>
 
       <div class={styles.body}>
-        {Array.from({ length: rows() }).map((_, i) => (
-          <div class={styles.row} style={{ 'animation-delay': `${i * 40}ms` }}>
-            <div class={styles.avatar}></div>
-            <div class={styles.content}>
-              <div class={styles.line} style={{ width: `${60 + Math.random() * 30}%` }}></div>
-              <div class={styles.lineShort} style={{ width: `${30 + Math.random() * 40}%` }}></div>
+        <For each={rowWidths()}>
+          {(widths, i) => (
+            <div class={styles.row} style={{ 'animation-delay': `${i() * 40}ms` }}>
+              <div class={styles.avatar}></div>
+              <div class={styles.content}>
+                <div class={styles.line} style={{ width: `${widths.line}%` }}></div>
+                <div class={styles.lineShort} style={{ width: `${widths.short}%` }}></div>
+              </div>
             </div>
-          </div>
-        ))}
+          )}
+        </For>
       </div>
 
       <Show when={showTabs()}>
         <div class={styles.tabs}>
-          {Array.from({ length: 4 }).map(() => (
-            <div class={styles.tab}>
-              <div class={styles.tabIcon}></div>
-              <div class={styles.tabLabel}></div>
-            </div>
-          ))}
+          <For each={tabIndices}>
+            {() => (
+              <div class={styles.tab}>
+                <div class={styles.tabIcon}></div>
+                <div class={styles.tabLabel}></div>
+              </div>
+            )}
+          </For>
         </div>
       </Show>
 
@@ -63,18 +76,21 @@ export interface SkeletonTextProps {
 
 export function SkeletonText(props: SkeletonTextProps) {
   const lines = () => props.lines || 1;
+  const lineIndices = createMemo(() => Array.from({ length: lines() }, (_, i) => i));
 
   return (
     <div classList={{ [styles.skeletonText]: true, [props.class || '']: !!props.class }}>
-      {Array.from({ length: lines() }).map((_, i) => (
-        <div
-          class={styles.skeletonLine}
-          style={{
-            width: i === lines() - 1 && lines() > 1 ? '60%' : '100%',
-            'animation-delay': `${i * 60}ms`,
-          }}
-        ></div>
-      ))}
+      <For each={lineIndices()}>
+        {(i) => (
+          <div
+            class={styles.skeletonLine}
+            style={{
+              width: i === lines() - 1 && lines() > 1 ? '60%' : '100%',
+              'animation-delay': `${i * 60}ms`,
+            }}
+          ></div>
+        )}
+      </For>
     </div>
   );
 }

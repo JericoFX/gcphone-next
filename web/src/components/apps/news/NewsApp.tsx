@@ -228,12 +228,14 @@ export function NewsApp() {
     reactionTimers.push(timer);
   };
 
-  createEffect(() => {
+  onMount(() => {
     void load();
+    void loadAccount();
   });
 
-  onMount(() => {
-    void loadAccount();
+  createEffect(() => {
+    selectedCategory();
+    void load();
   });
 
   onCleanup(() => {

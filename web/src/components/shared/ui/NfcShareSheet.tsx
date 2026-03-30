@@ -54,10 +54,13 @@ export function NfcShareSheet(props: NfcShareSheetProps) {
         pollTimer = undefined;
       }
     }
-  });
 
-  onCleanup(() => {
-    if (pollTimer) window.clearInterval(pollTimer);
+    onCleanup(() => {
+      if (pollTimer) {
+        window.clearInterval(pollTimer);
+        pollTimer = undefined;
+      }
+    });
   });
 
   const getInitials = (name: string) => {

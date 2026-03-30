@@ -381,20 +381,6 @@ local function ResolveSetupState(identifier)
     local explicitlySetup = phone and isTruthy(phone.is_setup)
     local complete = explicitlySetup and hasSnap and hasChirp and hasClips and hasMail
 
-    print(('[gcphone:debug] ResolveSetupState id=%s is_setup=%s clips_username=%s snap=%s chirp=%s mail=%s | explicitlySetup=%s hasSnap=%s hasChirp=%s hasClips=%s hasMail=%s complete=%s'):format(
-        tostring(identifier),
-        tostring(phone and phone.is_setup),
-        tostring(phone and phone.clips_username),
-        tostring(snap),
-        tostring(chirp),
-        tostring(mail),
-        tostring(explicitlySetup),
-        tostring(hasSnap),
-        tostring(hasChirp),
-        tostring(hasClips),
-        tostring(hasMail),
-        tostring(complete)
-    ))
 
     return {
         requiresSetup = not complete,

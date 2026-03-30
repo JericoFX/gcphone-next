@@ -1,4 +1,4 @@
-import { createSignal, createEffect, For, Show, createMemo } from 'solid-js';
+import { createSignal, createEffect, For, Show, createMemo, onMount } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { usePhoneActions } from '../../../store/phone';
 import { usePhoneState } from '../../../store/phone';
@@ -309,7 +309,9 @@ export function GalleryApp() {
     }
   });
 
-  void loadAlbums();
+  onMount(() => {
+    void loadAlbums();
+  });
 
   useNuiEvent<{ url?: string; from?: string }>('receiveSharedPhoto', (payload) => {
     if (payload?.url) {

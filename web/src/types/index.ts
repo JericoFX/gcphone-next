@@ -326,3 +326,9 @@ export interface PhoneApp {
   menuPosition?: number;
   badge?: () => number;
 }
+
+export type { PhoneActions } from '../store/phone';
+export type { ContactsState, ContactsActions } from '../store/contacts';
+export type { MessagesState, MessagesActions, SendOptions } from '../store/messages';
+export type { NotificationsState, NotificationsActions, FocusModeId, FocusModeConfig } from '../store/notifications';
+export type { LiveActivityType, LiveActivity, LiveActivityStore } from '../store/liveActivity';

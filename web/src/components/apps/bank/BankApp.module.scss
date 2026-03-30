@@ -101,9 +101,9 @@
   }
 }
 
-.tx-filter-active {
-  background: var(--surface) !important;
-  color: var(--text) !important;
+.tx-filters button.tx-filter-active {
+  background: var(--surface);
+  color: var(--text);
   box-shadow: var(--shadow-1);
 }
 

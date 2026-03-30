@@ -1,130 +1,130 @@
-import { createSignal, For, Show } from 'solid-js';
-import { AppScaffold, AppFAB, AppTabs } from '@/components/shared/layout';
-import { usePhoneKeyHandler } from '@/hooks/usePhoneKeyHandler';
-import { useAsyncData } from '@/hooks/useAsyncData';
+import { For, Show } from 'solid-js';
+import { AppView } from '@/components/shared/layout/AppView';
+import { AppFAB } from '@/components/shared/layout/AppLayout';
 import { ScreenState } from '@/components/shared/ui/ScreenState';
-import { SkeletonList } from '@/components/shared/ui/SkeletonList';
-import { Avatar } from '@/components/shared/ui/Avatar';
+import { Modal, ModalActions, ModalButton, FormField } from '@/components/shared/ui/Modal';
+import { createAppLoader } from '@/hooks/createAppLoader';
+import { createAppStore } from '@/hooks/createAppStore';
+import { useNuiCallback } from '@/hooks/useNuiCallback';
 import { fetchNui } from '@/utils/fetchNui';
-import type { TabItem } from '@/components/shared/layout';
+import { TemplateDetail } from './components/TemplateDetail';
+import type { TabItem } from '@/components/shared/layout/AppLayout';
+import styles from './TemplateApp.module.scss';
 
 interface TemplateItem {
   id: number;
-  name: string;
-  description?: string;
+  title: string;
+  description: string;
+  favorite: boolean;
+  createdAt: string;
 }
 
+type TabId = 'all' | 'favorites';
+
+const TABS: TabItem[] = [
+  { id: 'all', label: 'All', icon: './img/icons_ios/grid.svg' },
+  { id: 'favorites', label: 'Favorites', icon: './img/icons_ios/star-fill.svg' },
+];
+
 export function TemplateApp() {
-  const [activeTab, setActiveTab] = createSignal('all');
-  const [showModal, setShowModal] = createSignal(false);
-  const [newItemName, setNewItemName] = createSignal('');
-
-  usePhoneKeyHandler({
-    Backspace: () => {
-    },
-  });
-
-  const { data: items, loading, error, execute: reload } = useAsyncData<TemplateItem[]>(
-    () => fetchNui('getTemplateItems', undefined, []),
-    { initialData: [] }
+  const items = createAppLoader<TemplateItem[]>(
+    () => fetchNui<TemplateItem[]>('templateGetItems', {}, []),
+    { initialData: [] },
   );
 
-  const tabs: TabItem[] = [
-    { id: 'all', label: 'Todos', icon: './img/icons_ios/grid.svg' },
-    { id: 'favorites', label: 'Favoritos', icon: './img/icons_ios/star-fill.svg' },
-  ];
+  const [state, actions] = createAppStore(
+    {
+      tab: 'all' as TabId,
+      selectedId: null as number | null,
+      showCreate: false,
+      newTitle: '',
+    },
+    (_state, setState) => ({
+      setTab: (tab: TabId) => setState('tab', tab),
+      select: (id: number) => setState('selectedId', id),
+      clearSelection: () => setState('selectedId', null),
+      openCreate: () => setState('showCreate', true),
+      closeCreate: () => {
+        setState('showCreate', false);
+        setState('newTitle', '');
+      },
+      setNewTitle: (v: string) => setState('newTitle', v),
+    }),
+  );
+
+  useNuiCallback<TemplateItem>('templateItemUpdated', (item) => {
+    items.mutate((prev) => prev.map((i) => (i.id === item.id ? item : i)));
+  });
 
   const filteredItems = () => {
-    const all = items() || [];
-    if (activeTab() === 'favorites') {
-      return all.slice(0, 2);
-    }
-    return all;
+    const list = items.data();
+    return state.tab === 'favorites' ? list.filter((i) => i.favorite) : list;
   };
 
+  const selectedItem = () =>
+    items.data().find((i) => i.id === state.selectedId) ?? null;
+
   const handleCreate = async () => {
-    if (!newItemName().trim()) return;
-    await fetchNui('createTemplateItem', { name: newItemName() });
-    setNewItemName('');
-    setShowModal(false);
-    reload();
+    const title = state.newTitle.trim();
+    if (!title) return;
+    await fetchNui('templateCreateItem', { title });
+    actions.closeCreate();
+    items.refetch();
   };
 
   return (
-    <AppScaffold
-      title="Template App"
-      action={{ icon: '+', onClick: () => setShowModal(true) }}
-      footer={tabs.length > 1 ? <AppTabs tabs={tabs} active={activeTab()} onChange={setActiveTab} /> : undefined}
-      footerFixed
-    >
-        <Show when={loading()}>
-          <SkeletonList rows={6} avatar />
-        </Show>
-
-        <Show when={!loading() && error()}>
-          <ScreenState loading={false} error={error()?.message} empty={false}>
-            {null}
-          </ScreenState>
-        </Show>
-
-        <Show when={!loading() && !error()}>
-          <ScreenState
-            loading={false}
-            empty={filteredItems().length === 0}
-            emptyTitle="Sin items"
-            emptyDescription="Toca + para agregar un nuevo item."
+    <>
+      <AppView<TemplateItem[]>
+        title="Template"
+        action={{ icon: '+', onClick: actions.openCreate, label: 'New item' }}
+        tabs={{
+          items: TABS,
+          active: state.tab,
+          onChange: (id) => actions.setTab(id as TabId),
+        }}
+        loader={items}
+        emptyTitle="No items yet"
+        emptyDescription="Tap + to create your first item."
+      >
+        {() => (
+          <For
+            each={filteredItems()}
+            fallback={
+              <ScreenState loading={false} empty emptyTitle="No matches" emptyDescription="Try the other tab.">
+                {null}
+              </ScreenState>
+            }
           >
-            <For each={filteredItems()}>
-              {(item) => (
-                <div class="ios-list">
-                  <div class="ios-row">
-                    <Avatar identifier={item.name.toString()} display={item.name} />
-                    <div class="ios-label">{item.name}</div>
-                    <Show when={item.description}>
-                      <div class="ios-value">{item.description}</div>
-                    </Show>
-                  </div>
-                </div>
-              )}
-            </For>
-          </ScreenState>
-        </Show>
-      <AppFAB onClick={() => setShowModal(true)} />
+            {(item) => (
+              <div class={styles.item} onClick={() => actions.select(item.id)}>
+                <div class={styles.itemTitle}>{item.title}</div>
+                <div class={styles.itemDesc}>{item.description}</div>
+              </div>
+            )}
+          </For>
+        )}
+      </AppView>
 
-      <Show when={showModal()}>
-        <div class={modalStyles.overlay} onClick={() => setShowModal(false)}>
-          <div class={modalStyles.modal} onClick={(e) => e.stopPropagation()}>
-            <h2 class={modalStyles.title}>Nuevo Item</h2>
-            <div class={modalStyles.content}>
-              <label class={modalStyles.label}>Nombre</label>
-              <input
-                class="ios-input"
-                type="text"
-                value={newItemName()}
-                onInput={(e) => setNewItemName(e.currentTarget.value)}
-                placeholder="Ingresa el nombre"
-              />
-            </div>
-            <div class={modalStyles.actions}>
-              <button class="ios-btn" onClick={() => setShowModal(false)}>
-                Cancelar
-              </button>
-              <button class="ios-btn ios-btn-primary" onClick={handleCreate}>
-                Guardar
-              </button>
-            </div>
-          </div>
-        </div>
+      <AppFAB onClick={actions.openCreate} />
+
+      <Show when={selectedItem()}>
+        {(item) => (
+          <TemplateDetail item={item()} onClose={actions.clearSelection} />
+        )}
       </Show>
-    </AppScaffold>
+
+      <Modal open={state.showCreate} title="New Item" onClose={actions.closeCreate} size="sm">
+        <FormField
+          label="Title"
+          value={state.newTitle}
+          onChange={actions.setNewTitle}
+          placeholder="Enter a title"
+        />
+        <ModalActions>
+          <ModalButton label="Cancel" onClick={actions.closeCreate} />
+          <ModalButton label="Save" onClick={handleCreate} tone="primary" disabled={!state.newTitle.trim()} />
+        </ModalActions>
+      </Modal>
+    </>
   );
 }
-
-const modalStyles = {
-  overlay: 'fixed inset-0 bg-black/50 flex items-center justify-center z-50',
-  modal: 'bg-[var(--surface)] rounded-2xl p-4 w-[90%] max-w-[280px]',
-  title: 'text-lg font-bold text-center mb-4',
-  content: 'mb-4',
-  label: 'block text-xs font-semibold text-[var(--text-3)] mb-2',
-  actions: 'flex gap-3',
-};

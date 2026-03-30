@@ -104,10 +104,13 @@ export function LeafletMap(props: Props) {
     })
   })
 
+  let hasCentered = false;
+
   createEffect(() => {
-    if (!map || props.pins.length === 0) return
+    if (!map || props.pins.length === 0 || hasCentered) return
     const first = props.pins[0]
     map.setView(gtaToLatLng(first.x, first.y), 4)
+    hasCentered = true;
   })
 
   const polylines = new Map<string, L.Polyline>();

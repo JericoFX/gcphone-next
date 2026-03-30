@@ -280,7 +280,10 @@ lib.callback.register('gcphone:sendMessage', function(source, data)
         if type(data.audioData) ~= 'string' or data.audioData == '' then
             return false, 'INVALID_AUDIO'
         end
-        audioData = data.audioData
+        audioData = SanitizeMediaUrl(data.audioData)
+        if not audioData then
+            return false, 'INVALID_AUDIO'
+        end
         audioDuration = math.floor(math.max(1, math.min(tonumber(data.audioDuration) or 0, 30)))
         message = '[Audio]'
         -- Stricter rate limit for audio

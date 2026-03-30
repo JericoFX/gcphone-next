@@ -18,7 +18,7 @@ exports('openMiniApp', function(options)
     local callerResource = GetInvokingResource() or 'unknown'
     local callbackEvent = type(options.callbackEvent) == 'string' and options.callbackEvent or nil
 
-    if not PhoneState.isPhoneOpen() then return end
+    if not PhoneState.isOpen then return end
 
     local sanitizedOptions = {}
     if hasOptions then

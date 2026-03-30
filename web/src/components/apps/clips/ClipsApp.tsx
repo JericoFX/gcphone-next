@@ -308,6 +308,7 @@ export function ClipsApp() {
 
   const openProfileEditor = async () => {
     const account = await fetchNui<SharedSnapAccount | null>('clipsGetAccount', {});
+    if (!account) return;
     setProfilePrivate(!!account.is_private);
     setProfileAvatar(account.avatar || '');
     setShowProfileModal(true);

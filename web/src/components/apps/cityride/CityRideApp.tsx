@@ -1,6 +1,7 @@
-import { For, Show, createSignal, onMount, onCleanup, batch, createMemo } from 'solid-js';
+import { For, Show, createSignal, onMount, batch, createMemo } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { fetchNui } from '../../../utils/fetchNui';
+import { useNuiActions } from '../../../utils/useNui';
 import { sanitizeText } from '../../../utils/sanitize';
 import { uiConfirm } from '../../../utils/uiDialog';
 import { uiAlert } from '../../../utils/uiAlert';
@@ -175,70 +176,70 @@ export function CityRideApp() {
     void loadState();
   });
 
-  // Listen for NUI messages from client events
-  onMount(() => {
-    const handler = (e: MessageEvent) => {
-      const { action, data } = e.data || {};
-      if (action === 'cityRideNewRequest') {
-        if (data && activeTab() === 'driver') {
-          setAvailableRides((prev) => {
-            const exists = prev.some((r) => r.id === data.id);
-            return exists ? prev : [...prev, data];
-          });
-        }
-      } else if (action === 'cityRideAccepted') {
-        if (data) {
-          setActiveRide(data);
-          setActivity('cityride', {
-            title: data.driverName || 'CityRide',
-            subtitle: `ETA: ${Math.max(1, Math.round((data.distance || 0) / 80))} min`,
-            icon: './img/icons_ios/cityride.svg',
-            onStop: () => void cancelRide(data.id),
-            onNavigate: () => router.navigate('cityride'),
-          });
-        }
-      } else if (action === 'cityRideUpdate') {
-        if (data) {
-          setActiveRide((prev) => (prev && prev.id === data.id ? data : prev));
-          setDriverActiveRide((prev) => (prev && prev.id === data.id ? data : prev));
-          if (activeRide()?.id === data.id) {
-            setActivity('cityride', {
-              title: data.driverName || 'CityRide',
-              subtitle: `ETA: ${Math.max(1, Math.round((data.distance || 0) / 80))} min`,
-              icon: './img/icons_ios/cityride.svg',
-              onStop: () => void cancelRide(data.id),
-              onNavigate: () => router.navigate('cityride'),
-            });
-          } else if (driverActiveRide()?.id === data.id) {
-            setActivity('cityride', {
-              title: data.driverName || t('cityride.passenger_label', language()) || 'Pasajero',
-              subtitle: data.status,
-              icon: './img/icons_ios/cityride.svg',
-              onStop: () => void cancelRide(data.id),
-              onNavigate: () => router.navigate('cityride'),
-            });
-          }
-        }
-      } else if (action === 'cityRideCancelled') {
-        if (data) {
-          setActiveRide((prev) => (prev && prev.id === data.rideId ? null : prev));
-          setDriverActiveRide((prev) => (prev && prev.id === data.rideId ? null : prev));
-          removeActivity('cityride');
-          uiAlert(t('cityride.cancelled', language()), 'CityRide');
-        }
-      } else if (action === 'cityRideCompleted') {
-        if (data) {
-          setDriverActiveRide(null);
-          removeActivity('cityride');
-          if (activeRide()?.id === data.id) {
-            setActiveRide(null);
-            setCompletedRide(data);
-          }
-        }
+  useNuiActions<{
+    cityRideNewRequest: RideData;
+    cityRideAccepted: RideData;
+    cityRideUpdate: RideData;
+    cityRideCancelled: { rideId: number };
+    cityRideCompleted: RideData;
+  }>({
+    cityRideNewRequest: (data) => {
+      if (data && activeTab() === 'driver') {
+        setAvailableRides((prev) => {
+          const exists = prev.some((r) => r.id === data.id);
+          return exists ? prev : [...prev, data];
+        });
       }
-    };
-    window.addEventListener('message', handler);
-    onCleanup(() => window.removeEventListener('message', handler));
+    },
+    cityRideAccepted: (data) => {
+      if (!data) return;
+      setActiveRide(data);
+      setActivity('cityride', {
+        title: data.driverName || 'CityRide',
+        subtitle: `ETA: ${Math.max(1, Math.round((data.distance || 0) / 80))} min`,
+        icon: './img/icons_ios/cityride.svg',
+        onStop: () => void cancelRide(data.id),
+        onNavigate: () => router.navigate('cityride'),
+      });
+    },
+    cityRideUpdate: (data) => {
+      if (!data) return;
+      setActiveRide((prev) => (prev && prev.id === data.id ? data : prev));
+      setDriverActiveRide((prev) => (prev && prev.id === data.id ? data : prev));
+      if (activeRide()?.id === data.id) {
+        setActivity('cityride', {
+          title: data.driverName || 'CityRide',
+          subtitle: `ETA: ${Math.max(1, Math.round((data.distance || 0) / 80))} min`,
+          icon: './img/icons_ios/cityride.svg',
+          onStop: () => void cancelRide(data.id),
+          onNavigate: () => router.navigate('cityride'),
+        });
+      } else if (driverActiveRide()?.id === data.id) {
+        setActivity('cityride', {
+          title: data.driverName || t('cityride.passenger_label', language()) || 'Pasajero',
+          subtitle: data.status,
+          icon: './img/icons_ios/cityride.svg',
+          onStop: () => void cancelRide(data.id),
+          onNavigate: () => router.navigate('cityride'),
+        });
+      }
+    },
+    cityRideCancelled: (data) => {
+      if (!data) return;
+      setActiveRide((prev) => (prev && prev.id === data.rideId ? null : prev));
+      setDriverActiveRide((prev) => (prev && prev.id === data.rideId ? null : prev));
+      removeActivity('cityride');
+      uiAlert(t('cityride.cancelled', language()), 'CityRide');
+    },
+    cityRideCompleted: (data) => {
+      if (!data) return;
+      setDriverActiveRide(null);
+      removeActivity('cityride');
+      if (activeRide()?.id === data.id) {
+        setActiveRide(null);
+        setCompletedRide(data);
+      }
+    },
   });
 
   usePhoneKeyHandler({

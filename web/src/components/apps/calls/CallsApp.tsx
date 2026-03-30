@@ -216,8 +216,8 @@ export function CallsApp() {
     setLoading(false);
   };
   
-  createEffect(() => {
-    loadHistory();
+  onMount(() => {
+    void loadHistory();
   });
   
   usePhoneKeyHandler({
@@ -342,7 +342,6 @@ export function CallsApp() {
   };
 
   const handleMuteToggle = async (nextMuted: boolean) => {
-    if (!videoMode()) return;
     await setLiveKitMicrophoneEnabled(!nextMuted);
   };
 

@@ -131,6 +131,7 @@ CreateThread(function()
 end)
 
 RegisterNetEvent('gcphone:init', function(data)
+    if type(data) ~= 'table' then return end
     PhoneState.phoneNumber = data.phoneNumber
     PhoneState.wallpaper = data.wallpaper
     PhoneState.ringtone = data.ringtone

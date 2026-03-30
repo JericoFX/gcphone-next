@@ -146,9 +146,13 @@ export function YellowPagesApp() {
 
   onMount(() => {
     void loadCategories();
+    void loadListings();
   });
 
   createEffect(() => {
+    currentTab();
+    selectedCategory();
+    searchQuery();
     void loadListings();
   });
 
@@ -334,8 +338,8 @@ export function YellowPagesApp() {
             {(listing) => (
               <div class={styles.listingCard} onClick={() => openListing(listing)} onContextMenu={ctxMenu.onContextMenu(listing)}>
                 <div class={styles.cardImage}>
-                  <Show when={Array.isArray(listing.photos) && listing.photos.length > 0}>
-                    <img src={listing.photos[0]} alt="" />
+                  <Show when={Array.isArray(listing.photos) && listing.photos.length > 0 && typeof listing.photos[0] === 'string'}>
+                    <img src={listing.photos[0] as string} alt="" />
                   </Show>
                   <div class={styles.categoryBadge}>
                     <img src={getCategoryIcon(listing.category)} alt="" />
@@ -388,17 +392,22 @@ export function YellowPagesApp() {
             </button>
             
             <div class={styles.detailContent}>
-              <Show when={Array.isArray(selectedListing()?.photos) && selectedListing().photos.length > 0}>
-                <div class={styles.detailImage}>
-                  <img 
-                    src={selectedListing().photos[0]} 
-                    alt="" 
-                    onClick={() => setViewerUrl(selectedListing().photos[0])}
-                  />
-                  <Show when={selectedListing().photos.length > 1}>
-                    <div class={styles.photoCount}>+{selectedListing().photos.length - 1} {t('yellowpages.photos', language())}</div>
-                  </Show>
-                </div>
+              <Show when={Array.isArray(selectedListing()?.photos) && (selectedListing()?.photos as string[]).length > 0}>
+                {(() => {
+                  const detailPhotos = () => (Array.isArray(selectedListing()?.photos) ? selectedListing()!.photos as string[] : []);
+                  return (
+                    <div class={styles.detailImage}>
+                      <img
+                        src={detailPhotos()[0]}
+                        alt=""
+                        onClick={() => setViewerUrl(detailPhotos()[0] || null)}
+                      />
+                      <Show when={detailPhotos().length > 1}>
+                        <div class={styles.photoCount}>+{detailPhotos().length - 1} {t('yellowpages.photos', language())}</div>
+                      </Show>
+                    </div>
+                  );
+                })()}
               </Show>
               
               <div class={styles.detailInfo}>

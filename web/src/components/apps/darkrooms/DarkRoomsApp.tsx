@@ -1,6 +1,7 @@
 import { For, Show, createEffect, createMemo, createSignal, onMount } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { fetchNui } from '../../../utils/fetchNui';
+import { sanitizeMediaUrl } from '../../../utils/sanitize';
 import { uiAlert } from '../../../utils/uiAlert';
 import { AppFAB, AppScaffold } from '../../shared/layout';
 import { useAppCache } from '../../../hooks';
@@ -443,18 +444,17 @@ export function DarkRoomsApp() {
 
   // Render Room Interior View
   const RoomInteriorView = () => {
-    const room = selectedRoom();
-    if (!room) return null;
-
     return (
+      <Show when={selectedRoom()}>
+        {(room) => (
       <div class={styles.roomInteriorView}>
         <div class={styles.roomInteriorHeader}>
           <button class={styles.backButton} onClick={backToRooms}>
             ← {t('chirp.back', language())}
           </button>
           <div class={styles.roomTitleSection}>
-            <span class={styles.roomIconSmall}>{room.icon || '🌙'}</span>
-            <span class={styles.roomInteriorTitle}>{roomTag(room)}</span>
+            <span class={styles.roomIconSmall}>{room().icon || '🌙'}</span>
+            <span class={styles.roomInteriorTitle}>{roomTag(room())}</span>
           </div>
           <div class={styles.roomInteriorActions}>
             <span class={styles.roomStat}>{posts().length} posts</span>
@@ -512,15 +512,16 @@ export function DarkRoomsApp() {
           onPointerLeave={hideFabTooltip}
         />
       </div>
+        )}
+      </Show>
     );
   };
 
   // Render Post Detail View
   const PostDetailView = () => {
-    const post = selectedPost();
-    if (!post) return null;
-
     return (
+      <Show when={selectedPost()}>
+        {(post) => (
       <div class={styles.postDetailView}>
         <div class={styles.postDetailHeader}>
           <button class={styles.backButton} onClick={backToRoom}>
@@ -532,30 +533,30 @@ export function DarkRoomsApp() {
         <div class={styles.postThreadScroll}>
           <div class={styles.postDetailContent}>
             <div class={styles.postDetailVotes}>
-              <button 
+              <button
                 class={styles.voteButton}
-                classList={{ [styles.votedUp]: post.my_vote === 1 }}
-                onClick={() => void votePost(post.id, 1)}
+                classList={{ [styles.votedUp]: post().my_vote === 1 }}
+                onClick={() => void votePost(post().id, 1)}
               >
                 ▲
               </button>
-              <span class={styles.voteCountLarge}>{post.score}</span>
-              <button 
+              <span class={styles.voteCountLarge}>{post().score}</span>
+              <button
                 class={styles.voteButton}
-                classList={{ [styles.votedDown]: post.my_vote === -1 }}
-                onClick={() => void votePost(post.id, -1)}
+                classList={{ [styles.votedDown]: post().my_vote === -1 }}
+                onClick={() => void votePost(post().id, -1)}
               >
                 ▼
               </button>
             </div>
 
             <div class={styles.postDetailBody}>
-              <h2 class={styles.postDetailHeading}>{post.title}</h2>
+              <h2 class={styles.postDetailHeading}>{post().title}</h2>
               <div class={styles.postDetailMeta}>
-                  <span>{t('darkrooms.published_by', language(), { name: post.author_name })}</span>
+                  <span>{t('darkrooms.published_by', language(), { name: post().author_name })}</span>
               </div>
-              <p class={styles.postDetailText}>{post.content}</p>
-              <MediaBlock url={post.media_url} onOpen={setViewerUrl} />
+              <p class={styles.postDetailText}>{post().content}</p>
+              <MediaBlock url={sanitizeMediaUrl(post().media_url)} onOpen={setViewerUrl} />
             </div>
           </div>
 
@@ -571,7 +572,7 @@ export function DarkRoomsApp() {
                       <strong>{comment.author_name}</strong>
                     </div>
                     <p class={styles.commentText}>{comment.content}</p>
-                    <MediaBlock url={comment.media_url} compact onOpen={setViewerUrl} />
+                    <MediaBlock url={sanitizeMediaUrl(comment.media_url)} compact onOpen={setViewerUrl} />
                   </div>
                 )}
               </For>
@@ -589,14 +590,14 @@ export function DarkRoomsApp() {
           />
           <div class={styles.commentActions}>
             <label class={styles.anonymousToggle}>
-              <input 
-                type="checkbox" 
+              <input
+                type="checkbox"
                 checked={commentAnonymous()}
                 onChange={(e) => setCommentAnonymous(e.currentTarget.checked)}
               />
               <span>{t('darkrooms.anonymous', language())}</span>
             </label>
-            <button 
+            <button
               class={styles.sendButton}
               onClick={() => void createComment()}
               disabled={!commentText().trim()}
@@ -606,6 +607,8 @@ export function DarkRoomsApp() {
           </div>
         </div>
       </div>
+        )}
+      </Show>
     );
   };
 

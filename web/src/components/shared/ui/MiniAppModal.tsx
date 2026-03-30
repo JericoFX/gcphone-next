@@ -51,6 +51,9 @@ export function MiniAppModal() {
     const app = miniApp();
     if (!app) return;
     const cbEvent = app.callbackEvent || 'gcphone:miniAppCallback';
+    if (!cbEvent.startsWith('gcphone:miniApp:') && cbEvent !== 'gcphone:miniAppCallback') {
+      return;
+    }
     await fetchNui(cbEvent, { optionId, resourceName: app.resourceName });
     setMiniApp(null);
   };

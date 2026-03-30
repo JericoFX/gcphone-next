@@ -8,6 +8,7 @@ import { useNuiEvent } from '../../../utils/useNui';
 import { AppScaffold } from '../../shared/layout';
 import { useLiveActivity } from '../../../store/liveActivity';
 import { useInternalEvent } from '../../../utils/internalEvents';
+import { uiPrompt } from '../../../utils/uiDialog';
 import styles from './MusicApp.module.scss';
 
 interface SearchItem {
@@ -676,8 +677,8 @@ export function MusicApp() {
           </div>
         }>
           <div class={styles.playlistsList}>
-            <button class={styles.createPlaylistBtn} onClick={() => {
-              const name = prompt(t('music.playlist_name_prompt', language()));
+            <button class={styles.createPlaylistBtn} onClick={async () => {
+              const name = await uiPrompt(t('music.playlist_name_prompt', language()));
               if (name?.trim()) createPlaylist(name.trim());
             }}>
               + {t('music.new_playlist', language())}

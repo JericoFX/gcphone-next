@@ -18,13 +18,12 @@ export function PhoneNotificationBanner(props: Props) {
   const [phase, setPhase] = createSignal<'idle' | 'enter' | 'exit'>('idle');
   const titleId = createUniqueId();
   const messageId = createUniqueId();
-  let swapTimer: number | undefined;
+  let swapTimerA: number | undefined;
+  let swapTimerB: number | undefined;
 
-  const clearSwapTimer = () => {
-    if (swapTimer) {
-      window.clearTimeout(swapTimer);
-      swapTimer = undefined;
-    }
+  const clearSwapTimers = () => {
+    if (swapTimerA) { window.clearTimeout(swapTimerA); swapTimerA = undefined; }
+    if (swapTimerB) { window.clearTimeout(swapTimerB); swapTimerB = undefined; }
   };
 
   createEffect(() => {
@@ -32,12 +31,12 @@ export function PhoneNotificationBanner(props: Props) {
     const currentId = current?.id;
     const visible = displayed();
 
-    clearSwapTimer();
+    clearSwapTimers();
 
     if (!currentId) {
       if (visible) {
         setPhase('exit');
-        swapTimer = window.setTimeout(() => {
+        swapTimerA = window.setTimeout(() => {
           setDisplayed(null);
           setPhase('idle');
         }, 220);
@@ -49,13 +48,13 @@ export function PhoneNotificationBanner(props: Props) {
     if (!visible) {
       setDisplayed(current);
       setPhase('enter');
-      swapTimer = window.setTimeout(() => setPhase('idle'), 240);
+      swapTimerA = window.setTimeout(() => setPhase('idle'), 240);
     } else if (visible.id !== currentId) {
       setPhase('exit');
-      swapTimer = window.setTimeout(() => {
+      swapTimerA = window.setTimeout(() => {
         setDisplayed(current);
         setPhase('enter');
-        swapTimer = window.setTimeout(() => setPhase('idle'), 240);
+        swapTimerB = window.setTimeout(() => setPhase('idle'), 240);
       }, 220);
     }
 
@@ -69,7 +68,7 @@ export function PhoneNotificationBanner(props: Props) {
     return () => window.clearTimeout(timer);
   });
 
-  onCleanup(() => clearSwapTimer());
+  onCleanup(() => clearSwapTimers());
 
   const openNotification = () => {
     const current = displayed();

@@ -123,6 +123,7 @@ export function sendWaveTyping(roomId: string, typing: boolean) {
   socket?.emit('wavechat:typing', { roomId, typing });
 }
 export function getWaveRecent(roomId: string, limit = 100): Promise<AckPayload> {
+  if (!socket?.connected) return Promise.resolve({ success: false, messages: [] });
   return new Promise<AckPayload>((resolve) => {
     socket?.emit('wavechat:getRecent', { roomId, limit }, (payload: AckPayload) => {
       resolve(payload || { success: false, messages: [] });
@@ -130,6 +131,7 @@ export function getWaveRecent(roomId: string, limit = 100): Promise<AckPayload> 
   });
 }
 export function sendWaveMessage(roomId: string, content: string, mediaUrl?: string): Promise<AckPayload> {
+  if (!socket?.connected) return Promise.resolve({ success: false });
   return new Promise<AckPayload>((resolve) => {
     socket?.emit('wavechat:send', { roomId, content, mediaUrl }, (payload: AckPayload) => {
       resolve(payload || { success: false });

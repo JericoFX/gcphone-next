@@ -1,253 +1,38 @@
-# Cómo Crear una Nueva App
+# App Template
 
-Esta guia te muestra como crear una nueva app siguiendo los estandares de GCPhone Next.
+Copia esta carpeta para crear una nueva app.
 
-## Estructura de Archivos
+## Pasos
 
-```
-web/src/components/apps/myapp/
-├── MyApp.tsx           # Componente principal
-├── MyApp.module.scss   # Estilos especificos (opcional)
-└── index.ts            # Exports (opcional)
-```
+1. Copia `_template/` a `tu-app/`
+2. Renombra `TemplateApp` a `TuApp` en todos los archivos
+3. Renombra `TemplateItem` y `TemplateDetail` segun tu dominio
+4. Registra la app en `config/apps.ts` (agrega un `AppDefinition`)
+5. Agrega el lazy import en `Phone/PhoneFrame.tsx`:
+   ```ts
+   tuapp: lazy(() => import('../apps/tu-app/TuApp').then(m => ({ default: m.TuApp }))),
+   ```
+6. Agrega server callback en `server/modules/tu-app.lua`
+7. Agrega NUI callback en `client/nui_bridge.lua`
 
-## Paso 1: Crear los Archivos
+## Que incluye
 
-```bash
-mkdir -p web/src/components/apps/myapp
-touch web/src/components/apps/myapp/MyApp.tsx
-touch web/src/components/apps/myapp/MyApp.module.scss
-```
+- `TemplateApp.tsx` — AppView + createAppLoader + createAppStore + tabs + modal
+- `components/TemplateDetail.tsx` — Sub-componente con props y Modal
+- `TemplateApp.module.scss` — Estilos con SCSS modules
 
-## Paso 2: Copiar el Template
+## Utilidades disponibles
 
-Copia el contenido de `_template/TemplateApp.tsx` a tu nuevo archivo y personalízalo.
+- `createAppLoader(fetchFn, opts)` — Carga datos con loading/error/refetch/mutate
+- `createAppStore(initial, actionsFactory)` — Estado local tipado con acciones
+- `useNuiCallback(event, handler)` — Escuchar eventos NUI con cleanup automatico
+- `<AppView>` — Layout completo: scaffold + tabs + loading/empty/error automaticos
+- `<AppScaffold>` — Layout manual: header + body + footer (sin manejo de estados)
+- `<Modal>` — Modal animado con `ModalActions`, `ModalButton`, `FormField`
+- `<AppFAB>` — Floating Action Button
+- `<ScreenState>` — Estados de loading/empty/error
+- `fetchNui(event, data, mockData)` — Llamada NUI con mock para desarrollo en browser
 
-## Paso 3: Registrar la App
+## Documentacion completa
 
-En `web/src/config/apps.ts`:
-
-```typescript
-export const APP_DEFINITIONS: AppDefinition[] = [
-  // ... apps existentes
-  { id: 'myapp', name: 'Mi App', icon: './img/icons_ios/myapp.svg', route: 'myapp', defaultHome: true },
-];
-```
-
-## Paso 4: Agregar al Router
-
-En `web/src/components/Phone/PhoneFrame.tsx`:
-
-```typescript
-import { MyApp } from '../apps/myapp/MyApp';
-
-// En renderRoute():
-if (route === 'myapp') return <MyApp />;
-```
-
-## Componentes de Layout Disponibles
-
-### AppLayout
-Contenedor raíz de cualquier app.
-
-```tsx
-<AppLayout>
-  {children}
-</AppLayout>
-```
-
-### AppHeader
-Header con navegación iOS.
-
-```tsx
-<AppHeader
-  title="Mi App"
-  subtitle="Opcional"
-  onBack={() => console.log('back')}  // Opcional, default: router.goBack()
-  backIcon="‹"                        // Opcional
-  action={{ icon: '+', onClick: handleAdd }}  // Botón derecha
-/>
-```
-
-### AppBody
-Área de contenido principal con scroll.
-
-```tsx
-<AppBody padding="md">  // 'none' | 'sm' | 'md'
-  {children}
-</AppBody>
-```
-
-### AppFooter
-Footer fijo para acciones/tabs.
-
-```tsx
-<AppFooter fixed>
-  <AppTabs tabs={tabs} active={activeTab} onChange={setActiveTab} />
-</AppFooter>
-```
-
-### AppFAB
-Floating Action Button.
-
-```tsx
-<AppFAB onClick={handleAdd} icon="+" position="bottom-right" />
-```
-
-### AppTabs
-Tabs de navegación.
-
-```tsx
-const tabs: TabItem[] = [
-  { id: 'all', label: 'Todos', icon: './img/icons_ios/grid.svg', badge: 5 },
-  { id: 'fav', label: 'Favoritos', icon: './img/icons_ios/star.svg' },
-];
-
-<AppTabs tabs={tabs} active={activeTab()} onChange={setActiveTab} />
-```
-
-## Hooks Disponibles
-
-### usePhoneKeyHandler
-Maneja las teclas del teléfono.
-
-```tsx
-usePhoneKeyHandler({
-  Backspace: () => router.goBack(),
-  ArrowUp: () => selectPrev(),
-  ArrowDown: () => selectNext(),
-  Enter: () => confirmSelection(),
-});
-```
-
-### useAsyncData
-Carga datos asíncronos con estados.
-
-```tsx
-const { data, loading, error, execute, reset } = useAsyncData(
-  () => fetchNui('getMyData', undefined, []),
-  { initialData: [], autoFetch: true }
-);
-```
-
-### useMediaAttachment
-Adjuntar multimedia (galería, cámara, URL).
-
-```tsx
-const { mediaUrl, mediaType, attachFromGallery, attachFromCamera, attachByUrl, clearAttachment } = useMediaAttachment();
-
-// Usar con AttachmentSheet
-<AttachmentSheet
-  open={showAttach()}
-  onClose={() => setShowAttach(false)}
-  onGallery={attachFromGallery}
-  onCamera={attachFromCamera}
-  onUrl={attachByUrl}
-  onRemove={clearAttachment}
-  hasAttachment={!!mediaUrl()}
-/>
-```
-
-### useListNavigation
-Navegación con flechas en listas.
-
-```tsx
-const { selectedIndex, selectNext, selectPrev, confirmSelection } = useListNavigation(
-  () => items(),
-  { onSelect: (item, index) => console.log(item) }
-);
-```
-
-## Componentes UI Disponibles
-
-- `Modal` - Modal reutilizable
-- `Avatar` - Avatar con inicial/color
-- `MediaPreview` - Preview de imagen/video/audio
-- `AttachmentSheet` - Sheet para adjuntar media
-- `AppPlaceholder` - Skeleton de carga
-- `ScreenState` - Estados de loading/empty/error
-- `SkeletonList` - Lista skeleton de carga
-- `ActionSheet` - Sheet de acciones
-
-## Clases CSS iOS Disponibles
-
-Usa estas clases para mantener consistencia:
-
-- `.ios-page` - Contenedor de página
-- `.ios-nav` - Navegación
-- `.ios-content` - Área de contenido
-- `.ios-list` - Lista con bordes
-- `.ios-row` - Fila de lista
-- `.ios-input` - Input estilizado
-- `.ios-btn` - Botón
-- `.ios-btn-primary` - Botón primario
-- `.ios-btn-danger` - Botón de peligro
-- `.ios-chip` - Chip/tag
-
-## Ejemplo Completo
-
-```tsx
-import { createSignal, For, Show } from 'solid-js';
-import { AppLayout, AppHeader, AppBody, AppFAB } from '@/components/shared/layout';
-import { usePhoneKeyHandler } from '@/hooks/usePhoneKeyHandler';
-import { useAsyncData } from '@/hooks/useAsyncData';
-import { ScreenState } from '@/components/shared/ui/ScreenState';
-import { SkeletonList } from '@/components/shared/ui/SkeletonList';
-import { fetchNui } from '@/utils/fetchNui';
-
-interface Note {
-  id: number;
-  title: string;
-  content: string;
-}
-
-export function NotesApp() {
-  usePhoneKeyHandler({}); // Backspace -> goBack por defecto
-
-  const { data: notes, loading, execute: reload } = useAsyncData<Note[]>(
-    () => fetchNui('getNotes', undefined, []),
-    { initialData: [] }
-  );
-
-  return (
-    <AppLayout>
-      <AppHeader title="Notas" action={{ icon: '+', onClick: handleCreate }} />
-      
-      <AppBody>
-        <Show when={loading()}>
-          <SkeletonList rows={6} />
-        </Show>
-        
-        <Show when={!loading()}>
-          <ScreenState
-            loading={false}
-            empty={notes()?.length === 0}
-            emptyTitle="Sin notas"
-            emptyDescription="Toca + para crear una nota."
-          >
-            <For each={notes()}>
-              {(note) => (
-                <div class="ios-list">
-                  <div class="ios-row">
-                    <div class="ios-label">{note.title}</div>
-                  </div>
-                </div>
-              )}
-            </For>
-          </ScreenState>
-        </Show>
-      </AppBody>
-      
-      <AppFAB onClick={handleCreate} />
-    </AppLayout>
-  );
-}
-```
-
-## Tips
-
-1. **Siempre usa `AppLayout`** como contenedor raíz
-2. **Usa `usePhoneKeyHandler`** para manejar Backspace
-3. **Usa `ScreenState`** para estados de loading/empty/error
-4. **Prefiere clases iOS** (`ios-*`) sobre estilos custom
-5. **Lazy load** para apps grandes (ver PhoneFrame)
+Ver `docs/dev/` para la guia completa de desarrollo.

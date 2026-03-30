@@ -56,7 +56,7 @@ interface LockScreenWidgetsProps {
   language: string;
 }
 
-function NotificationPanel(props: Pick<LockScreenWidgetsProps, 'visibleNotifications' | 'onNotificationClick' | 'language'>) {
+function NotificationPanel(props: Pick<LockScreenWidgetsProps, 'visibleNotifications' | 'onNotificationClick' | 'language' | 'compact'>) {
   if (props.visibleNotifications.length === 0) {
     return (
       <>
@@ -75,7 +75,7 @@ function NotificationPanel(props: Pick<LockScreenWidgetsProps, 'visibleNotificat
         <span class={styles.widgetLabel}>{t('lock.notifications', props.language)}</span>
         <span class={styles.widgetMeta}>{props.visibleNotifications.length}</span>
       </div>
-      <div class={styles.notificationList}>
+      <div class={props.compact ? `${styles.notificationList} ${styles.notificationListCompact}` : styles.notificationList}>
         <For each={props.visibleNotifications}>
           {(item) => (
             <button
@@ -158,16 +158,12 @@ function MusicPanel(props: Pick<LockScreenWidgetsProps, 'musicState' | 'musicSta
 }
 
 export function LockScreenWidgets(props: LockScreenWidgetsProps) {
-  const notificationListClass = props.compact
-    ? `${styles.notificationList} ${styles.notificationListCompact}`
-    : styles.notificationList;
-
   return (
     <div class={styles.widgetCarousel}>
       <div class={styles.widgetViewport}>
         <Show when={props.activeWidget === 0}>
           <section class={`${styles.widgetPanel} ${styles.primaryPanel}`}>
-            <NotificationPanel visibleNotifications={props.visibleNotifications} onNotificationClick={props.onNotificationClick} language={props.language} />
+            <NotificationPanel visibleNotifications={props.visibleNotifications} onNotificationClick={props.onNotificationClick} language={props.language} compact={props.compact} />
           </section>
         </Show>
 

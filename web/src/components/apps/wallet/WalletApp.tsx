@@ -540,18 +540,23 @@ export function WalletApp() {
         <Modal open={showCreateInvoice()} title={t('wallet.new_invoice', language())} onClose={closeInvoiceModal} size="sm">
           <div class={styles.modalBody}>
             <Show when={targetMode() === 'nearby' && targetServerId()}>
-              <div class={styles.selectedTarget}>
-                <div class={styles.selectedAvatar}>
-                  {(nearbyPlayers().find(p => p.serverId === targetServerId())?.name || '?').charAt(0).toUpperCase()}
-                </div>
-                <div>
-                  <strong>{nearbyPlayers().find(p => p.serverId === targetServerId())?.name || t('wallet.player', language())}</strong>
-                  <span>{nearbyPlayers().find(p => p.serverId === targetServerId())?.distance.toFixed(1) || '?'}m</span>
-                </div>
-                <button class={styles.changeTarget} onClick={() => { setShowCreateInvoice(false); setShowNfcRadar(true); }}>
-                  {t('action.change', language())}
-                </button>
-              </div>
+              {(() => {
+                const selected = () => nearbyPlayers().find(p => p.serverId === targetServerId());
+                return (
+                  <div class={styles.selectedTarget}>
+                    <div class={styles.selectedAvatar}>
+                      {(selected()?.name || '?').charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <strong>{selected()?.name || t('wallet.player', language())}</strong>
+                      <span>{selected()?.distance.toFixed(1) || '?'}m</span>
+                    </div>
+                    <button class={styles.changeTarget} onClick={() => { setShowCreateInvoice(false); setShowNfcRadar(true); }}>
+                      {t('action.change', language())}
+                    </button>
+                  </div>
+                );
+              })()}
             </Show>
 
             <div class={styles.formGrid}>

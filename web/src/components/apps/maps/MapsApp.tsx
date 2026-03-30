@@ -37,11 +37,10 @@ interface ManualMarker {
   label: string;
 }
 
-let markerIdCounter = 0;
-
 export function MapsApp() {
   const router = useRouter();
   const language = () => getStoredLanguage();
+  let markerIdCounter = 0;
 
   const [locations, setLocations] = createSignal<SharedLocationItem[]>([]);
   const [manualMarkers, setManualMarkers] = createSignal<ManualMarker[]>([]);

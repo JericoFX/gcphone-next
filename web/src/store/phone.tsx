@@ -17,53 +17,56 @@ import { DEFAULT_WIDGET_LAYOUT, MAX_FOLDERS, MAX_APPS_PER_FOLDER, MAX_WIDGETS, P
 import { APP_IDS, DEFAULT_HOME_APPS, DEFAULT_MENU_APPS } from '../config/apps';
 import { isEnvBrowser } from '../utils/misc';
 
+export interface PhoneActions {
+  show: () => void;
+  hide: () => void;
+  toggle: () => void;
+  unlock: (code: string) => Promise<boolean>;
+  verifyPin: (code: string) => Promise<boolean>;
+  lock: () => void;
+  refreshSetupState: () => Promise<void>;
+  completeSetup: (payload: PhoneSetupPayload) => Promise<{ success: boolean; error?: string }>;
+  setWallpaper: (url: string) => void;
+  setRingtone: (ringtone: string) => void;
+  setCallRingtone: (ringtone: string) => void;
+  setNotificationTone: (tone: string) => void;
+  setMessageTone: (tone: string) => void;
+  setVolume: (volume: number) => void;
+  setTheme: (theme: 'auto' | 'light' | 'dark') => void;
+  setAccentColor: (color: string) => void;
+  setFontSize: (size: string) => void;
+  setPhoneCase: (phoneCase: string) => void;
+  setLanguage: (language: AppLanguage) => void;
+  setStreamerMode: (enabled: boolean) => void;
+  setAudioProfile: (audioProfile: 'normal' | 'street' | 'vehicle' | 'silent') => void;
+  setLockCode: (code: string) => void;
+  setPhoneScale: (scale: number) => void;
+  setSwipeUnlock: (enabled: boolean) => void;
+  setScreenLockEnabled: (enabled: boolean) => void;
+  unlockDirect: () => void;
+  factoryReset: () => Promise<boolean>;
+  loadAppLayout: () => Promise<void>;
+  saveAppLayout: () => Promise<void>;
+  reorderApp: (target: 'home' | 'menu', appId: string, targetIndex: number) => void;
+  moveApp: (appId: string, from: 'home' | 'menu', to: 'home' | 'menu', targetIndex?: number) => void;
+  createFolder: (name: string, apps: string[], color: string) => string;
+  updateFolder: (folderId: string, updates: Partial<Pick<Folder, 'name' | 'color' | 'apps'>>) => void;
+  deleteFolder: (folderId: string) => void;
+  addAppToFolder: (folderId: string, appId: string) => void;
+  removeAppFromFolder: (folderId: string, appId: string) => void;
+  mergeTwoAppsIntoFolder: (appId1: string, appId2: string) => string;
+  setIconShape: (shape: IconShape) => void;
+  loadWidgetLayout: () => Promise<void>;
+  saveWidgetLayout: () => Promise<void>;
+  addWidget: (type: WidgetType, size: WidgetSize) => void;
+  removeWidget: (widgetId: string) => void;
+  reorderWidget: (widgetId: string, targetIndex: number) => void;
+  resizeWidget: (widgetId: string, size: WidgetSize) => void;
+}
+
 interface PhoneContextValue {
   state: PhoneState;
-  actions: {
-    show: () => void;
-    hide: () => void;
-    toggle: () => void;
-    unlock: (code: string) => Promise<boolean>;
-    verifyPin: (code: string) => Promise<boolean>;
-    lock: () => void;
-    refreshSetupState: () => Promise<void>;
-    completeSetup: (payload: PhoneSetupPayload) => Promise<{ success: boolean; error?: string }>;
-    setWallpaper: (url: string) => void;
-    setRingtone: (ringtone: string) => void;
-    setCallRingtone: (ringtone: string) => void;
-    setNotificationTone: (tone: string) => void;
-    setMessageTone: (tone: string) => void;
-    setVolume: (volume: number) => void;
-    setTheme: (theme: 'auto' | 'light' | 'dark') => void;
-    setAccentColor: (color: string) => void;
-    setFontSize: (size: string) => void;
-    setPhoneCase: (phoneCase: string) => void;
-    setLanguage: (language: 'es' | 'en' | 'pt' | 'fr') => void;
-    setAudioProfile: (audioProfile: 'normal' | 'street' | 'vehicle' | 'silent') => void;
-    setLockCode: (code: string) => void;
-    setPhoneScale: (scale: number) => void;
-    setSwipeUnlock: (enabled: boolean) => void;
-    setScreenLockEnabled: (enabled: boolean) => void;
-    unlockDirect: () => void;
-    factoryReset: () => Promise<boolean>;
-    loadAppLayout: () => Promise<void>;
-    saveAppLayout: () => Promise<void>;
-    reorderApp: (target: 'home' | 'menu', appId: string, targetIndex: number) => void;
-    moveApp: (appId: string, from: 'home' | 'menu', to: 'home' | 'menu', targetIndex?: number) => void;
-    createFolder: (name: string, apps: string[], color: string) => string;
-    updateFolder: (folderId: string, updates: Partial<Pick<Folder, 'name' | 'color' | 'apps'>>) => void;
-    deleteFolder: (folderId: string) => void;
-    addAppToFolder: (folderId: string, appId: string) => void;
-    removeAppFromFolder: (folderId: string, appId: string) => void;
-    mergeTwoAppsIntoFolder: (appId1: string, appId2: string) => string;
-    setIconShape: (shape: IconShape) => void;
-    loadWidgetLayout: () => Promise<void>;
-    saveWidgetLayout: () => Promise<void>;
-    addWidget: (type: WidgetType, size: WidgetSize) => void;
-    removeWidget: (widgetId: string) => void;
-    reorderWidget: (widgetId: string, targetIndex: number) => void;
-    resizeWidget: (widgetId: string, size: WidgetSize) => void;
-  };
+  actions: PhoneActions;
 }
 
 const PhoneContext = createContext<PhoneContextValue>();
@@ -422,7 +425,7 @@ export const PhoneProvider: ParentComponent = (props) => {
       setState('settings', 'phoneCase', phoneCase);
       window.localStorage.setItem('gcphone:phoneCase', phoneCase);
     },
-    setLanguage: (language: 'es' | 'en' | 'pt' | 'fr') => {
+    setLanguage: (language: AppLanguage) => {
       if (isReadOnly()) return;
       setState('settings', 'language', language);
       window.localStorage.setItem('gcphone:language', language);

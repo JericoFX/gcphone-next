@@ -96,6 +96,13 @@ lib.callback.register('gcphone:gallery:shareNfc', function(source, data)
 
     if not Bridge.IsPlayerActionAllowed(targetServerId) then return { success = false, error = 'TARGET_UNAVAILABLE' } end
 
+    local function IsWithinPlayerDistance(src1, src2, maxDist)
+        local p1 = GetEntityCoords(GetPlayerPed(src1))
+        local p2 = GetEntityCoords(GetPlayerPed(src2))
+        if not p1 or not p2 then return false end
+        return #(p1 - p2) <= maxDist
+    end
+
     local shareDistance = tonumber(Config.Proximity and Config.Proximity.SharePhotoDistance) or 3.0
     local near = IsWithinPlayerDistance(source, targetServerId, shareDistance)
     if not near then

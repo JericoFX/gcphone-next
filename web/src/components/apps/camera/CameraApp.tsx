@@ -1,4 +1,5 @@
 import {
+  For,
   Show,
   createEffect,
   createSignal,
@@ -632,7 +633,8 @@ export function CameraApp() {
               <div class={styles.controlsBody}>
                 {/* Filter strip */}
                 <div class={styles.controlsFilterStrip}>
-                  {EFFECTS.map((fx) => (
+                  <For each={EFFECTS}>
+                    {(fx) => (
                     <button
                       class={styles.filterChip}
                       classList={{ [styles.filterChipActive]: effect() === fx.id }}
@@ -643,7 +645,8 @@ export function CameraApp() {
                         {t(`camera.filter.${fx.id}`, language())}
                       </span>
                     </button>
-                  ))}
+                    )}
+                  </For>
                 </div>
 
                 {/* Blur */}

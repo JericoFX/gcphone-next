@@ -6,13 +6,13 @@ import { sanitizeMediaUrl, sanitizePhone, sanitizeText } from '../utils/sanitize
 import { emitInternalEvent } from '../utils/internalEvents';
 import type { Message } from '../types';
 
-interface MessagesState {
+export interface MessagesState {
   messages: Message[];
   loading: boolean;
   unreadCount: number;
 }
 
-interface SendOptions {
+export interface SendOptions {
   phoneNumber: string;
   message: string;
   mediaUrl?: string;
@@ -22,7 +22,7 @@ interface SendOptions {
   audioDuration?: number;
 }
 
-interface MessagesActions {
+export interface MessagesActions {
   fetch: () => Promise<void>;
   getConversation: (phoneNumber: string) => Message[];
   send: (options: SendOptions) => Promise<boolean>;

@@ -223,6 +223,7 @@ exports('IsBlockedEither', IsBlockedEither)
 exports('RecordReport', RecordReport)
 
 AddEventHandler('playerDropped', function()
+    local source = source
     RateLimitBuckets[source] = nil
     SourceToIdentifier[source] = nil
     -- IdentifierBuckets intentionally NOT cleared — survives reconnects

@@ -1,4 +1,4 @@
-import { createSignal, createMemo, For, Show } from 'solid-js';
+import { createSignal, createMemo, For, Show, type Accessor } from 'solid-js';
 import { Portal } from 'solid-js/web';
 import { usePhone } from '../../../store/phone';
 import { WidgetCard } from './WidgetCard';
@@ -10,6 +10,10 @@ import styles from './WidgetPage.module.scss';
 interface WidgetPageProps {
   editing: boolean;
   language: () => string;
+  currentTime: Accessor<Date>;
+  musicNowPlaying: Accessor<string>;
+  radioStation: Accessor<string>;
+  bankBalance: Accessor<string>;
 }
 
 export function WidgetPage(props: WidgetPageProps) {
@@ -56,6 +60,10 @@ export function WidgetPage(props: WidgetPageProps) {
                   editing={props.editing}
                   language={props.language}
                   onRemove={() => phoneActions.removeWidget(widget.id)}
+                  currentTime={props.currentTime}
+                  musicNowPlaying={props.musicNowPlaying}
+                  radioStation={props.radioStation}
+                  bankBalance={props.bankBalance}
                 />
               )}
             </For>

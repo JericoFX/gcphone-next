@@ -42,7 +42,21 @@ export function setupMugshotListener() {
 
 export async function requestMugshot(): Promise<string> {
   return new Promise((resolve) => {
-    pendingResolve = resolve;
+    if (pendingResolve) {
+      pendingResolve('');
+    }
+    const wrapper = (value: string) => {
+      clearTimeout(timeout);
+      pendingResolve = null;
+      resolve(value);
+    };
+    const timeout = setTimeout(() => {
+      if (pendingResolve === wrapper) {
+        pendingResolve = null;
+        resolve('');
+      }
+    }, 10000);
+    pendingResolve = wrapper;
     void fetchNui('captureMugshot', {});
   });
 }

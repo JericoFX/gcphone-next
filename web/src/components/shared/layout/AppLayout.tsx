@@ -1,5 +1,5 @@
 import type { JSX, ParentComponent, ParentProps } from 'solid-js';
-import { Show } from 'solid-js';
+import { For, Show } from 'solid-js';
 import { getStoredLanguage, tl } from '../../../i18n';
 import { emitInternalEvent } from '../../../utils/internalEvents';
 import styles from './layout.module.scss';
@@ -212,32 +212,34 @@ export interface AppTabsProps {
 export function AppTabs(props: AppTabsProps) {
   return (
     <div classList={{ [styles.tabs]: true, [props.class || '']: !!props.class }} role="tablist">
-      {props.tabs.map((tab) => (
-        <button
-          type="button"
-          classList={{
-            [styles.tab]: true,
-            [styles.tabActive]: props.active === tab.id,
-          }}
-          onClick={() => props.onChange(tab.id)}
-          role="tab"
-          aria-selected={props.active === tab.id}
-          aria-label={tl(tab.label, getStoredLanguage())}
-          tabIndex={props.active === tab.id ? 0 : -1}
-        >
-          <Show when={tab.icon}>
-            <span class={styles.tabIcon} aria-hidden="true">
-              <Show when={tab.icon!.endsWith('.svg')} fallback={tab.icon}>
-                <img src={tab.icon} alt="" />
-              </Show>
-            </span>
-          </Show>
-          <span class={styles.tabLabel}>{tl(tab.label, getStoredLanguage())}</span>
-          <Show when={tab.badge && tab.badge > 0}>
-            <span class={styles.tabBadge}>{tab.badge! > 99 ? '99+' : tab.badge}</span>
-          </Show>
-        </button>
-      ))}
+      <For each={props.tabs} fallback={null}>
+        {(tab) => (
+          <button
+            type="button"
+            classList={{
+              [styles.tab]: true,
+              [styles.tabActive]: props.active === tab.id,
+            }}
+            onClick={() => props.onChange(tab.id)}
+            role="tab"
+            aria-selected={props.active === tab.id}
+            aria-label={tl(tab.label, getStoredLanguage())}
+            tabIndex={props.active === tab.id ? 0 : -1}
+          >
+            <Show when={tab.icon}>
+              <span class={styles.tabIcon} aria-hidden="true">
+                <Show when={tab.icon!.endsWith('.svg')} fallback={tab.icon}>
+                  <img src={tab.icon} alt="" />
+                </Show>
+              </span>
+            </Show>
+            <span class={styles.tabLabel}>{tl(tab.label, getStoredLanguage())}</span>
+            <Show when={tab.badge && tab.badge > 0}>
+              <span class={styles.tabBadge}>{tab.badge! > 99 ? '99+' : tab.badge}</span>
+            </Show>
+          </button>
+        )}
+      </For>
     </div>
   );
 }
