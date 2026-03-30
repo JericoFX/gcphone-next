@@ -162,6 +162,12 @@ export function ControlCenter() {
   };
 
   const SWIPE_THRESHOLD = 80;
+  const swipeDismissTimers = new Set<number>();
+
+  onCleanup(() => {
+    for (const id of swipeDismissTimers) window.clearTimeout(id);
+    swipeDismissTimers.clear();
+  });
 
   const createSwipeHandlers = (itemId: string) => {
     let startX = 0;
@@ -204,7 +210,11 @@ export function ControlCenter() {
         itemEl.style.transition = '';
         const cls = deltaX < 0 ? styles.swipeDismissLeft : styles.swipeDismissRight;
         if (trackEl) trackEl.classList.add(cls);
-        setTimeout(() => notificationsActions.remove(itemId), 220);
+        const timerId = window.setTimeout(() => {
+          swipeDismissTimers.delete(timerId);
+          notificationsActions.remove(itemId);
+        }, 220);
+        swipeDismissTimers.add(timerId);
       } else {
         itemEl.style.transition = '';
         itemEl.style.transform = '';

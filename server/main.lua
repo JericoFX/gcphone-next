@@ -65,6 +65,7 @@ do
     Config.Market = Config.Market or {}
     Config.News = Config.News or {}
     Config.Proximity = Config.Proximity or {}
+    Config.FixePhone = Config.FixePhone or {}
     Config.Chirp = Config.Chirp or {}
     Config.Snap = Config.Snap or {}
     Config.Music = Config.Music or {}
@@ -84,7 +85,6 @@ do
     print('')
     print(string.format('^2  v%s ^7| ^5By JericoFX ^7| ^3Core: %s^7', Version, fw))
     print('')
-    CheckRemoteVersion()
 end
 
 ---@alias GCPhoneNotificationPriority 'low'|'normal'|'high'

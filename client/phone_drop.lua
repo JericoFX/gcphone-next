@@ -144,11 +144,7 @@ local function HandlePhoneInteraction(phoneId)
         lib.callback('gcphone:unlockDroppedPhone', false, function(result)
             if result and result.success then
                 pinAttempts[phoneId] = nil
-                if result.payload then
-                    ShowPhonePayload(result.payload)
-                else
-                    require('client.phone').OpenPhoneUsingServerData()
-                end
+                require('client.phone').OpenPhoneUsingServerData()
                 lib.notify({
                     title = 'Telefono desbloqueado',
                     description = ('Acceso de solo lectura a %s'):format(result.phone and result.phone.owner or 'N/A'),

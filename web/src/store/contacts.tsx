@@ -4,12 +4,12 @@ import { fetchNui } from '../utils/fetchNui';
 import { useNuiCustomEvent } from '../utils/useNui';
 import type { Contact } from '../types';
 
-interface ContactsState {
+export interface ContactsState {
   contacts: Contact[];
   loading: boolean;
 }
 
-interface ContactsActions {
+export interface ContactsActions {
   fetch: () => Promise<void>;
   add: (display: string, number: string, avatar?: string) => Promise<boolean>;
   update: (id: number, display: string, number: string, avatar?: string) => Promise<boolean>;

@@ -243,6 +243,10 @@ lib.callback.register('gcphone:storage:proxyUpload', function(source, data)
         return { error = 'INVALID_DATA' }
     end
 
+    if #data.base64 > 10485760 then
+        return { error = 'PAYLOAD_TOO_LARGE' }
+    end
+
     if Utils.HitRateLimit(source, 'proxyUpload', 5000, 3) then
         return { error = 'RATE_LIMITED' }
     end

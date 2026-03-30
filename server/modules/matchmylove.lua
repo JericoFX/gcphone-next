@@ -518,7 +518,7 @@ end)
 -- ── Socket server integration ──
 
 -- Validate that an identifier belongs to a match (called by socket server)
-RegisterNetEvent('gcphone:matchmylove:validateMatch', function(requestId, identifier, matchId)
+AddEventHandler('gcphone:matchmylove:validateMatch', function(requestId, identifier, matchId)
     local id = tonumber(requestId) or 0
     local safeIdentifier = SafeString(identifier, 80)
     local safeMatchId = tonumber(matchId)
@@ -537,7 +537,7 @@ RegisterNetEvent('gcphone:matchmylove:validateMatch', function(requestId, identi
 end)
 
 -- Persist batch of chat messages (called by socket server)
-RegisterNetEvent('gcphone:matchmylove:persistBatch', function(requestId, batch)
+AddEventHandler('gcphone:matchmylove:persistBatch', function(requestId, batch)
     local id = tonumber(requestId) or 0
     if type(batch) ~= 'table' or #batch == 0 then
         emit('gcphone:matchmylove:persistBatchResult', id, false, 0, 'EMPTY_BATCH')

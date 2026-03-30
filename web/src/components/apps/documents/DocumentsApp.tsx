@@ -438,10 +438,9 @@ export function DocumentsApp() {
 
         {/* ===== Detail Overlay ===== */}
         <Show when={selectedDoc()}>
-          {(() => {
-            const doc = selectedDoc()!;
-            const typeInfo = getDocTypeInfo(doc.doc_type);
-            const expired = isExpired(doc.expires_at);
+          {(doc) => {
+            const typeInfo = () => getDocTypeInfo(doc().doc_type);
+            const expired = () => isExpired(doc().expires_at);
 
             return (
               <div class={styles.detailOverlay}>
@@ -450,52 +449,52 @@ export function DocumentsApp() {
                 </button>
 
                 {/* Header gradient */}
-                <div class={styles.detailHeader} style={{ '--detail-accent': typeInfo.color }}>
+                <div class={styles.detailHeader} style={{ '--detail-accent': typeInfo().color }}>
                   <Show
-                    when={doc.photo}
+                    when={doc().photo}
                     fallback={
-                      <div class={styles.detailPhotoPlaceholder}>{typeInfo.icon}</div>
+                      <div class={styles.detailPhotoPlaceholder}>{typeInfo().icon}</div>
                     }
                   >
                     <div class={styles.detailPhoto}>
-                      <img src={doc.photo} alt="" />
+                      <img src={doc().photo} alt="" />
                     </div>
                   </Show>
-                  <h2 class={styles.detailTitle}>{doc.title}</h2>
-                  <span class={styles.detailTypeBadge}>{typeInfo.name}</span>
+                  <h2 class={styles.detailTitle}>{doc().title}</h2>
+                  <span class={styles.detailTypeBadge}>{typeInfo().name}</span>
                 </div>
 
                 {/* Body fields */}
                 <div class={styles.detailBody}>
                   <div class={styles.detailField}>
                     <label>{t('documents.detail.holder', language())}</label>
-                    <strong>{doc.holder_name}</strong>
+                    <strong>{doc().holder_name}</strong>
                   </div>
 
-                  <Show when={doc.holder_number}>
+                  <Show when={doc().holder_number}>
                     <div class={styles.detailField}>
                       <label>{t('documents.detail.number', language())}</label>
-                      <strong>{doc.holder_number}</strong>
+                      <strong>{doc().holder_number}</strong>
                     </div>
                   </Show>
 
-                  <Show when={doc.expires_at}>
+                  <Show when={doc().expires_at}>
                     <div class={styles.detailField}>
                       <label>{t('documents.detail.expires', language())}</label>
                       <span
                         class={styles.expiryBadge}
-                        classList={{ [styles.valid]: !expired, [styles.expiredBadge]: expired }}
+                        classList={{ [styles.valid]: !expired(), [styles.expiredBadge]: expired() }}
                       >
-                        {doc.expires_at}
+                        {doc().expires_at}
                         {' '}
-                        {expired ? t('documents.detail.expired', language()) : t('documents.detail.valid', language())}
+                        {expired() ? t('documents.detail.expired', language()) : t('documents.detail.valid', language())}
                       </span>
                     </div>
                   </Show>
 
                   <div class={styles.detailField}>
                     <label>{t('documents.detail.code', language())}</label>
-                    <div class={styles.codeBox}>{doc.verification_code}</div>
+                    <div class={styles.codeBox}>{doc().verification_code}</div>
                   </div>
                 </div>
 
@@ -507,17 +506,17 @@ export function DocumentsApp() {
                       <span>{t('documents.detail.nfc_toggle', language())}</span>
                       <input
                         type="checkbox"
-                        checked={doc.nfc_enabled === 1}
-                        onChange={() => toggleNFC(doc)}
+                        checked={doc().nfc_enabled === 1}
+                        onChange={() => toggleNFC(doc())}
                       />
                     </div>
 
                     {/* NFC share */}
-                    <Show when={doc.nfc_enabled}>
+                    <Show when={doc().nfc_enabled}>
                       <button
                         class={styles.actionBtn}
                         onClick={() => {
-                          setNfcDocId(doc.id);
+                          setNfcDocId(doc().id);
                           nfcShare.open();
                         }}
                       >
@@ -527,14 +526,14 @@ export function DocumentsApp() {
                     </Show>
 
                     {/* Send by mail */}
-                    <button class={styles.actionBtn} onClick={() => shareDocumentByMail(doc)}>
+                    <button class={styles.actionBtn} onClick={() => shareDocumentByMail(doc())}>
                       <span class={styles.actionIcon}>@</span>
                       {t('documents.detail.send_mail', language())}
                     </button>
 
                     {/* Add mugshot (if no photo) */}
-                    <Show when={!doc.photo}>
-                      <button class={styles.actionBtn} onClick={() => void addMugshotToDoc(doc)}>
+                    <Show when={!doc().photo}>
+                      <button class={styles.actionBtn} onClick={() => void addMugshotToDoc(doc())}>
                         <span class={styles.actionIcon}>ID</span>
                         {t('documents.detail.add_mugshot', language())}
                       </button>
@@ -543,7 +542,7 @@ export function DocumentsApp() {
                     {/* Delete */}
                     <button
                       class={`${styles.actionBtn} ${styles.danger}`}
-                      onClick={() => void deleteDocument(doc.id)}
+                      onClick={() => void deleteDocument(doc().id)}
                     >
                       <span class={styles.actionIcon}>X</span>
                       {t('documents.detail.delete', language())}
@@ -586,7 +585,7 @@ export function DocumentsApp() {
                 </Show>
               </div>
             );
-          })()}
+          }}
         </Show>
 
         {/* ===== Creation Wizard ===== */}
@@ -761,81 +760,80 @@ export function DocumentsApp() {
 
         {/* ===== Received document modal ===== */}
         <Show when={receivedDoc()}>
-          <div class={styles.scanResultModal}>
-            <button class={styles.closeBtn} onClick={() => setReceivedDoc(null)}>
-              <img src="./img/icons_ios/ui-close.svg" alt="" />
-            </button>
+          {(doc) => {
+            const typeInfo = () => getDocTypeInfo(doc().doc_type);
+            const expired = () => isExpired(doc().expires_at);
 
-            {(() => {
-              const doc = receivedDoc()!;
-              const typeInfo = getDocTypeInfo(doc.doc_type);
-              const expired = isExpired(doc.expires_at);
+            return (
+              <div class={styles.scanResultModal}>
+                <button class={styles.closeBtn} onClick={() => setReceivedDoc(null)}>
+                  <img src="./img/icons_ios/ui-close.svg" alt="" />
+                </button>
 
-              return (
                 <div class={styles.scanResultContent}>
                   <div
                     class={styles.scanResultHeader}
-                    classList={{ [styles.valid]: !expired, [styles.invalid]: expired }}
+                    classList={{ [styles.valid]: !expired(), [styles.invalid]: expired() }}
                   >
                     <span class={styles.scanStatus}>
-                      {expired ? t('documents.detail.expired', language()) : t('documents.detail.valid', language())}
+                      {expired() ? t('documents.detail.expired', language()) : t('documents.detail.valid', language())}
                     </span>
                   </div>
 
                   <div class={styles.scanResultBody}>
                     <DocumentTypeAccent
                       class={styles.scanDocIcon}
-                      color={typeInfo.color}
-                      icon={typeInfo.icon}
-                      label={typeInfo.name}
+                      color={typeInfo().color}
+                      icon={typeInfo().icon}
+                      label={typeInfo().name}
                     />
-                    <h2>{doc.title}</h2>
-                    <span class={styles.scanDocType}>{typeInfo.name}</span>
+                    <h2>{doc().title}</h2>
+                    <span class={styles.scanDocType}>{typeInfo().name}</span>
 
                     <div class={styles.scanFields}>
                       <div class={styles.scanField}>
                         <label>{t('documents.detail.holder', language())}</label>
-                        <strong>{doc.holder_name}</strong>
+                        <strong>{doc().holder_name}</strong>
                       </div>
 
-                      <Show when={doc.holder_number}>
+                      <Show when={doc().holder_number}>
                         <div class={styles.scanField}>
                           <label>{t('documents.detail.number', language())}</label>
-                          <strong>{doc.holder_number}</strong>
+                          <strong>{doc().holder_number}</strong>
                         </div>
                       </Show>
 
-                      <Show when={doc.expires_at}>
+                      <Show when={doc().expires_at}>
                         <div class={styles.scanField}>
                           <label>{t('documents.detail.expires', language())}</label>
-                          <strong classList={{ [styles.expiredText]: expired }}>{doc.expires_at}</strong>
+                          <strong classList={{ [styles.expiredText]: expired() }}>{doc().expires_at}</strong>
                         </div>
                       </Show>
 
                       <div class={styles.scanField}>
                         <label>{t('documents.detail.code', language())}</label>
-                        <strong>{doc.verification_code}</strong>
+                        <strong>{doc().verification_code}</strong>
                       </div>
 
-                      <Show when={doc.from}>
+                      <Show when={doc().from}>
                         <div class={styles.scanField}>
                           <label>Compartido por</label>
-                          <strong>{doc.from}</strong>
+                          <strong>{doc().from}</strong>
                         </div>
                       </Show>
 
-                      <Show when={doc.shared_at}>
+                      <Show when={doc().shared_at}>
                         <div class={styles.scanField}>
                           <label>Fecha</label>
-                          <strong>{doc.shared_at}</strong>
+                          <strong>{doc().shared_at}</strong>
                         </div>
                       </Show>
                     </div>
                   </div>
                 </div>
-              );
-            })()}
-          </div>
+              </div>
+            );
+          }}
         </Show>
 
         {/* ===== Issued notification toast ===== */}

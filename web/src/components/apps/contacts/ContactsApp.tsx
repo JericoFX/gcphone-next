@@ -113,8 +113,9 @@ export function ContactsApp() {
   /* ── Effects ── */
 
   createEffect(() => {
-    const handle = setTimeout(() => setLoading(false), 120);
-    onCleanup(() => clearTimeout(handle));
+    if (!contactsState.loading) {
+      setLoading(false);
+    }
   });
 
   onMount(() => {

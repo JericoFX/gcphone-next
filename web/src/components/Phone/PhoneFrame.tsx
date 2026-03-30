@@ -11,6 +11,7 @@ import {
   createUniqueId,
   createEffect,
   onCleanup,
+  onMount,
 } from 'solid-js';
 import type { JSX } from 'solid-js';
 import { usePhone, usePhoneState } from '../../store/phone';
@@ -191,6 +192,23 @@ const lazyApps = {
   ),
 };
 
+function PhoneCaseSvg(props: { caseId?: string }) {
+  const c = () => phoneCaseColors(props.caseId);
+  return (
+    <svg class={styles.phoneFrame} width="350" height="766" viewBox="0 0 350 766" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <mask id="screen-hole">
+          <rect width="350" height="766" fill="white"/>
+          <rect x="7" y="7" width="336" height="752" rx="34" fill="black"/>
+        </mask>
+      </defs>
+      <rect width="350" height="766" rx="39" fill={c().body} mask="url(#screen-hole)"/>
+      <rect x="1" y="1" width="348" height="764" rx="38" stroke={c().border} stroke-width="2"/>
+      <rect x="7" y="7" width="336" height="752" rx="34" stroke={c().inner} stroke-width="1.5"/>
+    </svg>
+  );
+}
+
 export const PhoneFrame: ParentComponent & { Router: () => JSX.Element } = (
   props,
 ) => {
@@ -342,8 +360,10 @@ export const PhoneFrame: ParentComponent & { Router: () => JSX.Element } = (
     setViewportScale(fit);
   };
   updateViewportScale();
-  window.addEventListener('resize', updateViewportScale);
-  onCleanup(() => window.removeEventListener('resize', updateViewportScale));
+  onMount(() => {
+    window.addEventListener('resize', updateViewportScale);
+    onCleanup(() => window.removeEventListener('resize', updateViewportScale));
+  });
 
   const effectiveScale = () => Math.min(phoneScale(), viewportScale());
 
@@ -509,22 +529,7 @@ export const PhoneFrame: ParentComponent & { Router: () => JSX.Element } = (
           </LiveActivityProvider>
         </RouterContext.Provider>
       </div>
-      {(() => {
-        const c = phoneCaseColors(phoneState.settings.phoneCase);
-        return (
-          <svg class={styles.phoneFrame} width="350" height="766" viewBox="0 0 350 766" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-              <mask id="screen-hole">
-                <rect width="350" height="766" fill="white"/>
-                <rect x="7" y="7" width="336" height="752" rx="34" fill="black"/>
-              </mask>
-            </defs>
-            <rect width="350" height="766" rx="39" fill={c.body} mask="url(#screen-hole)"/>
-            <rect x="1" y="1" width="348" height="764" rx="38" stroke={c.border} stroke-width="2"/>
-            <rect x="7" y="7" width="336" height="752" rx="34" stroke={c.inner} stroke-width="1.5"/>
-          </svg>
-        );
-      })()}
+      <PhoneCaseSvg caseId={phoneState.settings.phoneCase} />
     </div>
   );
 };

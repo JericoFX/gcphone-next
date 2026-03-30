@@ -26,7 +26,7 @@ export function HomeScreen() {
   const [openFolder, setOpenFolder] = createSignal<Folder | null>(null);
 
   const language = createMemo(() => state.settings.language || 'es');
-  const { currentTime, desktopPage, setDesktopPage } = useHomeDesktopState(language);
+  const { currentTime, desktopPage, setDesktopPage, musicNowPlaying, radioStation, bankBalance } = useHomeDesktopState(language);
   const {
     searchOpen,
     searchQuery,
@@ -190,7 +190,7 @@ export function HomeScreen() {
               />
             </div>
           }>
-            <WidgetPage editing={editing()} language={language} />
+            <WidgetPage editing={editing()} language={language} currentTime={currentTime} musicNowPlaying={musicNowPlaying} radioStation={radioStation} bankBalance={bankBalance} />
           </Show>
         </div>
 

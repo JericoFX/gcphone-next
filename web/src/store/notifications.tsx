@@ -19,7 +19,7 @@ const DEFAULT_FOCUS_CONFIGS: Record<string, FocusModeConfig> = {
   sleep: { allowedApps: ['calls'], autoReply: '' },
 };
 
-interface NotificationsState {
+export interface NotificationsState {
   queue: PhoneNotification[];
   history: PhoneNotification[];
   current: PhoneNotification | null;
@@ -38,7 +38,7 @@ interface NotificationsState {
   mutedApps: string[];
 }
 
-interface NotificationsActions {
+export interface NotificationsActions {
   receive: (payload: Partial<PhoneNotification>) => void;
   remove: (id: string) => void;
   dismissCurrent: () => void;

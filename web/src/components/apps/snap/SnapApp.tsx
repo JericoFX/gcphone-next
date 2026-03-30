@@ -295,7 +295,7 @@ export function SnapApp() {
   };
 
   // FAB Tooltip
-  let fabTimeout: number;
+  let fabTimeout: number | undefined;
   const showFabTooltip = () => {
     setFabTooltipVisible(true);
     fabTimeout = window.setTimeout(() => setFabTooltipVisible(false), 2000);
@@ -587,6 +587,7 @@ export function SnapApp() {
   });
 
   onCleanup(() => {
+    if (fabTimeout) window.clearTimeout(fabTimeout);
     clearFloatingTimers();
     reactionTimers.forEach((t) => window.clearTimeout(t));
     reactionTimers = [];

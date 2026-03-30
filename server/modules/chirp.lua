@@ -637,19 +637,22 @@ lib.callback.register('gcphone:chirp:deleteTweet', function(source, tweetId)
     local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false end
 
+    local id = tonumber(tweetId)
+    if not id or id < 1 then return false end
+
     local chirpMs = GetRateLimitWindow('chirp', 1400)
     if HitRateLimit(source, 'chirp_delete', chirpMs, 3) then
         return false, 'RATE_LIMITED'
     end
-    
+
     local account = GetAccount(identifier)
     if not account then return false end
-    
+
     MySQL.update.await(
         'DELETE FROM phone_chirp_tweets WHERE id = ? AND account_id = ?',
-        { tweetId, account.id }
+        { id, account.id }
     )
-    
+
     return true
 end)
 

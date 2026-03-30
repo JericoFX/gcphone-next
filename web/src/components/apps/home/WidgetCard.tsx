@@ -1,6 +1,5 @@
-import { Show } from 'solid-js';
+import { Show, type Accessor } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
-import { useHomeDesktopState } from './hooks/useHomeDesktopState';
 import { formatDate as formatDateI18n, t } from '../../../i18n';
 import type { WidgetInstance } from '../../../types/home';
 import { WIDGET_DEFINITIONS } from '../../../types/home';
@@ -11,11 +10,18 @@ interface WidgetCardProps {
   editing: boolean;
   language: () => string;
   onRemove: () => void;
+  currentTime: Accessor<Date>;
+  musicNowPlaying: Accessor<string>;
+  radioStation: Accessor<string>;
+  bankBalance: Accessor<string>;
 }
 
 export function WidgetCard(props: WidgetCardProps) {
   const router = useRouter();
-  const { currentTime, musicNowPlaying, radioStation, bankBalance } = useHomeDesktopState(props.language);
+  const currentTime = () => props.currentTime();
+  const musicNowPlaying = () => props.musicNowPlaying();
+  const radioStation = () => props.radioStation();
+  const bankBalance = () => props.bankBalance();
   const def = () => WIDGET_DEFINITIONS[props.widget.type];
   const handleClick = () => {
     if (props.editing) return;

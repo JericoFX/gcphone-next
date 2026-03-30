@@ -1,4 +1,5 @@
-import { Show } from 'solid-js';
+import { For, Show, children as resolveChildren, createMemo } from 'solid-js';
+import type { JSX } from 'solid-js';
 import { generateColorForString, getBestFontColor } from '@/utils/misc';
 import styles from './Avatar.module.scss';
 
@@ -42,32 +43,32 @@ export function Avatar(props: AvatarProps) {
 }
 
 export interface AvatarGroupProps {
-  children: unknown;
+  children: JSX.Element;
   max?: number;
   class?: string;
 }
 
 export function AvatarGroup(props: AvatarGroupProps) {
-  const children = () => {
-    const arr = Array.isArray(props.children) ? props.children : [props.children];
+  const resolved = resolveChildren(() => props.children);
+
+  const visibleItems = createMemo(() => {
+    const arr = resolved.toArray();
     if (props.max && arr.length > props.max) {
-      return [...arr.slice(0, props.max), arr.length - props.max];
+      return { items: arr.slice(0, props.max), overflow: arr.length - props.max };
     }
-    return arr;
-  };
+    return { items: arr, overflow: 0 };
+  });
 
   return (
     <div classList={{ [styles.group]: true, [props.class || '']: !!props.class }}>
-      {children().map((child, index) => {
-        if (typeof child === 'number') {
-          return (
-            <div classList={{ [styles.avatar]: true, [styles.overflow]: true }}>
-              +{child}
-            </div>
-          );
-        }
-        return child;
-      })}
+      <For each={visibleItems().items}>
+        {(child) => child}
+      </For>
+      <Show when={visibleItems().overflow > 0}>
+        <div classList={{ [styles.avatar]: true, [styles.overflow]: true }}>
+          +{visibleItems().overflow}
+        </div>
+      </Show>
     </div>
   );
 }

@@ -21,6 +21,8 @@ let mmlPersistRequestId = 1;
 const MML_BATCH_SIZE = 25;
 const MML_BATCH_DELAY_MS = 900;
 const MML_ROOM_IDLE_TTL_MS = 3600000; // 1 hour
+const mmlValidatePending = new Map();
+let mmlValidateRequestId = 1;
 const mmlValidateCache = new Map(); // `${identifier}:${matchId}` → { valid, expiresAt }
 const MML_VALIDATE_TTL_MS = 120000; // 2 min cache
 
@@ -258,9 +260,9 @@ on('gcphone:matchmylove:persistBatchResult', (requestId, success, count, error) 
 
 on('gcphone:matchmylove:validateMatchResult', (requestId, valid) => {
   const id = Number(requestId) || 0;
-  const pending = mmlPersistPending.get(id);
+  const pending = mmlValidatePending.get(id);
   if (!pending) return;
-  mmlPersistPending.delete(id);
+  mmlValidatePending.delete(id);
   pending({ success: valid === true });
 });
 
@@ -272,17 +274,17 @@ function validateMmlMatch(identifier, matchId) {
   }
 
   return new Promise((resolve) => {
-    const reqId = mmlPersistRequestId++;
-    mmlPersistPending.set(reqId, (result) => {
+    const reqId = mmlValidateRequestId++;
+    mmlValidatePending.set(reqId, (result) => {
       const valid = result?.success === true;
       mmlValidateCache.set(cacheKey, { valid, expiresAt: Date.now() + MML_VALIDATE_TTL_MS });
       resolve(valid);
     });
     emit('gcphone:matchmylove:validateMatch', reqId, identifier, matchId);
     setTimeout(() => {
-      const pending = mmlPersistPending.get(reqId);
+      const pending = mmlValidatePending.get(reqId);
       if (!pending) return;
-      mmlPersistPending.delete(reqId);
+      mmlValidatePending.delete(reqId);
       pending({ success: false });
     }, 3000);
   });
@@ -439,6 +441,11 @@ io.on('connection', (socket) => {
 
     if (room.mutedIdentifiers.has(socket.data.identifier)) {
       if (typeof ack === 'function') ack({ success: false, error: 'MUTED' });
+      return;
+    }
+
+    if (hitIdentifierRateLimit(identifierMessageTimestamps, socket.data.identifier, 5000, 8)) {
+      if (typeof ack === 'function') ack({ success: false, error: 'RATE_LIMITED' });
       return;
     }
 

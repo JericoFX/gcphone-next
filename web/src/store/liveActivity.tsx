@@ -26,7 +26,7 @@ const PRIORITY: Record<LiveActivityType, number> = {
   location: 6,
 };
 
-interface LiveActivityStore {
+export interface LiveActivityStore {
   activities: () => LiveActivity[];
   topActivity: () => LiveActivity | undefined;
   setActivity: (type: LiveActivityType, data: Omit<LiveActivity, 'type'>) => void;

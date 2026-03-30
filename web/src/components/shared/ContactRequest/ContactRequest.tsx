@@ -1,4 +1,4 @@
-import { createSignal, Show, onCleanup } from 'solid-js';
+import { createSignal, Show, onCleanup, onMount } from 'solid-js';
 import { usePhoneState } from '../../../store/phone';
 import { useNuiCustomEvent } from '../../../utils/useNui';
 import { fetchNui } from '../../../utils/fetchNui';
@@ -11,18 +11,24 @@ export function ContactRequestNotification() {
   const [contactRequest, setContactRequest] = createSignal<ContactRequest | null>(null);
   const [friendRequest, setFriendRequest] = createSignal<FriendRequest | null>(null);
   const [sharedLocation, setSharedLocation] = createSignal<SharedLocation | null>(null);
-  
+  let locationTimer: number | undefined;
+
+  onCleanup(() => {
+    if (locationTimer) window.clearTimeout(locationTimer);
+  });
+
   useNuiCustomEvent<ContactRequest>('receiveContactRequest', (data) => {
     setContactRequest(data);
   });
-  
+
   useNuiCustomEvent<FriendRequest>('receiveFriendRequest', (data) => {
     setFriendRequest(data);
   });
-  
+
   useNuiCustomEvent<SharedLocation>('receiveSharedLocation', (data) => {
+    if (locationTimer) window.clearTimeout(locationTimer);
     setSharedLocation(data);
-    setTimeout(() => setSharedLocation(null), 5000);
+    locationTimer = window.setTimeout(() => setSharedLocation(null), 5000);
   });
   
   const handleAcceptContact = async () => {

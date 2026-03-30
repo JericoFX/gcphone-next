@@ -1,5 +1,7 @@
 -- Creado/Modificado por JericoFX
 
+local Bridge = require 'server.bridge'
+
 local function SanitizeText(value, maxLength)
     if type(value) ~= 'string' then return '' end
     local text = value:gsub('[%z\1-\31\127]', '')
@@ -80,7 +82,7 @@ lib.callback.register('gcphone:market:getListings', function(source, data)
 end)
 
 lib.callback.register('gcphone:market:getMyListings', function(source)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return {} end
     
     return MySQL.query.await(
@@ -90,12 +92,12 @@ lib.callback.register('gcphone:market:getMyListings', function(source)
 end)
 
 lib.callback.register('gcphone:market:createListing', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false end
 
     if type(data) ~= 'table' then return false end
     
-    local phoneNumber = GetPhoneNumber(identifier)
+    local phoneNumber = Bridge.GetPhoneNumber(identifier)
     if not phoneNumber then return false end
 
     local marketMs = (Config.Security and Config.Security.RateLimits and Config.Security.RateLimits.market) or 2500
@@ -135,7 +137,7 @@ lib.callback.register('gcphone:market:createListing', function(source, data)
 end)
 
 lib.callback.register('gcphone:market:updateListing', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false end
 
     if type(data) ~= 'table' then return false end
@@ -160,7 +162,7 @@ lib.callback.register('gcphone:market:updateListing', function(source, data)
 end)
 
 lib.callback.register('gcphone:market:deleteListing', function(source, listingId)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false end
     
     MySQL.update.await(
@@ -172,7 +174,7 @@ lib.callback.register('gcphone:market:deleteListing', function(source, listingId
 end)
 
 lib.callback.register('gcphone:market:markAsSold', function(source, listingId)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false end
     
     MySQL.update.await(
@@ -184,7 +186,7 @@ lib.callback.register('gcphone:market:markAsSold', function(source, listingId)
 end)
 
 lib.callback.register('gcphone:market:contactSeller', function(source, data)
-    local identifier = GetIdentifier(source)
+    local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false end
     
     local listing = MySQL.single.await(

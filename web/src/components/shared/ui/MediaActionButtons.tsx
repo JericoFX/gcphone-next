@@ -32,7 +32,7 @@ export function MediaActionButtons(props: MediaActionButtonsProps) {
       }}
     >
       <For each={props.actions}>
-        {(action, index) => (
+        {(action) => (
           <button
             type="button"
             class={styles.action}

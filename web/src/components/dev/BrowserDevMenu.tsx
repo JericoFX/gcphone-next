@@ -31,11 +31,11 @@ const buttonStyle = {
 } as const;
 
 export function BrowserDevMenu() {
-  if (!isEnvBrowser()) return null;
-
+  const browserMode = isEnvBrowser();
   const [open, setOpen] = createSignal(false);
 
   onMount(() => {
+    if (!browserMode) return;
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'd') {
         event.preventDefault();
@@ -48,7 +48,7 @@ export function BrowserDevMenu() {
   });
 
   return (
-    <Show when={open()}>
+    <Show when={browserMode && open()}>
       <div style={panelStyle}>
         <strong>gcphone Browser Dev</strong>
         <span>Ctrl+Shift+D</span>

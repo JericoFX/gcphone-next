@@ -372,6 +372,7 @@ export function WaveChatApp() {
     void loadGroups();
     void loadGroupInvites();
     void loadStatuses();
+    void reconnectWaveRealtime();
   });
 
   createEffect(() => {
@@ -384,12 +385,6 @@ export function WaveChatApp() {
     groups();
     if (!socketReady() || !isWaveSocketConnected()) return;
     syncWaveRooms();
-  });
-
-  onMount(() => {
-    void (async () => {
-      await reconnectWaveRealtime();
-    })();
   });
 
   useNuiCustomEvent<WaveChatGroupMessage>('wavechatGroupMessage', (message) => {

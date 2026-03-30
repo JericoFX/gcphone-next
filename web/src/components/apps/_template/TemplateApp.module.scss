@@ -1,0 +1,24 @@
+.item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border-subtle);
+  transition: background 120ms ease;
+
+  &:active {
+    background: var(--surface-glass);
+  }
+}
+
+.itemTitle {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.itemDesc {
+  font-size: 13px;
+  color: var(--text-2);
+  line-height: 1.4;
+}

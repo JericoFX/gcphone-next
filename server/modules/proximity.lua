@@ -82,13 +82,17 @@ lib.callback.register('gcphone:proximity:acceptContact', function(source, data)
     local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false end
 
-    if not data.display or not data.number then
+    local number = Utils.SafePhone(data.number)
+    local display = Utils.SafeText(data.display, 64)
+    local avatar = Utils.SanitizeMediaUrl(data.avatar, {'.png','.jpg','.jpeg','.webp','.gif'}, 500)
+
+    if not number or not display or display == '' then
         return false, 'Invalid data'
     end
 
     local existing = MySQL.scalar.await(
         'SELECT id FROM phone_contacts WHERE identifier = ? AND number = ?',
-        { identifier, data.number }
+        { identifier, number }
     )
 
     if existing then
@@ -97,7 +101,7 @@ lib.callback.register('gcphone:proximity:acceptContact', function(source, data)
 
     MySQL.insert.await(
         'INSERT INTO phone_contacts (identifier, number, display, avatar) VALUES (?, ?, ?, ?)',
-        { identifier, data.number, data.display, data.avatar or nil }
+        { identifier, number, display, avatar }
     )
 
     return true

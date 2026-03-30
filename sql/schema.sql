@@ -448,7 +448,7 @@ CREATE TABLE IF NOT EXISTS `phone_clips_posts` (
     `likes` INT DEFAULT 0,
     `comments_count` INT DEFAULT 0,
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (`account_id`) REFERENCES `phone_snap_accounts`(`id`) ON DELETE CASCADE,
+    FOREIGN KEY (`account_id`) REFERENCES `phone_clips_accounts`(`id`) ON DELETE CASCADE,
     KEY `idx_account` (`account_id`),
     KEY `idx_created` (`created_at`),
     KEY `idx_clips_posts_created` (`created_at`)
@@ -461,7 +461,7 @@ CREATE TABLE IF NOT EXISTS `phone_clips_likes` (
     `account_id` INT NOT NULL,
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (`clip_id`) REFERENCES `phone_clips_posts`(`id`) ON DELETE CASCADE,
-    FOREIGN KEY (`account_id`) REFERENCES `phone_snap_accounts`(`id`) ON DELETE CASCADE,
+    FOREIGN KEY (`account_id`) REFERENCES `phone_clips_accounts`(`id`) ON DELETE CASCADE,
     UNIQUE KEY `idx_unique_clip_like` (`clip_id`, `account_id`),
     KEY `idx_account_id` (`account_id`),
     KEY `idx_clips_likes_clip` (`clip_id`, `account_id`)
@@ -475,7 +475,7 @@ CREATE TABLE IF NOT EXISTS `phone_clips_comments` (
     `content` VARCHAR(500) NOT NULL,
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (`clip_id`) REFERENCES `phone_clips_posts`(`id`) ON DELETE CASCADE,
-    FOREIGN KEY (`account_id`) REFERENCES `phone_snap_accounts`(`id`) ON DELETE CASCADE,
+    FOREIGN KEY (`account_id`) REFERENCES `phone_clips_accounts`(`id`) ON DELETE CASCADE,
     KEY `idx_clip_id` (`clip_id`),
     KEY `idx_account_id` (`account_id`),
     KEY `idx_created_at` (`created_at`),

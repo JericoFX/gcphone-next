@@ -599,7 +599,7 @@ lib.callback.register('gcphone:emergencySOS', function(source)
     local coords = GetEntityCoords(ped)
     local playerName = Bridge.GetName(source) or 'Ciudadano'
 
-    local emergencyNumbers = Config.Setup and Config.Setup.EmergencyContacts or {}
+    local emergencyNumbers = Config.Phone and Config.Phone.Setup and Config.Phone.Setup.EmergencyContacts or {}
     local notified = 0
 
     for _, entry in ipairs(emergencyNumbers) do

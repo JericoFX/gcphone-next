@@ -462,7 +462,7 @@ export function MatchMyLoveApp() {
     setFormPhotos(photos.join('\n'));
   }
 
-  function ProfileForm(onSubmit: () => void, submitLabel: string) {
+  function ProfileForm(props: { onSubmit: () => void; submitLabel: string }) {
     return (
       <div class={styles.form}>
         <div class={styles.formField}>
@@ -587,10 +587,10 @@ export function MatchMyLoveApp() {
 
         <button
           class={styles.primaryBtn}
-          onClick={onSubmit}
+          onClick={props.onSubmit}
           disabled={saving()}
         >
-          {saving() ? '...' : submitLabel}
+          {saving() ? '...' : props.submitLabel}
         </button>
       </div>
     );
@@ -607,7 +607,7 @@ export function MatchMyLoveApp() {
           <h2 class={styles.setupTitle}>MatchMyLove</h2>
           <p class={styles.setupSubtitle}>{t('matchmylove.setup_subtitle', language())}</p>
         </div>
-        {ProfileForm(handleCreateProfile, t('matchmylove.create_profile', language()))}
+        <ProfileForm onSubmit={handleCreateProfile} submitLabel={t('matchmylove.create_profile', language())} />
       </div>
     );
   }
@@ -883,7 +883,7 @@ export function MatchMyLoveApp() {
           </div>
           <h3>{profile()?.display_name}, {profile()?.age}</h3>
         </div>
-        {ProfileForm(handleUpdateProfile, t('matchmylove.save_changes', language()))}
+        <ProfileForm onSubmit={handleUpdateProfile} submitLabel={t('matchmylove.save_changes', language())} />
         <button class={styles.dangerBtn} onClick={handleDeleteProfile}>
           {t('matchmylove.delete_profile', language())}
         </button>
@@ -899,16 +899,8 @@ export function MatchMyLoveApp() {
       bodyPadding="none"
     >
       <Show when={!loading()} fallback={<div class={styles.loading}>{t('matchmylove.loading', language())}</div>}>
-        <Show when={activeChat()}>
-          {ChatView()}
-        </Show>
-
-        <Show when={!activeChat()}>
-          <Show when={!profile()}>
-            {SetupView()}
-          </Show>
-
-          <Show when={profile()}>
+        <Show when={activeChat()} fallback={
+          <Show when={!profile()} fallback={
             <div class={styles.matchApp}>
               <div class={styles.tabs}>
                 <SegmentedTabs
@@ -924,17 +916,21 @@ export function MatchMyLoveApp() {
 
               <div class={styles.tabContent}>
                 <Show when={activeTab() === 'swipe'}>
-                  {SwipeView()}
+                  <SwipeView />
                 </Show>
                 <Show when={activeTab() === 'matches'}>
-                  {MatchesView()}
+                  <MatchesView />
                 </Show>
                 <Show when={activeTab() === 'profile'}>
-                  {ProfileEditView()}
+                  <ProfileEditView />
                 </Show>
               </div>
             </div>
+          }>
+            <SetupView />
           </Show>
+        }>
+          <ChatView />
         </Show>
       </Show>
     </AppScaffold>

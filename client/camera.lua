@@ -116,6 +116,42 @@ local function CleanupPhoneProps()
     end)
 end
 
+local function ActivateMobilePhoneCam()
+    CameraWalk.StopAdvancedPhoneCamera()
+    cameraSession.walkableMode = false
+    CreateMobilePhone(0)
+    CellCamActivate(true, true)
+    Citizen.InvokeNative(0x2635073306796480568, cameraSession.selfie)
+    CleanupPhoneProps()
+end
+
+local function ActivateWalkableCam()
+    DestroyMobilePhone()
+    cameraSession.walkableMode = true
+    CameraWalk.StartAdvancedPhoneCamera({
+        fov = cameraSession.fov,
+        selfie = cameraSession.selfie,
+        frozen = cameraSession.frozen,
+        landscape = cameraSession.landscape,
+    })
+end
+
+local function ToggleWalkableMode()
+    if not cameraSession.active then return end
+
+    if cameraSession.walkableMode then
+        ActivateMobilePhoneCam()
+    else
+        ActivateWalkableCam()
+    end
+
+    ApplyCameraVisuals()
+    SendNUIMessage({
+        action = 'cameraWalkableModeChanged',
+        data = { walkable = cameraSession.walkableMode },
+    })
+end
+
 local function StartCameraSession(data)
     NormalizeCameraData(data)
     local ped = cache.ped
@@ -200,42 +236,6 @@ local function StartCameraSession(data)
     end)
 
     return true
-end
-
-local function ActivateMobilePhoneCam()
-    CameraWalk.StopAdvancedPhoneCamera()
-    cameraSession.walkableMode = false
-    CreateMobilePhone(0)
-    CellCamActivate(true, true)
-    Citizen.InvokeNative(0x2635073306796480568, cameraSession.selfie)
-    CleanupPhoneProps()
-end
-
-local function ActivateWalkableCam()
-    DestroyMobilePhone()
-    cameraSession.walkableMode = true
-    CameraWalk.StartAdvancedPhoneCamera({
-        fov = cameraSession.fov,
-        selfie = cameraSession.selfie,
-        frozen = cameraSession.frozen,
-        landscape = cameraSession.landscape,
-    })
-end
-
-local function ToggleWalkableMode()
-    if not cameraSession.active then return end
-
-    if cameraSession.walkableMode then
-        ActivateMobilePhoneCam()
-    else
-        ActivateWalkableCam()
-    end
-
-    ApplyCameraVisuals()
-    SendNUIMessage({
-        action = 'cameraWalkableModeChanged',
-        data = { walkable = cameraSession.walkableMode },
-    })
 end
 
 local function StopCameraSession()

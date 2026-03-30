@@ -360,7 +360,7 @@ lib.callback.register('gcphone:news:startLive', function(source, data)
 
     local articleId = MySQL.insert.await(
         'INSERT INTO phone_news (identifier, author_name, author_avatar, author_verified, title, content, category, is_live, live_viewers) VALUES (?, ?, ?, ?, ?, ?, ?, 1, 0)',
-        { identifier, name, avatar, verified and 1 or 0, title, content, category, 1, 0 }
+        { identifier, name, avatar, verified and 1 or 0, title, content, category }
     )
     
     ActiveLiveNews[articleId] = {
