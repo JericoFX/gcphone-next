@@ -1,0 +1,117 @@
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.modal {
+  width: 82%;
+  max-width: 270px;
+  background: var(--sheet-bg, var(--surface));
+  border-radius: var(--r-lg, 16px);
+  border: 1px solid var(--border, rgba(0, 0, 0, 0.12));
+  overflow: hidden;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 20px 20px 8px;
+  text-align: center;
+}
+
+.appIcon {
+  font-size: 32px;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.appTitle {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.subtitle {
+  font-size: 13px;
+  color: var(--text-2, rgba(17, 17, 17, 0.72));
+  margin: 0;
+}
+
+.permissionList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 20px 16px;
+}
+
+.permissionRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.permissionIcon {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  opacity: 0.8;
+}
+
+.permissionLabel {
+  font-size: 14px;
+  color: var(--text);
+  line-height: 1.3;
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+  padding: 0 16px 16px;
+}
+
+.denyBtn {
+  flex: 1;
+  min-height: 44px;
+  border: 1px solid var(--border, rgba(0, 0, 0, 0.12));
+  border-radius: var(--r-md, 12px);
+  background: var(--surface-2, #f7f7fa);
+  color: var(--text-2, rgba(17, 17, 17, 0.72));
+  font-size: var(--fs-subhead, 0.9375rem);
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 120ms ease, opacity 180ms ease;
+
+  &:active {
+    transform: scale(0.98);
+  }
+}
+
+.allowBtn {
+  flex: 1;
+  min-height: 44px;
+  border: 1px solid transparent;
+  border-radius: var(--r-md, 12px);
+  background: var(--tint, #007aff);
+  color: #fff;
+  font-size: var(--fs-subhead, 0.9375rem);
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 120ms ease, opacity 180ms ease;
+
+  &:active {
+    transform: scale(0.98);
+  }
+}

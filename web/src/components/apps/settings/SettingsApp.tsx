@@ -15,11 +15,12 @@ import { SettingsAppearance } from './SettingsAppearance';
 import { SettingsSound } from './SettingsSound';
 import { SettingsSecurity } from './SettingsSecurity';
 import { SettingsNotifications } from './SettingsNotifications';
+import { SettingsAppsPermissions } from './SettingsAppsPermissions';
 import { SettingsSystem } from './SettingsSystem';
 import { SettingsAbout } from './SettingsAbout';
 import styles from './SettingsApp.module.scss';
 
-type SettingsSection = 'main' | 'appearance' | 'sound' | 'security' | 'notifications' | 'system' | 'about';
+type SettingsSection = 'main' | 'appearance' | 'sound' | 'security' | 'notifications' | 'appsandpermissions' | 'system' | 'about';
 
 export function SettingsApp() {
   const router = useRouter();
@@ -140,6 +141,7 @@ export function SettingsApp() {
       case 'sound': return t('settings.tab.sound', language());
       case 'security': return t('settings.tab.security', language());
       case 'notifications': return t('control.notifications', language());
+      case 'appsandpermissions': return 'Apps y Permisos';
       case 'system': return t('settings.system', language());
       case 'about': return t('settings.about_gcphone', language());
       default: return t('settings.title', language());
@@ -191,6 +193,9 @@ export function SettingsApp() {
         </Match>
         <Match when={section() === 'notifications'}>
           <SettingsNotifications language={language} phoneState={phoneState} notificationsActions={notificationsActions} />
+        </Match>
+        <Match when={section() === 'appsandpermissions'}>
+          <SettingsAppsPermissions language={language} onBack={() => setSection('main')} />
         </Match>
         <Match when={section() === 'system'}>
           <SettingsSystem language={language} phoneActions={phoneActions} liveLocationEnabled={liveLocationEnabled} setLiveLocationEnabled={setLiveLocationEnabled} liveLocationStatus={liveLocationStatus} setLiveLocationStatus={setLiveLocationStatus} toggleLiveLocation={() => void toggleLiveLocation()} liveLocationInterval={liveLocationInterval} updateLiveLocationInterval={(s) => void updateLiveLocationInterval(s)} />

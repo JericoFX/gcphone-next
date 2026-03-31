@@ -40,6 +40,7 @@ export const APP_DEFINITIONS: AppDefinition[] = [
   { id: 'radio', name: 'Radio', icon: './img/icons_ios/radio.svg', route: 'radio', defaultHome: true },
   { id: 'matchmylove', name: 'MatchMyLove', icon: './img/icons_ios/matchmylove.svg', route: 'matchmylove', defaultHome: true },
   { id: 'cityride', name: 'CityRide', icon: './img/icons_ios/cityride.svg', route: 'cityride', defaultHome: true },
+  { id: 'directorio', name: 'Directorio', icon: './img/icons_ios/appstore.svg', route: 'directorio', defaultHome: true },
 ];
 
 export const APP_IDS = APP_DEFINITIONS.map((app) => app.id);

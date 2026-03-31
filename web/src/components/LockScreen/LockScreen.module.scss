@@ -1023,8 +1023,8 @@
   position: absolute;
   left: 0;
   right: 0;
-  bottom: 0;
-  height: 120px;
+  bottom: 100px;
+  top: 55%;
   z-index: 50;
   background: transparent;
   border: none;
@@ -1035,9 +1035,15 @@
 }
 
 .tap-unlock-label {
-  font-size: 14px;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.7);
-  letter-spacing: 0.02em;
-  animation: swipe-pulse 2s ease-in-out infinite;
+  font-size: 15px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.65);
+  letter-spacing: 0.03em;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.3);
+  animation: tap-unlock-glow 2.5s ease-in-out infinite;
+}
+
+@keyframes tap-unlock-glow {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
 }

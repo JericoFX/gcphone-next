@@ -142,26 +142,6 @@ export function mockMessages() {
   ], 350);
 }
 
-export function mockMiniApp() {
-  if (!isEnvBrowser()) return;
-
-  setTimeout(() => {
-    emitInternalEvent('gcphone:openMiniApp', {
-      title: 'Menu del Restaurante',
-      url: 'https://picsum.photos/300/400',
-      height: 300,
-      resourceName: 'mock-restaurant',
-      options: [
-        { id: 'order_burger', label: 'Hamburguesa - $150', icon: '🍔', tone: 'default' },
-        { id: 'order_pizza', label: 'Pizza - $200', icon: '🍕', tone: 'default' },
-        { id: 'order_drink', label: 'Bebida - $50', icon: '🥤', tone: 'primary' },
-        { id: 'cancel', label: 'Cancelar', icon: '❌', tone: 'danger' },
-      ],
-      callbackEvent: 'gcphone:miniAppCallback',
-    });
-  }, 100);
-}
-
 export function mockAirDrop() {
   if (!isEnvBrowser()) return;
 
@@ -182,4 +162,220 @@ export function mockTyping() {
   setTimeout(() => {
     emitInternalEvent('messages:remoteTyping', { from: '555-5678' });
   }, 100);
+}
+
+export function mockSDKInput() {
+  if (!isEnvBrowser()) return;
+  setTimeout(() => {
+    emitInternalEvent('gcphone:sdk:open', {
+      requestId: 'mock_input_' + Date.now(),
+      mode: 'input',
+      title: 'Transferir dinero',
+      resourceName: 'mock-bank',
+      elements: [
+        { type: 'input', id: 'target', label: 'Numero destino', required: true, placeholder: '555-XXXX', maxLength: 20 },
+        { type: 'number', id: 'amount', label: 'Monto ($)', required: true, min: 1, max: 100000 },
+        { type: 'select', id: 'account', label: 'Desde cuenta', required: true, options: [
+          { value: 'cash', label: 'Efectivo — $24,500' },
+          { value: 'bank', label: 'Banco — $150,000' },
+        ]},
+        { type: 'textarea', id: 'note', label: 'Nota', placeholder: 'Opcional...', maxLength: 140 },
+      ],
+      submitLabel: 'Transferir',
+      submitTone: 'primary',
+    });
+  }, 100);
+}
+
+export function mockSDKConfirm() {
+  if (!isEnvBrowser()) return;
+  setTimeout(() => {
+    emitInternalEvent('gcphone:sdk:open', {
+      requestId: 'mock_confirm_' + Date.now(),
+      mode: 'confirm',
+      title: 'Vender vehiculo?',
+      icon: '🚗',
+      resourceName: 'mock-garage',
+      description: 'Vas a vender tu Elegy Retro Custom por $45,000. Esta accion no se puede deshacer.',
+      confirmLabel: 'Vender',
+      confirmTone: 'danger',
+    });
+  }, 100);
+}
+
+export function mockSDKSelect() {
+  if (!isEnvBrowser()) return;
+  setTimeout(() => {
+    emitInternalEvent('gcphone:sdk:open', {
+      requestId: 'mock_select_' + Date.now(),
+      mode: 'select',
+      title: 'Mis vehiculos',
+      resourceName: 'mock-garage',
+      searchable: true,
+      items: [
+        { id: 'elegy', label: 'Elegy Retro Custom', description: 'Garage Norte — Motor Nv.3', icon: '🚗' },
+        { id: 'sultan', label: 'Sultan RS', description: 'Garage Sur — Stock', icon: '🏎️' },
+        { id: 'kuruma', label: 'Kuruma Blindado', description: 'Garage Norte — Turbo', icon: '🛡️' },
+        { id: 'zentorno', label: 'Zentorno', description: 'Garage VIP — Full', icon: '🏁' },
+        { id: 'insurgent', label: 'Insurgent', description: 'Garage Militar', icon: '🪖', disabled: true },
+      ],
+    });
+  }, 100);
+}
+
+export function mockSDKBar() {
+  if (!isEnvBrowser()) return;
+  setTimeout(() => {
+    emitInternalEvent('gcphone:sdk:open', {
+      requestId: 'mock_bar_' + Date.now(),
+      mode: 'registered',
+      title: 'El Gordo Bar',
+      icon: '🍺',
+      resourceName: 'mock-bar',
+      startView: 'main',
+      views: {
+        main: {
+          elements: [
+            { type: 'header', text: 'Menu' },
+            { type: 'list', id: 'category', items: [
+              { id: 'drinks', label: 'Tragos', description: '8 opciones', icon: '🍹', navigateTo: 'drinks' },
+              { id: 'food', label: 'Comida', description: '5 platos', icon: '🍔', navigateTo: 'food' },
+              { id: 'promos', label: 'Promos del dia', description: '2x1 en cervezas', icon: '🔥', navigateTo: 'promos' },
+            ]},
+          ],
+        },
+        drinks: {
+          title: 'Tragos',
+          elements: [
+            { type: 'select', id: 'drink', label: 'Elige trago', required: true, options: [
+              { value: 'beer', label: 'Cerveza — $30' },
+              { value: 'whisky', label: 'Whisky — $80' },
+              { value: 'cocktail', label: 'Cocktail de la casa — $60' },
+              { value: 'wine', label: 'Vino tinto — $50' },
+            ]},
+            { type: 'number', id: 'qty', label: 'Cantidad', min: 1, max: 5, default: 1, required: true },
+            { type: 'checkbox', id: 'double', label: 'Doble (trago largo)' },
+          ],
+          options: [
+            { id: 'order_drink', label: 'Pedir', tone: 'primary' },
+          ],
+        },
+        food: {
+          title: 'Comida',
+          elements: [
+            { type: 'select', id: 'plate', label: 'Plato', required: true, options: [
+              { value: 'burger', label: 'Hamburguesa completa — $120' },
+              { value: 'nachos', label: 'Nachos con queso — $80' },
+              { value: 'wings', label: 'Alitas BBQ x6 — $100' },
+            ]},
+            { type: 'textarea', id: 'notes', label: 'Notas', placeholder: 'Sin cebolla, extra salsa...', maxLength: 140 },
+          ],
+          options: [
+            { id: 'order_food', label: 'Pedir', tone: 'primary' },
+          ],
+        },
+        promos: {
+          title: 'Promos',
+          elements: [
+            { type: 'label', text: 'Happy Hour: 18:00 - 21:00', tone: 'muted' },
+            { type: 'label', text: 'Todas las cervezas 2x1' },
+            { type: 'divider' },
+            { type: 'label', text: 'Combo amigos: 4 cervezas + nachos por $150', tone: 'primary' },
+          ],
+          options: [
+            { id: 'order_combo', label: 'Pedir combo — $150', tone: 'primary' },
+          ],
+        },
+      },
+    });
+  }, 100);
+}
+
+export function mockSDKMechanic() {
+  if (!isEnvBrowser()) return;
+  setTimeout(() => {
+    emitInternalEvent('gcphone:sdk:open', {
+      requestId: 'mock_mech_' + Date.now(),
+      mode: 'registered',
+      title: 'MechWork',
+      icon: '🔧',
+      resourceName: 'mock-mechanic',
+      startView: 'main',
+      views: {
+        main: {
+          elements: [
+            { type: 'header', text: 'Panel de mecanico' },
+            { type: 'label', text: 'Turno: En servicio', tone: 'muted' },
+            { type: 'label', text: 'Trabajos hoy: 3' },
+            { type: 'divider' },
+            { type: 'list', id: 'action', items: [
+              { id: 'pending', label: 'Trabajos pendientes', description: '2 en cola', icon: '📋', navigateTo: 'pending' },
+              { id: 'services', label: 'Ofrecer servicio', icon: '🔧', navigateTo: 'offer' },
+              { id: 'parts', label: 'Inventario de repuestos', icon: '📦', navigateTo: 'inventory' },
+              { id: 'stats', label: 'Mis estadisticas', icon: '📊', navigateTo: 'stats' },
+            ]},
+          ],
+        },
+        pending: {
+          title: 'Trabajos pendientes',
+          elements: [
+            { type: 'list', id: 'job', items: [
+              { id: 'job_1', label: 'Sultan RS — Reparacion motor', description: '$1,500 — Juan Perez', icon: '🔧' },
+              { id: 'job_2', label: 'Elegy — Pintura completa', description: '$2,000 — Maria Garcia', icon: '🎨' },
+            ]},
+          ],
+        },
+        offer: {
+          title: 'Ofrecer servicio',
+          elements: [
+            { type: 'select', id: 'service_type', label: 'Tipo de servicio', required: true, options: [
+              { value: 'repair', label: 'Reparacion general — $500' },
+              { value: 'engine', label: 'Reparacion de motor — $1,500' },
+              { value: 'body', label: 'Reparacion carroceria — $800' },
+              { value: 'paint', label: 'Pintura completa — $2,000' },
+              { value: 'tow', label: 'Servicio de grua — $300' },
+            ]},
+            { type: 'input', id: 'plate', label: 'Patente del vehiculo', placeholder: 'ABC123', maxLength: 8 },
+            { type: 'number', id: 'price', label: 'Precio personalizado ($)', min: 0, max: 50000 },
+            { type: 'textarea', id: 'diagnosis', label: 'Diagnostico', placeholder: 'Describe el problema...', maxLength: 300 },
+          ],
+          options: [
+            { id: 'create_job', label: 'Crear orden de trabajo', tone: 'primary' },
+          ],
+        },
+        inventory: {
+          title: 'Repuestos',
+          elements: [
+            { type: 'header', text: 'Tus repuestos' },
+            { type: 'list', id: 'part', items: [
+              { id: 'engine_part', label: 'Pieza de motor', description: 'x5', icon: '⚙️' },
+              { id: 'brake_pad', label: 'Pastilla de freno', description: 'x12', icon: '🔴' },
+              { id: 'turbo_kit', label: 'Kit de turbo', description: 'x2', icon: '💨' },
+              { id: 'paint_can', label: 'Pintura', description: 'x8', icon: '🎨' },
+            ]},
+          ],
+        },
+        stats: {
+          title: 'Estadisticas',
+          elements: [
+            { type: 'label', text: 'Trabajos completados: 47' },
+            { type: 'label', text: 'Ganancia total: $68,500' },
+            { type: 'label', text: 'Rating: 4.8 / 5.0' },
+            { type: 'divider' },
+            { type: 'label', text: 'Mejor mes: Febrero 2026', tone: 'muted' },
+          ],
+        },
+      },
+    });
+  }, 100);
+}
+
+export function mockSDKPermission() {
+  if (!isEnvBrowser()) return;
+  const perms = (window as any).__gcphonePermissions;
+  if (!perms) {
+    console.warn('[SDK Mock] Permissions store not ready');
+    return;
+  }
+  perms.requestPermissions('mock_taxi', 'CityTaxi', '🚕', ['location', 'notifications', 'maps', 'contacts']);
 }

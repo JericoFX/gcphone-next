@@ -116,7 +116,8 @@ io.use((socket, next) => {
     const snapRole = typeof decoded.snapRole === 'string' ? decoded.snapRole.trim().toLowerCase().slice(0, 16) : '';
     const snapUsername = typeof decoded.snapUsername === 'string' ? decoded.snapUsername.trim().slice(0, 32) : '';
     const snapDisplay = typeof decoded.snapDisplay === 'string' ? decoded.snapDisplay.trim().slice(0, 64) : '';
-    const snapAvatar = typeof decoded.snapAvatar === 'string' ? decoded.snapAvatar.trim().slice(0, 255) : '';
+    const rawAvatar = typeof decoded.snapAvatar === 'string' ? decoded.snapAvatar.trim().slice(0, 255) : '';
+    const snapAvatar = rawAvatar.startsWith('https://') ? rawAvatar : '';
     
     if (!phone) {
       next(new Error('INVALID_TOKEN'));

@@ -31,6 +31,7 @@ const SEARCH_INDEX: SearchEntry[] = [
   { id: 'sound',         icon: ICONS.sound,          iconBg: 'iconPink',   section: 'sound' },
   { id: 'security',      icon: ICONS.security,       iconBg: 'iconRed',    section: 'security' },
   { id: 'notifications', icon: ICONS.notifications,  iconBg: 'iconRed',    section: 'notifications' },
+  { id: 'appsandpermissions', icon: './img/icons_ios/appstore.svg', iconBg: 'iconBlue', section: 'appsandpermissions' },
   { id: 'system',        icon: ICONS.location,       iconBg: 'iconBlue',   section: 'system' },
   { id: 'about',         icon: ICONS.info,           iconBg: 'iconGray',   section: 'about' },
 ];
@@ -45,6 +46,7 @@ function getSearchName(id: string, lang: string): string {
     case 'sound':         return t('settings.tab.sound', lang);
     case 'security':      return t('settings.tab.security', lang);
     case 'notifications': return t('control.notifications', lang);
+    case 'appsandpermissions': return 'Apps y Permisos';
     case 'system':        return t('settings.system', lang);
     case 'about':         return t('settings.about_gcphone', lang);
     default:              return id;
@@ -57,6 +59,7 @@ function getSectionLabel(section: string, lang: string): string {
     case 'sound':         return t('settings.tab.sound', lang);
     case 'security':      return t('settings.tab.security', lang);
     case 'notifications': return t('control.notifications', lang);
+    case 'appsandpermissions': return 'Apps y Permisos';
     case 'system':        return t('settings.system', lang);
     case 'about':         return t('settings.about_gcphone', lang);
     case 'main':          return t('settings.quick_controls', lang);
@@ -270,6 +273,18 @@ export function SettingsMain(props: SettingsMainProps) {
             <div style={{ display: 'flex', 'align-items': 'center', gap: '8px', flex: '1' }}>
               <SettingsIcon icon={ICONS.notifications} bg="iconRed" />
               <span class="ios18-cell__title">{t('control.notifications', props.language())}</span>
+            </div>
+            <div class={styles.chevron} />
+          </button>
+
+          <button
+            class="ios18-cell"
+            style={{ cursor: 'pointer', width: '100%', 'text-align': 'left', background: 'transparent', border: 'none' }}
+            onClick={() => props.onNavigate('appsandpermissions')}
+          >
+            <div style={{ display: 'flex', 'align-items': 'center', gap: '8px', flex: '1' }}>
+              <SettingsIcon icon="./img/icons_ios/appstore.svg" bg="iconBlue" />
+              <span class="ios18-cell__title">Apps y Permisos</span>
             </div>
             <div class={styles.chevron} />
           </button>

@@ -3,7 +3,7 @@ game 'gta5'
 
 author 'JericoFX'
 description 'Modern FiveM Phone - SolidJS + ox_lib + oxmysql'
-version '2.9.5'
+version '2.10.0'
 
 lua54 'yes'
 
@@ -32,7 +32,7 @@ files {
     'client/proximity.lua',
     'client/location_tracking.lua',
     'client/phone_drop.lua',
-    'client/miniapp.lua',
+    'client/sdk.lua',
     'client/carplay.lua',
     'client/music.lua',
     'client/txadmin.lua',

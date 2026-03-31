@@ -6,7 +6,10 @@ import { PhoneSetup } from './components/Setup/PhoneSetup';
 import { ContactRequestNotification } from './components/shared/ContactRequest/ContactRequest';
 import { PhoneNotificationBanner } from './components/shared/notifications/PhoneNotificationBanner';
 import { IncomingShareModal } from './components/shared/ui/IncomingShareModal';
-import { MiniAppModal } from './components/shared/ui/MiniAppModal';
+import { PhoneSDKModal } from './components/shared/ui/PhoneSDKModal';
+import { PermissionModal } from './components/shared/ui/PermissionModal';
+import { SDKProvider } from './store/sdk';
+import { PermissionsProvider } from './store/permissions';
 import { CarPlayOverlay } from './components/shared/ui/CarPlayOverlay';
 import { PhoneAudioController } from './components/system/PhoneAudioController';
 import { fetchNui } from './utils/fetchNui';
@@ -181,7 +184,8 @@ function PhoneContent() {
                 <PhoneFrame.Router />
                 <ContactRequestNotification />
                 <IncomingShareModal />
-                <MiniAppModal />
+                <PhoneSDKModal />
+                <PermissionModal />
                 <CarPlayOverlay />
               </>
             }>
@@ -263,9 +267,13 @@ export function App() {
       <NotificationsProvider>
         <ContactsProvider>
           <MessagesProvider>
-            <PhoneAudioController />
-            <PhoneContent />
-            <BrowserDevMenu />
+            <SDKProvider>
+              <PermissionsProvider>
+                <PhoneAudioController />
+                <PhoneContent />
+                <BrowserDevMenu />
+              </PermissionsProvider>
+            </SDKProvider>
           </MessagesProvider>
         </ContactsProvider>
       </NotificationsProvider>

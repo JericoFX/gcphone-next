@@ -3453,6 +3453,11 @@ export async function handleBrowserNui<T = unknown>(eventName: string, data?: un
     return { success: true } as T;
   }
 
+  if (eventName === 'phoneSDKResult') {
+    void payload;
+    return { ok: true } as T;
+  }
+
   if (eventName === 'wavechatGetDMConversations') {
     const convos = new Map<string, any>();
     for (const msg of (state as any).dmMessages) {
@@ -3471,6 +3476,246 @@ export async function handleBrowserNui<T = unknown>(eventName: string, data?: un
       }
     }
     return Array.from(convos.values()) as T;
+  }
+
+  // SDK Permission mocks
+  if (eventName === 'sdkGetShortcuts') {
+    return [
+      { id: 'mock_food', title: 'Cluckin Bell', icon: '🍗', category: 'food', description: 'Comida a domicilio', resourceName: 'mock-food' },
+      { id: 'mock_mech', title: 'Mecanico Central', icon: '🔧', category: 'services', description: 'Reparaciones y mejoras', resourceName: 'mock-mech' },
+      { id: 'mock_store', title: 'Fashion Store', icon: '👗', category: 'shop', description: 'Ropa exclusiva', resourceName: 'mock-store' },
+    ] as T;
+  }
+
+  if (eventName === 'sdkGetAllAppPermissions') {
+    return [
+      { app_id: 'wavechat', permission: 'camera', granted: 1 },
+      { app_id: 'wavechat', permission: 'microphone', granted: 1 },
+      { app_id: 'wavechat', permission: 'contacts', granted: 1 },
+      { app_id: 'wavechat', permission: 'gallery', granted: 1 },
+      { app_id: 'mock_food', permission: 'notifications', granted: 1 },
+      { app_id: 'mock_food', permission: 'location', granted: 1 },
+    ] as T;
+  }
+
+  if (eventName === 'sdkGetBlockedApps') {
+    return [] as T;
+  }
+
+  if (eventName === 'sdkSetPermission') {
+    return true as T;
+  }
+
+  if (eventName === 'sdkGrantAllPermissions') {
+    return true as T;
+  }
+
+  if (eventName === 'sdkDenyAllPermissions') {
+    return true as T;
+  }
+
+  if (eventName === 'sdkBlockApp') {
+    return true as T;
+  }
+
+  if (eventName === 'sdkUnblockApp') {
+    return true as T;
+  }
+
+  if (eventName === 'sdkGetOpenData') {
+    return null as T;
+  }
+
+  if (eventName === 'sdkGetShortcutDefinition') {
+    const appId = (data as any)?.appId;
+    const MOCK_DEFS: Record<string, any> = {
+      mock_food: {
+        title: 'Cluckin Bell Delivery', icon: '🍗', resourceName: 'mock-food', startView: 'main',
+        views: {
+          main: {
+            elements: [
+              { type: 'header', text: 'Menu del dia' },
+              { type: 'select', id: 'food', label: 'Plato', required: true, options: [
+                { value: 'burger', label: 'Cluckin Burger — $8' },
+                { value: 'wings', label: 'Wings x6 — $6' },
+                { value: 'combo', label: 'Combo Familiar — $15' },
+                { value: 'wrap', label: 'Chicken Wrap — $5' },
+              ]},
+              { type: 'number', id: 'quantity', label: 'Cantidad', required: true, min: 1, max: 10, default: 1 },
+              { type: 'select', id: 'drink', label: 'Bebida', options: [
+                { value: 'none', label: 'Sin bebida' }, { value: 'cola', label: 'eCola — $2' }, { value: 'sprunk', label: 'Sprunk — $2' },
+              ]},
+              { type: 'textarea', id: 'instructions', label: 'Instrucciones', placeholder: 'Sin cebolla, extra salsa...', maxLength: 140 },
+            ],
+            options: [{ id: 'order', label: 'Hacer pedido', tone: 'primary' }],
+          },
+        },
+      },
+      mock_mech: {
+        title: 'Mecanico Central', icon: '🔧', resourceName: 'mock-mech', startView: 'main',
+        views: {
+          main: {
+            elements: [
+              { type: 'header', text: 'Servicios disponibles' },
+              { type: 'list', id: 'service', items: [
+                { id: 'repair', label: 'Reparar vehiculo', description: '$500', icon: '🔧', navigateTo: 'confirm_repair' },
+                { id: 'upgrade', label: 'Mejoras de motor', description: 'Motor, turbo, frenos', icon: '⬆️', navigateTo: 'upgrades' },
+                { id: 'paint', label: 'Pintura', description: 'Cambiar color', icon: '🎨', navigateTo: 'paint' },
+              ]},
+            ],
+          },
+          confirm_repair: {
+            title: 'Confirmar reparacion',
+            elements: [
+              { type: 'label', text: 'Se reparara tu vehiculo al 100%.' },
+              { type: 'label', text: 'Costo: $500', tone: 'muted' },
+            ],
+            options: [{ id: 'confirm_repair', label: 'Reparar — $500', tone: 'primary' }],
+          },
+          upgrades: {
+            title: 'Mejoras',
+            elements: [
+              { type: 'select', id: 'part', label: 'Pieza', required: true, options: [
+                { value: 'engine', label: 'Motor — $2,000' }, { value: 'turbo', label: 'Turbo — $5,000' }, { value: 'brakes', label: 'Frenos — $1,500' },
+              ]},
+              { type: 'select', id: 'level', label: 'Nivel', required: true, options: [
+                { value: '1', label: 'Nivel 1' }, { value: '2', label: 'Nivel 2' }, { value: '3', label: 'Nivel 3' },
+              ]},
+            ],
+            options: [{ id: 'buy_upgrade', label: 'Instalar mejora', tone: 'primary' }],
+          },
+          paint: {
+            title: 'Pintura',
+            elements: [
+              { type: 'select', id: 'color', label: 'Color', required: true, options: [
+                { value: 'red', label: 'Rojo' }, { value: 'blue', label: 'Azul' }, { value: 'black', label: 'Negro' }, { value: 'white', label: 'Blanco' },
+              ]},
+              { type: 'checkbox', id: 'metallic', label: 'Acabado metalico (+$200)' },
+            ],
+            options: [{ id: 'apply_paint', label: 'Pintar — $1,000', tone: 'primary' }],
+          },
+        },
+      },
+      mock_store: {
+        title: 'Fashion Store', icon: '👗', resourceName: 'mock-store', startView: 'main',
+        views: {
+          main: {
+            elements: [
+              { type: 'header', text: 'MEGA OFERTA LIMITADA' },
+              { type: 'label', text: 'Solo por hoy — descuentos increibles!' },
+              { type: 'list', id: 'offer', items: [
+                { id: 'offer50', label: '50% Descuento Standard', description: 'Toda la tienda', icon: '🔥' },
+                { id: 'offer70', label: '70% Descuento VIP', description: 'Exclusivo para ti', icon: '💎' },
+                { id: 'offer90', label: '90% Flash Sale', description: 'Ultimas 2 horas', icon: '⚡' },
+              ]},
+            ],
+            options: [{ id: 'claim', label: 'Reclamar descuento', tone: 'primary' }],
+          },
+        },
+      },
+    };
+    return (appId ? MOCK_DEFS[appId] : undefined) as T;
+  }
+
+  if (eventName === 'sdkOpenShortcut') {
+    const appId = (data as any)?.appId;
+    const MOCK_SHORTCUT_VIEWS: Record<string, any> = {
+      mock_food: {
+        title: 'Cluckin Bell Delivery', icon: '🍗', resourceName: 'mock-food', startView: 'main',
+        views: {
+          main: {
+            elements: [
+              { type: 'header', text: 'Menu del dia' },
+              { type: 'select', id: 'food', label: 'Plato', required: true, options: [
+                { value: 'burger', label: 'Cluckin Burger — $8' },
+                { value: 'wings', label: 'Wings x6 — $6' },
+                { value: 'combo', label: 'Combo Familiar — $15' },
+                { value: 'wrap', label: 'Chicken Wrap — $5' },
+              ]},
+              { type: 'number', id: 'quantity', label: 'Cantidad', required: true, min: 1, max: 10, default: 1 },
+              { type: 'select', id: 'drink', label: 'Bebida', options: [
+                { value: 'none', label: 'Sin bebida' }, { value: 'cola', label: 'eCola — $2' }, { value: 'sprunk', label: 'Sprunk — $2' },
+              ]},
+              { type: 'textarea', id: 'instructions', label: 'Instrucciones', placeholder: 'Sin cebolla, extra salsa...', maxLength: 140 },
+            ],
+            options: [{ id: 'order', label: 'Hacer pedido', tone: 'primary' }],
+          },
+        },
+      },
+      mock_mech: {
+        title: 'Mecanico Central', icon: '🔧', resourceName: 'mock-mech', startView: 'main',
+        views: {
+          main: {
+            elements: [
+              { type: 'header', text: 'Servicios disponibles' },
+              { type: 'list', id: 'service', items: [
+                { id: 'repair', label: 'Reparar vehiculo', description: '$500', icon: '🔧', navigateTo: 'confirm_repair' },
+                { id: 'upgrade', label: 'Mejoras de motor', description: 'Motor, turbo, frenos', icon: '⬆️', navigateTo: 'upgrades' },
+                { id: 'paint', label: 'Pintura', description: 'Cambiar color', icon: '🎨', navigateTo: 'paint' },
+              ]},
+            ],
+          },
+          confirm_repair: {
+            title: 'Confirmar reparacion',
+            elements: [
+              { type: 'label', text: 'Se reparara tu vehiculo al 100%.' },
+              { type: 'label', text: 'Costo: $500', tone: 'muted' },
+            ],
+            options: [{ id: 'confirm_repair', label: 'Reparar — $500', tone: 'primary' }],
+          },
+          upgrades: {
+            title: 'Mejoras',
+            elements: [
+              { type: 'select', id: 'part', label: 'Pieza', required: true, options: [
+                { value: 'engine', label: 'Motor — $2,000' }, { value: 'turbo', label: 'Turbo — $5,000' }, { value: 'brakes', label: 'Frenos — $1,500' },
+              ]},
+              { type: 'select', id: 'level', label: 'Nivel', required: true, options: [
+                { value: '1', label: 'Nivel 1' }, { value: '2', label: 'Nivel 2' }, { value: '3', label: 'Nivel 3' },
+              ]},
+            ],
+            options: [{ id: 'buy_upgrade', label: 'Instalar mejora', tone: 'primary' }],
+          },
+          paint: {
+            title: 'Pintura',
+            elements: [
+              { type: 'select', id: 'color', label: 'Color', required: true, options: [
+                { value: 'red', label: 'Rojo' }, { value: 'blue', label: 'Azul' }, { value: 'black', label: 'Negro' }, { value: 'white', label: 'Blanco' },
+              ]},
+              { type: 'checkbox', id: 'metallic', label: 'Acabado metalico (+$200)' },
+            ],
+            options: [{ id: 'apply_paint', label: 'Pintar — $1,000', tone: 'primary' }],
+          },
+        },
+      },
+      mock_store: {
+        title: 'Fashion Store', icon: '👗', resourceName: 'mock-store', startView: 'main',
+        views: {
+          main: {
+            elements: [
+              { type: 'header', text: 'MEGA OFERTA LIMITADA' },
+              { type: 'label', text: 'Solo por hoy — descuentos increibles!' },
+              { type: 'list', id: 'offer', items: [
+                { id: 'offer50', label: '50% Descuento Standard', description: 'Toda la tienda', icon: '🔥' },
+                { id: 'offer70', label: '70% Descuento VIP', description: 'Exclusivo para ti', icon: '💎' },
+                { id: 'offer90', label: '90% Flash Sale', description: 'Ultimas 2 horas', icon: '⚡' },
+              ]},
+            ],
+            options: [{ id: 'claim', label: 'Reclamar descuento', tone: 'primary' }],
+          },
+        },
+      },
+    };
+    const def = appId ? MOCK_SHORTCUT_VIEWS[appId] : null;
+    if (def) {
+      setTimeout(() => {
+        emitInternalEvent('gcphone:sdk:open', { requestId: 'shortcut_' + Date.now(), mode: 'registered', ...def });
+      }, 150);
+    }
+    return { success: true } as T;
+  }
+
+  if (eventName === 'sdkCheckPromos') {
+    return null as T;
   }
 
   return undefined;

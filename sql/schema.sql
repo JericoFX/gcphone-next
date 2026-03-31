@@ -1819,5 +1819,38 @@ DO
     WHERE created_at < DATE_SUB(NOW(), INTERVAL 14 DAY);
 
 -- ============================================================
+-- APP PERMISSIONS (SDK permission system)
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS `phone_app_permissions` (
+    `id`          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    `identifier`  VARCHAR(50) NOT NULL,
+    `app_id`      VARCHAR(64) NOT NULL,
+    `permission`  VARCHAR(32) NOT NULL,
+    `granted`     TINYINT(1) NOT NULL DEFAULT 0,
+    `granted_at`  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at`  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY `uk_perm` (`identifier`, `app_id`, `permission`),
+    INDEX `idx_perm_identifier` (`identifier`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS `phone_app_blocks` (
+    `id`          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    `identifier`  VARCHAR(50) NOT NULL,
+    `app_id`      VARCHAR(64) NOT NULL,
+    `blocked_at`  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY `uk_block` (`identifier`, `app_id`),
+    INDEX `idx_block_identifier` (`identifier`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS `phone_app_promo_seen` (
+    `id`          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    `identifier`  VARCHAR(50) NOT NULL,
+    `app_id`      VARCHAR(64) NOT NULL,
+    `seen_at`     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY `uk_promo` (`identifier`, `app_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ============================================================
 -- END OF SCHEMA
 -- ============================================================

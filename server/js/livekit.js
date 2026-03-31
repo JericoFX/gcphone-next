@@ -63,7 +63,6 @@ on('gcphone:livekit:requestToken', async (src, requestId, roomName, identity, pa
         const at = new AccessToken(livekitApiKey, livekitApiSecret, {
             identity: safeIdentity,
             name: safeName || safeIdentity,
-            // Verified: livekit/node-sdks AccessToken accepts string TTL values like '30m'
             ttl: `${durationSeconds}s`,
         });
 

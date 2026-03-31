@@ -190,6 +190,11 @@ const lazyApps = {
       default: m.CityRideApp,
     })),
   ),
+  directorio: lazy(() =>
+    import('../apps/directorio/DirectorioApp').then((m) => ({
+      default: m.DirectorioApp,
+    })),
+  ),
 };
 
 function PhoneCaseSvg(props: { caseId?: string }) {

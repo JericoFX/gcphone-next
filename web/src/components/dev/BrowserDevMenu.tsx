@@ -1,11 +1,11 @@
 import { Show, createSignal, onCleanup, onMount } from 'solid-js';
-import { mockContacts, mockMessages, mockPhoneInit, mockPhoneSetup, mockShowPhone, mockHidePhone, mockNotification, mockMiniApp, mockAirDrop, mockTyping } from '../../utils/debugData';
+import { mockContacts, mockMessages, mockPhoneInit, mockPhoneSetup, mockShowPhone, mockHidePhone, mockNotification, mockAirDrop, mockTyping, mockSDKInput, mockSDKConfirm, mockSDKSelect, mockSDKBar, mockSDKMechanic, mockSDKPermission } from '../../utils/debugData';
 import { isEnvBrowser } from '../../utils/misc';
 
 const panelStyle = {
   position: 'fixed',
   top: '12px',
-  right: '12px',
+  left: '12px',
   width: '220px',
   padding: '12px',
   background: 'rgba(15, 23, 42, 0.92)',
@@ -58,9 +58,15 @@ export function BrowserDevMenu() {
         <button style={buttonStyle} onClick={() => mockNotification()}>Notification (hidden)</button>
         <button style={buttonStyle} onClick={() => mockContacts()}>Mock contacts</button>
         <button style={buttonStyle} onClick={() => mockMessages()}>Mock messages</button>
-        <button style={buttonStyle} onClick={() => mockMiniApp()}>Mock MiniApp</button>
         <button style={buttonStyle} onClick={() => mockAirDrop()}>Mock AirDrop</button>
         <button style={buttonStyle} onClick={() => mockTyping()}>Mock Typing</button>
+        <strong style={{ 'margin-top': '8px' }}>SDK Modals</strong>
+        <button style={buttonStyle} onClick={() => mockSDKInput()}>SDK: Input (Bank)</button>
+        <button style={buttonStyle} onClick={() => mockSDKConfirm()}>SDK: Confirm (Sell)</button>
+        <button style={buttonStyle} onClick={() => mockSDKSelect()}>SDK: Select (Garage)</button>
+        <button style={buttonStyle} onClick={() => mockSDKBar()}>SDK: Bar (Multi-view)</button>
+        <button style={buttonStyle} onClick={() => mockSDKMechanic()}>SDK: Mechanic (Complex)</button>
+        <button style={buttonStyle} onClick={() => mockSDKPermission()}>SDK: Permission Modal</button>
       </div>
     </Show>
   );
