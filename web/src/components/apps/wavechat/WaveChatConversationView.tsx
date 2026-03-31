@@ -38,6 +38,7 @@ export function WaveChatConversationView(props: {
   onOpenCoords: (x: number, y: number) => void;
   onDeleteConversation: () => void;
   framework?: 'esx' | 'qbcore' | 'qbox' | 'unknown';
+  myNumber?: string;
 }) {
   const language = () => getStoredLanguage();
   let messagesEnd: HTMLDivElement | undefined;
@@ -71,8 +72,11 @@ export function WaveChatConversationView(props: {
             const mediaUrl = props.getMediaUrl(msg);
             const mediaType = resolveMediaType(mediaUrl);
 
+            const isSent = msg.owner === 1 || (props.myNumber && msg.sender === props.myNumber);
+            const isReceived = msg.owner === 0 || (props.myNumber && msg.sender !== props.myNumber && msg.sender === props.phoneNumber);
+
             return (
-            <div class={styles.bubble} classList={{ [styles.sent]: msg.owner === 1, [styles.received]: msg.owner === 0 }}>
+            <div class={styles.bubble} classList={{ [styles.sent]: !!isSent, [styles.received]: !!isReceived }}>
               <Show when={shared} fallback={
                 <>
                   <Show when={messageText}>
@@ -113,7 +117,7 @@ export function WaveChatConversationView(props: {
                   <audio class={styles.audioPreview} src={mediaUrl!} controls preload="metadata" />
                 </Show>
               </Show>
-              <span class={styles.messageTime}>{timeAgo(msg.time)}</span>
+              <span class={styles.messageTime}>{timeAgo(msg.time || msg.created_at || (msg.createdAt ? new Date(msg.createdAt).toISOString() : ''))}</span>
             </div>
           )}}
         </For>

@@ -49,6 +49,7 @@ interface BrowserMockState {
   requiresSetup: boolean;
   contacts: Contact[];
   messages: Message[];
+  dmMessages: Array<{ id: number; sender: string; receiver: string; message: string; is_read: number; created_at: string; media_url?: string }>;
   calls: Call[];
   gallery: Array<{ id: number; url: string; type: 'image' | 'video'; album_id: number | null; created_at: string }>;
   galleryAlbums: Array<{ id: number; name: string; color: string; created_at: string }>;
@@ -616,6 +617,24 @@ const state: BrowserMockState = {
       isRead: false,
       owner: 0,
       time: nowIso(),
+    },
+  ],
+  dmMessages: [
+    {
+      id: 101,
+      sender: '555-1111',
+      receiver: '555-1234',
+      message: 'Hola por WaveChat!',
+      is_read: 0,
+      created_at: nowIso(),
+    },
+    {
+      id: 102,
+      sender: '555-1234',
+      receiver: '555-1111',
+      message: 'Que onda! Todo bien?',
+      is_read: 1,
+      created_at: nowIso(),
     },
   ],
   calls: [
@@ -3432,6 +3451,26 @@ export async function handleBrowserNui<T = unknown>(eventName: string, data?: un
 
   if (eventName === 'newsPostComment') {
     return { success: true } as T;
+  }
+
+  if (eventName === 'wavechatGetDMConversations') {
+    const convos = new Map<string, any>();
+    for (const msg of (state as any).dmMessages) {
+      const number = msg.sender === '555-1234' ? msg.receiver : msg.sender;
+      const existing = convos.get(number);
+      if (!existing || new Date(msg.created_at) > new Date(existing.last_time)) {
+        convos.set(number, {
+          number,
+          last_message: msg.message,
+          last_media_url: msg.media_url || null,
+          last_time: msg.created_at,
+          is_read: msg.is_read,
+          sender: msg.sender,
+          unread: msg.is_read ? 0 : 1,
+        });
+      }
+    }
+    return Array.from(convos.values()) as T;
   }
 
   return undefined;

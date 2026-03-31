@@ -7,7 +7,7 @@ export function useWaveChatRouteSync(params: {
   setRouteConversationName: (value: string) => void;
   setActiveTab: (value: 'chats' | 'status' | 'calls' | 'groups') => void;
   setAttachmentUrl: (value: string | null) => void;
-  markAsRead: (number: string) => void;
+  onMarkDmRead: (number: string) => void;
 }) {
   createEffect(() => {
     const routeParams = params.routeParams();
@@ -28,6 +28,6 @@ export function useWaveChatRouteSync(params: {
       params.setAttachmentUrl(mediaUrl);
     }
 
-    params.markAsRead(number);
+    params.onMarkDmRead(number);
   });
 }

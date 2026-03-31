@@ -17,6 +17,8 @@ let currentHost: string | null = null;
 let currentHandlers: {
   onMessage?: (message: WaveSocketMessage) => void;
   onTyping?: (payload: { roomId: string; phone: string; typing: boolean }) => void;
+  onDmMessage?: (message: any) => void;
+  onDmTyping?: (payload: { phone: string; typing: boolean }) => void;
   onDisconnect?: () => void;
   onReconnect?: () => void;
   onReconnectFailed?: () => void;
@@ -71,6 +73,8 @@ export function disconnectWaveSocket() {
 export function connectWaveSocket(host: string, token: string, handlers?: {
   onMessage?: (message: WaveSocketMessage) => void;
   onTyping?: (payload: { roomId: string; phone: string; typing: boolean }) => void;
+  onDmMessage?: (message: any) => void;
+  onDmTyping?: (payload: { phone: string; typing: boolean }) => void;
   onDisconnect?: () => void;
   onReconnect?: () => void;
   onReconnectFailed?: () => void;
@@ -93,6 +97,12 @@ export function connectWaveSocket(host: string, token: string, handlers?: {
   }
   if (handlers?.onTyping) {
     socket.on('wavechat:typing', handlers.onTyping);
+  }
+  if (handlers?.onDmMessage) {
+    socket.on('wavechat:dm:message', handlers.onDmMessage);
+  }
+  if (handlers?.onDmTyping) {
+    socket.on('wavechat:dm:typing', handlers.onDmTyping);
   }
   if (handlers?.onDisconnect) {
     socket.on('disconnect', handlers.onDisconnect);
@@ -134,6 +144,66 @@ export function sendWaveMessage(roomId: string, content: string, mediaUrl?: stri
   if (!socket?.connected) return Promise.resolve({ success: false });
   return new Promise<AckPayload>((resolve) => {
     socket?.emit('wavechat:send', { roomId, content, mediaUrl }, (payload: AckPayload) => {
+      resolve(payload || { success: false });
+    });
+  });
+}
+
+export type DMAckPayload = { success?: boolean; error?: string; message?: any; messages?: any[]; conversations?: any[] };
+
+export function joinWaveDM(targetPhone: string): Promise<DMAckPayload> {
+  if (!socket?.connected) return Promise.resolve({ success: false, messages: [] });
+  return new Promise<DMAckPayload>((resolve) => {
+    socket?.emit('wavechat:dm:join', { targetPhone }, (payload: DMAckPayload) => {
+      resolve(payload || { success: false, messages: [] });
+    });
+  });
+}
+
+export function leaveWaveDM(targetPhone: string) {
+  socket?.emit('wavechat:dm:leave', { targetPhone });
+}
+
+export function sendWaveDM(targetPhone: string, content: string, mediaUrl?: string): Promise<DMAckPayload> {
+  if (!socket?.connected) return Promise.resolve({ success: false });
+  return new Promise<DMAckPayload>((resolve) => {
+    const safe = String(content || '').replace(/[\x00-\x1F\x7F]/g, '').trim().slice(0, 800);
+    if (!safe && !mediaUrl) {
+      resolve({ success: false, error: 'EMPTY_MESSAGE' });
+      return;
+    }
+    socket?.emit('wavechat:dm:send', { targetPhone, content: safe, mediaUrl }, (payload: DMAckPayload) => {
+      resolve(payload || { success: false });
+    });
+  });
+}
+
+export function sendWaveDMTyping(targetPhone: string, typing: boolean) {
+  socket?.emit('wavechat:dm:typing', { targetPhone, typing });
+}
+
+export function markWaveDMRead(targetPhone: string): Promise<DMAckPayload> {
+  if (!socket?.connected) return Promise.resolve({ success: false });
+  return new Promise<DMAckPayload>((resolve) => {
+    socket?.emit('wavechat:dm:read', { targetPhone }, (payload: DMAckPayload) => {
+      resolve(payload || { success: false });
+    });
+  });
+}
+
+export function getWaveDMConversations(): Promise<DMAckPayload> {
+  if (!socket?.connected) return Promise.resolve({ success: false, conversations: [] });
+  return new Promise<DMAckPayload>((resolve) => {
+    socket?.emit('wavechat:dm:getConversations', {}, (payload: DMAckPayload) => {
+      resolve(payload || { success: false, conversations: [] });
+    });
+  });
+}
+
+export function deleteWaveDMConversation(targetPhone: string): Promise<DMAckPayload> {
+  if (!socket?.connected) return Promise.resolve({ success: false });
+  return new Promise<DMAckPayload>((resolve) => {
+    socket?.emit('wavechat:dm:deleteConversation', { targetPhone }, (payload: DMAckPayload) => {
       resolve(payload || { success: false });
     });
   });

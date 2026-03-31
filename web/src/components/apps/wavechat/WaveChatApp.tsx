@@ -1,6 +1,6 @@
 import { createMemo, createSelector, createSignal, For, Show, createEffect, onCleanup, onMount } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
-import { useMessages } from '../../../store/messages';
+import { joinWaveDM, leaveWaveDM, sendWaveDM, sendWaveDMTyping, markWaveDMRead, getWaveDMConversations, deleteWaveDMConversation } from '../../../utils/socket';
 import { useContacts } from '../../../store/contacts';
 import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { useContextMenu } from '../../../hooks/useContextMenu';
@@ -33,14 +33,13 @@ import { WaveChatConversationView } from './WaveChatConversationView';
 import { WaveChatStatusTab } from './WaveChatStatusTab';
 import { WaveChatCallsTab } from './WaveChatCallsTab';
 import { WaveChatGroupsTab } from './WaveChatGroupsTab';
-import type { GifResult, WaveChatGroup, WaveChatInvite, WaveChatGroupMessage, WaveStatus, WaveStatusMediaConfig, WaveSocketAuth } from './WaveChatTypes';
+import type { GifResult, WaveChatGroup, WaveChatInvite, WaveChatGroupMessage, WaveStatus, WaveStatusMediaConfig, WaveSocketAuth, WaveChatDMMessage, WaveChatDMConversation } from './WaveChatTypes';
 import styles from './WaveChatApp.module.scss';
 
 export function WaveChatApp() {
   const router = useRouter();
   const [phoneState] = usePhone();
   const language = () => getStoredLanguage();
-  const [messagesState, messagesActions] = useMessages();
   const [contactsState, contactsActions] = useContacts();
   const [selectedConversation, setSelectedConversation] = createSignal<string | null>(null);
   const [messageInput, setMessageInput] = createSignal('');
@@ -78,6 +77,9 @@ export function WaveChatApp() {
   const [groupMemberDraft, setGroupMemberDraft] = createSignal<string[]>([]);
   const [socketReady, setSocketReady] = createSignal(false);
   const [groupTyping, setGroupTyping] = createSignal<Record<number, string[]>>({});
+  const [dmConversations, setDmConversations] = createSignal<WaveChatDMConversation[]>([]);
+  const [dmMessages, setDmMessages] = createSignal<Record<string, WaveChatDMMessage[]>>({});
+  const [dmTyping, setDmTyping] = createSignal<Record<string, boolean>>({});
 
   let mediaRecorder: MediaRecorder | null = null;
   let mediaStream: MediaStream | null = null;
@@ -89,14 +91,27 @@ export function WaveChatApp() {
     contactDisplayByNumber,
     knownContactNumbers,
     selectableContacts,
-    conversations,
     statusRows,
   } = useWaveChatDerivedData({
     contacts: () => contactsState.contacts,
-    messages: () => messagesState.messages,
     statuses,
     groupContactSearch,
     ownNumber: myNumber,
+  });
+
+  const conversations = createMemo(() => {
+    return dmConversations().map((convo) => ({
+      number: convo.number,
+      display: contactDisplayByNumber().get(convo.number) || convo.number,
+      lastMessage: {
+        message: convo.last_message,
+        media_url: convo.last_media_url,
+        time: convo.last_time,
+        sender: convo.sender,
+      },
+      unread: convo.unread || 0,
+      _timeMs: new Date(convo.last_time).getTime(),
+    })).sort((a, b) => b._timeMs - a._timeMs);
   });
 
   const getMediaUrl = (msg: any): string | undefined => sanitizeMediaUrl(msg.mediaUrl || msg.media_url) || undefined;
@@ -129,6 +144,13 @@ export function WaveChatApp() {
       contact_name: sanitizeText(entry.contact_name || '', 80),
     })).filter((entry) => entry.media_url));
     setStatusMediaConfig(mediaConfig || { canUploadImage: false, canUploadVideo: false, maxVideoDurationSeconds: 10 });
+  };
+
+  const loadDmConversations = async () => {
+    const result = await getWaveDMConversations();
+    if (result?.success && result.conversations) {
+      setDmConversations(result.conversations as WaveChatDMConversation[]);
+    }
   };
 
   const reconnectWaveRealtime = async () => {
@@ -189,10 +211,51 @@ export function WaveChatApp() {
           typingTimers.delete(timerKey);
         }
       },
+      onDmMessage: (msg: WaveChatDMMessage) => {
+        if (!msg?.sender || !msg?.receiver) return;
+        const otherPhone = msg.sender === myNumber() ? msg.receiver : msg.sender;
+
+        setDmMessages((prev) => {
+          const current = prev[otherPhone] || [];
+          if (current.some((m) => m.id === msg.id)) return prev;
+          return { ...prev, [otherPhone]: [...current, msg] };
+        });
+
+        setDmConversations((prev) => {
+          const existing = prev.find((c) => c.number === otherPhone);
+          const updated: WaveChatDMConversation = {
+            number: otherPhone,
+            last_message: msg.message || '',
+            last_media_url: msg.mediaUrl || msg.media_url,
+            last_time: typeof msg.createdAt === 'number' ? new Date(msg.createdAt).toISOString() : (msg.created_at || new Date().toISOString()),
+            is_read: msg.sender === myNumber() ? 1 : 0,
+            sender: msg.sender,
+            unread: (existing?.unread || 0) + (msg.sender !== myNumber() && selectedConversation() !== otherPhone ? 1 : 0),
+          };
+          const filtered = prev.filter((c) => c.number !== otherPhone);
+          return [updated, ...filtered];
+        });
+      },
+      onDmTyping: (payload: { phone: string; typing: boolean }) => {
+        if (!payload?.phone) return;
+        setDmTyping((prev) => ({ ...prev, [payload.phone]: payload.typing }));
+
+        if (payload.typing) {
+          const timerKey = `dm-typing:${payload.phone}`;
+          const prevTimer = typingTimers.get(timerKey);
+          if (prevTimer) window.clearTimeout(prevTimer);
+          const timer = window.setTimeout(() => {
+            setDmTyping((prev) => ({ ...prev, [payload.phone]: false }));
+            typingTimers.delete(timerKey);
+          }, 1600);
+          typingTimers.set(timerKey, timer);
+        }
+      },
       onDisconnect: () => setSocketReady(false),
       onReconnect: () => {
         setSocketReady(true);
         syncWaveRooms();
+        void loadDmConversations();
       },
       onReconnectFailed: () => {
         setSocketReady(false);
@@ -286,7 +349,7 @@ export function WaveChatApp() {
   const selectedConversationMessages = createMemo(() => {
     const number = selectedConversation();
     if (!number) return [];
-    return messagesActions.getConversation(number);
+    return dmMessages()[number] || [];
   });
 
   const selectedGroupMessages = createMemo(() => {
@@ -319,7 +382,7 @@ export function WaveChatApp() {
     setRouteConversationName,
     setActiveTab,
     setAttachmentUrl,
-    markAsRead: messagesActions.markAsRead,
+    onMarkDmRead: (number) => void markWaveDMRead(number),
   });
 
   const searchGifs = async () => {
@@ -359,6 +422,8 @@ export function WaveChatApp() {
     },
     Backspace: () => {
       if (selectedConversation()) {
+        const num = selectedConversation();
+        if (num) leaveWaveDM(num);
         setSelectedConversation(null);
         setRouteConversationName('');
         return;
@@ -372,7 +437,7 @@ export function WaveChatApp() {
     void loadGroups();
     void loadGroupInvites();
     void loadStatuses();
-    void reconnectWaveRealtime();
+    void reconnectWaveRealtime().then(() => void loadDmConversations());
   });
 
   createEffect(() => {
@@ -395,17 +460,34 @@ export function WaveChatApp() {
     });
   });
 
-  const openConversation = (number: string, display?: string) => {
+  const openConversation = async (number: string, display?: string) => {
     setSelectedConversation(number);
     setRouteConversationName(sanitizeText(display, 80));
-    messagesActions.markAsRead(number);
+
+    const result = await joinWaveDM(number);
+    if (result?.success && result.messages) {
+      setDmMessages((prev) => ({ ...prev, [number]: result.messages as WaveChatDMMessage[] }));
+    }
+
+    void markWaveDMRead(number);
+    setDmConversations((prev) => prev.map((c) => c.number === number ? { ...c, unread: 0 } : c));
   };
 
   const deleteConversation = async (number: string) => {
-    const ok = await messagesActions.deleteConversation(number);
-    if (ok && selectedConversation() === number) {
-      setSelectedConversation(null);
-      setRouteConversationName('');
+    const result = await deleteWaveDMConversation(number);
+    if (result?.success) {
+      setDmConversations((prev) => prev.filter((c) => c.number !== number));
+      setDmMessages((prev) => {
+        const next = { ...prev };
+        delete next[number];
+        return next;
+      });
+      if (selectedConversation() === number) {
+        const num = selectedConversation();
+        if (num) leaveWaveDM(num);
+        setSelectedConversation(null);
+        setRouteConversationName('');
+      }
     }
   };
 
@@ -415,9 +497,11 @@ export function WaveChatApp() {
     const media = sanitizeMediaUrl(attachmentUrl());
     if (!number || (!content && !media)) return;
 
-    await messagesActions.send({ phoneNumber: number, message: content, mediaUrl: media || undefined });
-    setMessageInput('');
-    setAttachmentUrl(null);
+    const result = await sendWaveDM(number, content, media || undefined);
+    if (result?.success) {
+      setMessageInput('');
+      setAttachmentUrl(null);
+    }
   };
 
   const media = useMediaAttachment({
@@ -566,7 +650,7 @@ export function WaveChatApp() {
     if (!number) return;
     const coords = await getPlayerCoords();
     if (!coords) return;
-    await messagesActions.send({ phoneNumber: number, message: formatLocationMessage(coords, t('maps.share_location', language())) });
+    await sendWaveDM(number, formatLocationMessage(coords, t('maps.share_location', language())));
   };
 
   const clearRecordingTimer = () => {
@@ -714,12 +798,15 @@ export function WaveChatApp() {
             isKnownContact={isKnownContact}
             onAddContact={addContactFromMessage}
             onBack={() => {
+              const num = selectedConversation();
+              if (num) leaveWaveDM(num);
               setSelectedConversation(null);
               setRouteConversationName('');
             }}
             onOpenCoords={(x, y) => router.navigate('maps', { x, y })}
             onDeleteConversation={() => void deleteConversation(selectedConversation()!)}
             framework={phoneState.framework || 'unknown'}
+            myNumber={myNumber()}
           />
         }
       >

@@ -205,6 +205,170 @@ on('gcphone:wavechat:persistBatchResult', (requestId, success, count, error) => 
   pending({ success: success === true, count: Number(count) || 0, error: typeof error === 'string' ? error : '' });
 });
 
+// ── WaveChat DM helpers ──
+
+const dmPersistQueue = [];
+const dmPersistPending = new Map();
+let dmPersistTimer = null;
+let dmPersistRequestId = 1;
+const DM_BATCH_SIZE = 25;
+const DM_BATCH_DELAY_MS = 900;
+
+const dmHistoryPending = new Map();
+let dmHistoryRequestId = 1;
+
+const dmConversationsPending = new Map();
+let dmConversationsRequestId = 1;
+
+const dmReadPending = new Map();
+let dmReadRequestId = 1;
+
+const dmDeletePending = new Map();
+let dmDeleteRequestId = 1;
+
+function getDmRoomName(phoneA, phoneB) {
+  return phoneA < phoneB ? `dm:${phoneA}:${phoneB}` : `dm:${phoneB}:${phoneA}`;
+}
+
+function scheduleDmPersistFlush() {
+  if (dmPersistTimer) return;
+  dmPersistTimer = setTimeout(() => {
+    dmPersistTimer = null;
+    void flushDmPersistQueue();
+  }, DM_BATCH_DELAY_MS);
+}
+
+function requestDmPersist(batch) {
+  return new Promise((resolve) => {
+    const requestId = dmPersistRequestId++;
+    dmPersistPending.set(requestId, resolve);
+    emit('gcphone:wavechat:dm:persistBatch', requestId, batch);
+    setTimeout(() => {
+      const pending = dmPersistPending.get(requestId);
+      if (!pending) return;
+      dmPersistPending.delete(requestId);
+      pending({ success: false, count: 0, error: 'TIMEOUT' });
+    }, 5000);
+  });
+}
+
+async function flushDmPersistQueue() {
+  if (dmPersistQueue.length === 0) return;
+  const batch = dmPersistQueue.splice(0, DM_BATCH_SIZE);
+  const result = await requestDmPersist(batch);
+  if (!result?.success) {
+    console.warn('[wavechat-dm] failed to persist batch', result?.error || 'UNKNOWN');
+  }
+  if (dmPersistQueue.length > 0) {
+    scheduleDmPersistFlush();
+  }
+}
+
+function queueDmPersist(entry) {
+  dmPersistQueue.push(entry);
+  if (dmPersistQueue.length >= DM_BATCH_SIZE) {
+    void flushDmPersistQueue();
+    return;
+  }
+  scheduleDmPersistFlush();
+}
+
+function requestDmHistory(phoneA, phoneB) {
+  return new Promise((resolve) => {
+    const requestId = dmHistoryRequestId++;
+    dmHistoryPending.set(requestId, resolve);
+    emit('gcphone:wavechat:dm:getHistory', requestId, phoneA, phoneB);
+    setTimeout(() => {
+      const pending = dmHistoryPending.get(requestId);
+      if (!pending) return;
+      dmHistoryPending.delete(requestId);
+      pending([]);
+    }, 5000);
+  });
+}
+
+function requestDmConversations(phone) {
+  return new Promise((resolve) => {
+    const requestId = dmConversationsRequestId++;
+    dmConversationsPending.set(requestId, resolve);
+    emit('gcphone:wavechat:dm:getConversations', requestId, phone);
+    setTimeout(() => {
+      const pending = dmConversationsPending.get(requestId);
+      if (!pending) return;
+      dmConversationsPending.delete(requestId);
+      pending([]);
+    }, 5000);
+  });
+}
+
+function requestDmMarkRead(phone, targetPhone) {
+  return new Promise((resolve) => {
+    const requestId = dmReadRequestId++;
+    dmReadPending.set(requestId, resolve);
+    emit('gcphone:wavechat:dm:markRead', requestId, phone, targetPhone);
+    setTimeout(() => {
+      const pending = dmReadPending.get(requestId);
+      if (!pending) return;
+      dmReadPending.delete(requestId);
+      pending(false);
+    }, 3000);
+  });
+}
+
+function requestDmDeleteConversation(phone, targetPhone) {
+  return new Promise((resolve) => {
+    const requestId = dmDeleteRequestId++;
+    dmDeletePending.set(requestId, resolve);
+    emit('gcphone:wavechat:dm:deleteConversation', requestId, phone, targetPhone);
+    setTimeout(() => {
+      const pending = dmDeletePending.get(requestId);
+      if (!pending) return;
+      dmDeletePending.delete(requestId);
+      pending(false);
+    }, 3000);
+  });
+}
+
+on('gcphone:wavechat:dm:persistBatchResult', (requestId, success, count, error) => {
+  const id = Number(requestId) || 0;
+  const pending = dmPersistPending.get(id);
+  if (!pending) return;
+  dmPersistPending.delete(id);
+  pending({ success: success === true, count: Number(count) || 0, error: typeof error === 'string' ? error : '' });
+});
+
+on('gcphone:wavechat:dm:getHistoryResult', (requestId, messages) => {
+  const id = Number(requestId) || 0;
+  const pending = dmHistoryPending.get(id);
+  if (!pending) return;
+  dmHistoryPending.delete(id);
+  pending(Array.isArray(messages) ? messages : []);
+});
+
+on('gcphone:wavechat:dm:getConversationsResult', (requestId, conversations) => {
+  const id = Number(requestId) || 0;
+  const pending = dmConversationsPending.get(id);
+  if (!pending) return;
+  dmConversationsPending.delete(id);
+  pending(Array.isArray(conversations) ? conversations : []);
+});
+
+on('gcphone:wavechat:dm:markReadResult', (requestId, success) => {
+  const id = Number(requestId) || 0;
+  const pending = dmReadPending.get(id);
+  if (!pending) return;
+  dmReadPending.delete(id);
+  pending(success === true);
+});
+
+on('gcphone:wavechat:dm:deleteConversationResult', (requestId, success) => {
+  const id = Number(requestId) || 0;
+  const pending = dmDeletePending.get(id);
+  if (!pending) return;
+  dmDeletePending.delete(id);
+  pending(success === true);
+});
+
 // ── MatchMyLove helpers ──
 
 function scheduleMmlPersistFlush() {
@@ -660,6 +824,133 @@ io.on('connection', (socket) => {
     }
 
     if (typeof ack === 'function') ack({ success: true, messages: [] });
+  });
+
+  // ── WaveChat DM (1-on-1) ──
+
+  socket.on('wavechat:dm:getConversations', async (payload = {}, ack) => {
+    if (!phone) {
+      if (typeof ack === 'function') ack({ success: false, conversations: [] });
+      return;
+    }
+    const conversations = await requestDmConversations(phone);
+    if (typeof ack === 'function') ack({ success: true, conversations });
+  });
+
+  socket.on('wavechat:dm:join', async (payload = {}, ack) => {
+    const targetPhone = String(payload.targetPhone || '').replace(/[^\d+\-() ]/g, '').trim().slice(0, 20);
+    if (!targetPhone || targetPhone === phone) {
+      if (typeof ack === 'function') ack({ success: false, error: 'INVALID_TARGET', messages: [] });
+      return;
+    }
+
+    const roomName = getDmRoomName(phone, targetPhone);
+    socket.join(roomName);
+    socket.data.joinedDmRoom = roomName;
+    socket.data.joinedDmTarget = targetPhone;
+
+    const messages = await requestDmHistory(phone, targetPhone);
+    if (typeof ack === 'function') ack({ success: true, messages });
+  });
+
+  socket.on('wavechat:dm:leave', (payload = {}) => {
+    const targetPhone = String(payload.targetPhone || '').trim().slice(0, 20);
+    if (!targetPhone) return;
+    const roomName = getDmRoomName(phone, targetPhone);
+    socket.leave(roomName);
+    if (socket.data.joinedDmRoom === roomName) {
+      socket.data.joinedDmRoom = '';
+      socket.data.joinedDmTarget = '';
+    }
+  });
+
+  socket.on('wavechat:dm:send', (payload = {}, ack) => {
+    const targetPhone = String(payload.targetPhone || '').replace(/[^\d+\-() ]/g, '').trim().slice(0, 20);
+    let content = String(payload.content || '').replace(/[\x00-\x1F\x7F]/g, '').trim();
+    const mediaUrl = normalizeSnapText(payload.mediaUrl, 500);
+
+    if (!targetPhone || targetPhone === phone) {
+      if (typeof ack === 'function') ack({ success: false, error: 'INVALID_TARGET' });
+      return;
+    }
+
+    if (!content && !mediaUrl) {
+      if (typeof ack === 'function') ack({ success: false, error: 'EMPTY_MESSAGE' });
+      return;
+    }
+
+    content = content.slice(0, 800);
+
+    if (hitIdentifierRateLimit(identifierMessageTimestamps, socket.data.identifier, 5000, 8)) {
+      if (typeof ack === 'function') ack({ success: false, error: 'RATE_LIMITED' });
+      return;
+    }
+
+    const stamp = nowMs();
+    const message = {
+      id: `${stamp}-${Math.random().toString(36).slice(2, 8)}`,
+      sender: phone,
+      receiver: targetPhone,
+      message: content,
+      mediaUrl: mediaUrl || undefined,
+      messageType: 'text',
+      isRead: false,
+      createdAt: stamp,
+    };
+
+    const roomName = getDmRoomName(phone, targetPhone);
+    // Emit to DM room (excludes sender — sender gets message via ACK)
+    socket.to(roomName).emit('wavechat:dm:message', message);
+
+    // Also emit to both users' personal rooms for notification when not in the DM room.
+    // Frontend dedup prevents double-delivery if they are also in the DM room.
+    io.to(`user:${targetPhone}`).emit('wavechat:dm:message', message);
+    io.to(`user:${phone}`).emit('wavechat:dm:message', message);
+
+    queueDmPersist({
+      sender: phone,
+      receiver: targetPhone,
+      message: content,
+      mediaUrl: mediaUrl || '',
+    });
+
+    if (typeof ack === 'function') ack({ success: true, message });
+  });
+
+  socket.on('wavechat:dm:typing', (payload = {}) => {
+    const targetPhone = String(payload.targetPhone || '').trim().slice(0, 20);
+    const typing = payload.typing === true;
+    if (!targetPhone) return;
+
+    const stamp = nowMs();
+    const key = `dm:${targetPhone}`;
+    const lastTypingAt = eventState.typingByRoom.get(key) || 0;
+    if (typing && stamp - lastTypingAt < 350) return;
+    eventState.typingByRoom.set(key, stamp);
+
+    const roomName = getDmRoomName(phone, targetPhone);
+    socket.to(roomName).emit('wavechat:dm:typing', { phone, typing });
+    socket.to(`user:${targetPhone}`).emit('wavechat:dm:typing', { phone, typing });
+  });
+
+  socket.on('wavechat:dm:read', async (payload = {}, ack) => {
+    const targetPhone = String(payload.targetPhone || '').trim().slice(0, 20);
+    if (!targetPhone) {
+      if (typeof ack === 'function') ack({ success: false });
+      return;
+    }
+    const result = await requestDmMarkRead(phone, targetPhone);
+    if (typeof ack === 'function') ack({ success: result });
+  });
+
+  socket.on('wavechat:dm:deleteConversation', async (payload = {}, ack) => {
+    const targetPhone = String(payload.targetPhone || '').trim().slice(0, 20);
+    if (!targetPhone) {
+      if (typeof ack === 'function') ack({ success: false });
+      return;
+    }
+    const result = await requestDmDeleteConversation(phone, targetPhone);
+    if (typeof ack === 'function') ack({ success: result });
   });
 
   // ── MatchMyLove Chat ──

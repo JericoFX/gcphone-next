@@ -57,6 +57,35 @@ export interface WaveSocketAuth {
   token?: string;
 }
 
+export interface WaveChatDMMessage {
+  id: number | string;
+  sender: string;
+  receiver: string;
+  message: string;
+  mediaUrl?: string;
+  media_url?: string;
+  messageType?: 'text' | 'audio';
+  message_type?: 'text' | 'audio';
+  audioData?: string;
+  audio_data?: string;
+  audioDuration?: number;
+  audio_duration?: number;
+  isRead?: boolean;
+  is_read?: number | boolean;
+  createdAt: number | string;
+  created_at?: string;
+}
+
+export interface WaveChatDMConversation {
+  number: string;
+  last_message: string;
+  last_media_url?: string;
+  last_time: string;
+  is_read: number | boolean;
+  sender: string;
+  unread: number;
+}
+
 export function extractCoords(text?: string): { x: number; y: number } | null {
   if (!text) return null;
   const match = text.match(/LOC:([\-\d.]+),\s*([\-\d.]+)/i);

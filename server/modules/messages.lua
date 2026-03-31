@@ -957,4 +957,158 @@ AddEventHandler('playerDropped', function()
     end
 end)
 
+-- ── WaveChat DM persistence (Socket.IO batch) ──
+
+AddEventHandler('gcphone:wavechat:dm:persistBatch', function(requestId, entries)
+    local reqId = tonumber(requestId) or 0
+    if reqId < 1 or type(entries) ~= 'table' then
+        emit('gcphone:wavechat:dm:persistBatchResult', reqId, false, 0, 'INVALID_BATCH')
+        return
+    end
+
+    if #entries > 50 then
+        emit('gcphone:wavechat:dm:persistBatchResult', reqId, false, 0, 'BATCH_TOO_LARGE')
+        return
+    end
+
+    local placeholders = {}
+    local params = {}
+    local inserted = 0
+
+    for _, entry in ipairs(entries) do
+        if type(entry) == 'table' then
+            local sender = SanitizePhoneNumber(entry.sender)
+            local receiver = SanitizePhoneNumber(entry.receiver)
+            local message = SanitizeText(entry.message, 800)
+            local mediaUrl = SanitizeMediaUrl(entry.mediaUrl)
+
+            if sender ~= '' and receiver ~= '' and (message ~= '' or mediaUrl) then
+                placeholders[#placeholders + 1] = '(?, ?, ?, ?)'
+                params[#params + 1] = sender
+                params[#params + 1] = receiver
+                params[#params + 1] = message
+                params[#params + 1] = mediaUrl
+                inserted = inserted + 1
+            end
+        end
+    end
+
+    if inserted > 0 then
+        MySQL.query.await(
+            'INSERT INTO phone_wavechat_dm_messages (sender, receiver, message, media_url) VALUES ' .. table.concat(placeholders, ', '),
+            params
+        )
+    end
+
+    emit('gcphone:wavechat:dm:persistBatchResult', reqId, true, inserted, nil)
+end)
+
+AddEventHandler('gcphone:wavechat:dm:getHistory', function(requestId, phoneA, phoneB)
+    local reqId = tonumber(requestId) or 0
+    local a = SanitizePhoneNumber(phoneA)
+    local b = SanitizePhoneNumber(phoneB)
+
+    if reqId < 1 or a == '' or b == '' then
+        emit('gcphone:wavechat:dm:getHistoryResult', reqId, {})
+        return
+    end
+
+    local rows = MySQL.query.await(
+        [[SELECT id, sender, receiver, message, media_url, message_type, audio_data, audio_duration, is_read, created_at
+          FROM phone_wavechat_dm_messages
+          WHERE (sender = ? AND receiver = ?) OR (sender = ? AND receiver = ?)
+          ORDER BY created_at ASC
+          LIMIT 50]],
+        { a, b, b, a }
+    ) or {}
+
+    emit('gcphone:wavechat:dm:getHistoryResult', reqId, rows)
+end)
+
+AddEventHandler('gcphone:wavechat:dm:getConversations', function(requestId, phone)
+    local reqId = tonumber(requestId) or 0
+    local myPhone = SanitizePhoneNumber(phone)
+
+    if reqId < 1 or myPhone == '' then
+        emit('gcphone:wavechat:dm:getConversationsResult', reqId, {})
+        return
+    end
+
+    local rows = MySQL.query.await(
+        [[SELECT
+            CASE WHEN sender = ? THEN receiver ELSE sender END AS number,
+            message AS last_message,
+            media_url AS last_media_url,
+            created_at AS last_time,
+            is_read,
+            sender
+          FROM phone_wavechat_dm_messages m1
+          WHERE (sender = ? OR receiver = ?)
+            AND created_at = (
+                SELECT MAX(m2.created_at)
+                FROM phone_wavechat_dm_messages m2
+                WHERE (m2.sender = m1.sender AND m2.receiver = m1.receiver)
+                   OR (m2.sender = m1.receiver AND m2.receiver = m1.sender)
+            )
+          ORDER BY created_at DESC
+          LIMIT 100]],
+        { myPhone, myPhone, myPhone }
+    ) or {}
+
+    local unreadRows = MySQL.query.await(
+        [[SELECT sender AS number, COUNT(*) AS unread
+          FROM phone_wavechat_dm_messages
+          WHERE receiver = ? AND is_read = 0
+          GROUP BY sender]],
+        { myPhone }
+    ) or {}
+
+    local unreadMap = {}
+    for _, row in ipairs(unreadRows) do
+        unreadMap[row.number] = row.unread
+    end
+
+    for _, row in ipairs(rows) do
+        row.unread = unreadMap[row.number] or 0
+    end
+
+    emit('gcphone:wavechat:dm:getConversationsResult', reqId, rows)
+end)
+
+AddEventHandler('gcphone:wavechat:dm:markRead', function(requestId, phone, targetPhone)
+    local reqId = tonumber(requestId) or 0
+    local myPhone = SanitizePhoneNumber(phone)
+    local target = SanitizePhoneNumber(targetPhone)
+
+    if reqId < 1 or myPhone == '' or target == '' then
+        emit('gcphone:wavechat:dm:markReadResult', reqId, false)
+        return
+    end
+
+    MySQL.update.await(
+        'UPDATE phone_wavechat_dm_messages SET is_read = 1 WHERE sender = ? AND receiver = ? AND is_read = 0',
+        { target, myPhone }
+    )
+
+    emit('gcphone:wavechat:dm:markReadResult', reqId, true)
+end)
+
+AddEventHandler('gcphone:wavechat:dm:deleteConversation', function(requestId, phone, targetPhone)
+    local reqId = tonumber(requestId) or 0
+    local myPhone = SanitizePhoneNumber(phone)
+    local target = SanitizePhoneNumber(targetPhone)
+
+    if reqId < 1 or myPhone == '' or target == '' then
+        emit('gcphone:wavechat:dm:deleteConversationResult', reqId, false)
+        return
+    end
+
+    MySQL.update.await(
+        'DELETE FROM phone_wavechat_dm_messages WHERE (sender = ? AND receiver = ?) OR (sender = ? AND receiver = ?)',
+        { myPhone, target, target, myPhone }
+    )
+
+    emit('gcphone:wavechat:dm:deleteConversationResult', reqId, true)
+end)
+
 return {}

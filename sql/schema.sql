@@ -1750,5 +1750,74 @@ CALL sp_gcphone_add_column('phone_gallery', 'album_id',          "INT DEFAULT NU
 DROP PROCEDURE IF EXISTS `sp_gcphone_add_column`;
 
 -- ============================================================
+-- WAVECHAT DM MESSAGES (Socket.IO 1-on-1 chats)
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS `phone_wavechat_dm_messages` (
+    `id`             INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    `sender`         VARCHAR(20) NOT NULL,
+    `receiver`       VARCHAR(20) NOT NULL,
+    `message`        VARCHAR(800) NOT NULL DEFAULT '',
+    `media_url`      VARCHAR(500) DEFAULT NULL,
+    `message_type`   ENUM('text','audio') NOT NULL DEFAULT 'text',
+    `audio_data`     VARCHAR(500) DEFAULT NULL,
+    `audio_duration` TINYINT UNSIGNED DEFAULT NULL,
+    `is_read`        TINYINT(1) NOT NULL DEFAULT 0,
+    `created_at`     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX `idx_wdm_conversation` (`sender`, `receiver`),
+    INDEX `idx_wdm_receiver` (`receiver`),
+    INDEX `idx_wdm_created_at` (`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Trigger: cap each conversation pair at 50 messages (oldest removed on INSERT)
+DROP TRIGGER IF EXISTS `trg_wavechat_dm_cap`;
+DELIMITER $$
+CREATE TRIGGER `trg_wavechat_dm_cap` AFTER INSERT ON `phone_wavechat_dm_messages`
+FOR EACH ROW
+BEGIN
+    DECLARE msg_count INT;
+
+    SELECT COUNT(*) INTO msg_count
+    FROM `phone_wavechat_dm_messages`
+    WHERE (sender = NEW.sender AND receiver = NEW.receiver)
+       OR (sender = NEW.receiver AND receiver = NEW.sender);
+
+    IF msg_count > 50 THEN
+        DELETE FROM `phone_wavechat_dm_messages`
+        WHERE id IN (
+            SELECT id FROM (
+                SELECT id
+                FROM `phone_wavechat_dm_messages`
+                WHERE (sender = NEW.sender AND receiver = NEW.receiver)
+                   OR (sender = NEW.receiver AND receiver = NEW.sender)
+                ORDER BY created_at ASC
+                LIMIT 18446744073709551615 OFFSET 50
+            ) AS overflow
+        );
+    END IF;
+END$$
+DELIMITER ;
+
+-- Trigger: remove messages older than 14 days on each INSERT
+DROP TRIGGER IF EXISTS `trg_wavechat_dm_expire`;
+DELIMITER $$
+CREATE TRIGGER `trg_wavechat_dm_expire` AFTER INSERT ON `phone_wavechat_dm_messages`
+FOR EACH ROW
+BEGIN
+    DELETE FROM `phone_wavechat_dm_messages`
+    WHERE created_at < DATE_SUB(NOW(), INTERVAL 14 DAY);
+END$$
+DELIMITER ;
+
+-- Daily fallback sweep for expired messages (catches idle conversations)
+DROP EVENT IF EXISTS `evt_wavechat_dm_cleanup`;
+CREATE EVENT IF NOT EXISTS `evt_wavechat_dm_cleanup`
+ON SCHEDULE EVERY 1 DAY
+STARTS CURRENT_TIMESTAMP
+DO
+    DELETE FROM `phone_wavechat_dm_messages`
+    WHERE created_at < DATE_SUB(NOW(), INTERVAL 14 DAY);
+
+-- ============================================================
 -- END OF SCHEMA
 -- ============================================================
