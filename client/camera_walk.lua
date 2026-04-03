@@ -13,6 +13,33 @@ local scriptedCamera = {
     anchorHeading = nil,
 }
 
+local PHONE_PROP_HASH = GetHashKey(Config.Phone.PropModel or 'prop_npc_phone_02')
+
+--- Hide or show the local ped and nearby phone props for first-person camera.
+---@param hide boolean
+local function SetFirstPersonVisibility(hide)
+    local ped = cache.ped
+    if hide then
+        SetEntityLocallyInvisible(ped)
+    else
+        SetEntityLocallyVisible(ped)
+    end
+    -- Also handle phone props attached to ped
+    local playerCoords = GetEntityCoords(ped)
+    for _, obj in ipairs(GetGamePool('CObject')) do
+        if #(playerCoords - GetEntityCoords(obj)) < 2.0 then
+            local model = GetEntityModel(obj)
+            if model == PHONE_PROP_HASH or model == 413312110 then
+                if hide then
+                    SetEntityLocallyInvisible(obj)
+                else
+                    SetEntityLocallyVisible(obj)
+                end
+            end
+        end
+    end
+end
+
 local function CameraClamp(value, minValue, maxValue)
     local num = tonumber(value) or minValue
     if num < minValue then return minValue end
@@ -218,6 +245,8 @@ local function StartAdvancedPhoneCamera(data)
 
     EnsureScriptCamera()
     require('client.phone_animation').PhonePlayCamera()
+    -- Hide ped + phone prop in rear mode (first-person), show in selfie
+    SetFirstPersonVisibility(not scriptedCamera.selfie)
     UpdateScriptCameraTransform()
 end
 
@@ -231,6 +260,8 @@ local function StopAdvancedPhoneCamera()
     scriptedCamera.quickZoomIndex = FindClosestQuickZoomIndex(GetCameraConfig().Fov.Default)
     ReleaseFrozenCamera()
     DestroyScriptCamera()
+    -- Restore ped + phone prop visibility
+    SetFirstPersonVisibility(false)
 end
 
 local function UpdateAdvancedPhoneCamera(data)
@@ -254,6 +285,15 @@ local function SetAdvancedPhoneCameraFreeze(enabled)
 
     UpdateScriptCameraTransform()
     return scriptedCamera.frozen == true
+end
+
+local function SetAdvancedPhoneCameraSelfie(enabled)
+    scriptedCamera.selfie = enabled == true
+    -- Toggle visibility: hide ped in rear (first-person), show in selfie
+    SetFirstPersonVisibility(not scriptedCamera.selfie)
+    SyncPhoneVisualMode()
+    UpdateScriptCameraTransform()
+    return scriptedCamera.selfie == true
 end
 
 local function SetAdvancedPhoneCameraLandscape(enabled)
@@ -329,6 +369,20 @@ CreateThread(function()
                 DisableControlAction(0, 21, true)
             end
 
+            -- Keep WASD movement relative to player heading, not camera heading
+            SetGameplayCamRelativeHeading(0.0)
+
+            -- Detect if player is walking (WASD)
+            local isMoving = IsControlPressed(0, 32) or IsControlPressed(0, 33) or
+                             IsControlPressed(0, 34) or IsControlPressed(0, 35)
+
+            -- When moving, sync entity heading with camera yaw so player walks where camera faces
+            if isMoving and not scriptedCamera.selfie and math.abs(scriptedCamera.yaw) > 1.0 then
+                local baseHeading = GetEntityHeading(ped)
+                SetEntityHeading(ped, baseHeading + scriptedCamera.yaw)
+                scriptedCamera.yaw = 0.0
+            end
+
             HideHudComponentThisFrame(6)
             HideHudComponentThisFrame(7)
             HideHudComponentThisFrame(8)
@@ -352,6 +406,7 @@ return {
     IsAdvancedPhoneCameraActive = IsAdvancedPhoneCameraActive,
     GetAdvancedPhoneCameraState = GetAdvancedPhoneCameraState,
     SetAdvancedPhoneCameraFreeze = SetAdvancedPhoneCameraFreeze,
+    SetAdvancedPhoneCameraSelfie = SetAdvancedPhoneCameraSelfie,
     SetAdvancedPhoneCameraLandscape = SetAdvancedPhoneCameraLandscape,
     SetAdvancedPhoneCameraQuickZoom = SetAdvancedPhoneCameraQuickZoom,
     StepAdvancedPhoneCameraQuickZoom = StepAdvancedPhoneCameraQuickZoom,

@@ -1282,6 +1282,38 @@ lib.callback.register('gcphone:setAppLayout', function(source, layout)
     return true
 end)
 
+lib.callback.register('gcphone:getWidgetLayout', function(source)
+    local identifier = Bridge.GetIdentifier(source)
+    if not identifier then return nil end
+
+    local raw = MySQL.scalar.await(
+        'SELECT widget_json FROM phone_layouts WHERE identifier = ?',
+        { identifier }
+    )
+
+    if not raw or raw == '' then return nil end
+
+    local ok, decoded = pcall(json.decode, raw)
+    if not ok or type(decoded) ~= 'table' then return nil end
+    return decoded
+end)
+
+lib.callback.register('gcphone:setWidgetLayout', function(source, layout)
+    if IsPhoneReadOnly(source) then return false end
+    local identifier = Bridge.GetIdentifier(source)
+    if not identifier then return false end
+
+    if type(layout) ~= 'table' then return false end
+    local encoded = json.encode(layout)
+
+    MySQL.update.await(
+        'UPDATE phone_layouts SET widget_json = ? WHERE identifier = ?',
+        { encoded, identifier }
+    )
+
+    return true
+end)
+
 lib.callback.register('gcphone:getPhoneMetadata', function(source, phoneId)
     local identifier = Bridge.GetIdentifier(source)
     if not identifier then return nil end

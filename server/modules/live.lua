@@ -22,6 +22,9 @@ end
 RegisterNetEvent('gcphone:live:create')
 AddEventHandler('gcphone:live:create', function(clipId, avatar)
     local source = source
+    if type(clipId) ~= 'string' and type(clipId) ~= 'number' then return end
+    clipId = tostring(clipId)
+    if #clipId > 64 then return end
     if Utils.HitRateLimit(source, 'live_create', 5000, 2) then return end
     local identifier = Bridge.GetIdentifier(source)
 
@@ -44,6 +47,8 @@ end)
 RegisterNetEvent('gcphone:live:join')
 AddEventHandler('gcphone:live:join', function(clipId)
     local source = source
+    if type(clipId) ~= 'string' and type(clipId) ~= 'number' then return end
+    clipId = tostring(clipId)
     if Utils.HitRateLimit(source, 'live_join', 2000, 3) then return end
     local live = ActiveLives[clipId]
 
@@ -133,13 +138,19 @@ end)
 RegisterNetEvent('gcphone:live:reaction')
 AddEventHandler('gcphone:live:reaction', function(clipId, reaction)
     local source = source
+    if type(clipId) ~= 'string' and type(clipId) ~= 'number' then return end
+    clipId = tostring(clipId)
+    if type(reaction) ~= 'string' or #reaction > 16 then return end
     if Utils.HitRateLimit(source, 'live_reaction', 500, 8) then return end
     local live = ActiveLives[clipId]
 
     if not live then return end
 
-    local validReactions = { '\240\159\145\141', '\226\157\164\239\184\143', '\240\159\152\130', '\240\159\148\165', '\240\159\145\143' }
-    if not table.concat(validReactions):find(reaction) then return end
+    local validReactions = {
+        ['\240\159\145\141'] = true, ['\226\157\164\239\184\143'] = true,
+        ['\240\159\152\130'] = true, ['\240\159\148\165'] = true, ['\240\159\145\143'] = true,
+    }
+    if not validReactions[reaction] then return end
 
     local user = live.users[source]
     if not user then return end

@@ -424,6 +424,7 @@ lib.callback.register('gcphone:chirp:publishTweet', function(source, data)
         WHERE t.id = ?
     ]], { tweetId })
 
+    tweet.is_own = 1
     tweet.liked = false
     tweet.rechirped = false
 

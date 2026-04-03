@@ -102,15 +102,21 @@ local function NormalizeCameraData(data)
     cameraSession.quickZoomIndex = NormalizeQuickZoomIndex(type(data) == 'table' and data.quickZoomIndex or cameraSession.quickZoomIndex)
 end
 
+local PHONE_PROP_HASH = GetHashKey(Config.Phone.PropModel or 'prop_npc_phone_02')
+local IFRUIT_PHONE_HASH = 413312110
+
 local function CleanupPhoneProps()
     SetTimeout(500, function()
         local objects = GetGamePool('CObject')
         local playerCoords = GetEntityCoords(cache.ped)
         for _, obj in ipairs(objects) do
             local objCoords = GetEntityCoords(obj)
-            if #(playerCoords - objCoords) < 4.0 and GetEntityModel(obj) == 413312110 then
-                SetEntityAsMissionEntity(obj, true, true)
-                DeleteObject(obj)
+            if #(playerCoords - objCoords) < 4.0 then
+                local model = GetEntityModel(obj)
+                if model == IFRUIT_PHONE_HASH or model == PHONE_PROP_HASH then
+                    SetEntityAsMissionEntity(obj, true, true)
+                    DeleteObject(obj)
+                end
             end
         end
     end)
@@ -435,9 +441,97 @@ RegisterNUICallback('faketakePhoto', function(_, cb)
     TriggerEvent('camera:open')
 end)
 
+-- ── Live Session (walkable cam for live streamers) ──
+
+local liveSession = {
+    active = false,
+    selfie = false,
+}
+
+local function StartLiveSession(data)
+    if cameraSession.active then return false end
+    if liveSession.active then return true end
+
+    liveSession.active = true
+    liveSession.selfie = type(data) == 'table' and data.selfie == true or false
+
+    local ped = cache.ped
+    SetPedCurrentWeaponVisible(ped, false, true, true, true)
+    CleanupPhoneProps()
+    Anim.PhonePlayLive()
+
+    -- Live mode: NUI receives events but no cursor, game input enabled (walk around)
+    SetNuiFocus(true, false)
+    SetNuiFocusKeepInput(true)
+
+    CameraWalk.StartAdvancedPhoneCamera({
+        fov = Config.Camera.Fov.Default,
+        selfie = liveSession.selfie,
+        frozen = false,
+        landscape = false,
+    })
+
+    CreateThread(function()
+        while liveSession.active do
+            Wait(0)
+            InvalidateIdleCam()
+            InvalidateVehicleIdleCam()
+
+            if IsControlJustPressed(0, 27) then
+                liveSession.selfie = not liveSession.selfie
+                CameraWalk.SetAdvancedPhoneCameraSelfie(liveSession.selfie)
+                SendNUIMessage({
+                    action = 'liveCameraFlipped',
+                    data = { selfie = liveSession.selfie },
+                })
+            end
+
+            DisableControlAction(0, 24, true)
+            DisableControlAction(0, 25, true)
+            DisableControlAction(0, 140, true)
+            DisableControlAction(0, 141, true)
+            DisableControlAction(0, 142, true)
+            DisableControlAction(0, 257, true)
+        end
+
+        CameraWalk.StopAdvancedPhoneCamera()
+        CleanupPhoneProps()
+        SetPedCurrentWeaponVisible(cache.ped, true, true, true, true)
+        SetNuiFocus(true, true)
+        SetNuiFocusKeepInput(false)
+        Anim.PhonePlayText()
+    end)
+
+    return true
+end
+
+local function StopLiveSession()
+    liveSession.active = false
+end
+
+RegisterNUICallback('startLiveSession', function(data, cb)
+    cb({ success = StartLiveSession(data) })
+end)
+
+RegisterNUICallback('stopLiveSession', function(_, cb)
+    StopLiveSession()
+    cb(true)
+end)
+
+RegisterNUICallback('liveToggleSelfie', function(_, cb)
+    if not liveSession.active then
+        cb({ success = false, selfie = false })
+        return
+    end
+    liveSession.selfie = not liveSession.selfie
+    CameraWalk.SetAdvancedPhoneCameraSelfie(liveSession.selfie)
+    cb({ success = true, selfie = liveSession.selfie })
+end)
+
 AddEventHandler('onResourceStop', function(resourceName)
     if resourceName ~= GetCurrentResourceName() then return end
     StopCameraSession()
+    StopLiveSession()
     CameraWalk.StopAdvancedPhoneCamera()
     PhoneState.cameraActive = false
     ClearTimecycleModifier()

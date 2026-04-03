@@ -5,8 +5,7 @@ import { useLiveActivity } from '../../../store/liveActivity';
 import { useInternalEvent } from '../../../utils/internalEvents';
 import { sanitizeText } from '../../../utils/sanitize';
 import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
-import { fetchLiveKitToken } from '../../../utils/realtimeAuth';
-import { connectLiveKit, disconnectLiveKit, setLiveKitMicrophoneEnabled } from '../../../utils/livekit';
+import { initSession, disconnectAll, enableMicrophone, setMicrophoneEnabled } from '../../../utils/peerManager';
 import { useNuiEvent } from '../../../utils/useNui';
 import { isEnvBrowser } from '../../../utils/misc';
 import { AppScaffold } from '../../shared/layout';
@@ -110,7 +109,7 @@ export function RadioApp() {
     setStations(prev => prev.filter(s => s.id !== stationId));
     const station = activeStation();
     if (station && station.id === stationId) {
-      disconnectLiveKit();
+      disconnectAll();
       batch(() => {
         setActiveStation(null);
         setLivekitConnected(false);
@@ -183,13 +182,8 @@ export function RadioApp() {
       return true;
     }
 
-    const tokenPayload = await fetchLiveKitToken(roomName, isHost, 3600);
-    if (!tokenPayload?.success || !tokenPayload.url || !tokenPayload.token) {
-      return false;
-    }
-
     try {
-      await connectLiveKit(tokenPayload.url, tokenPayload.token, tokenPayload.maxDuration || 3600, {
+      await initSession(3600, {
         onCallTimeout: () => {
           void cleanupSession();
           setView('list');
@@ -197,13 +191,13 @@ export function RadioApp() {
       });
 
       if (isHost) {
-        await setLiveKitMicrophoneEnabled(true);
+        await enableMicrophone();
       }
 
       setLivekitConnected(true);
       return true;
     } catch {
-      disconnectLiveKit();
+      disconnectAll();
       return false;
     }
   };
@@ -219,7 +213,7 @@ export function RadioApp() {
       await fetchNui('radioLeaveStation', { stationId: station.id }, { success: false });
     }
 
-    disconnectLiveKit();
+    disconnectAll();
     batch(() => {
       setActiveStation(null);
       setLivekitConnected(false);
@@ -388,7 +382,7 @@ export function RadioApp() {
     }
 
     await fetchNui('radioEndStation', { stationId: station.id }, { success: false });
-    disconnectLiveKit();
+    disconnectAll();
 
     batch(() => {
       setActiveStation(null);
@@ -409,7 +403,7 @@ export function RadioApp() {
     if (!station) return;
 
     await fetchNui('radioLeaveStation', { stationId: station.id }, { success: false });
-    disconnectLiveKit();
+    disconnectAll();
 
     batch(() => {
       setActiveStation(null);
@@ -426,7 +420,7 @@ export function RadioApp() {
   const handleMuteToggle = async () => {
     const next = !muted();
     setMuted(next);
-    await setLiveKitMicrophoneEnabled(!next);
+    setMicrophoneEnabled(!next);
   };
 
   const handleMusicSearch = async () => {

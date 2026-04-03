@@ -765,3 +765,89 @@
   color: var(--text-2);
   font-size: var(--fs-footnote);
 }
+
+/* ── Add to Playlist Selector ── */
+
+.playlistSelector {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(0, 0, 0, 0.5);
+  display: grid;
+  place-items: center;
+  padding: 20px;
+}
+
+.playlistSelectorCard {
+  width: 100%;
+  max-width: 280px;
+  border-radius: 16px;
+  background: var(--surface-card, #1c1c1e);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.playlistSelectorTitle {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 6px;
+  text-align: center;
+}
+
+.playlistSelectorItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border: none;
+  border-radius: 12px;
+  background: var(--fill-tertiary, rgba(255, 255, 255, 0.08));
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+
+  small {
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--text-2);
+  }
+
+  &:active {
+    opacity: 0.7;
+  }
+}
+
+.playlistSelectorNew {
+  padding: 12px 14px;
+  border: 2px dashed var(--border-subtle, rgba(255, 255, 255, 0.15));
+  border-radius: 12px;
+  background: none;
+  color: var(--accent, #007aff);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  text-align: center;
+
+  &:active {
+    opacity: 0.7;
+  }
+}
+
+.playlistSelectorCancel {
+  padding: 10px;
+  border: none;
+  border-radius: 10px;
+  background: none;
+  color: var(--text-2);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 4px;
+}

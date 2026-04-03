@@ -18,7 +18,6 @@ import { isEnvBrowser } from './utils/misc';
 import { setupBrowserMock } from './mock/browserMock';
 import { BrowserDevMenu } from './components/dev/BrowserDevMenu';
 import { localeTagFromLanguage, t } from './i18n';
-import { setLiveKitRemoteAudioPriority, setLiveKitRemoteAudioVolume } from './utils/livekit';
 import { useWindowEvent } from './hooks';
 import { emitInternalEvent, useInternalEvent } from './utils/internalEvents';
 import { setupMugshotListener } from './utils/mugshot';
@@ -100,34 +99,7 @@ function PhoneContent() {
     phoneActions.lock();
   });
 
-  useInternalEvent<{ active?: boolean; listening?: boolean; peerId?: string | null }>('gcphone:nearbyVoiceState', (detail) => {
-    const peerId = typeof detail?.peerId === 'string' ? detail.peerId.trim() : '';
-
-    if (!detail?.active || !peerId) {
-      setLiveKitRemoteAudioPriority(null);
-      setLiveKitRemoteAudioVolume(1);
-      return;
-    }
-
-    setLiveKitRemoteAudioPriority(peerId, {
-      priorityScale: detail.listening ? 1 : 0.7,
-      othersScale: detail.listening ? 0.35 : 0.18,
-    });
-  });
-
-  useInternalEvent<{ active?: boolean; volume?: number }>('gcphone:nearbyVoiceVolume', (detail) => {
-    if (!detail?.active) {
-      setLiveKitRemoteAudioVolume(1);
-      return;
-    }
-
-    setLiveKitRemoteAudioVolume(typeof detail.volume === 'number' ? detail.volume : 1);
-  });
-
-  onCleanup(() => {
-    setLiveKitRemoteAudioPriority(null);
-    setLiveKitRemoteAudioVolume(1);
-  });
+  /* Audio priority/volume now handled by FiveM Mumble voice targets */
 
   const themeClass = createMemo(() => {
     const theme = phoneState.settings.theme;

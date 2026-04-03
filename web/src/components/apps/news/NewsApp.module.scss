@@ -324,8 +324,8 @@
 }
 
 .liveUtilityButton {
-  width: 42px;
-  height: 42px;
+  width: 44px;
+  height: 44px;
   display: grid;
   place-items: center;
 }
@@ -364,6 +364,18 @@
   border-radius: 24px;
   background: #071321;
   min-height: 0;
+}
+
+.liveVideoHost {
+  width: 100%;
+  height: 100%;
+  min-height: 320px;
+
+  :global(video) {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
 }
 
 .liveStageMedia,
@@ -441,8 +453,8 @@
 }
 
 .liveReactionRow button {
-  width: 42px;
-  height: 42px;
+  width: 44px;
+  height: 44px;
   display: grid;
   place-items: center;
   padding: 0;

@@ -2,6 +2,24 @@
 -- JS files and @oxmysql are loaded via fxmanifest before this file.
 -- Config and ox_lib are loaded via shared_scripts.
 
+-- ── Startup checks ──
+
+if GetResourceState('yarn') == 'started' then
+    print('^1[gcphone] FATAL: The "yarn" resource is running.^0')
+    print('^1[gcphone] FiveM yarn auto-detects package.json and breaks gcphone dependencies.^0')
+    print('^1[gcphone] Stop yarn first: "stop yarn" in server console, then "ensure gcphone".^0')
+    print('^1[gcphone] To prevent this permanently, remove "ensure yarn" from your server.cfg.^0')
+    return
+end
+
+local resourcePath = GetResourcePath(cache.resource)
+local nodeModules = resourcePath .. '/node_modules'
+if not LoadResourceFile(cache.resource, 'node_modules/livekit-server-sdk/package.json') then
+    print('^3[gcphone] WARNING: node_modules not installed or livekit-server-sdk missing.^0')
+    print('^3[gcphone] Run: cd ' .. resourcePath .. ' && npm install^0')
+    print('^3[gcphone] LiveKit features (calls, SnapLive) will not work without it.^0')
+end
+
 require 'server.modules.database'
 require 'server.main'
 require 'server.modules.hooks'
@@ -34,7 +52,6 @@ require 'server.modules.proximity'
 require 'server.modules.external'
 require 'server.modules.storage'
 require 'server.modules.livekit'
-require 'server.modules.socket'
 require 'server.modules.location_tracking'
 require 'server.modules.phone_drop'
 require 'server.modules.music'

@@ -47,6 +47,7 @@ end)
 
 lib.callback.register('gcphone:transferMoney', function(source, data)
     if Phone.IsPhoneReadOnly(source) then return false, 'READ_ONLY' end
+    if Utils.HitRateLimit(source, 'bank_transfer', 2000, 1) then return false, 'RATE_LIMITED' end
     local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false, 'Invalid source' end
     if type(data) ~= 'table' then return false, 'Invalid data' end

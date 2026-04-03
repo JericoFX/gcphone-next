@@ -15,8 +15,6 @@ This guide covers installing gcphone-next, configuring your server, and verifyin
 - **gcphone_sounds** resource (native audio bank)
 - A supported framework: **QBCore** (`qb-core`), **QBox** (`qbx_core`), or **ESX** (`es_extended`)
 - **Bun** (or Node.js) to build the web frontend
-- **Node.js** (or Bun) to run the Socket.IO server
-- **Docker + Docker Compose** *(optional)* if you plan to self-host LiveKit for video calls
 
 ## Installation
 
@@ -26,7 +24,14 @@ This guide covers installing gcphone-next, configuring your server, and verifyin
    resources/[phone]/gcphone-next/
    ```
 
-2. Build the web frontend:
+2. Install server-side JS dependencies:
+
+   ```bash
+   cd resources/[phone]/gcphone-next/server/js
+   bun install
+   ```
+
+3. Build the web frontend:
 
    ```bash
    cd resources/[phone]/gcphone-next/web
@@ -36,9 +41,7 @@ This guide covers installing gcphone-next, configuring your server, and verifyin
 
    This produces the `web/dist/` directory that FiveM serves as the NUI page.
 
-   > **Note:** Server-side JS dependencies (`server/js/node_modules`) are already included in the repository — no extra install step is needed for YouTube search, LiveKit tokens, or Socket.IO auth.
-
-3. Add the resource to your `server.cfg`:
+4. Add the resource to your `server.cfg`:
 
    ```cfg
    ensure oxmysql
@@ -55,76 +58,29 @@ Resources must start in this order:
 1. `oxmysql`
 2. `ox_lib`
 3. Your framework (`qb-core`, `qbx_core`, or `es_extended`)
-4. External services (LiveKit, Socket.IO) if used
-5. `gcphone_sounds`
-6. `gcphone-next`
-
-The resource declares these dependencies in `fxmanifest.lua`:
-
-```lua
-dependencies {
-    '/server:5181',
-    '/onesync',
-    'ox_lib',
-    'oxmysql',
-    'gcphone_sounds',
-}
-```
-
-## Automated Setup (recommended)
-
-The repository includes an interactive setup wizard that configures LiveKit + Redis, generates all convars for `server.cfg`, and optionally opens the required firewall ports:
-
-```
-tools\livekit\setup-livekit.bat
-```
-
-Or directly via PowerShell:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File tools\livekit\setup-livekit.ps1
-```
-
-The wizard will:
-
-1. **Check/install Docker Desktop** automatically if not present
-2. **Ask for your settings** (IP, ports, API key/secret, room prefix, call duration, TURN/TLS)
-3. **Generate config files** (`livekit.yaml`, `.env`, start/stop scripts)
-4. **Open firewall ports** (LiveKit signal, RTC TCP/UDP, Socket.IO) -- asks for admin elevation if needed
-5. **Print the exact `server.cfg` convars** ready to copy-paste
-
-After the wizard finishes, start the stack with `tools\livekit\start-livekit.bat`.
-
-See the [LiveKit Setup Guide](/guides/livekit-setup) for manual setup and advanced options.
+4. `gcphone_sounds`
+5. `gcphone-next`
 
 ## server.cfg Convars
 
-### LiveKit (optional — video calls)
+### Cloudflare TURN (optional, recommended for production)
 
-LiveKit is **optional**. Only needed if you want video calls. If you ran the setup wizard, it already printed these values for you. Otherwise, add them manually:
-
-```cfg
-setr livekit_host "ws://YOUR_SERVER_IP:7880"
-setr livekit_api_key "YOUR_KEY"
-setr livekit_api_secret "YOUR_SECRET"
-setr livekit_room_prefix "gcphone"
-setr livekit_max_call_duration "300"
-```
-
-- `livekit_host` must start with `ws://` or `wss://`.
-- `livekit_api_key` and `livekit_api_secret` are **server-side only** -- never expose them in client or web code.
-
-### Socket.IO (required)
-
-The Socket.IO server handles real-time chat (Snap live, MatchMyLove, group messages). It is included in the main release zip under `socket-server/` and must be running for the phone to work properly.
+Cloudflare TURN helps players behind strict NATs connect. Free tier: 1 TB/month.
 
 ```cfg
-setr gcphone_socket_host "ws://YOUR_SERVER_IP:3001"
-setr gcphone_socket_jwt_secret "YOUR_JWT_SECRET"
+set webrtc_turn_token_id "your-cloudflare-token-id"
+set webrtc_turn_api_token "your-cloudflare-api-token"
 ```
 
-- The JWT secret must match the one configured on your Socket.IO server.
-- See the [Socket.IO Setup Guide](/guides/socket-setup) for details.
+Then enable in `shared/config.lua`:
+
+```lua
+Config.WebRTC.DynamicTURN.Enabled = true
+```
+
+Get credentials at [Cloudflare Dashboard](https://dash.cloudflare.com/) > Realtime > TURN.
+
+Without Cloudflare, gcphone uses free public STUN/TURN servers by default.
 
 ### Media Upload (required for photos/videos/audio)
 
@@ -135,7 +91,7 @@ set gcphone_provider "fivemanage"
 set gcphone_provider_token "YOUR_FIVEMANAGE_API_TOKEN"
 ```
 
-Supported providers: `fivemanage`, `discord`, `custom`, `server_folder`.
+Supported providers: `fivemanage`, `discord`, `custom`, `server_folder`, `local`.
 
 ## Config.lua Overview
 
@@ -144,28 +100,13 @@ The main configuration file is `shared/config.lua`. Key sections:
 | Section | Purpose |
 |---|---|
 | `Config.Framework` | Set to `'qbcore'`, `'qbox'`, or `'esx'` |
-| `Config.Phone` | Key bindings, number format/prefix, default settings, setup wizard, item requirement |
+| `Config.Phone` | Key bindings, number format/prefix, default settings, item requirement |
 | `Config.NativeAudio` | Sound bank, ringtone catalog, default tones per category |
-| `Config.Calls` | WebRTC toggle, max call duration, hidden number prefix |
-| `Config.LiveKit` | Enable/disable LiveKit, max call duration |
-| `Config.Socket` | Enable/disable Socket.IO |
-| `Config.Features` | Toggle apps on/off (AppStore, WaveChat, DarkRooms, Clips, Wallet, Documents, Music, YellowPages, Mail) |
+| `Config.Calls` | Max call duration, hidden number prefix |
+| `Config.WebRTC` | TURN/ICE server configuration (Cloudflare or static) |
+| `Config.Features` | Toggle apps on/off |
 | `Config.Camera` | Camera sensitivity, FOV, offsets, freeze settings |
-| `Config.Flashlight` | Flashlight distance, intensity, kelvin/lumens range |
-| `Config.Music` | Music player volume, distance, max results |
-| `Config.Storage` | Upload settings (see [Storage Setup Guide](/guides/storage-setup)) — provider configured via `server.cfg` convars |
-| `Config.Gallery` | Max photos, allowed formats, size limits |
-| `Config.Bank` | Transfer fee, max transfer amount |
-| `Config.Wallet` | Initial balance, max transfer, proximity distance |
-| `Config.Chirp` | Max tweet length, daily limits, media toggle |
-| `Config.Snap` | Story duration, daily limits, live streaming settings |
-| `Config.Garage` | Max vehicles, spawn points, impound locations |
-| `Config.Market` | Listing limits, duration, categories |
-| `Config.News` | Article limits, live streaming, categories |
-| `Config.Mail` | Domain, alias length, body length, attachment limits |
-| `Config.Security` | Rate limits per action type |
-| `Config.Proximity` | Distance thresholds for sharing contacts, locations, documents, photos |
-| `Config.APIs` | API keys for Unsplash, Picsum, Tenor |
+| `Config.Storage` | Upload settings — provider configured via `server.cfg` convars |
 
 ### Phone Item Requirement
 
@@ -175,7 +116,6 @@ By default, all players can open the phone. To require an ox_inventory item:
 Config.Phone = {
     RequireItem = true,
     ItemName = 'phone',
-    -- ...
 }
 ```
 
@@ -185,7 +125,6 @@ Config.Phone = {
 Config.Phone = {
     NumberFormat = 'XXX-XXXX',
     NumberPrefix = { 555, 556, 557, 558, 559 },
-    -- ...
 }
 ```
 
@@ -199,17 +138,6 @@ When the resource starts, `server/modules/database.lua` runs migrations automati
 2. Creates a `phone_migrations` tracking table.
 3. Checks the current database version.
 4. Applies any pending migrations in order.
-
-The migration system currently has 18 versions covering:
-
-- Core tables (phone_numbers, contacts, messages, calls, gallery, etc.)
-- Social tables (chirp accounts/tweets, snap accounts/posts, clips)
-- Dark Rooms (rooms, posts, comments, votes)
-- Wallet and Documents
-- Mail system
-- Notification inbox
-- SQL cleanup rules and scheduled events
-- Performance indexes and auto-counter triggers
 
 You can check the current database version at any time via the server export:
 
@@ -240,7 +168,7 @@ The `gcphone_sounds` resource provides the native GTA audio bank used for ringto
 
 ### Where to get it
 
-The `gcphone_sounds` resource is **required** unless you provide your own custom audio bank. It is included in the GitHub releases as a separate download (`gcphone-sounds-v*.zip`). Place it in your resources folder:
+Included in the GitHub releases as a separate download (`gcphone-sounds-v*.zip`). Place it in your resources folder:
 
 ```
 resources/[phone]/gcphone_sounds/
@@ -248,47 +176,23 @@ resources/[phone]/gcphone_sounds/
 
 ### Custom sounds
 
-If you want to use your own ringtones and notification sounds, use [Audiotool](https://github.com/JericoFX/Audiotool) to compile custom `.awc` audio banks for GTA V. This tool includes a special fix for audio bank compilation that other tools don't have.
+Use [Audiotool](https://github.com/JericoFX/Audiotool) to compile custom `.awc` audio banks for GTA V.
 
-After generating your custom audio bank:
+## Real-Time Chat
 
-1. Replace the files in `gcphone_sounds/audiodirectory/`
-2. Update the sound catalog in `shared/config.lua` under `Config.NativeAudio.Catalog` to match your new sound names
-3. Restart both `gcphone_sounds` and `gcphone-next`
-
-### Configuration
-
-The audio configuration is in `shared/config.lua` under `Config.NativeAudio`. You can customize:
-
-- Sound bank name and sound set
-- Ringtone catalog (which tones are available and their GTA sound names)
-- Default tones per category (calls, messages, notifications)
-
-All audio plays through GTA's native sound system, so players hear ringtones and notifications spatially in-game. If a player's phone rings, nearby players will hear it.
-
-## Tools (separate download)
-
-The `tools/` directory contains Docker setup scripts for self-hosting LiveKit (video calls). It is distributed as a separate zip in the GitHub releases (`gcphone-next-tools-v*.zip`).
-
-See the [LiveKit Setup Guide](/guides/livekit-setup) for full instructions.
-
-## Open Source
-
-gcphone-next is fully open source. You can modify, extend, and redistribute the code freely. All Lua, JavaScript, and SolidJS source is included in the repository -- nothing is obfuscated or locked behind escrow.
+All chat (WaveChat groups, DMs, Snap Live, MatchMyLove) uses FiveM native events. No external server required — it works out of the box. See the [Real-Time Chat Guide](/guides/socket-setup) for details.
 
 ## Verification After Start
 
 1. Open the phone in-game and confirm the initial load screen appears.
 2. Test a social action (follow request or post).
-3. If LiveKit is enabled, test a video call.
-4. Check the server console for errors -- look for `[gcphone-next]` prefixed messages.
+3. Test a video call between two players to verify WebRTC connectivity.
+4. Check the server console for errors — look for `[gcphone-next]` prefixed messages.
 
 ## Troubleshooting
 
 | Error | Fix |
 |---|---|
-| `MISSING_HOST` or `INVALID_HOST_SCHEME` (LiveKit) | Check `livekit_host` convar -- must start with `ws://` or `wss://` |
-| 401 on LiveKit token | Verify `livekit_api_key` and `livekit_api_secret` match your LiveKit server |
-| `MISSING_SOCKET_HOST` or `INVALID_SOCKET_HOST_SCHEME` | Check `gcphone_socket_host` convar |
-| Setup script closes immediately | Run `tools\livekit\setup-livekit.bat` from `cmd` (not double-click) to see the error |
+| `SDK_NOT_INSTALLED` | Run `cd server/js && bun install` |
+| Video calls not connecting | Configure TURN servers — see [WebRTC & TURN Setup](/guides/livekit-setup) |
 | Database migration failed | Check the server console for the specific migration version and SQL error |

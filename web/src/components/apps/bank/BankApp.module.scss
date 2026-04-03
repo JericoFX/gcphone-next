@@ -123,16 +123,10 @@
   justify-content: space-between;
   padding: var(--s-3) var(--s-4);
   border-bottom: 1px solid var(--separator);
-  animation: tx-in 260ms ease both;
 
   &:last-child {
     border-bottom: none;
   }
-}
-
-@keyframes tx-in {
-  from { opacity: 0; transform: translateY(3px); }
-  to { opacity: 1; transform: translateY(0); }
 }
 
 .transactionInfo {

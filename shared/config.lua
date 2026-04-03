@@ -229,18 +229,45 @@ Config.Messages = {
     AllowPhotos = true,
 }
 
+Config.WaveChatDM = {
+    RetentionDays = 30, -- messages older than this are hard-deleted from DB (0 = never delete)
+    DeleteForAllMinutes = 5, -- sender can delete for everyone within this window (like WhatsApp)
+}
+
 Config.Calls = {
     MaxCallDuration = 3600,
     HiddenNumberPrefix = '#',
 }
 
-Config.LiveKit = {
+Config.VideoCall = {
     Enabled = true,
-    MaxCallDurationSeconds = 300,
+    MaxDurationSeconds = 300, -- 5 min for P2P video calls
 }
 
-Config.Socket = {
-    Enabled = true,
+-- WebRTC TURN/ICE configuration for NAT traversal
+-- If your players have connectivity issues with LiveKit (behind strict NATs, firewalls),
+-- configure a TURN server. Cloudflare TURN is supported out of the box.
+Config.WebRTC = {
+    -- Dynamic credential generation (recommended for production)
+    DynamicTURN = {
+        Enabled = false,
+        Service = 'cloudflare', -- currently supported: 'cloudflare'
+        -- Set credentials as convars in your server.cfg:
+        --   set webrtc_turn_token_id "your-cloudflare-token-id"
+        --   set webrtc_turn_api_token "your-cloudflare-api-token"
+        -- Get credentials: https://dash.cloudflare.com/?to=/:account/realtime/turn/overview
+        RemoveDefaultStun = false, -- remove default STUN servers when dynamic TURN is active?
+    },
+    -- Static ICE servers (used when DynamicTURN is disabled, or as fallback)
+    -- These defaults include free public STUN + Open Relay TURN servers.
+    -- For production, replace with Cloudflare DynamicTURN or your own TURN server.
+    IceServers = {
+        { urls = 'stun:stun.l.google.com:19302' },
+        { urls = 'stun:stun1.l.google.com:19302' },
+        { urls = 'stun:stun.cloudflare.com:3478' },
+        { urls = 'turn:openrelay.metered.ca:80', username = 'openrelayproject', credential = 'openrelayproject' },
+        { urls = 'turn:openrelay.metered.ca:443?transport=tcp', username = 'openrelayproject', credential = 'openrelayproject' },
+    },
 }
 
 Config.LiveLocation = {
@@ -259,9 +286,9 @@ Config.Camera = {
     RollStep = 2.5,
     LandscapeRoll = -90.0,
     RearOffset = {
-        x = 0.02,
-        y = -0.06,
-        z = 0.72,
+        x = 0.0,
+        y = 0.3,
+        z = 0.78,
     },
     SelfieOffset = {
         x = 0.0,

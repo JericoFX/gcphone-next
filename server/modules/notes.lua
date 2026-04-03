@@ -13,7 +13,7 @@ lib.callback.register('gcphone:notes:getAll', function(source)
     if not identifier then return {} end
 
     return MySQL.query.await(
-        'SELECT id, title, content, color, created_at, updated_at FROM phone_notes WHERE identifier = ? ORDER BY updated_at DESC',
+        'SELECT id, title, content, color, created_at, updated_at FROM phone_notes WHERE identifier = ? ORDER BY updated_at DESC LIMIT 200',
         { identifier }
     ) or {}
 end)

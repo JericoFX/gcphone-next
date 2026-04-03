@@ -305,11 +305,12 @@ lib.callback.register('gcphone:matchmylove:swipe', function(source, data)
     )
     if alreadySwiped then return false, 'ALREADY_SWIPED' end
 
-    -- Insert the swipe
-    MySQL.insert.await(
-        'INSERT INTO phone_matchmylove_swipes (swiper_id, target_id, direction) VALUES (?, ?, ?)',
+    -- Insert the swipe (IGNORE prevents duplicate race condition)
+    local swipeInserted = MySQL.insert.await(
+        'INSERT IGNORE INTO phone_matchmylove_swipes (swiper_id, target_id, direction) VALUES (?, ?, ?)',
         { identifier, targetId, direction }
     )
+    if not swipeInserted or swipeInserted < 1 then return false, 'ALREADY_SWIPED' end
 
     -- Check for mutual match on right swipe
     if direction == 'right' then
@@ -363,6 +364,7 @@ end)
 
 -- Get matches with profile info and last message
 lib.callback.register('gcphone:matchmylove:getMatches', function(source)
+    if Utils.HitRateLimit(source, 'mml_matches', 2000, 3) then return {} end
     local identifier = Bridge.GetIdentifier(source)
     if not identifier then return {} end
 
@@ -395,6 +397,7 @@ lib.callback.register('gcphone:matchmylove:getMatches', function(source)
             )
         WHERE m.profile_a_id = ? OR m.profile_b_id = ?
         ORDER BY COALESCE(lm.created_at, m.created_at) DESC
+        LIMIT 50
     ]], { identifier, identifier, identifier, identifier })
 
     return matches or {}
@@ -515,53 +518,62 @@ lib.callback.register('gcphone:matchmylove:unmatch', function(source, data)
     return true
 end)
 
--- ── Socket server integration ──
+-- Cache match participants to avoid DB query on every typing event
+local MatchPartnerCache = {} -- [matchId:identifier] = otherId, expires after 2min
+local MmlTypingDebounce = {}
 
--- Validate that an identifier belongs to a match (called by socket server)
-AddEventHandler('gcphone:matchmylove:validateMatch', function(requestId, identifier, matchId)
-    local id = tonumber(requestId) or 0
-    local safeIdentifier = SafeString(identifier, 80)
-    local safeMatchId = tonumber(matchId)
+lib.callback.register('gcphone:matchmylove:typing', function(source, data)
+    if type(data) ~= 'table' then return end
+    local identifier = Bridge.GetIdentifier(source)
+    if not identifier then return end
 
-    if not safeIdentifier or not safeMatchId or safeMatchId < 1 then
-        emit('gcphone:matchmylove:validateMatchResult', id, false)
+    local matchId = tonumber(data.matchId)
+    if not matchId then return end
+
+    local typing = data.typing == true
+
+    -- Debounce: 500ms per source per match
+    local debounceKey = source .. ':' .. matchId
+    local now = GetGameTimer()
+    if typing and MmlTypingDebounce[debounceKey] and (now - MmlTypingDebounce[debounceKey]) < 500 then
         return
     end
+    MmlTypingDebounce[debounceKey] = now
 
-    local match = MySQL.scalar.await(
-        'SELECT 1 FROM phone_matchmylove_matches WHERE id = ? AND (profile_a_id = ? OR profile_b_id = ?) LIMIT 1',
-        { safeMatchId, safeIdentifier, safeIdentifier }
-    )
+    -- Check cache first
+    local cacheKey = matchId .. ':' .. identifier
+    local cached = MatchPartnerCache[cacheKey]
+    local otherId
 
-    emit('gcphone:matchmylove:validateMatchResult', id, match ~= nil)
-end)
+    if cached and now < cached.expiresAt then
+        otherId = cached.otherId
+    else
+        local match = MySQL.single.await(
+            'SELECT profile_a_id, profile_b_id FROM phone_matchmylove_matches WHERE id = ? AND (profile_a_id = ? OR profile_b_id = ?) LIMIT 1',
+            { matchId, identifier, identifier }
+        )
+        if not match then return end
 
--- Persist batch of chat messages (called by socket server)
-AddEventHandler('gcphone:matchmylove:persistBatch', function(requestId, batch)
-    local id = tonumber(requestId) or 0
-    if type(batch) ~= 'table' or #batch == 0 then
-        emit('gcphone:matchmylove:persistBatchResult', id, false, 0, 'EMPTY_BATCH')
-        return
-    end
-
-    local count = 0
-    for _, entry in ipairs(batch) do
-        local matchId = tonumber(entry.matchId)
-        local senderIdentifier = SafeString(entry.senderIdentifier, 80)
-        local content = SanitizeText(entry.content, 500)
-
-        if matchId and matchId > 0 and senderIdentifier and content ~= '' then
-            pcall(function()
-                MySQL.insert.await(
-                    'INSERT INTO phone_matchmylove_messages (match_id, sender_id, content) VALUES (?, ?, ?)',
-                    { matchId, senderIdentifier, content }
-                )
-                count = count + 1
-            end)
+        if match.profile_a_id == identifier then
+            otherId = match.profile_b_id
+        elseif match.profile_b_id == identifier then
+            otherId = match.profile_a_id
+        else
+            return
         end
+
+        MatchPartnerCache[cacheKey] = { otherId = otherId, expiresAt = now + 120000 }
     end
 
-    emit('gcphone:matchmylove:persistBatchResult', id, true, count, '')
+    local targetSource = Bridge.GetSourceFromIdentifier(otherId)
+    if not targetSource then return end
+
+    TriggerClientEvent('gcphone:matchmylove:typing', targetSource, {
+        matchId = matchId,
+        identifier = identifier,
+        name = Bridge.GetName(source) or '',
+        typing = typing,
+    })
 end)
 
 return {}

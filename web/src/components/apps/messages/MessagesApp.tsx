@@ -65,12 +65,14 @@ function SocialPostCard(props: { post: { type: 'chirp' | 'snap'; id: number }; o
     else setFailed(true);
   });
 
+  const lang = () => getStoredLanguage();
+
   return (
     <Show when={!failed()} fallback={
-      <span class={styles.messageText}>{props.post.type === 'chirp' ? 'Tweet eliminado' : 'Post eliminado'}</span>
+      <span class={styles.messageText}>{t('messages.post_deleted', lang())}</span>
     }>
       <Show when={preview()} fallback={
-        <span class={styles.messageText}>{props.post.type === 'chirp' ? 'Cargando tweet...' : 'Cargando post...'}</span>
+        <span class={styles.messageText}>{t('messages.post_loading', lang())}</span>
       }>
         {(p) => (
           <div class={styles.socialCard} onClick={() => props.onOpen(p().type, p().id)}>
@@ -356,7 +358,7 @@ export function MessagesApp() {
     if (isReadOnly()) return;
     const number = selectedConversation();
     if (!number) return;
-    const input = await uiPrompt('Monto a enviar', { title: 'Enviar pago' });
+    const input = await uiPrompt(t('messages.payment_amount', language()), { title: t('messages.payment_title', language()) });
     const amount = parseInt(input || '0', 10);
     if (!amount || amount < 1) return;
     const result = await fetchNui<{ success?: boolean; balance?: number; error?: string }>('walletChatTransfer', {

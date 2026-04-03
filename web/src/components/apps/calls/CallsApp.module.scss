@@ -191,11 +191,16 @@
 
   .info {
     flex: 1;
+    min-width: 0;
+    overflow: hidden;
 
     .number {
       display: block;
       font-size: 17px;
       font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .time {
@@ -223,7 +228,7 @@
     margin-left: 8px;
     border: none;
     border-radius: 999px;
-    min-height: 32px;
+    min-height: 44px;
     padding: 0 10px;
     background: rgba(0, 122, 255, 0.12);
     color: var(--tint);
@@ -520,7 +525,7 @@
 .start-video-btn {
   border: none;
   border-radius: 999px;
-  height: 40px;
+  height: 44px;
   padding: 0 18px;
   background: linear-gradient(135deg, var(--tint), #46a2ff);
   color: #fff;
@@ -658,6 +663,10 @@
       font-size: 11px;
       font-weight: 700;
       color: var(--text-2);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 100%;
     }
 
     &.active {
@@ -704,7 +713,7 @@
   margin-top: 10px;
   border: none;
   border-radius: 999px;
-  min-height: 36px;
+  min-height: 44px;
   padding: 0 16px;
   background: rgba(255, 149, 0, 0.14);
   color: var(--warning);

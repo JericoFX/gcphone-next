@@ -13,6 +13,134 @@ Two API modes are available:
 
 All exports are invoked via `exports['gcphone-next']:ExportName(...)`.
 
+## Architecture
+
+Understanding where each piece runs is essential to using the SDK correctly.
+
+### Direct Dialogs
+
+Direct dialogs (`phoneInput`, `phoneConfirm`, `phoneSelect`) run **client-side only**. They require no prior registration — call them directly from client Lua and they block the thread until the player responds or cancels.
+
+```
+CLIENT: phoneInput(...) → blocks → returns result or nil
+```
+
+```lua
+-- client/main.lua — Direct dialog example
+
+RegisterCommand('pay', function()
+  -- This runs on the CLIENT. No registration needed.
+  local result = exports['gcphone-next']:phoneInput('Send Payment', {
+    { type = 'input', id = 'target', label = 'Phone number', required = true },
+    { type = 'number', id = 'amount', label = 'Amount ($)', required = true, min = 1 },
+  }, {
+    submitLabel = 'Send',
+    submitTone = 'primary',
+  })
+
+  if not result then return end -- player cancelled
+
+  -- Send to server for processing
+  TriggerServerEvent('bank:transfer', result.target, result.amount)
+end)
+```
+
+### Registered UIs
+
+Registered UIs follow a three-step lifecycle across server and client:
+
+```
+1. SERVER  registerPhoneUI('id', definition)    Register the app once on resource start.
+                                                 No source needed — this defines the app
+                                                 for all players.
+           ↓
+2. CLIENT  openPhoneUI('id')                    Player opens the app (e.g. via ox_target,
+           — or —                                a command, a keybind, etc.).
+   SERVER  openPhoneUI('id', source)            Alternatively, the server can open it for
+                                                 a specific player by passing their source.
+           ↓
+3. SERVER  controller.onResult(source, result)  The server receives the player's interaction
+                                                 with source identifying who interacted.
+                                                 Process logic here (charge money, give items, etc.).
+```
+
+```lua
+-- ============================================================
+-- Step 1: REGISTER on the SERVER (server/main.lua)
+-- ============================================================
+-- Runs once when the resource starts. No source needed.
+
+local shop = exports['gcphone-next']:registerPhoneUI('my_shop', {
+  title = 'My Shop',
+  icon = '🛒',
+  shortcut = {
+    visible = false,
+    category = 'shop',
+    description = 'Buy items',
+  },
+  views = {
+    main = {
+      elements = {
+        { type = 'header', text = 'Available items' },
+        { type = 'list', id = 'item', items = {
+          { id = 'water', label = 'Water', description = '$10', icon = '💧' },
+          { id = 'bread', label = 'Bread', description = '$15', icon = '🍞' },
+        }},
+      },
+      options = {
+        { id = 'buy', label = 'Buy selected', tone = 'primary' },
+      },
+    },
+  },
+  startView = 'main',
+})
+
+-- ============================================================
+-- Step 2: OPEN from the CLIENT (client/main.lua)
+-- ============================================================
+-- Player triggers this (e.g. via ox_target, command, keybind).
+
+RegisterCommand('shop', function()
+  local result = exports['gcphone-next']:openPhoneUI('my_shop')
+  -- result is returned after the player interacts or closes
+end)
+
+-- ============================================================
+-- Step 3: HANDLE RESULT on the SERVER (server/main.lua)
+-- ============================================================
+-- source tells you WHICH player interacted.
+
+shop.onResult(function(source, result)
+  if not result then return end
+  if result.optionId == 'buy' and result.selectedId then
+    local price = result.selectedId == 'water' and 10 or 15
+    if exports['gcphone-next']:RemoveMoney(source, price) then
+      GiveItem(source, result.selectedId, 1)
+    end
+  end
+end)
+```
+
+### Quick Reference
+
+| Function / Method | Side | Needs `source`? | Purpose |
+|---|---|---|---|
+| `phoneInput` | Client | No | One-shot form dialog |
+| `phoneConfirm` | Client | No | One-shot yes/no dialog |
+| `phoneSelect` | Client | No | One-shot selection list |
+| `registerPhoneUI` | Server | No | Register a multi-view app (once) |
+| `openPhoneUI(id)` | Client | No | Player opens a registered app |
+| `openPhoneUI(id, source)` | Server | Yes | Server opens app for a player |
+| `controller.onOpened` | Server | Receives it | Callback when app opens from Shortcuts |
+| `controller.onResult` | Server | Receives it | Callback with player's interaction result |
+| `controller.notify` | Server | Yes | Send notification to a player |
+| `controller.setVisible` | Server | Yes | Show/hide app per player |
+| `controller.setVisibleAll` | Server | No | Show/hide app globally |
+| `controller.close` | Server | Yes | Force-close app for a player |
+| `controller.unregister` | Server | No | Remove the app entirely |
+
+---
+
 ## Screenshots
 
 | Input Dialog | Confirm | Select List |
@@ -298,6 +426,147 @@ app.unregister()
 | `onOpened(handler)` | `function(source)` | `boolean` | Callback for Shortcuts-initiated opens |
 | `onResult(handler)` | `function(source, result)` | `boolean` | Callback for results |
 | `unregister()` | -- | `boolean` | Remove the app |
+
+#### Dynamic Data & View Overrides
+
+When you register a UI with `registerPhoneUI`, the definition is **static** — it's saved once on resource start. But most apps need to show live data (player balance, inventory, job status, etc.) that changes between opens.
+
+The `onOpened` callback solves this. It runs on the **server** every time a player opens the app from Shortcuts. Your callback receives `source` and must return a table with two optional fields:
+
+| Field | Type | Purpose |
+|-------|------|---------|
+| `dynamicData` | `table<string, string>` | Key-value pairs that replace `${dynamic.key}` placeholders in element text |
+| `viewOverrides` | `table<string, view>` | Completely replaces the `elements` (and optionally `options`) of specific views |
+
+##### `dynamicData` — Replace text placeholders
+
+Use `${dynamic.key}` in any text field (`text`, `label`, `description`) of your static definition. When the player opens the app, the `onOpened` callback provides the actual values.
+
+```lua
+-- Step 1: Use placeholders in the static definition
+local shop = exports['gcphone-next']:registerPhoneUI('my_shop', {
+  title = 'My Shop',
+  icon = '🛒',
+  views = {
+    main = {
+      elements = {
+        { type = 'label', text = 'Your balance: ${dynamic.balance}', tone = 'muted' },
+        { type = 'label', text = 'Items in stock: ${dynamic.stock}' },
+        { type = 'list', id = 'action', items = {
+          { id = 'buy', label = 'Buy items', description = '${dynamic.stock} available', icon = '🛒' },
+        }},
+      },
+    },
+  },
+  startView = 'main',
+})
+
+-- Step 2: Provide real values when the player opens the app
+shop.onOpened(function(source)
+  return {
+    dynamicData = {
+      balance = ('$%d'):format(GetPlayerMoney(source)),  -- replaces ${dynamic.balance}
+      stock = tostring(GetStockCount()),                  -- replaces ${dynamic.stock}
+    },
+  }
+end)
+```
+
+When player opens the app, `${dynamic.balance}` becomes `$5,000` and `${dynamic.stock}` becomes `12`. All values must be **strings**.
+
+##### `viewOverrides` — Replace entire view contents
+
+For cases where placeholders aren't enough (dynamic lists, conditional elements), use `viewOverrides` to completely replace a view's elements at open time.
+
+```lua
+local garage = exports['gcphone-next']:registerPhoneUI('my_garage', {
+  title = 'Garage',
+  icon = '🚗',
+  views = {
+    main = {
+      elements = {
+        { type = 'header', text = 'Your vehicles' },
+        -- This placeholder is shown while loading or if onOpened is not set
+        { type = 'label', text = 'Loading...', tone = 'muted' },
+      },
+    },
+  },
+  startView = 'main',
+})
+
+garage.onOpened(function(source)
+  -- Fetch the player's actual vehicles from your database
+  local vehicles = GetPlayerVehicles(source)
+
+  -- Build the list dynamically
+  local items = {}
+  for _, v in ipairs(vehicles) do
+    items[#items + 1] = {
+      id = v.plate,
+      label = v.name,
+      description = ('%s — %s'):format(v.garage, v.status),
+      icon = '🚗',
+    }
+  end
+
+  return {
+    viewOverrides = {
+      -- 'main' matches the view key in the definition
+      main = {
+        -- This REPLACES the entire elements array for this view
+        elements = #items > 0
+          and {
+            { type = 'header', text = 'Your vehicles' },
+            { type = 'list', id = 'vehicle', items = items },
+          }
+          or {
+            { type = 'label', text = 'No vehicles found', tone = 'muted' },
+          },
+      },
+    },
+  }
+end)
+```
+
+##### Combining both
+
+You can use `dynamicData` and `viewOverrides` together in the same `onOpened` return:
+
+```lua
+app.onOpened(function(source)
+  local stats = GetPlayerStats(source)
+  local inventory = GetPlayerInventory(source)
+
+  local invItems = {}
+  for _, item in ipairs(inventory) do
+    invItems[#invItems + 1] = {
+      id = item.name,
+      label = item.label,
+      description = ('x%d'):format(item.count),
+      icon = '📦',
+    }
+  end
+
+  return {
+    -- Text replacements (for views that use ${dynamic.X} placeholders)
+    dynamicData = {
+      player_name = stats.name,
+      level = tostring(stats.level),
+      balance = ('$%d'):format(stats.money),
+    },
+    -- Full view replacements (for views that need dynamic lists/elements)
+    viewOverrides = {
+      inventory = {
+        elements = #invItems > 0
+          and {{ type = 'list', id = 'item', items = invItems }}
+          or {{ type = 'label', text = 'Empty inventory', tone = 'muted' }},
+      },
+    },
+  }
+end)
+```
+
+> **Important:** `onOpened` only runs when the app is opened from the **Shortcuts/Servicios** app. If you open the UI via `openPhoneUI()` from client Lua or `controller.open(source)` from server Lua, the `onOpened` callback is **not** triggered — those are direct opens where you control the flow yourself.
 
 #### Promo Notification
 

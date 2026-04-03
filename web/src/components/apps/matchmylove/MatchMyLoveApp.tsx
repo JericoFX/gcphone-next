@@ -1,4 +1,4 @@
-import { For, Show, createSignal, onMount, onCleanup, createEffect } from 'solid-js';
+import { For, Show, createSignal, onMount, onCleanup } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { fetchNui } from '../../../utils/fetchNui';
 import { sanitizeText, sanitizeMediaUrl } from '../../../utils/sanitize';
@@ -10,12 +10,11 @@ import { AppScaffold } from '../../shared/layout';
 import { EmptyState } from '../../shared/ui/EmptyState';
 import { SegmentedTabs } from '../../shared/ui/SegmentedTabs';
 import { timeAgo } from '../../../utils/misc';
-import { fetchSocketToken } from '../../../utils/realtimeAuth';
 import {
-  connectMmlSocket, disconnectMmlSocket, isMmlSocketConnected,
-  joinMmlRoom, leaveMmlRoom, sendMmlMessage, sendMmlTyping,
-  type MmlSocketMessage,
-} from '../../../utils/socket';
+  getMatchMessages, sendMatchMessage, sendMatchTyping,
+  disconnectMatchMyLove,
+} from '../../../utils/chatBridge';
+import { useNuiEvent } from '../../../utils/useNui';
 import { t } from '../../../i18n';
 import styles from './MatchMyLoveApp.module.scss';
 
@@ -94,7 +93,6 @@ export function MatchMyLoveApp() {
   const [messages, setMessages] = createSignal<ChatMessage[]>([]);
   const [chatInput, setChatInput] = createSignal('');
   const [sendingMessage, setSendingMessage] = createSignal(false);
-  const [socketReady, setSocketReady] = createSignal(false);
   const [peerTyping, setPeerTyping] = createSignal(false);
   let typingTimeout: number | undefined;
   let matchOverlayTimer: number | undefined;
@@ -283,49 +281,29 @@ export function MatchMyLoveApp() {
     }
   }
 
-  async function ensureSocket(): Promise<boolean> {
-    if (isMmlSocketConnected()) return true;
-    const auth = await fetchSocketToken();
-    if (!auth.success || !auth.token || !auth.host) return false;
+  // NUI event: incoming message from server
+  useNuiEvent<ChatMessage>('matchmyloveNewMessage', (msg) => {
+    const chat = activeChat();
+    if (!chat || msg.match_id !== chat.match_id) return;
+    if (msg.sender_id === profile()?.identifier) return;
+    setMessages(prev => [...prev, msg]);
+    scrollToBottom();
+  });
 
-    connectMmlSocket(auth.host, auth.token, {
-      onMessage: (msg: MmlSocketMessage) => {
-        const chat = activeChat();
-        if (!chat || msg.matchId !== chat.match_id) return;
-        // Skip own messages (already added optimistically)
-        if (msg.senderId === profile()?.identifier) return;
-        setMessages(prev => [...prev, {
-          id: 0,
-          match_id: msg.matchId,
-          sender_id: msg.senderId,
-          content: msg.content,
-          created_at: new Date(msg.createdAt).toISOString(),
-        }]);
-        scrollToBottom();
-      },
-      onTyping: (payload) => {
-        const chat = activeChat();
-        if (!chat || payload.matchId !== chat.match_id) return;
-        if (payload.identifier === profile()?.identifier) return;
-        setPeerTyping(payload.typing);
-        if (typingTimeout) window.clearTimeout(typingTimeout);
-        if (payload.typing) {
-          typingTimeout = window.setTimeout(() => setPeerTyping(false), 3000);
-        }
-      },
-      onDisconnect: () => setSocketReady(false),
-      onReconnect: () => {
-        setSocketReady(true);
-        const chat = activeChat();
-        if (chat) void joinMmlRoom(chat.match_id);
-      },
-    });
-    setSocketReady(true);
-    return true;
-  }
+  // NUI event: typing indicator from server
+  useNuiEvent<{ matchId: number; identifier: string; name: string; typing: boolean }>('matchmyloveTyping', (payload) => {
+    const chat = activeChat();
+    if (!chat || payload.matchId !== chat.match_id) return;
+    if (payload.identifier === profile()?.identifier) return;
+    setPeerTyping(payload.typing);
+    if (typingTimeout) window.clearTimeout(typingTimeout);
+    if (payload.typing) {
+      typingTimeout = window.setTimeout(() => setPeerTyping(false), 3000);
+    }
+  });
 
   onCleanup(() => {
-    disconnectMmlSocket();
+    disconnectMatchMyLove();
     if (typingTimeout) window.clearTimeout(typingTimeout);
     if (matchOverlayTimer) window.clearTimeout(matchOverlayTimer);
   });
@@ -333,16 +311,22 @@ export function MatchMyLoveApp() {
   async function openChat(match: Match) {
     setActiveChat(match);
     setPeerTyping(false);
-    await loadMessages(match.match_id);
-    const connected = await ensureSocket();
-    if (connected) {
-      await joinMmlRoom(match.match_id);
+    const result = await getMatchMessages(match.match_id);
+    if (Array.isArray(result) && result.length > 0) {
+      setMessages(result.map(m => ({
+        id: m.id,
+        match_id: m.matchId,
+        sender_id: m.sender,
+        content: m.content,
+        created_at: new Date(m.timestamp).toISOString(),
+      })));
+      scrollToBottom();
+    } else {
+      await loadMessages(match.match_id);
     }
   }
 
   function closeChat() {
-    const chat = activeChat();
-    if (chat) leaveMmlRoom(chat.match_id);
     setActiveChat(null);
     setMessages([]);
     setPeerTyping(false);
@@ -358,36 +342,21 @@ export function MatchMyLoveApp() {
     setSendingMessage(true);
     setChatInput('');
 
-    if (isMmlSocketConnected()) {
-      // Optimistic: add message immediately
-      const optimistic: ChatMessage = {
-        id: Date.now(),
-        match_id: chat.match_id,
-        sender_id: profile()?.identifier || '',
-        content,
-        created_at: new Date().toISOString(),
-      };
-      setMessages(prev => [...prev, optimistic]);
-      scrollToBottom();
+    // Optimistic: add message immediately
+    const optimistic: ChatMessage = {
+      id: Date.now(),
+      match_id: chat.match_id,
+      sender_id: profile()?.identifier || '',
+      content,
+      created_at: new Date().toISOString(),
+    };
+    setMessages(prev => [...prev, optimistic]);
+    scrollToBottom();
 
-      const result = await sendMmlMessage(chat.match_id, content);
-      setSendingMessage(false);
-      if (!result.success) {
-        // Remove optimistic message on failure
-        setMessages(prev => prev.filter(m => m !== optimistic));
-      }
-    } else {
-      // Fallback to NUI callback
-      const result = await fetchNui<{ success: boolean; message?: ChatMessage }>(
-        'matchmyloveSendMessage',
-        { matchId: chat.match_id, content },
-        { success: false }
-      );
-      setSendingMessage(false);
-      if (result && typeof result === 'object' && 'message' in result && result.message) {
-        setMessages(prev => [...prev, result.message!]);
-        scrollToBottom();
-      }
+    const result = await sendMatchMessage(chat.match_id, content);
+    setSendingMessage(false);
+    if (!result || (typeof result === 'object' && 'success' in (result as any) && !(result as any).success)) {
+      setMessages(prev => prev.filter(m => m !== optimistic));
     }
   }
 
@@ -409,21 +378,6 @@ export function MatchMyLoveApp() {
     return undefined;
   }
 
-  // Fallback NUI message listener (for when socket is unavailable)
-  createEffect(() => {
-    if (socketReady()) return; // socket handles real-time when connected
-    const handler = (event: MessageEvent) => {
-      if (!event.data || event.data.type !== 'gcphone:matchmylove:newMessage') return;
-      const msg = event.data.payload as ChatMessage;
-      const chat = activeChat();
-      if (chat && msg && msg.match_id === chat.match_id) {
-        setMessages(prev => [...prev, msg]);
-        scrollToBottom();
-      }
-    };
-    window.addEventListener('message', handler);
-    return () => window.removeEventListener('message', handler);
-  });
 
   async function attachAvatarFromGallery() {
     const gallery = await fetchNui<any[]>('getGallery', undefined, []);
@@ -841,7 +795,7 @@ export function MatchMyLoveApp() {
             value={chatInput()}
             onInput={(e) => {
               setChatInput(e.currentTarget.value);
-              if (isMmlSocketConnected()) sendMmlTyping(chat.match_id, true);
+              sendMatchTyping(chat.match_id, true);
             }}
             onKeyDown={(e) => { if (e.key === 'Enter') handleSendMessage(); }}
             placeholder={t('matchmylove.placeholder_message', language())}

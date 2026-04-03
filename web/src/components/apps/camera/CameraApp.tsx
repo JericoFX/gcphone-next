@@ -81,6 +81,7 @@ export function CameraApp() {
   const [controlsOpen, setControlsOpen] = createSignal(false);
   const [videoMode, setVideoMode] = createSignal(false);
   const [renderer, setRenderer] = createSignal<'webgl' | 'css'>('webgl');
+  const [zoomLevel, setZoomLevel] = createSignal(1.0);
   const videoSupported = () => true;
   let canvasRef: HTMLCanvasElement | undefined;
   let gameViewRef: GameView | null = null;
@@ -162,6 +163,7 @@ export function CameraApp() {
     const te = temperature();
     const vi = vignette();
     const ef = effect();
+    const zm = zoomLevel();
     const r = renderer();
     if (!gameViewRef || r !== 'webgl') return;
     gameViewRef.setBlur(b / 100);
@@ -172,6 +174,7 @@ export function CameraApp() {
     gameViewRef.setVignette(vi / 100);
     const effectMap: Record<CameraEffect, number> = { normal: 0, noir: 1, vivid: 2, warm: 3 };
     gameViewRef.setEffect(effectMap[ef] ?? 0);
+    gameViewRef.setZoom(zm);
   });
 
   // CSS filter fallback string
@@ -198,6 +201,7 @@ export function CameraApp() {
     setTemperature(0);
     setVignette(0);
     setEffect('normal');
+    setZoomLevel(1.0);
   };
 
   // Long press shutter to toggle video mode
@@ -647,6 +651,13 @@ export function CameraApp() {
                     </button>
                     )}
                   </For>
+                </div>
+
+                {/* Zoom */}
+                <div class={styles.sliderRow}>
+                  <svg class={styles.sliderRowIcon} viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2"/><path d="M21 21l-4.35-4.35" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M8 11h6M11 8v6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                  <input type="range" class={styles.horizontalSlider} min={100} max={500} step={10} value={Math.round(zoomLevel() * 100)} onInput={(e) => setZoomLevel(Number(e.currentTarget.value) / 100)} />
+                  <span class={styles.sliderRowValue}>{zoomLevel().toFixed(1)}x</span>
                 </div>
 
                 {/* Blur */}

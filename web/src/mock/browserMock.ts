@@ -72,8 +72,6 @@ type GalleryEntry = BrowserMockState['gallery'][number];
 const nowIso = () => new Date().toISOString();
 
 interface MockRealtimeConfig {
-  socketHost: string;
-  socketToken: string;
   livekitUrl: string;
   livekitToken: string;
   livekitIdentity: string;
@@ -82,11 +80,6 @@ interface MockRealtimeConfig {
 }
 
 interface MockRealtimePreview {
-  socket: {
-    success: boolean;
-    host: string;
-    token: string;
-  };
   livekit: {
     success: boolean;
     url: string;
@@ -99,15 +92,12 @@ interface MockRealtimePreview {
 }
 
 const MOCK_REALTIME_KEYS = {
-  socketHost: 'gcphone:mock:socketHost',
-  socketToken: 'gcphone:mock:socketToken',
   livekitUrl: 'gcphone:mock:livekitUrl',
   livekitToken: 'gcphone:mock:livekitToken',
   livekitIdentity: 'gcphone:mock:livekitIdentity',
   livekitApiKey: 'gcphone:mock:livekitApiKey',
 } as const;
 
-const DEFAULT_MOCK_SOCKET_HOST = 'ws://127.0.0.1:3001';
 const DEFAULT_MOCK_LIVEKIT_URL = 'ws://127.0.0.1:7880';
 const REALTIME_PANEL_ID = 'gcphone-mock-realtime-panel';
 const textEncoder = new TextEncoder();
@@ -121,8 +111,6 @@ const sanitizeConfigValue = (value: unknown, maxLength = 512) => {
 };
 
 const readRealtimeConfig = (): MockRealtimeConfig => ({
-  socketHost: isEnvBrowser() ? sanitizeConfigValue(window.localStorage.getItem(MOCK_REALTIME_KEYS.socketHost), 200) : '',
-  socketToken: isEnvBrowser() ? sanitizeConfigValue(window.localStorage.getItem(MOCK_REALTIME_KEYS.socketToken), 1000) : '',
   livekitUrl: isEnvBrowser() ? sanitizeConfigValue(window.localStorage.getItem(MOCK_REALTIME_KEYS.livekitUrl), 200) : '',
   livekitToken: isEnvBrowser() ? sanitizeConfigValue(window.localStorage.getItem(MOCK_REALTIME_KEYS.livekitToken), 2000) : '',
   livekitIdentity: isEnvBrowser() ? sanitizeConfigValue(window.localStorage.getItem(MOCK_REALTIME_KEYS.livekitIdentity), 120) : '',
@@ -138,16 +126,12 @@ const writeRealtimeConfig = (config: Partial<MockRealtimeConfig>) => {
     return;
   }
 
-  const nextSocketHost = sanitizeConfigValue(config.socketHost, 200);
-  const nextSocketToken = sanitizeConfigValue(config.socketToken, 1000);
   const nextLivekitUrl = sanitizeConfigValue(config.livekitUrl, 200);
   const nextLivekitToken = sanitizeConfigValue(config.livekitToken, 2000);
   const nextLivekitIdentity = sanitizeConfigValue(config.livekitIdentity, 120);
   const nextLivekitApiKey = sanitizeConfigValue(config.livekitApiKey, 120);
   const nextLivekitApiSecret = sanitizeConfigValue(config.livekitApiSecret, 512);
 
-  if (nextSocketHost) window.localStorage.setItem(MOCK_REALTIME_KEYS.socketHost, nextSocketHost);
-  if (nextSocketToken) window.localStorage.setItem(MOCK_REALTIME_KEYS.socketToken, nextSocketToken);
   if (nextLivekitUrl) window.localStorage.setItem(MOCK_REALTIME_KEYS.livekitUrl, nextLivekitUrl);
   if (nextLivekitToken) window.localStorage.setItem(MOCK_REALTIME_KEYS.livekitToken, nextLivekitToken);
   if (nextLivekitIdentity) window.localStorage.setItem(MOCK_REALTIME_KEYS.livekitIdentity, nextLivekitIdentity);
@@ -159,8 +143,6 @@ const writeRealtimeConfig = (config: Partial<MockRealtimeConfig>) => {
 
 const clearRealtimeConfig = () => {
   if (isEnvBrowser()) {
-    window.localStorage.removeItem(MOCK_REALTIME_KEYS.socketHost);
-    window.localStorage.removeItem(MOCK_REALTIME_KEYS.socketToken);
     window.localStorage.removeItem(MOCK_REALTIME_KEYS.livekitUrl);
     window.localStorage.removeItem(MOCK_REALTIME_KEYS.livekitToken);
     window.localStorage.removeItem(MOCK_REALTIME_KEYS.livekitIdentity);
@@ -194,17 +176,13 @@ const saveRealtimeConfig = (config: Partial<MockRealtimeConfig>) => {
 };
 
 const makeRealtimeConfig = (config: Partial<MockRealtimeConfig> = {}) => {
-  const socketHost = sanitizeWsEndpoint(config.socketHost, DEFAULT_MOCK_SOCKET_HOST);
   const livekitUrl = sanitizeWsEndpoint(config.livekitUrl, DEFAULT_MOCK_LIVEKIT_URL);
-  const socketToken = sanitizeConfigValue(config.socketToken, 1000) || randomToken('mock-socket', 24);
   const livekitToken = sanitizeConfigValue(config.livekitToken, 2000) || randomToken('mock-livekit', 36);
   const livekitIdentity = sanitizeConfigValue(config.livekitIdentity, 120) || `mock:${state.phoneNumber}`;
   const livekitApiKey = sanitizeConfigValue(config.livekitApiKey, 120);
   const livekitApiSecret = sanitizeConfigValue(config.livekitApiSecret, 512);
 
   return {
-    socketHost,
-    socketToken,
     livekitUrl,
     livekitToken,
     livekitIdentity,
@@ -243,7 +221,6 @@ const parseRealtimeInstallerText = (input: string): Partial<MockRealtimeConfig> 
       if (key === 'livekit_host') result.livekitUrl = value;
       else if (key === 'livekit_api_key') result.livekitApiKey = value;
       else if (key === 'livekit_api_secret') result.livekitApiSecret = value;
-      else if (key === 'gcphone_socket_host') result.socketHost = value;
       continue;
     }
 
@@ -255,7 +232,6 @@ const parseRealtimeInstallerText = (input: string): Partial<MockRealtimeConfig> 
     if (key === 'LIVEKIT_HOST') result.livekitUrl = value;
     else if (key === 'LIVEKIT_API_KEY') result.livekitApiKey = value;
     else if (key === 'LIVEKIT_API_SECRET') result.livekitApiSecret = value;
-    else if (key === 'GCPHONE_SOCKET_HOST') result.socketHost = value;
   }
 
   return result;
@@ -271,10 +247,6 @@ const buildRealtimeSetrText = () => {
     'setr livekit_room_prefix "gcphone"',
     'setr livekit_max_call_duration "300"',
   ];
-
-  if (realtime.socketHost) {
-    lines.push(`setr gcphone_socket_host "${sanitizeWsEndpoint(realtime.socketHost, DEFAULT_MOCK_SOCKET_HOST)}"`);
-  }
 
   return lines.join('\n');
 };
@@ -360,15 +332,6 @@ const buildLivekitJwt = async (
   return `${unsignedToken}.${signature}`;
 };
 
-const buildSocketTokenResult = () => {
-  const realtime = readRealtimeConfig();
-  return {
-    success: true,
-    host: realtime.socketHost || DEFAULT_MOCK_SOCKET_HOST,
-    token: realtime.socketToken || 'mock-socket-token',
-  };
-};
-
 const buildLivekitTokenPreview = (roomName: string) => {
   const realtime = readRealtimeConfig();
   return {
@@ -417,7 +380,6 @@ const buildLivekitTokenResult = async (roomName: string, publish: boolean, maxDu
 };
 
 const buildRealtimePreview = (roomName = `call-${Date.now()}`): MockRealtimePreview => ({
-  socket: buildSocketTokenResult(),
   livekit: buildLivekitTokenPreview(roomName),
 });
 
@@ -459,8 +421,6 @@ const openRealtimePanel = () => {
     '<strong>gcphone Mock Realtime Lab</strong>',
     '<button data-action="close" style="border:0;background:#1f2937;color:#e5edf8;border-radius:6px;padding:3px 7px;cursor:pointer;">x</button>',
     '</div>',
-    '<label style="display:block;margin-bottom:6px;">Socket host</label>',
-    '<input data-field="socketHost" style="width:100%;margin-bottom:8px;padding:6px;border-radius:8px;border:1px solid #334155;background:#0b1220;color:#dbeafe;" />',
     '<label style="display:block;margin-bottom:6px;">LiveKit URL</label>',
     '<input data-field="livekitUrl" style="width:100%;margin-bottom:8px;padding:6px;border-radius:8px;border:1px solid #334155;background:#0b1220;color:#dbeafe;" />',
     '<label style="display:block;margin-bottom:6px;">LiveKit API key (setup output)</label>',
@@ -486,7 +446,6 @@ const openRealtimePanel = () => {
     '<pre data-field="preview" style="white-space:pre-wrap;background:#020617;border:1px solid #1e293b;border-radius:8px;padding:8px;max-height:220px;overflow:auto;"></pre>',
   ].join('');
 
-  const socketHostInput = root.querySelector('[data-field="socketHost"]') as HTMLInputElement | null;
   const livekitUrlInput = root.querySelector('[data-field="livekitUrl"]') as HTMLInputElement | null;
   const livekitApiKeyInput = root.querySelector('[data-field="livekitApiKey"]') as HTMLInputElement | null;
   const livekitApiSecretInput = root.querySelector('[data-field="livekitApiSecret"]') as HTMLInputElement | null;
@@ -495,13 +454,12 @@ const openRealtimePanel = () => {
   const installerTextInput = root.querySelector('[data-field="installerText"]') as HTMLTextAreaElement | null;
   const previewNode = root.querySelector('[data-field="preview"]') as HTMLElement | null;
 
-  if (!socketHostInput || !livekitUrlInput || !livekitApiKeyInput || !livekitApiSecretInput || !livekitTokenInput || !identityInput || !installerTextInput || !previewNode) {
+  if (!livekitUrlInput || !livekitApiKeyInput || !livekitApiSecretInput || !livekitTokenInput || !identityInput || !installerTextInput || !previewNode) {
     return;
   }
 
   const refill = () => {
     const realtime = readRealtimeConfig();
-    socketHostInput.value = realtime.socketHost || DEFAULT_MOCK_SOCKET_HOST;
     livekitUrlInput.value = realtime.livekitUrl || DEFAULT_MOCK_LIVEKIT_URL;
     livekitApiKeyInput.value = realtime.livekitApiKey || '';
     livekitApiSecretInput.value = realtime.livekitApiSecret || '';
@@ -528,7 +486,6 @@ const openRealtimePanel = () => {
 
     if (action === 'local') {
       saveRealtimeConfig(makeRealtimeConfig({
-        socketHost: DEFAULT_MOCK_SOCKET_HOST,
         livekitUrl: DEFAULT_MOCK_LIVEKIT_URL,
         livekitApiKey: '',
         livekitApiSecret: '',
@@ -549,7 +506,6 @@ const openRealtimePanel = () => {
 
     if (action === 'generate') {
       saveRealtimeConfig(makeRealtimeConfig({
-        socketHost: socketHostInput.value,
         livekitUrl: livekitUrlInput.value,
         livekitApiKey: livekitApiKeyInput.value,
         livekitApiSecret: livekitApiSecretInput.value,
@@ -567,7 +523,6 @@ const openRealtimePanel = () => {
 
     if (action === 'save') {
       updateRealtimeConfig({
-        socketHost: sanitizeWsEndpoint(socketHostInput.value, DEFAULT_MOCK_SOCKET_HOST),
         livekitUrl: sanitizeWsEndpoint(livekitUrlInput.value, DEFAULT_MOCK_LIVEKIT_URL),
         livekitApiKey: sanitizeConfigValue(livekitApiKeyInput.value, 120),
         livekitApiSecret: sanitizeConfigValue(livekitApiSecretInput.value, 512),
@@ -1392,10 +1347,8 @@ export function setupBrowserMock() {
     exportRealtimeAsSetr: () => buildRealtimeSetrText(),
     copyRealtimeAsSetr: async () => copyText(buildRealtimeSetrText()),
     previewRealtime: (roomName = `call-${Date.now()}`) => buildRealtimePreview(String(roomName)),
-    useLocalRealtime: (socketToken = 'mock-socket-token', livekitToken = 'mock-livekit-token') => {
+    useLocalRealtime: (livekitToken = 'mock-livekit-token') => {
       return saveRealtimeConfig({
-        socketHost: DEFAULT_MOCK_SOCKET_HOST,
-        socketToken,
         livekitUrl: DEFAULT_MOCK_LIVEKIT_URL,
         livekitToken,
         livekitIdentity: `mock:${state.phoneNumber}`,
@@ -1916,10 +1869,6 @@ export async function handleBrowserNui<T = unknown>(eventName: string, data?: un
     const publish = payload.publish !== false;
     const maxDuration = Math.max(30, Number(payload.maxDuration || 300) || 300);
     return await buildLivekitTokenResult(roomName, publish, maxDuration) as T;
-  }
-
-  if (eventName === 'socketGetToken') {
-    return buildSocketTokenResult() as T;
   }
 
   if (eventName === 'endCall') {

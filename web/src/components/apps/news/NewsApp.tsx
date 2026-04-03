@@ -1,6 +1,7 @@
 import { For, Show, createEffect, createMemo, createSignal, onCleanup, onMount } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { fetchNui } from '../../../utils/fetchNui';
+import { useInternalEvent } from '../../../utils/internalEvents';
 import { timeAgo } from '../../../utils/misc';
 import { resolveMediaType, sanitizeMediaUrl, sanitizeText } from '../../../utils/sanitize';
 import { uiAlert } from '../../../utils/uiAlert';
@@ -23,6 +24,8 @@ import { useNotifications } from '../../../store/notifications';
 import { getStoredLanguage, t } from '../../../i18n';
 import type { NewsArticle, NewsScaleform, MockLiveMessage, LiveJoinResponse, NewsProfile, LiveReaction } from './NewsTypes';
 import { articleMediaUrl, isLiveArticle, articleAuthor, buildClockTime, NEWS_MOCK_USERS, NEWS_MOCK_LINES, LIVE_REACTIONS } from './NewsTypes';
+import { createOffer, handleSignal, allowPeer } from '../../../utils/peerManager';
+import { useLiveCamera } from '../../../hooks/useLiveCamera';
 import styles from './NewsApp.module.scss';
 
 export function NewsApp() {
@@ -68,6 +71,57 @@ export function NewsApp() {
 
   let stopNewsMock: (() => void) | undefined;
   let reactionTimers: number[] = [];
+  const newsCam = useLiveCamera({ maxSeconds: 3600 });
+  let newsVideoHost: HTMLDivElement | undefined;
+  const [newsVideoReady, setNewsVideoReady] = createSignal(false);
+
+  const connectNewsPeer = async (articleId: number, isBroadcaster: boolean) => {
+    try {
+      if (isBroadcaster) {
+        await newsCam.startCamera();
+      }
+
+      const mySessionId = await newsCam.initViewer({
+        onRemoteStream: (_remotePeerId, stream) => {
+          const video = stream.getVideoTracks()[0];
+          if (video && newsVideoHost) {
+            const el = document.createElement('video');
+            el.srcObject = new MediaStream([video]);
+            el.autoplay = true;
+            el.playsInline = true;
+            el.className = styles.liveStageMedia;
+            newsVideoHost.appendChild(el);
+            setNewsVideoReady(true);
+          }
+        },
+        onRemoteDisconnected: () => {
+          if (newsVideoHost) {
+            while (newsVideoHost.firstChild) newsVideoHost.removeChild(newsVideoHost.firstChild);
+            setNewsVideoReady(false);
+          }
+        },
+      });
+
+      if (isBroadcaster) {
+        await newsCam.publishVideo();
+        if (newsVideoHost) {
+          const previewEl = newsCam.createPreviewElement();
+          if (previewEl) {
+            previewEl.className = styles.liveStageMedia;
+            newsVideoHost.appendChild(previewEl);
+            setNewsVideoReady(true);
+          }
+        }
+      }
+
+      const channel = `newslive-${articleId}`;
+      await fetchNui('webrtcRegisterSession', { sessionId: mySessionId, channel }, true);
+      await fetchNui('newsLivePeerReady', { articleId, sessionId: mySessionId, broadcaster: isBroadcaster }, true);
+    } catch (e) {
+      console.warn('[news] Failed to connect peer:', e);
+      setStatusMessage(t('news.live_connect_failed', language()));
+    }
+  };
 
   const refreshScaleform = async (articleId: number) => {
     const sf = await fetchNui<NewsScaleform | null>('newsGetScaleform', { articleId }, null);
@@ -144,12 +198,22 @@ export function NewsApp() {
 
   const closeLiveViewer = () => {
     const current = activeLive();
+    const isBroadcaster = current && current.id === liveArticleId();
+
+    if (isBroadcaster) {
+      void toggleLive();
+      return;
+    }
+
     if (joinedLiveId() && current?.id === joinedLiveId()) {
       void leaveJoinedLive(joinedLiveId());
     }
-    if (!current || current.id !== liveArticleId()) {
-      void fetchNui('phoneSetVisualMode', { mode: 'text' }, true);
+    void fetchNui('phoneSetVisualMode', { mode: 'text' }, true);
+    newsCam.stopCamera();
+    if (newsVideoHost) {
+      while (newsVideoHost.firstChild) newsVideoHost.removeChild(newsVideoHost.firstChild);
     }
+    setNewsVideoReady(false);
     setActiveLive(null);
     setLiveChatOpen(false);
     setLiveChatInput('');
@@ -183,6 +247,7 @@ export function NewsApp() {
             text: sanitizeText(message.content || '', 180),
             at: message.createdAt ? buildClockTime() : 'ahora',
           })));
+          void connectNewsPeer(article.id, false);
         }
       }
     }
@@ -241,7 +306,14 @@ export function NewsApp() {
   onCleanup(() => {
     reactionTimers.forEach((t) => window.clearTimeout(t));
     reactionTimers = [];
+    newsCam.stopCamera();
     void leaveJoinedLive();
+  });
+
+  useInternalEvent<{ route: string }>('phone:appForceClose', (detail) => {
+    if (detail?.route === 'news' && activeLive()) {
+      closeLiveViewer();
+    }
   });
 
   usePhoneKeyHandler({
@@ -285,6 +357,19 @@ export function NewsApp() {
       setActiveLive(article);
     }
     void load();
+  });
+
+  useNuiCustomEvent<{ sessionId: string }>('gcphone:news:livePeerConnected', (payload) => {
+    if (!payload?.sessionId || !activeLive()) return;
+    const article = activeLive();
+    if (!article) return;
+    allowPeer(payload.sessionId);
+    void createOffer(payload.sessionId, `newslive-${article.id}`);
+  });
+
+  useNuiCustomEvent<{ type: string; data: string; fromPeerId: string; channel: string }>('webrtcSignal', (signal) => {
+    if (!signal?.type || !signal?.fromPeerId) return;
+    void handleSignal(signal as Parameters<typeof handleSignal>[0]);
   });
 
   useNuiCustomEvent<number>('gcphone:news:liveEnded', (articleId) => {
@@ -471,9 +556,10 @@ export function NewsApp() {
     if (liveArticleId()) {
       const result = await fetchNui<{ success?: boolean }>('newsEndLive', { articleId: liveArticleId() });
       if (!result?.success) return;
-      await fetchNui('phoneSetVisualMode', { mode: 'text' }, true);
+      await fetchNui('stopLiveSession', {}, true);
       liveFlashlight.setPanelOpen(false);
       await liveFlashlight.turnOff();
+      newsCam.stopCamera();
       setLiveArticleId(null);
       setStatusMessage(t('news.live_ended', language()));
       closeLiveViewer();
@@ -499,7 +585,7 @@ export function NewsApp() {
 
     if (!result?.success || !result.articleId) return;
 
-    await fetchNui('phoneSetVisualMode', { mode: 'live' }, true);
+    await fetchNui('startLiveSession', {}, true);
     setLiveArticleId(result.articleId);
     setStatusMessage('Live iniciado');
     const nextLive: NewsArticle = {
@@ -515,6 +601,7 @@ export function NewsApp() {
     };
     setActiveLive(nextLive);
     await refreshScaleform(result.articleId);
+    void connectNewsPeer(result.articleId, true);
     await load();
   };
 
@@ -926,7 +1013,7 @@ export function NewsApp() {
         <Show when={activeLive()}>
           <div class={styles.liveViewer}>
             <div class={styles.liveTopBar}>
-              <button class={styles.liveUtilityButton} onClick={closeLiveViewer}><img src="./img/icons_ios/ui-close.svg" alt="" draggable={false} /></button>
+              <button class={styles.liveUtilityButton} aria-label={t('control.close', language())} onClick={closeLiveViewer}><img src="./img/icons_ios/ui-close.svg" alt="" draggable={false} /></button>
               <div class={styles.liveOwnerInfo}>
                 <strong>{articleAuthor(activeLive())}</strong>
                 <span>{activeLiveStatus()}</span>
@@ -965,9 +1052,12 @@ export function NewsApp() {
             </div>
 
             <div class={styles.liveStage}>
-              <Show when={activeLiveMedia()} fallback={<div class={styles.liveStageFallback}>{t('news.no_video_yet', language())}</div>}>
-                <Show when={resolveMediaType(activeLiveMedia()) === 'image'} fallback={<video class={styles.liveStageMedia} src={activeLiveMedia()} autoplay muted loop playsinline />}>
-                  <img class={styles.liveStageMedia} src={activeLiveMedia()} alt={activeLive()?.title || 'Live'} />
+              <div ref={newsVideoHost} class={styles.liveVideoHost} style={{ display: newsVideoReady() ? 'block' : 'none' }} />
+              <Show when={!newsVideoReady()}>
+                <Show when={activeLiveMedia()} fallback={<div class={styles.liveStageFallback}>{t('news.no_video_yet', language())}</div>}>
+                  <Show when={resolveMediaType(activeLiveMedia()) === 'image'} fallback={<video class={styles.liveStageMedia} src={activeLiveMedia()} autoplay muted loop playsinline />}>
+                    <img class={styles.liveStageMedia} src={activeLiveMedia()} alt={activeLive()?.title || 'Live'} />
+                  </Show>
                 </Show>
               </Show>
 

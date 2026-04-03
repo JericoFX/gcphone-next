@@ -1,4 +1,5 @@
 import { createSignal, For, Show, createEffect, onCleanup, onMount, batch, createMemo } from 'solid-js';
+import { Motion } from '@motionone/solid';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { useContacts } from '../../../store/contacts';
 import { useMessages } from '../../../store/messages';
@@ -419,7 +420,11 @@ export function ContactsApp() {
                       </div>
                       <For each={contacts}>
                         {(contact, index) => (
-                          <>
+                          <Motion.div
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ duration: 0.22, delay: Math.min(index(), 12) * 0.03 }}
+                          >
                             <div
                               class={styles.contactItem}
                               onClick={() => openProfile(contact)}
@@ -444,7 +449,7 @@ export function ContactsApp() {
                             <Show when={index() < contacts.length - 1}>
                               <div class={styles.separator} />
                             </Show>
-                          </>
+                          </Motion.div>
                         )}
                       </For>
                     </>

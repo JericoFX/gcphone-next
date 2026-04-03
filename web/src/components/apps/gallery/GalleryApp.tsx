@@ -1,4 +1,5 @@
 import { createSignal, createEffect, For, Show, createMemo, onMount } from 'solid-js';
+import { Motion } from '@motionone/solid';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { usePhoneActions } from '../../../store/phone';
 import { usePhoneState } from '../../../store/phone';
@@ -373,19 +374,25 @@ export function GalleryApp() {
           <Show when={loading()} fallback={<ScreenState loading={false} empty={visiblePhotos().length === 0} emptyTitle={t('gallery.empty_title', language())} emptyDescription={t('gallery.empty_desc', language())}>
             <For each={visiblePhotos()}>
               {(photo, index) => (
-                <div
-                  class={styles.photoItem}
-                  classList={{ [styles.selected]: selectedIndex() === index() }}
-                  onClick={() => openPhotoAt(index())}
-                  onContextMenu={(e: MouseEvent) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    openPhotoAt(index());
-                    setShowActions(true);
-                  }}
+                <Motion.div
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.22, delay: Math.min(index(), 9) * 0.04 }}
                 >
-                  <img src={photo.url} alt="Photo" />
-                </div>
+                  <div
+                    class={styles.photoItem}
+                    classList={{ [styles.selected]: selectedIndex() === index() }}
+                    onClick={() => openPhotoAt(index())}
+                    onContextMenu={(e: MouseEvent) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      openPhotoAt(index());
+                      setShowActions(true);
+                    }}
+                  >
+                    <img src={photo.url} alt="Photo" />
+                  </div>
+                </Motion.div>
               )}
             </For>
           </ScreenState>}>

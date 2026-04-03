@@ -56,7 +56,7 @@ do
     Config.Contacts = Config.Contacts or {}
     Config.Messages = Config.Messages or {}
     Config.Calls = Config.Calls or {}
-    Config.LiveKit = Config.LiveKit or {}
+    Config.VideoCall = Config.VideoCall or {}
     Config.Camera = Config.Camera or {}
     Config.Gallery = Config.Gallery or {}
     Config.Storage = Config.Storage or {}

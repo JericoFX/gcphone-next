@@ -31,10 +31,12 @@ end
 
 local function ApplyNuiFocus()
     if menuIsOpen then
-        SetNuiFocus(true, true)
+        -- Walk mode: NUI active, no cursor, game input enabled
+        -- Cursor mode: NUI active, cursor visible, game input disabled
+        SetNuiFocus(true, not walkMode)
         SetNuiFocusKeepInput(walkMode)
         PhoneState.hasFocus = true
-        PhoneState.useMouse = true
+        PhoneState.useMouse = not walkMode
     else
         SetNuiFocus(false, false)
         SetNuiFocusKeepInput(false)
@@ -179,6 +181,17 @@ local function SetPhoneVisualMode(mode, options)
     phoneVisualMode = type(mode) == 'string' and mode or 'text'
     phoneVisualOptions = type(options) == 'table' and options or {}
     ApplyPhonePropAttachment()
+
+    -- Live viewer mode: hide cursor, enable game input so player can walk
+    if phoneVisualMode == 'live' then
+        SetNuiFocus(true, false)
+        SetNuiFocusKeepInput(true)
+        walkMode = true
+    elseif phoneVisualMode == 'text' and walkMode then
+        -- Returning from live to normal phone: restore cursor
+        walkMode = false
+        ApplyNuiFocus()
+    end
 end
 
 local function GetPhoneVisualMode()
@@ -212,6 +225,8 @@ local phoneKeybind = lib.addKeybind({
 })
 
 -- Toggle walk mode: Alt key switches between cursor mode and walk mode
+-- Disabled during live/camera modes (those manage their own focus)
+local walkToggleCooldown = 0
 lib.addKeybind({
     name = 'gcphone_walk_toggle',
     description = 'Telefono: alternar cursor/caminar',
@@ -219,6 +234,10 @@ lib.addKeybind({
     defaultKey = 'LMENU',
     onPressed = function()
         if not menuIsOpen then return end
+        if phoneVisualMode == 'live' or phoneVisualMode == 'camera' then return end
+        local now = GetGameTimer()
+        if now - walkToggleCooldown < 300 then return end
+        walkToggleCooldown = now
         walkMode = not walkMode
         ApplyNuiFocus()
     end,

@@ -87,6 +87,12 @@ end
 
 CreateThread(function()
     EnsureSnapTables()
+
+    local orphaned = MySQL.scalar.await('SELECT COUNT(*) FROM phone_snap_posts WHERE is_live = 1')
+    if orphaned and orphaned > 0 then
+        MySQL.update.await('DELETE FROM phone_snap_posts WHERE is_live = 1')
+        print(('[gcphone:snap] Cleaned up %d orphaned live posts from previous session'):format(orphaned))
+    end
 end)
 
 AddEventHandler('playerDropped', function()
@@ -100,7 +106,7 @@ AddEventHandler('playerDropped', function()
                 { liveId }
             )
             ActiveStreams[liveId] = nil
-            TriggerClientEvent('gcphone:snap:liveEnded', -1, liveId)
+                    TriggerClientEvent('gcphone:snap:liveEnded', -1, liveId)
         end
     end
 
@@ -119,12 +125,33 @@ local function GetLiveViewerCount(stream)
     return count
 end
 
+-- Send event only to viewers of a specific live (not all players)
+-- Uses lib.triggerClientEvent for single msgpack serialization across all targets
+local function TriggerLiveViewers(liveId, eventName, payload)
+    local stream = ActiveStreams[liveId]
+    if not stream or type(stream.viewers) ~= 'table' then return end
+
+    local targets = {}
+    for _, viewer in pairs(stream.viewers) do
+        if viewer.source then
+            targets[#targets + 1] = viewer.source
+        end
+    end
+    if stream.source then
+        targets[#targets + 1] = stream.source
+    end
+
+    if #targets > 0 then
+        lib.triggerClientEvent(eventName, targets, payload)
+    end
+end
+
 local function BroadcastLiveViewerCount(liveId)
     local stream = ActiveStreams[liveId]
     if not stream then return end
 
     local viewers = GetLiveViewerCount(stream)
-    TriggerClientEvent('gcphone:snap:liveViewersUpdated', -1, {
+    TriggerLiveViewers(liveId, 'gcphone:snap:liveViewersUpdated', {
         liveId = liveId,
         viewers = viewers,
     })
@@ -157,28 +184,28 @@ local function PushLiveChatMessage(liveId, stream, message)
         table.remove(stream.messages, 1)
     end
 
-    TriggerClientEvent('gcphone:snap:liveMessage', -1, {
+    TriggerLiveViewers(liveId, 'gcphone:snap:liveMessage', {
         liveId = liveId,
         message = message,
     })
 end
 
 local function BroadcastLiveReaction(liveId, reaction)
-    TriggerClientEvent('gcphone:snap:liveReaction', -1, {
+    TriggerLiveViewers(liveId, 'gcphone:snap:liveReaction', {
         liveId = liveId,
         reaction = reaction,
     })
 end
 
 local function BroadcastLiveMessageRemoved(liveId, messageId)
-    TriggerClientEvent('gcphone:snap:liveMessageRemoved', -1, {
+    TriggerLiveViewers(liveId, 'gcphone:snap:liveMessageRemoved', {
         liveId = liveId,
         messageId = messageId,
     })
 end
 
 local function BroadcastLiveUserMuted(liveId, username)
-    TriggerClientEvent('gcphone:snap:liveUserMuted', -1, {
+    TriggerLiveViewers(liveId, 'gcphone:snap:liveUserMuted', {
         liveId = liveId,
         username = username,
     })
@@ -866,21 +893,40 @@ end)
 
 lib.callback.register('gcphone:snap:startLive', function(source)
     local identifier = Bridge.GetIdentifier(source)
-    if not identifier then return false end
-    
+    if not identifier then
+        print('[gcphone:snap] startLive failed: no identifier for source ' .. tostring(source))
+        return false, 'NO_IDENTIFIER'
+    end
+
     local account = GetAccount(identifier)
-    if not account then return false end
+    if not account then
+        print('[gcphone:snap] startLive failed: no snap account for ' .. identifier)
+        return false, 'NO_ACCOUNT'
+    end
 
     local snapMs = GetRateLimitWindow('snap', 1500)
     if HitRateLimit(source, 'snap_live', snapMs, 1) then
         return false, 'RATE_LIMITED'
     end
-    
+
+    -- Check if player already has an active stream
+    for liveId, stream in pairs(ActiveStreams) do
+        if stream.identifier == identifier then
+            print('[gcphone:snap] startLive failed: player already has active stream #' .. tostring(liveId))
+            return false, 'ALREADY_STREAMING'
+        end
+    end
+
     local postId = MySQL.insert.await(
         'INSERT INTO phone_snap_posts (account_id, media_url, media_type, caption, is_live, live_viewers) VALUES (?, ?, ?, ?, 1, 0)',
-        { account.id, '', 'video', 'Live Stream', 1, 0 }
+        { account.id, '', 'video', 'Live Stream' }
     )
-    
+
+    if not postId then
+        print('[gcphone:snap] startLive failed: DB insert returned nil')
+        return false, 'DB_ERROR'
+    end
+
     ActiveStreams[postId] = {
         source = source,
         accountId = account.id,
@@ -891,16 +937,17 @@ lib.callback.register('gcphone:snap:startLive', function(source)
         mutedUsers = {},
         sequence = 0,
     }
-    
+
     local post = MySQL.single.await([[
         SELECT p.*, a.username, a.display_name, a.avatar
         FROM phone_snap_posts p
         JOIN phone_snap_accounts a ON p.account_id = a.id
         WHERE p.id = ?
     ]], { postId })
-    
+
     TriggerClientEvent('gcphone:snap:liveStarted', -1, post)
-    
+    print(('[gcphone:snap] Live #%d started by %s (%s)'):format(postId, account.username or '?', identifier))
+
     return true, { postId = postId, stream = ActiveStreams[postId] }
 end)
 
@@ -922,9 +969,9 @@ lib.callback.register('gcphone:snap:endLive', function(source, postId)
     )
     
     ActiveStreams[id] = nil
-    
+
     TriggerClientEvent('gcphone:snap:liveEnded', -1, id)
-    
+
     return true
 end)
 
@@ -985,6 +1032,49 @@ lib.callback.register('gcphone:snap:leaveLive', function(source, data)
 
     RemoveViewerFromAllLives(source)
     return true
+end)
+
+lib.callback.register('gcphone:snap:joinLiveChat', function(source, data)
+    local identifier = Bridge.GetIdentifier(source)
+    if not identifier then
+        print('[gcphone:snap] joinLiveChat failed: NO_IDENTIFIER')
+        return { success = false, error = 'NO_IDENTIFIER' }
+    end
+
+    local liveId = tonumber(type(data) == 'table' and data.liveId or nil)
+    if not liveId then
+        print(('[gcphone:snap] joinLiveChat failed: INVALID_LIVE, data=%s'):format(json.encode(data)))
+        return { success = false, error = 'INVALID_LIVE' }
+    end
+
+    local stream = ActiveStreams[liveId]
+    if not stream then
+        print(('[gcphone:snap] joinLiveChat failed: LIVE_NOT_FOUND liveId=%d, activeStreams=%s'):format(liveId, json.encode(ActiveStreams)))
+        return { success = false, error = 'LIVE_NOT_FOUND' }
+    end
+
+    stream.viewers[identifier] = { source = source, joinedAt = os.time() }
+    BroadcastLiveViewerCount(liveId)
+
+    return {
+        success = true,
+        viewers = GetLiveViewerCount(stream),
+        messages = GetLiveChatMessages(stream),
+    }
+end)
+
+lib.callback.register('gcphone:snap:leaveLiveChat', function(source, data)
+    local identifier = Bridge.GetIdentifier(source)
+    if not identifier then return end
+
+    local liveId = tonumber(type(data) == 'table' and data.liveId or nil)
+    if not liveId then return end
+
+    local stream = ActiveStreams[liveId]
+    if not stream then return end
+
+    stream.viewers[identifier] = nil
+    BroadcastLiveViewerCount(liveId)
 end)
 
 lib.callback.register('gcphone:snap:sendLiveMessage', function(source, data)
@@ -1487,4 +1577,6 @@ lib.callback.register('gcphone:snap:getProfile', function(source, data)
     }
 end)
 
-return {}
+return {
+    GetActiveStreams = function() return ActiveStreams end,
+}

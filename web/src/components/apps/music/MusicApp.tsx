@@ -97,6 +97,7 @@ export function MusicApp() {
   const [queueIndex, setQueueIndex] = createSignal(0);
   const [shuffleMode, setShuffleMode] = createSignal(false);
   const [repeatMode, setRepeatMode] = createSignal<'off' | 'all' | 'one'>('off');
+  const [addToPlaylistItem, setAddToPlaylistItem] = createSignal<SearchItem | null>(null);
 
   const stateLabel = createMemo(() => {
     if (isPaused()) return 'Pausado';
@@ -251,6 +252,9 @@ export function MusicApp() {
     setIsPaused(false);
     setStatus(t('music.broadcasting', language()));
     setBusyAction(false);
+    setResults([]);
+    setQuery('');
+    setSearchError('');
   };
 
   const playManual = async () => {
@@ -587,13 +591,7 @@ export function MusicApp() {
                   <div class={styles.trackTitle}>{item.title}</div>
                   <div class={styles.trackChannel}>{item.channel || t('music.channel_unnamed', language())}</div>
                 </div>
-                <Show when={playlists().length > 0}>
-                  <button class={styles.trackAddBtn} onClick={() => {
-                    const pl = playlists()[0];
-                    addTrackToPlaylist(pl.id, { url: `https://youtube.com/watch?v=${item.videoId}`, videoId: item.videoId, title: item.title, thumbnail: item.thumbnail });
-                    setStatus(`Agregado a "${pl.name}"`);
-                  }}>+</button>
-                </Show>
+                <button class={styles.trackAddBtn} onClick={() => setAddToPlaylistItem(item)}>+</button>
                 <div class={styles.trackPlayBtn} onClick={() => playFromResult(item)}>
                   <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
                 </div>
@@ -697,6 +695,47 @@ export function MusicApp() {
             </For>
           </div>
         </Show>
+      </Show>
+      {/* Add to Playlist Selector */}
+      <Show when={addToPlaylistItem()}>
+        <div class={styles.playlistSelector} onClick={() => setAddToPlaylistItem(null)}>
+          <div class={styles.playlistSelectorCard} onClick={(e) => e.stopPropagation()}>
+            <div class={styles.playlistSelectorTitle}>{t('music.add_to_playlist', language()) || 'Agregar a playlist'}</div>
+            <For each={playlists()}>
+              {(pl) => (
+                <button class={styles.playlistSelectorItem} onClick={() => {
+                  const item = addToPlaylistItem();
+                  if (item) {
+                    addTrackToPlaylist(pl.id, { url: `https://youtube.com/watch?v=${item.videoId}`, videoId: item.videoId, title: item.title, thumbnail: item.thumbnail });
+                    setStatus(`Agregado a "${pl.name}"`);
+                  }
+                  setAddToPlaylistItem(null);
+                }}>
+                  <span>{pl.name}</span>
+                  <small>{pl.tracks.length} {pl.tracks.length === 1 ? 'cancion' : 'canciones'}</small>
+                </button>
+              )}
+            </For>
+            <button class={styles.playlistSelectorNew} onClick={async () => {
+              const name = await uiPrompt(t('music.playlist_name', language()) || 'Nombre de la playlist:');
+              if (name && name.trim()) {
+                createPlaylist(name.trim());
+                const item = addToPlaylistItem();
+                const newPl = playlists().find(p => p.name === name.trim());
+                if (item && newPl) {
+                  addTrackToPlaylist(newPl.id, { url: `https://youtube.com/watch?v=${item.videoId}`, videoId: item.videoId, title: item.title, thumbnail: item.thumbnail });
+                  setStatus(`Agregado a "${newPl.name}"`);
+                }
+                setAddToPlaylistItem(null);
+              }
+            }}>
+              + {t('music.new_playlist', language()) || 'Nueva playlist'}
+            </button>
+            <button class={styles.playlistSelectorCancel} onClick={() => setAddToPlaylistItem(null)}>
+              {t('action.cancel', language()) || 'Cancelar'}
+            </button>
+          </div>
+        </div>
       </Show>
     </AppScaffold>
   );

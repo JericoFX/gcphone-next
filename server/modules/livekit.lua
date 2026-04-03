@@ -1,206 +1,308 @@
--- Creado/Modificado por JericoFX
+-- Native WebRTC Signaling Relay
+-- Relays SDP offer/answer and ICE candidates between peers via FiveM events.
+-- No external signaling server — everything goes through the FiveM server.
 
 local Bridge = require 'server.bridge'
 local Utils = require 'server.lib.utils'
 
-local PendingTokenRequests = {}
-local LastTokenRequestId = 0
-local REQUEST_TIMEOUT_MS = 7000
-local CLEANUP_INTERVAL_MS = 30000
-local CleanupTimer = nil
+local MAX_VIEWERS_PER_LIVE = 30
+local MAX_SIGNAL_SIZE = 8192
 
-local function NextRequestId()
-    LastTokenRequestId = LastTokenRequestId + 1
-    if LastTokenRequestId > 2147483000 then
-        LastTokenRequestId = 1
-    end
-    return LastTokenRequestId
-end
+-- ── Peer Session Registry ──
+local PeerSessions = {}       -- [source] = { sessionId, channel }
+local SessionToSource = {}    -- [sessionId] = source (reverse map for O(1) lookup)
 
-local function IsParticipantOfCall(callId, source)
+-- ── Helpers ──
+
+local function GetActiveCall(callId)
     local ok, calls = pcall(function()
         return exports[GetCurrentResourceName()]:GetActiveCalls()
     end)
-    if not ok or not calls then return false end
-    local call = calls[callId]
-    if not call then return false end
-    return source == call.transmitterSrc or source == call.receiverSrc
+    if not ok or not calls then return nil end
+    return calls[callId]
 end
 
-local function GetLiveKitHost()
-    local host = Utils.SafeString(GetConvar('livekit_host', ''), 240)
-    if not host then
-        return nil, 'MISSING_HOST'
+local function GetSnapActiveStreams()
+    local ok, mod = pcall(require, 'server.modules.snap')
+    if ok and mod and mod.GetActiveStreams then
+        return mod.GetActiveStreams()
     end
-
-    local lowered = string.lower(host)
-    if lowered:sub(1, 5) ~= 'ws://' and lowered:sub(1, 6) ~= 'wss://' then
-        return nil, 'INVALID_HOST_SCHEME'
-    end
-
-    return host
+    return nil
 end
 
-local function IsSnapLiveParticipant(liveId, source)
+local function IsSnapLiveOwner(liveId, source)
+    local streams = GetSnapActiveStreams()
+    if not streams then return false end
+    local stream = streams[liveId]
+    return stream and stream.source == source
+end
+
+local function IsSnapLiveViewer(liveId, source)
+    local streams = GetSnapActiveStreams()
+    if not streams then return false end
+    local stream = streams[liveId]
+    if not stream or not stream.viewers then return false end
     local identifier = Bridge.GetIdentifier(source)
-    if not identifier then return false, false end
-
-    local stream = MySQL.single.await([[
-        SELECT p.account_id, a.identifier
-        FROM phone_snap_posts p
-        JOIN phone_snap_accounts a ON a.id = p.account_id
-        WHERE p.id = ? AND p.is_live = 1
-        LIMIT 1
-    ]], { liveId })
-
-    if not stream then
-        return false, false
-    end
-
-    local isOwner = stream.identifier == identifier
-    return true, isOwner
+    if not identifier then return false end
+    return stream.viewers[identifier] ~= nil
 end
 
-local function CleanupExpiredRequests()
-    local now = GetGameTimer()
-    for id, data in pairs(PendingTokenRequests) do
-        if now - data.createdAt > REQUEST_TIMEOUT_MS then
-            data.p:resolve({ ok = false, error = 'TOKEN_TIMEOUT' })
-            PendingTokenRequests[id] = nil
-        end
-    end
+local function IsNewsLiveBroadcaster(articleId, source)
+    local identifier = Bridge.GetIdentifier(source)
+    if not identifier then return false end
+    local article = MySQL.single.await(
+        'SELECT author_id FROM phone_news_articles WHERE id = ? AND is_live = 1 LIMIT 1',
+        { articleId }
+    )
+    if not article then return false end
+    local account = MySQL.single.await(
+        'SELECT id FROM phone_news_accounts WHERE identifier = ? LIMIT 1',
+        { identifier }
+    )
+    return account and account.id == article.author_id
 end
 
-CleanupTimer = lib.timer(CLEANUP_INTERVAL_MS, function()
-    CleanupExpiredRequests()
-    CleanupTimer:restart()
-end, true)
+local function IsNewsLiveActive(articleId)
+    local article = MySQL.single.await(
+        'SELECT id FROM phone_news_articles WHERE id = ? AND is_live = 1 LIMIT 1',
+        { articleId }
+    )
+    return article ~= nil
+end
 
-AddEventHandler('gcphone:livekit:tokenResponse', function(requestId, token, errorCode)
-    local id = tonumber(requestId)
-    if not id then return end
-    local data = PendingTokenRequests[id]
-    if not data then return end
-    PendingTokenRequests[id] = nil
-
-    if type(token) == 'string' and token ~= '' then
-        data.p:resolve({ ok = true, token = token })
-        return
+local function ClearSession(source)
+    local old = PeerSessions[source]
+    if old and old.sessionId then
+        SessionToSource[old.sessionId] = nil
     end
+    PeerSessions[source] = nil
+end
 
-    data.p:resolve({ ok = false, error = type(errorCode) == 'string' and errorCode or 'TOKEN_ERROR' })
+-- ── Session Registration ──
+
+lib.callback.register('gcphone:peer:register', function(source, data)
+    if type(data) ~= 'table' then return { success = false } end
+    if Utils.HitRateLimit(source, 'peer_register', 2000, 3) then return { success = false } end
+
+    local peerSessionId = Utils.SafeString(data.sessionId, 64)
+    local channel = Utils.SafeString(data.channel, 80)
+    if not peerSessionId or not channel then return { success = false } end
+
+    ClearSession(source)
+
+    PeerSessions[source] = { sessionId = peerSessionId, channel = channel }
+    SessionToSource[peerSessionId] = source
+
+    return { success = true }
 end)
 
-lib.callback.register('gcphone:livekit:getToken', function(source, data)
-    if Config.LiveKit and Config.LiveKit.Enabled == false then
-        return { success = false, error = 'LIVEKIT_DISABLED' }
+-- ── Video Call Peer Relay ──
+
+lib.callback.register('gcphone:peer:videoReady', function(source, data)
+    if type(data) ~= 'table' then return { success = false } end
+    if Utils.HitRateLimit(source, 'peer_video', 2000, 2) then return { success = false } end
+
+    local callId = tonumber(data.callId)
+    local peerSessionId = Utils.SafeString(data.sessionId, 64)
+    if not callId or not peerSessionId then return { success = false } end
+
+    local call = GetActiveCall(callId)
+    if not call then return { success = false } end
+
+    local otherSource = nil
+    if source == call.transmitterSrc then
+        otherSource = call.receiverSrc
+    elseif source == call.receiverSrc then
+        otherSource = call.transmitterSrc
     end
+    if not otherSource then return { success = false } end
 
-    local livekitMs = Utils.GetRateLimitWindow('livekit_token', 1500)
-    if Utils.HitRateLimit(source, 'livekit_token', livekitMs, 2) then
-        return { success = false, error = 'RATE_LIMITED' }
-    end
+    TriggerClientEvent('gcphone:peer:videoConnected', otherSource, { sessionId = peerSessionId })
+    return { success = true }
+end)
 
-    local identifier = Bridge.GetIdentifier(source)
-    if not identifier then
-        return { success = false, error = 'INVALID_SOURCE' }
-    end
+-- ── Snap Live Peer Relay ──
 
-    local roomName = Utils.SafeString(type(data) == 'table' and data.roomName or nil, 80)
-    if not roomName then
-        return { success = false, error = 'INVALID_ROOM' }
-    end
+local SnapLivePeers = {}
 
-    local grants = {
-        canPublish = not (type(data) == 'table' and data.publish == false),
-        canSubscribe = true,
-        canPublishData = true,
-    }
+lib.callback.register('gcphone:peer:snapLiveReady', function(source, data)
+    if type(data) ~= 'table' then return { success = false } end
+    if Utils.HitRateLimit(source, 'peer_snap_live', 2000, 3) then return { success = false } end
 
-    local callId = roomName:match('^call%-(%d+)$')
-    if callId then
-        callId = tonumber(callId)
-        if not callId then
-            return { success = false, error = 'INVALID_CALL_ID' }
-        end
+    local liveId = tonumber(data.liveId)
+    local peerSessionId = Utils.SafeString(data.sessionId, 64)
+    if not liveId or not peerSessionId then return { success = false } end
 
-        if not IsParticipantOfCall(callId, source) then
-            return { success = false, error = 'NOT_CALL_PARTICIPANT' }
+    local isOwner = IsSnapLiveOwner(liveId, source)
+
+    if isOwner then
+        SnapLivePeers[liveId] = SnapLivePeers[liveId] or { viewers = {} }
+        SnapLivePeers[liveId].ownerSessionId = peerSessionId
+        SnapLivePeers[liveId].ownerSource = source
+
+        for viewerSource, viewerData in pairs(SnapLivePeers[liveId].viewers) do
+            TriggerClientEvent('gcphone:peer:snapLiveConnected', viewerSource, { sessionId = peerSessionId })
+            TriggerClientEvent('gcphone:peer:snapLiveConnected', source, { sessionId = viewerData.sessionId })
         end
     else
-        local radioId = roomName:match('^radio%-(%d+)$')
-        if radioId then
-            radioId = tonumber(radioId)
-            if not radioId then
-                return { success = false, error = 'INVALID_RADIO_ID' }
-            end
+        if not IsSnapLiveViewer(liveId, source) then
+            return { success = false, error = 'NOT_VIEWER' }
+        end
 
-            -- Radio room: canPublish is determined by the request (host=true, listener=false)
-            -- The radio module validates host/listener status independently
-            grants.canPublish = grants.canPublish
-        else
-            local liveId = roomName:match('^snaplive%-(%d+)$')
-            if not liveId then
-                return { success = false, error = 'INVALID_ROOM_FORMAT' }
-            end
+        SnapLivePeers[liveId] = SnapLivePeers[liveId] or { viewers = {} }
 
-            liveId = tonumber(liveId)
-            if not liveId then
-                return { success = false, error = 'INVALID_LIVE_ID' }
-            end
+        local viewerCount = 0
+        for _ in pairs(SnapLivePeers[liveId].viewers) do viewerCount = viewerCount + 1 end
+        if viewerCount >= MAX_VIEWERS_PER_LIVE then
+            return { success = false, error = 'MAX_VIEWERS' }
+        end
 
-            local valid, isOwner = IsSnapLiveParticipant(liveId, source)
-            if not valid then
-                return { success = false, error = 'NOT_LIVE_PARTICIPANT' }
-            end
+        SnapLivePeers[liveId].viewers[source] = { sessionId = peerSessionId }
 
-            grants.canPublish = isOwner
+        if SnapLivePeers[liveId].ownerSessionId then
+            TriggerClientEvent('gcphone:peer:snapLiveConnected', source, { sessionId = SnapLivePeers[liveId].ownerSessionId })
+        end
+        if SnapLivePeers[liveId].ownerSource then
+            TriggerClientEvent('gcphone:peer:snapLiveConnected', SnapLivePeers[liveId].ownerSource, { sessionId = peerSessionId })
         end
     end
 
-    local identity = Utils.SafeString('player:' .. tostring(identifier), 64)
-    local participantName = Utils.SafeString(Bridge.GetName(source) or ('player-' .. tostring(source)), 64)
-    local configuredDuration = tonumber(Config.LiveKit and Config.LiveKit.MaxCallDurationSeconds) or 300
-    if configuredDuration < 30 then configuredDuration = 30 end
-    if configuredDuration > 3600 then configuredDuration = 3600 end
+    return { success = true }
+end)
 
-    local requestedDuration = tonumber(data and data.maxDuration) or configuredDuration
-    if requestedDuration < 30 then requestedDuration = 30 end
-    if requestedDuration > configuredDuration then requestedDuration = configuredDuration end
-    local maxDuration = math.floor(requestedDuration)
+local function CleanupSnapLivePeer(liveId)
+    SnapLivePeers[liveId] = nil
+end
 
-    local host, hostError = GetLiveKitHost()
-    if not host then
-        return { success = false, error = hostError or 'MISSING_HOST' }
+-- ── News Live Peer Relay ──
+
+local NewsLivePeers = {}
+
+lib.callback.register('gcphone:peer:newsLiveReady', function(source, data)
+    if type(data) ~= 'table' then return { success = false } end
+    if Utils.HitRateLimit(source, 'peer_news_live', 2000, 3) then return { success = false } end
+
+    local articleId = tonumber(data.articleId)
+    local peerSessionId = Utils.SafeString(data.sessionId, 64)
+    if not articleId or not peerSessionId then return { success = false } end
+
+    local isBroadcaster = IsNewsLiveBroadcaster(articleId, source)
+
+    if isBroadcaster then
+        NewsLivePeers[articleId] = NewsLivePeers[articleId] or { viewers = {} }
+        NewsLivePeers[articleId].broadcasterSessionId = peerSessionId
+        NewsLivePeers[articleId].broadcasterSource = source
+
+        for viewerSource, viewerData in pairs(NewsLivePeers[articleId].viewers) do
+            TriggerClientEvent('gcphone:peer:newsLiveConnected', viewerSource, { sessionId = peerSessionId })
+            TriggerClientEvent('gcphone:peer:newsLiveConnected', source, { sessionId = viewerData.sessionId })
+        end
+    else
+        if not IsNewsLiveActive(articleId) then
+            return { success = false, error = 'NOT_LIVE' }
+        end
+
+        NewsLivePeers[articleId] = NewsLivePeers[articleId] or { viewers = {} }
+
+        local viewerCount = 0
+        for _ in pairs(NewsLivePeers[articleId].viewers) do viewerCount = viewerCount + 1 end
+        if viewerCount >= MAX_VIEWERS_PER_LIVE then
+            return { success = false, error = 'MAX_VIEWERS' }
+        end
+
+        NewsLivePeers[articleId].viewers[source] = { sessionId = peerSessionId }
+
+        if NewsLivePeers[articleId].broadcasterSessionId then
+            TriggerClientEvent('gcphone:peer:newsLiveConnected', source, { sessionId = NewsLivePeers[articleId].broadcasterSessionId })
+        end
+        if NewsLivePeers[articleId].broadcasterSource then
+            TriggerClientEvent('gcphone:peer:newsLiveConnected', NewsLivePeers[articleId].broadcasterSource, { sessionId = peerSessionId })
+        end
     end
 
-    local requestId = NextRequestId()
-    local p = promise.new()
-    PendingTokenRequests[requestId] = {
-        p = p,
-        createdAt = GetGameTimer(),
-    }
+    return { success = true }
+end)
 
-    TriggerEvent('gcphone:livekit:requestToken', source, requestId, roomName, identity, participantName, grants, maxDuration)
+local function CleanupNewsLivePeer(articleId)
+    NewsLivePeers[articleId] = nil
+end
 
-    local result = Citizen.Await(p)
-    if type(result) == 'table' and result.ok then
-        return {
-            success = true,
-            url = host,
-            token = result.token,
-            roomName = roomName,
-            identity = identity,
-            maxDuration = maxDuration,
-        }
+-- ── WebRTC Signal Relay ──
+
+lib.callback.register('gcphone:peer:signal', function(source, data)
+    if type(data) ~= 'table' then return { success = false } end
+    if Utils.HitRateLimit(source, 'peer_signal', 500, 60) then return { success = false } end
+
+    local targetPeerId = Utils.SafeString(data.targetPeerId, 64)
+    local signalType = Utils.SafeString(data.type, 16)
+    local signalData = Utils.SafeString(data.data, MAX_SIGNAL_SIZE)
+    local fromPeerId = Utils.SafeString(data.fromPeerId, 64)
+    local channel = Utils.SafeString(data.channel, 80)
+
+    if not targetPeerId or not signalType or not signalData or not fromPeerId or not channel then
+        return { success = false }
     end
 
-    return { success = false, error = result and result.error or 'TOKEN_ERROR' }
+    if signalType ~= 'offer' and signalType ~= 'answer' and signalType ~= 'candidate' then
+        return { success = false }
+    end
+
+    local senderSession = PeerSessions[source]
+    if not senderSession or senderSession.sessionId ~= fromPeerId then
+        return { success = false, error = 'SESSION_MISMATCH' }
+    end
+
+    local targetSource = SessionToSource[targetPeerId]
+    if not targetSource then
+        return { success = false, error = 'TARGET_NOT_FOUND' }
+    end
+
+    local targetSession = PeerSessions[targetSource]
+    if not targetSession or targetSession.channel ~= senderSession.channel then
+        return { success = false, error = 'CHANNEL_MISMATCH' }
+    end
+
+    TriggerClientEvent('gcphone:peer:signal', targetSource, {
+        type = signalType,
+        data = signalData,
+        fromPeerId = fromPeerId,
+        channel = channel,
+    })
+
+    return { success = true }
+end)
+
+-- ── Cleanup ──
+
+AddEventHandler('playerDropped', function()
+    local src = source
+    ClearSession(src)
+
+    for liveId, data in pairs(SnapLivePeers) do
+        if data.ownerSource == src then
+            CleanupSnapLivePeer(liveId)
+        elseif data.viewers then
+            data.viewers[src] = nil
+        end
+    end
+    for articleId, data in pairs(NewsLivePeers) do
+        if data.broadcasterSource == src then
+            CleanupNewsLivePeer(articleId)
+        elseif data.viewers then
+            data.viewers[src] = nil
+        end
+    end
 end)
 
 AddEventHandler('onResourceStop', function(resourceName)
-    if resourceName ~= cache.resource or not CleanupTimer then return end
-    CleanupTimer:forceEnd(false)
+    if resourceName ~= cache.resource then return end
+    PeerSessions = {}
+    SessionToSource = {}
+    SnapLivePeers = {}
+    NewsLivePeers = {}
 end)
 
-return {}
+return {
+    CleanupSnapLivePeer = CleanupSnapLivePeer,
+    CleanupNewsLivePeer = CleanupNewsLivePeer,
+}

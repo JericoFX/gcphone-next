@@ -261,7 +261,7 @@ end)
 
 lib.callback.register('gcphone:news:getLiveNews', function(source)
     local rows = MySQL.query.await(
-        'SELECT * FROM phone_news WHERE is_live = 1 ORDER BY created_at DESC'
+        'SELECT id, title, content, category, author_id, author_name, author_avatar, media_url, is_live, live_viewers, created_at FROM phone_news WHERE is_live = 1 ORDER BY created_at DESC LIMIT 20'
     ) or {}
 
     local active = {}

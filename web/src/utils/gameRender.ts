@@ -29,13 +29,16 @@ uniform float u_temperature;
 uniform float u_vignette;
 uniform int u_effect;
 uniform vec2 u_resolution;
+uniform float u_zoom;
 
 void main() {
+  vec2 uv = (v_uv - 0.5) / u_zoom + 0.5;
+  uv = clamp(uv, 0.0, 1.0);
   vec2 texel = u_blur * 3.0 / u_resolution;
   vec4 color = vec4(0.0);
   for (int x = -1; x <= 1; x++) {
     for (int y = -1; y <= 1; y++) {
-      color += texture2D(external_texture, v_uv + vec2(float(x), float(y)) * texel);
+      color += texture2D(external_texture, uv + vec2(float(x), float(y)) * texel);
     }
   }
   color /= 9.0;
@@ -59,7 +62,7 @@ void main() {
     color.rgb = mix(color.rgb, color.rgb * vec3(1.15, 1.05, 0.85), 0.5);
   }
 
-  float dist = distance(v_uv, vec2(0.5));
+  float dist = distance(uv, vec2(0.5));
   color.rgb *= 1.0 - u_vignette * smoothstep(0.3, 0.85, dist);
 
   color.rgb = clamp(color.rgb, 0.0, 1.0);
@@ -143,6 +146,7 @@ function compileProgram(gl: WebGLRenderingContext) {
     uVignette: gl.getUniformLocation(program, 'u_vignette'),
     uEffect: gl.getUniformLocation(program, 'u_effect'),
     uResolution: gl.getUniformLocation(program, 'u_resolution'),
+    uZoom: gl.getUniformLocation(program, 'u_zoom'),
   };
 }
 
@@ -163,6 +167,7 @@ export interface GameView {
   setTemperature: (value: number) => void;
   setVignette: (value: number) => void;
   setEffect: (effectId: number) => void;
+  setZoom: (value: number) => void;
   startRecording: (onComplete: (blob: Blob, durationMs: number) => void, fps?: number) => Promise<void>;
   stopRecording: () => void;
   recording: () => boolean;
@@ -192,7 +197,7 @@ export function createGameView(canvas: HTMLCanvasElement): GameView {
 
   // Setup
   const tex = createTexture(gl);
-  const { program, vloc, tloc, uBlur, uBrightness, uContrast, uSaturation, uTemperature, uVignette, uEffect, uResolution } = compileProgram(gl);
+  const { program, vloc, tloc, uBlur, uBrightness, uContrast, uSaturation, uTemperature, uVignette, uEffect, uResolution, uZoom } = compileProgram(gl);
   const { vertexBuff, texBuff } = createBuffers(gl);
 
   gl.useProgram(program);
@@ -207,6 +212,7 @@ export function createGameView(canvas: HTMLCanvasElement): GameView {
   gl.uniform1f(uTemperature, 0.0);
   gl.uniform1f(uVignette, 0.0);
   gl.uniform1i(uEffect, 0);
+  gl.uniform1f(uZoom, 1.0);
 
   // Attributes
   gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuff);
@@ -332,6 +338,10 @@ export function createGameView(canvas: HTMLCanvasElement): GameView {
 
     setEffect(effectId: number) {
       gl.uniform1i(uEffect, effectId);
+    },
+
+    setZoom(value: number) {
+      gl.uniform1f(uZoom, Math.max(1, Math.min(5, value)));
     },
 
     // ── Video recording ──

@@ -1,6 +1,6 @@
 import { createMemo, createSelector, createSignal, For, Show, createEffect, onCleanup, onMount } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
-import { joinWaveDM, leaveWaveDM, sendWaveDM, sendWaveDMTyping, markWaveDMRead, getWaveDMConversations, deleteWaveDMConversation } from '../../../utils/socket';
+import { sendWaveDM, sendWaveDMTyping, markWaveDMRead, getWaveDMConversations, deleteWaveDMConversation, getWaveDMHistory, sendWaveMessage, sendWaveTyping, connectWaveChat, disconnectWaveChat } from '../../../utils/chatBridge';
 import { useContacts } from '../../../store/contacts';
 import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { useContextMenu } from '../../../hooks/useContextMenu';
@@ -11,10 +11,8 @@ import { useNuiCustomEvent } from '../../../utils/useNui';
 import { generateColorForString, timeAgo } from '../../../utils/misc';
 import { resolveMediaType, sanitizeMediaUrl, sanitizePhone, sanitizeText } from '../../../utils/sanitize';
 import { parseSharedContactMessage } from '../../../utils/contactShare';
-import { fetchSocketToken } from '../../../utils/realtimeAuth';
 import { uiPrompt } from '../../../utils/uiDialog';
 import { uiAlert } from '../../../utils/uiAlert';
-import { connectWaveSocket, disconnectWaveSocket, isWaveSocketConnected, joinWaveRoom, sendWaveMessage, sendWaveTyping, type WaveSocketMessage } from '../../../utils/socket';
 import { usePhone } from '../../../store/phone';
 import { ActionSheet } from '../../shared/ui/ActionSheet';
 import { EmptyState } from '../../shared/ui/EmptyState';
@@ -33,7 +31,7 @@ import { WaveChatConversationView } from './WaveChatConversationView';
 import { WaveChatStatusTab } from './WaveChatStatusTab';
 import { WaveChatCallsTab } from './WaveChatCallsTab';
 import { WaveChatGroupsTab } from './WaveChatGroupsTab';
-import type { GifResult, WaveChatGroup, WaveChatInvite, WaveChatGroupMessage, WaveStatus, WaveStatusMediaConfig, WaveSocketAuth, WaveChatDMMessage, WaveChatDMConversation } from './WaveChatTypes';
+import type { GifResult, WaveChatGroup, WaveChatInvite, WaveChatGroupMessage, WaveStatus, WaveStatusMediaConfig, WaveChatDMMessage, WaveChatDMConversation } from './WaveChatTypes';
 import styles from './WaveChatApp.module.scss';
 
 export function WaveChatApp() {
@@ -75,7 +73,6 @@ export function WaveChatApp() {
   const [groupNameDraft, setGroupNameDraft] = createSignal('');
   const [groupContactSearch, setGroupContactSearch] = createSignal('');
   const [groupMemberDraft, setGroupMemberDraft] = createSignal<string[]>([]);
-  const [socketReady, setSocketReady] = createSignal(false);
   const [groupTyping, setGroupTyping] = createSignal<Record<number, string[]>>({});
   const [dmConversations, setDmConversations] = createSignal<WaveChatDMConversation[]>([]);
   const [dmMessages, setDmMessages] = createSignal<Record<string, WaveChatDMMessage[]>>({});
@@ -148,132 +145,13 @@ export function WaveChatApp() {
 
   const loadDmConversations = async () => {
     const result = await getWaveDMConversations();
-    if (result?.success && result.conversations) {
-      setDmConversations(result.conversations as WaveChatDMConversation[]);
+    if (result?.length) {
+      setDmConversations(result as unknown as WaveChatDMConversation[]);
     }
   };
 
-  const reconnectWaveRealtime = async () => {
-    disconnectWaveSocket();
-
-    const auth = await fetchSocketToken() as WaveSocketAuth | undefined;
-    if (!auth?.success || !auth.host || !auth.token) {
-      setSocketReady(false);
-      return false;
-    }
-
-    connectWaveSocket(auth.host, auth.token, {
-      onMessage: (payload: WaveSocketMessage) => {
-        const groupId = Number(payload.roomId);
-        if (!Number.isFinite(groupId)) return;
-        const mapped: WaveChatGroupMessage = {
-          id: payload.id,
-          group_id: groupId,
-          sender_number: payload.senderPhone,
-          message: payload.content,
-          media_url: payload.mediaUrl,
-          created_at: new Date(payload.createdAt).toISOString(),
-        };
-
-        setGroupMessages((prev) => {
-          const current = prev[groupId] || [];
-          if (current.some((m) => m.id === mapped.id)) return prev;
-          return { ...prev, [groupId]: [...current, mapped] };
-        });
-      },
-      onTyping: (payload) => {
-        const groupId = Number(payload.roomId);
-        if (!Number.isFinite(groupId)) return;
-
-        setGroupTyping((prev) => {
-          const current = prev[groupId] || [];
-          if (payload.typing) {
-            if (current.includes(payload.phone)) return prev;
-            return { ...prev, [groupId]: [...current, payload.phone] };
-          }
-          return { ...prev, [groupId]: current.filter((x) => x !== payload.phone) };
-        });
-
-        const timerKey = `${groupId}:${payload.phone}`;
-        const prevTimer = typingTimers.get(timerKey);
-        if (prevTimer) window.clearTimeout(prevTimer);
-
-        if (payload.typing) {
-          const timer = window.setTimeout(() => {
-            setGroupTyping((prev) => {
-              const current = prev[groupId] || [];
-              return { ...prev, [groupId]: current.filter((x) => x !== payload.phone) };
-            });
-            typingTimers.delete(timerKey);
-          }, 1600);
-          typingTimers.set(timerKey, timer);
-        } else {
-          typingTimers.delete(timerKey);
-        }
-      },
-      onDmMessage: (msg: WaveChatDMMessage) => {
-        if (!msg?.sender || !msg?.receiver) return;
-        const otherPhone = msg.sender === myNumber() ? msg.receiver : msg.sender;
-
-        setDmMessages((prev) => {
-          const current = prev[otherPhone] || [];
-          if (current.some((m) => m.id === msg.id)) return prev;
-          return { ...prev, [otherPhone]: [...current, msg] };
-        });
-
-        setDmConversations((prev) => {
-          const existing = prev.find((c) => c.number === otherPhone);
-          const updated: WaveChatDMConversation = {
-            number: otherPhone,
-            last_message: msg.message || '',
-            last_media_url: msg.mediaUrl || msg.media_url,
-            last_time: typeof msg.createdAt === 'number' ? new Date(msg.createdAt).toISOString() : (msg.created_at || new Date().toISOString()),
-            is_read: msg.sender === myNumber() ? 1 : 0,
-            sender: msg.sender,
-            unread: (existing?.unread || 0) + (msg.sender !== myNumber() && selectedConversation() !== otherPhone ? 1 : 0),
-          };
-          const filtered = prev.filter((c) => c.number !== otherPhone);
-          return [updated, ...filtered];
-        });
-      },
-      onDmTyping: (payload: { phone: string; typing: boolean }) => {
-        if (!payload?.phone) return;
-        setDmTyping((prev) => ({ ...prev, [payload.phone]: payload.typing }));
-
-        if (payload.typing) {
-          const timerKey = `dm-typing:${payload.phone}`;
-          const prevTimer = typingTimers.get(timerKey);
-          if (prevTimer) window.clearTimeout(prevTimer);
-          const timer = window.setTimeout(() => {
-            setDmTyping((prev) => ({ ...prev, [payload.phone]: false }));
-            typingTimers.delete(timerKey);
-          }, 1600);
-          typingTimers.set(timerKey, timer);
-        }
-      },
-      onDisconnect: () => setSocketReady(false),
-      onReconnect: () => {
-        setSocketReady(true);
-        syncWaveRooms();
-        void loadDmConversations();
-      },
-      onReconnectFailed: () => {
-        setSocketReady(false);
-      },
-    });
-
-    setSocketReady(true);
-    syncWaveRooms();
-    return true;
-  };
-
-  const syncWaveRooms = () => {
-    if (!socketReady() || !isWaveSocketConnected()) return;
-    for (const group of groups()) {
-      if (group?.id) {
-        joinWaveRoom(String(group.id));
-      }
-    }
+  const initWaveChat = () => {
+    connectWaveChat();
   };
 
   const loadGroupMessages = async (groupId: number) => {
@@ -306,7 +184,6 @@ export function WaveChatApp() {
     if (result?.success) {
       await loadGroups();
       await loadGroupInvites();
-      await reconnectWaveRealtime();
       if (result.groupId) {
         setSelectedGroupId(result.groupId);
         await loadGroupMessages(result.groupId);
@@ -321,7 +198,6 @@ export function WaveChatApp() {
 
     await loadGroupInvites();
     await loadGroups();
-    await reconnectWaveRealtime();
 
     if (accept && result.payload?.groupId) {
       setSelectedGroupId(result.payload.groupId);
@@ -334,14 +210,9 @@ export function WaveChatApp() {
     const content = sanitizeText(groupMessageInput(), 800);
     if (!groupId || !content) return;
 
-    const result = socketReady() && isWaveSocketConnected()
-      ? await sendWaveMessage(String(groupId), content)
-      : await fetchNui<{ success?: boolean; message?: WaveChatGroupMessage }>('wavechatSendGroupMessage', { groupId, message: content }, { success: false });
-
-    if (result?.success) {
-      setGroupMessageInput('');
-      sendWaveTyping(String(groupId), false);
-    }
+    await sendWaveMessage(String(groupId), content);
+    setGroupMessageInput('');
+    sendWaveTyping(String(groupId), false);
   };
 
   const isSelectedConversationIndex = createSelector(selectedIndex);
@@ -422,8 +293,6 @@ export function WaveChatApp() {
     },
     Backspace: () => {
       if (selectedConversation()) {
-        const num = selectedConversation();
-        if (num) leaveWaveDM(num);
         setSelectedConversation(null);
         setRouteConversationName('');
         return;
@@ -437,7 +306,8 @@ export function WaveChatApp() {
     void loadGroups();
     void loadGroupInvites();
     void loadStatuses();
-    void reconnectWaveRealtime().then(() => void loadDmConversations());
+    initWaveChat();
+    void loadDmConversations();
   });
 
   createEffect(() => {
@@ -446,27 +316,110 @@ export function WaveChatApp() {
     void loadGroupMessages(groupId);
   });
 
-  createEffect(() => {
-    groups();
-    if (!socketReady() || !isWaveSocketConnected()) return;
-    syncWaveRooms();
-  });
-
   useNuiCustomEvent<WaveChatGroupMessage>('wavechatGroupMessage', (message) => {
     if (!message || !message.group_id) return;
     setGroupMessages((prev) => {
       const current = prev[message.group_id] || [];
+      if (current.some((m) => m.id === message.id)) return prev;
       return { ...prev, [message.group_id]: [...current, message] };
     });
+  });
+
+  useNuiCustomEvent<{ roomId: string; phone: string; typing: boolean }>('wavechatGroupTyping', (payload) => {
+    if (!payload) return;
+    const groupId = Number(payload.roomId);
+    if (!Number.isFinite(groupId)) return;
+
+    setGroupTyping((prev) => {
+      const current = prev[groupId] || [];
+      if (payload.typing) {
+        if (current.includes(payload.phone)) return prev;
+        return { ...prev, [groupId]: [...current, payload.phone] };
+      }
+      return { ...prev, [groupId]: current.filter((x) => x !== payload.phone) };
+    });
+
+    const timerKey = `${groupId}:${payload.phone}`;
+    const prevTimer = typingTimers.get(timerKey);
+    if (prevTimer) window.clearTimeout(prevTimer);
+
+    if (payload.typing) {
+      const timer = window.setTimeout(() => {
+        setGroupTyping((prev) => {
+          const current = prev[groupId] || [];
+          return { ...prev, [groupId]: current.filter((x) => x !== payload.phone) };
+        });
+        typingTimers.delete(timerKey);
+      }, 1600);
+      typingTimers.set(timerKey, timer);
+    } else {
+      typingTimers.delete(timerKey);
+    }
+  });
+
+  useNuiCustomEvent<WaveChatDMMessage>('wavechatDmMessage', (msg) => {
+    if (!msg?.sender || !msg?.receiver) return;
+    const otherPhone = msg.sender === myNumber() ? msg.receiver : msg.sender;
+
+    setDmMessages((prev) => {
+      const current = prev[otherPhone] || [];
+      if (current.some((m) => m.id === msg.id)) return prev;
+      return { ...prev, [otherPhone]: [...current, msg] };
+    });
+
+    setDmConversations((prev) => {
+      const existing = prev.find((c) => c.number === otherPhone);
+      const updated: WaveChatDMConversation = {
+        number: otherPhone,
+        last_message: msg.message || '',
+        last_media_url: msg.mediaUrl || msg.media_url,
+        last_time: typeof msg.createdAt === 'number' ? new Date(msg.createdAt).toISOString() : (msg.created_at || new Date().toISOString()),
+        is_read: msg.sender === myNumber() ? 1 : 0,
+        sender: msg.sender,
+        unread: (existing?.unread || 0) + (msg.sender !== myNumber() && selectedConversation() !== otherPhone ? 1 : 0),
+      };
+      const filtered = prev.filter((c) => c.number !== otherPhone);
+      return [updated, ...filtered];
+    });
+  });
+
+  useNuiCustomEvent<{ messageId: number; phone: string }>('wavechatDmMessageDeleted', (payload) => {
+    if (!payload?.messageId) return;
+    const msgId = Number(payload.messageId);
+    setDmMessages((prev) => {
+      const next: typeof prev = {};
+      for (const [phone, msgs] of Object.entries(prev)) {
+        next[phone] = msgs.map((m) =>
+          Number(m.id) === msgId ? { ...m, message: '', media_url: null, audio_data: null, deleted_at: new Date().toISOString() } : m,
+        );
+      }
+      return next;
+    });
+  });
+
+  useNuiCustomEvent<{ phone: string; typing: boolean }>('wavechatDmTyping', (payload) => {
+    if (!payload?.phone) return;
+    setDmTyping((prev) => ({ ...prev, [payload.phone]: payload.typing }));
+
+    if (payload.typing) {
+      const timerKey = `dm-typing:${payload.phone}`;
+      const prevTimer = typingTimers.get(timerKey);
+      if (prevTimer) window.clearTimeout(prevTimer);
+      const timer = window.setTimeout(() => {
+        setDmTyping((prev) => ({ ...prev, [payload.phone]: false }));
+        typingTimers.delete(timerKey);
+      }, 1600);
+      typingTimers.set(timerKey, timer);
+    }
   });
 
   const openConversation = async (number: string, display?: string) => {
     setSelectedConversation(number);
     setRouteConversationName(sanitizeText(display, 80));
 
-    const result = await joinWaveDM(number);
-    if (result?.success && result.messages) {
-      setDmMessages((prev) => ({ ...prev, [number]: result.messages as WaveChatDMMessage[] }));
+    const messages = await getWaveDMHistory(number);
+    if (messages?.length) {
+      setDmMessages((prev) => ({ ...prev, [number]: messages as unknown as WaveChatDMMessage[] }));
     }
 
     void markWaveDMRead(number);
@@ -474,7 +427,7 @@ export function WaveChatApp() {
   };
 
   const deleteConversation = async (number: string) => {
-    const result = await deleteWaveDMConversation(number);
+    const result = await deleteWaveDMConversation(number) as { success?: boolean } | undefined;
     if (result?.success) {
       setDmConversations((prev) => prev.filter((c) => c.number !== number));
       setDmMessages((prev) => {
@@ -483,8 +436,6 @@ export function WaveChatApp() {
         return next;
       });
       if (selectedConversation() === number) {
-        const num = selectedConversation();
-        if (num) leaveWaveDM(num);
         setSelectedConversation(null);
         setRouteConversationName('');
       }
@@ -497,11 +448,9 @@ export function WaveChatApp() {
     const media = sanitizeMediaUrl(attachmentUrl());
     if (!number || (!content && !media)) return;
 
-    const result = await sendWaveDM(number, content, media || undefined);
-    if (result?.success) {
-      setMessageInput('');
-      setAttachmentUrl(null);
-    }
+    await sendWaveDM(number, content, media || undefined);
+    setMessageInput('');
+    setAttachmentUrl(null);
   };
 
   const media = useMediaAttachment({
@@ -759,7 +708,7 @@ export function WaveChatApp() {
       window.clearTimeout(timer);
     }
     typingTimers.clear();
-    disconnectWaveSocket();
+    disconnectWaveChat();
   });
 
   return (
@@ -798,8 +747,6 @@ export function WaveChatApp() {
             isKnownContact={isKnownContact}
             onAddContact={addContactFromMessage}
             onBack={() => {
-              const num = selectedConversation();
-              if (num) leaveWaveDM(num);
               setSelectedConversation(null);
               setRouteConversationName('');
             }}
@@ -880,7 +827,6 @@ export function WaveChatApp() {
               selectedGroupTypingList={selectedGroupTypingList}
               groupMessageInput={groupMessageInput}
               setGroupMessageInput={setGroupMessageInput}
-              socketReady={socketReady}
               isRecordingVoice={isRecordingVoice}
               recordingSeconds={recordingSeconds}
               showCreateGroupModal={showCreateGroupModal}

@@ -9,7 +9,7 @@ lib.callback.register('gcphone:getGallery', function(source)
     if not identifier then return {} end
 
     return MySQL.query.await(
-        'SELECT id, url, type, album_id, created_at FROM phone_gallery WHERE identifier = ? ORDER BY created_at DESC',
+        'SELECT id, url, type, album_id, created_at FROM phone_gallery WHERE identifier = ? ORDER BY created_at DESC LIMIT 500',
         { identifier }
     ) or {}
 end)

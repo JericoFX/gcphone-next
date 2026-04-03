@@ -59,8 +59,8 @@
 
 .refresh-btn {
   margin-left: auto;
-  width: 32px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
   border: 1px solid var(--border);
   border-radius: var(--r-pill);
   background: var(--surface);
@@ -185,26 +185,66 @@
   gap: var(--s-2);
 }
 
-/* ── Notification card ── */
+/* ── Group block ── */
 
-.card {
+.group-block {
+  display: grid;
+  gap: 0;
+}
+
+/* ── Alfa card (group header — distinct style) ── */
+
+.alfa-card {
   display: grid;
   grid-template-columns: auto 1fr auto;
   gap: var(--s-3);
-  align-items: start;
-  padding: var(--s-3);
+  align-items: center;
+  padding: var(--s-3) var(--s-3);
   border-radius: var(--r-lg);
   background: var(--surface);
   border: 1px solid var(--border);
   box-shadow: var(--shadow-1);
   cursor: pointer;
-  transition:
-    transform 120ms ease,
-    box-shadow 180ms ease;
-  animation: card-in 260ms ease both;
+  transition: transform 120ms ease, box-shadow 180ms ease;
+  position: relative;
+
+  &::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 8px;
+    bottom: 8px;
+    width: 3px;
+    border-radius: 2px;
+    background: var(--tint);
+    opacity: 0.6;
+  }
 
   &:active {
     transform: scale(0.985);
+  }
+}
+
+/* ── Regular notification card ── */
+
+.card {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--s-2);
+  padding: var(--s-2) var(--s-3) var(--s-2) calc(var(--s-3) + 36px + var(--s-3));
+  border-radius: 0;
+  background: rgba(var(--surface-rgb), 0.5);
+  border-bottom: 1px solid rgba(var(--border-rgb), 0.4);
+  cursor: pointer;
+  transition: transform 100ms ease;
+
+  &:last-child {
+    border-bottom: none;
+    border-radius: 0 0 var(--r-lg) var(--r-lg);
+  }
+
+  &:active {
+    transform: scale(0.99);
   }
 }
 
@@ -214,17 +254,6 @@
     var(--shadow-1),
     0 0 0 1px rgba(var(--tint-rgb), 0.08);
   background: rgba(var(--tint-rgb), 0.03);
-}
-
-@keyframes card-in {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
 }
 
 /* ── Card icon ── */
@@ -260,15 +289,9 @@
 }
 
 @keyframes dot-pop {
-  from {
-    transform: scale(0);
-  }
-  50% {
-    transform: scale(1.3);
-  }
-  to {
-    transform: scale(1);
-  }
+  from { transform: scale(0); }
+  50% { transform: scale(1.3); }
+  to { transform: scale(1); }
 }
 
 /* ── Card body ── */
@@ -282,7 +305,6 @@
 .card-top {
   display: flex;
   align-items: baseline;
-  justify-content: space-between;
   gap: var(--s-2);
 
   strong {
@@ -300,6 +322,7 @@
   font-weight: 600;
   color: var(--text-3);
   flex-shrink: 0;
+  margin-left: auto;
 }
 
 .card-body p {
@@ -313,39 +336,79 @@
   overflow: hidden;
 }
 
-.card-app {
+/* ── Group badge (count) ── */
+
+.group-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: var(--r-pill);
+  background: var(--tint);
+  color: #fff;
   font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--text-3);
+  font-weight: 800;
+  flex-shrink: 0;
 }
 
-/* ── Action buttons ── */
+/* ── Expand arrow ── */
 
-.mute-btn {
-  align-self: center;
-  border: none;
-  border-radius: var(--r-pill);
-  padding: var(--s-1) var(--s-2);
-  min-height: 24px;
-  font-size: 10px;
-  font-weight: 700;
-  background: var(--tint-subtle);
-  color: var(--tint);
-  cursor: pointer;
-  white-space: nowrap;
-  transition: transform 120ms ease;
+.expand-arrow {
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  transition: transform 200ms ease;
 
-  &:active {
-    transform: scale(0.92);
+  img {
+    width: 14px;
+    height: 14px;
+    opacity: 0.4;
   }
 }
 
+.expand-arrow-open {
+  transform: rotate(180deg);
+}
+
+/* ── Alfa actions (arrow + delete) ── */
+
+.alfa-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--s-1);
+}
+
+/* ── Expanded group children ── */
+
+.group-expanded {
+  border: 1px solid var(--border);
+  border-top: none;
+  border-radius: 0 0 var(--r-lg) var(--r-lg);
+  overflow: hidden;
+  background: rgba(var(--surface-rgb), 0.4);
+  animation: expand-in 180ms ease;
+  transform-origin: top;
+}
+
+@keyframes expand-in {
+  from {
+    opacity: 0;
+    transform: scaleY(0);
+  }
+  to {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+}
+
+/* ── Delete button ── */
+
 .delete-btn {
-  align-self: center;
-  width: 28px;
-  height: 28px;
+  width: 44px;
+  height: 44px;
   border: none;
   border-radius: var(--r-pill);
   background: var(--danger-subtle);
@@ -401,11 +464,6 @@
   strong {
     font-size: var(--fs-footnote);
     color: var(--text-2);
-  }
-
-  span {
-    font-size: var(--fs-caption1);
-    color: var(--text-3);
   }
 }
 

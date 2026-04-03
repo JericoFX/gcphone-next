@@ -66,17 +66,22 @@ export function WaveChatConversationView(props: {
       <div class={styles.messagesList}>
         <For each={props.messages}>
           {(msg) => {
-            const shared = parseSharedContactMessage(msg.message);
-            const messageText = sanitizeText(msg.message || '', 800);
-            const coords = extractCoords(msg.message);
-            const mediaUrl = props.getMediaUrl(msg);
+            const isDeleted = !!msg.deleted_at;
+            const shared = isDeleted ? null : parseSharedContactMessage(msg.message);
+            const messageText = isDeleted ? '' : sanitizeText(msg.message || '', 800);
+            const coords = isDeleted ? null : extractCoords(msg.message);
+            const mediaUrl = isDeleted ? undefined : props.getMediaUrl(msg);
             const mediaType = resolveMediaType(mediaUrl);
 
             const isSent = msg.owner === 1 || (props.myNumber && msg.sender === props.myNumber);
             const isReceived = msg.owner === 0 || (props.myNumber && msg.sender !== props.myNumber && msg.sender === props.phoneNumber);
 
             return (
-            <div class={styles.bubble} classList={{ [styles.sent]: !!isSent, [styles.received]: !!isReceived }}>
+            <div class={styles.bubble} classList={{ [styles.sent]: !!isSent, [styles.received]: !!isReceived, [styles.deleted]: isDeleted }}>
+              <Show when={isDeleted}>
+                <span class={styles.deletedText}>{t('wavechat.message_deleted', language())}</span>
+              </Show>
+              <Show when={!isDeleted}>
               <Show when={shared} fallback={
                 <>
                   <Show when={messageText}>
@@ -116,6 +121,7 @@ export function WaveChatConversationView(props: {
                 <Show when={mediaType === 'audio'}>
                   <audio class={styles.audioPreview} src={mediaUrl!} controls preload="metadata" />
                 </Show>
+              </Show>
               </Show>
               <span class={styles.messageTime}>{timeAgo(msg.time || msg.created_at || (msg.createdAt ? new Date(msg.createdAt).toISOString() : ''))}</span>
             </div>

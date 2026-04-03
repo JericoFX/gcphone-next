@@ -86,7 +86,7 @@ lib.callback.register('gcphone:market:getMyListings', function(source)
     if not identifier then return {} end
     
     return MySQL.query.await(
-        'SELECT * FROM phone_market WHERE identifier = ? ORDER BY created_at DESC',
+        'SELECT id, identifier, title, description, price, category, media_url, contact_phone, created_at FROM phone_market WHERE identifier = ? ORDER BY created_at DESC LIMIT 100',
         { identifier }
     ) or {}
 end)

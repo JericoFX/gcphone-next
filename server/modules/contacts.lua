@@ -9,7 +9,7 @@ local function GetContacts(identifier)
     if not identifier then return {} end
 
     return MySQL.query.await(
-        'SELECT id, number, display, avatar, favorite FROM phone_contacts WHERE identifier = ? ORDER BY favorite DESC, display ASC',
+        'SELECT id, number, display, avatar, favorite FROM phone_contacts WHERE identifier = ? ORDER BY favorite DESC, display ASC LIMIT 500',
         { identifier }
     ) or {}
 end

@@ -64,8 +64,8 @@ export default defineConfig({
         collapsed: false,
         items: [
           { text: 'Adding an App', link: '/guides/adding-app' },
-          { text: 'LiveKit Setup', link: '/guides/livekit-setup' },
-          { text: 'Socket.IO Setup', link: '/guides/socket-setup' },
+          { text: 'WebRTC & TURN Setup', link: '/guides/livekit-setup' },
+          { text: 'Real-Time Chat', link: '/guides/socket-setup' },
           { text: 'Framework Bridge', link: '/guides/framework-bridge' },
         ],
       },

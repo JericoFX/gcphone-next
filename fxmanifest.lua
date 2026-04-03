@@ -6,6 +6,7 @@ description 'Modern FiveM Phone - SolidJS + ox_lib + oxmysql'
 version '2.10.0'
 
 lua54 'yes'
+node_version '22'
 
 ui_page 'web/dist/index.html'
 
@@ -52,11 +53,11 @@ client_scripts {
 }
 
 server_scripts {
-    'server/js/livekit.js',
-    'server/js/socket_auth.js',
     'server/js/youtube_search.js',
     '@oxmysql/lib/MySQL.lua',
     'server/init.lua',
+    'server/modules/wavechat_dm.lua',
+    'server/modules/webrtc.lua',
 }
 
 dependencies {

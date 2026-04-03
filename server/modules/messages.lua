@@ -185,7 +185,7 @@ local function GetMessages(identifier)
     if not phoneNumber then return {} end
 
     return MySQL.query.await(
-        'SELECT * FROM phone_messages WHERE receiver = ? OR transmitter = ? ORDER BY time DESC',
+        'SELECT * FROM phone_messages WHERE receiver = ? OR transmitter = ? ORDER BY time DESC LIMIT 200',
         { phoneNumber, phoneNumber }
     ) or {}
 end
@@ -631,7 +631,7 @@ lib.callback.register('gcphone:wavechatSendGroupMessage', function(source, data)
         local waveRateMs = (Config.Security and Config.Security.RateLimits and Config.Security.RateLimits.wavechatVoice) or 3000
         if Utils.HitRateLimit(source, 'wavechat_voice', waveRateMs, 1) then return false, 'RATE_LIMITED' end
 
-        audioData = type(data.audioData) == 'string' and data.audioData or nil
+        audioData = Utils.SanitizeMediaUrl(type(data.audioData) == 'string' and data.audioData or nil)
         if not audioData or audioData == '' then
             return false, 'INVALID_AUDIO'
         end
@@ -654,14 +654,72 @@ lib.callback.register('gcphone:wavechatSendGroupMessage', function(source, data)
     TrimGroupMessages(groupId)
 
     local members = MySQL.query.await('SELECT identifier FROM phone_chat_group_members WHERE group_id = ?', { groupId }) or {}
+    local targets = {}
     for _, row in ipairs(members) do
         local memberSource = Bridge.GetSourceFromIdentifier(row.identifier)
         if memberSource then
-            TriggerClientEvent('gcphone:wavechatGroupMessage', memberSource, payload)
+            targets[#targets + 1] = memberSource
         end
+    end
+    if #targets > 0 then
+        lib.triggerClientEvent('gcphone:wavechatGroupMessage', targets, payload)
     end
 
     return true, payload
+end)
+
+-- Server-side typing debounce: 500ms per source per group
+local TypingDebounce = {}
+
+lib.callback.register('gcphone:wavechat:groupTyping', function(source, data)
+    if type(data) ~= 'table' then return end
+    local identifier = Bridge.GetIdentifier(source)
+    if not identifier then return end
+
+    local groupId = ToPositiveInt(data.groupId)
+    if not groupId then return end
+
+    local typing = data.typing == true
+
+    -- Debounce: skip if same source sent typing for this group within 500ms
+    local debounceKey = source .. ':' .. groupId
+    local now = GetGameTimer()
+    if typing and TypingDebounce[debounceKey] and (now - TypingDebounce[debounceKey]) < 500 then
+        return
+    end
+    TypingDebounce[debounceKey] = now
+
+    -- Single query: get members + verify sender is a member in one shot
+    local members = MySQL.query.await(
+        'SELECT identifier FROM phone_chat_group_members WHERE group_id = ?',
+        { groupId }
+    ) or {}
+
+    local isMember = false
+    local phone = Bridge.GetPhoneNumber(identifier)
+    if not phone then return end
+
+    local payload = {
+        groupId = tostring(groupId),
+        phone = phone,
+        typing = typing,
+    }
+
+    local targetSources = {}
+    for _, m in ipairs(members) do
+        if m.identifier == identifier then
+            isMember = true
+        else
+            local targetSource = Bridge.GetSourceFromIdentifier(m.identifier)
+            if targetSource then
+                targetSources[#targetSources + 1] = targetSource
+            end
+        end
+    end
+
+    if #targetSources > 0 then
+        lib.triggerClientEvent('gcphone:wavechat:groupTyping', targetSources, payload)
+    end
 end)
 
 ---Get recent message threads for an identifier.
@@ -689,62 +747,6 @@ exports('GetConversation', function(identifier, targetNumber, requestSource)
     return GetConversation(identifier, targetNumber)
 end)
 
-AddEventHandler('gcphone:wavechat:persistBatch', function(requestId, entries)
-    local reqId = tonumber(requestId) or 0
-    if reqId < 1 or type(entries) ~= 'table' then
-        emit('gcphone:wavechat:persistBatchResult', reqId, false, 0, 'INVALID_BATCH')
-        return
-    end
-
-    if #entries > 50 then
-        emit('gcphone:wavechat:persistBatchResult', reqId, false, 0, 'BATCH_TOO_LARGE')
-        return
-    end
-
-    local placeholders = {}
-    local params = {}
-    local inserted = 0
-
-    for _, entry in ipairs(entries) do
-        if type(entry) == 'table' then
-            local identifier = type(entry.senderIdentifier) == 'string' and entry.senderIdentifier or nil
-            local groupId = ToPositiveInt(entry.groupId)
-            local message = SanitizeText(entry.message, 800)
-            local mediaUrl = SanitizeMediaUrl(entry.mediaUrl)
-
-            if identifier and groupId and (message ~= '' or mediaUrl) and IsGroupMember(groupId, identifier) then
-                local senderNumber = Bridge.GetPhoneNumber(identifier)
-                if senderNumber then
-                    placeholders[#placeholders + 1] = '(?, ?, ?, ?, ?)'
-                    params[#params + 1] = groupId
-                    params[#params + 1] = identifier
-                    params[#params + 1] = senderNumber
-                    params[#params + 1] = message
-                    params[#params + 1] = mediaUrl
-                    inserted = inserted + 1
-                end
-            end
-        end
-    end
-
-    if inserted > 0 then
-        MySQL.query.await(
-            'INSERT INTO phone_chat_group_messages (group_id, sender_identifier, sender_number, message, media_url) VALUES ' .. table.concat(placeholders, ', '),
-            params
-        )
-
-        local trimmedGroups = {}
-        for _, entry in ipairs(entries) do
-            local groupId = type(entry) == 'table' and ToPositiveInt(entry.groupId) or nil
-            if groupId and not trimmedGroups[groupId] then
-                trimmedGroups[groupId] = true
-                TrimGroupMessages(groupId)
-            end
-        end
-    end
-
-    emit('gcphone:wavechat:persistBatchResult', reqId, true, inserted, nil)
-end)
 
 lib.callback.register('gcphone:wavechatGetStatuses', function(source)
     local identifier = Bridge.GetIdentifier(source)
@@ -955,160 +957,6 @@ AddEventHandler('playerDropped', function()
             LastStatusViewByIdentifier[key] = nil
         end
     end
-end)
-
--- ── WaveChat DM persistence (Socket.IO batch) ──
-
-AddEventHandler('gcphone:wavechat:dm:persistBatch', function(requestId, entries)
-    local reqId = tonumber(requestId) or 0
-    if reqId < 1 or type(entries) ~= 'table' then
-        emit('gcphone:wavechat:dm:persistBatchResult', reqId, false, 0, 'INVALID_BATCH')
-        return
-    end
-
-    if #entries > 50 then
-        emit('gcphone:wavechat:dm:persistBatchResult', reqId, false, 0, 'BATCH_TOO_LARGE')
-        return
-    end
-
-    local placeholders = {}
-    local params = {}
-    local inserted = 0
-
-    for _, entry in ipairs(entries) do
-        if type(entry) == 'table' then
-            local sender = SanitizePhoneNumber(entry.sender)
-            local receiver = SanitizePhoneNumber(entry.receiver)
-            local message = SanitizeText(entry.message, 800)
-            local mediaUrl = SanitizeMediaUrl(entry.mediaUrl)
-
-            if sender ~= '' and receiver ~= '' and (message ~= '' or mediaUrl) then
-                placeholders[#placeholders + 1] = '(?, ?, ?, ?)'
-                params[#params + 1] = sender
-                params[#params + 1] = receiver
-                params[#params + 1] = message
-                params[#params + 1] = mediaUrl
-                inserted = inserted + 1
-            end
-        end
-    end
-
-    if inserted > 0 then
-        MySQL.query.await(
-            'INSERT INTO phone_wavechat_dm_messages (sender, receiver, message, media_url) VALUES ' .. table.concat(placeholders, ', '),
-            params
-        )
-    end
-
-    emit('gcphone:wavechat:dm:persistBatchResult', reqId, true, inserted, nil)
-end)
-
-AddEventHandler('gcphone:wavechat:dm:getHistory', function(requestId, phoneA, phoneB)
-    local reqId = tonumber(requestId) or 0
-    local a = SanitizePhoneNumber(phoneA)
-    local b = SanitizePhoneNumber(phoneB)
-
-    if reqId < 1 or a == '' or b == '' then
-        emit('gcphone:wavechat:dm:getHistoryResult', reqId, {})
-        return
-    end
-
-    local rows = MySQL.query.await(
-        [[SELECT id, sender, receiver, message, media_url, message_type, audio_data, audio_duration, is_read, created_at
-          FROM phone_wavechat_dm_messages
-          WHERE (sender = ? AND receiver = ?) OR (sender = ? AND receiver = ?)
-          ORDER BY created_at ASC
-          LIMIT 50]],
-        { a, b, b, a }
-    ) or {}
-
-    emit('gcphone:wavechat:dm:getHistoryResult', reqId, rows)
-end)
-
-AddEventHandler('gcphone:wavechat:dm:getConversations', function(requestId, phone)
-    local reqId = tonumber(requestId) or 0
-    local myPhone = SanitizePhoneNumber(phone)
-
-    if reqId < 1 or myPhone == '' then
-        emit('gcphone:wavechat:dm:getConversationsResult', reqId, {})
-        return
-    end
-
-    local rows = MySQL.query.await(
-        [[SELECT
-            CASE WHEN sender = ? THEN receiver ELSE sender END AS number,
-            message AS last_message,
-            media_url AS last_media_url,
-            created_at AS last_time,
-            is_read,
-            sender
-          FROM phone_wavechat_dm_messages m1
-          WHERE (sender = ? OR receiver = ?)
-            AND created_at = (
-                SELECT MAX(m2.created_at)
-                FROM phone_wavechat_dm_messages m2
-                WHERE (m2.sender = m1.sender AND m2.receiver = m1.receiver)
-                   OR (m2.sender = m1.receiver AND m2.receiver = m1.sender)
-            )
-          ORDER BY created_at DESC
-          LIMIT 100]],
-        { myPhone, myPhone, myPhone }
-    ) or {}
-
-    local unreadRows = MySQL.query.await(
-        [[SELECT sender AS number, COUNT(*) AS unread
-          FROM phone_wavechat_dm_messages
-          WHERE receiver = ? AND is_read = 0
-          GROUP BY sender]],
-        { myPhone }
-    ) or {}
-
-    local unreadMap = {}
-    for _, row in ipairs(unreadRows) do
-        unreadMap[row.number] = row.unread
-    end
-
-    for _, row in ipairs(rows) do
-        row.unread = unreadMap[row.number] or 0
-    end
-
-    emit('gcphone:wavechat:dm:getConversationsResult', reqId, rows)
-end)
-
-AddEventHandler('gcphone:wavechat:dm:markRead', function(requestId, phone, targetPhone)
-    local reqId = tonumber(requestId) or 0
-    local myPhone = SanitizePhoneNumber(phone)
-    local target = SanitizePhoneNumber(targetPhone)
-
-    if reqId < 1 or myPhone == '' or target == '' then
-        emit('gcphone:wavechat:dm:markReadResult', reqId, false)
-        return
-    end
-
-    MySQL.update.await(
-        'UPDATE phone_wavechat_dm_messages SET is_read = 1 WHERE sender = ? AND receiver = ? AND is_read = 0',
-        { target, myPhone }
-    )
-
-    emit('gcphone:wavechat:dm:markReadResult', reqId, true)
-end)
-
-AddEventHandler('gcphone:wavechat:dm:deleteConversation', function(requestId, phone, targetPhone)
-    local reqId = tonumber(requestId) or 0
-    local myPhone = SanitizePhoneNumber(phone)
-    local target = SanitizePhoneNumber(targetPhone)
-
-    if reqId < 1 or myPhone == '' or target == '' then
-        emit('gcphone:wavechat:dm:deleteConversationResult', reqId, false)
-        return
-    end
-
-    MySQL.update.await(
-        'DELETE FROM phone_wavechat_dm_messages WHERE (sender = ? AND receiver = ?) OR (sender = ? AND receiver = ?)',
-        { myPhone, target, target, myPhone }
-    )
-
-    emit('gcphone:wavechat:dm:deleteConversationResult', reqId, true)
 end)
 
 return {}

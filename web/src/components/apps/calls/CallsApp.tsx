@@ -18,20 +18,13 @@ import { LetterAvatar } from '../../shared/ui/LetterAvatar';
 import { AppFAB, AppScaffold, AppTabs } from '../../shared/layout';
 import { useNotifications } from '../../../store/notifications';
 import { t } from '../../../i18n';
-import { fetchLiveKitToken } from '../../../utils/realtimeAuth';
-import { connectLiveKit, disconnectLiveKit, setLiveKitCameraEnabled, setLiveKitMicrophoneEnabled, getCallRemainingTime } from '../../../utils/livekit';
+import { createOffer, handleSignal, getCallRemainingTime, allowPeer } from '../../../utils/peerManager';
+import { useLiveCamera } from '../../../hooks/useLiveCamera';
 import type { Call } from '../../../types';
 import type { TabItem } from '../../shared/layout';
 import styles from './CallsApp.module.scss';
 
 type TabType = 'favorites' | 'recents' | 'contacts' | 'keypad';
-type TrackKind = 'audio' | 'video';
-
-interface MediaTrackEntry {
-  sid: string;
-  kind: TrackKind;
-  element: HTMLMediaElement;
-}
 
 export function CallsApp() {
   const router = useRouter();
@@ -100,18 +93,19 @@ export function CallsApp() {
     }
   };
 
+  const callCam = useLiveCamera({ maxSeconds: 300 });
   const mediaHosts = new Map<string, HTMLDivElement>();
-  const participantTracks = new Map<string, MediaTrackEntry[]>();
   const isReadOnly = () => phoneState.accessMode === 'foreign-readonly';
 
   const renderParticipantMedia = (identity: string) => {
     const host = mediaHosts.get(identity);
     if (!host) return;
 
-    host.innerHTML = '';
-    const tracks = participantTracks.get(identity) || [];
-    const videoTrack = tracks.find((entry) => entry.kind === 'video');
-    const audioTracks = tracks.filter((entry) => entry.kind === 'audio');
+    while (host.firstChild) host.removeChild(host.firstChild);
+
+    const tracks = callCam.getTracksFor(identity);
+    const videoTrack = tracks.find((e) => e.kind === 'video');
+    const audioTracks = tracks.filter((e) => e.kind === 'audio');
 
     if (videoTrack) {
       videoTrack.element.className = styles.videoElement;
@@ -134,42 +128,7 @@ export function CallsApp() {
 
   const removeParticipant = (identity: string) => {
     setVideoParticipants((prev) => prev.filter((x) => x !== identity));
-    const entries = participantTracks.get(identity) || [];
-    for (const entry of entries) {
-      entry.element.remove();
-    }
-    participantTracks.delete(identity);
-  };
-
-  const addTrack = (identity: string, track: MediaTrackEntry) => {
-    const isLocal = identity === localVideoIdentity();
-    if (isLocal && track.kind === 'audio') {
-      track.element.muted = true;
-    }
-    const entries = participantTracks.get(identity) || [];
-    const deduped = entries.filter((entry) => entry.sid !== track.sid);
-    for (const prev of entries) {
-      if (prev.sid === track.sid) {
-        prev.element.remove();
-      }
-    }
-    participantTracks.set(identity, [...deduped, track]);
-    upsertParticipant(identity);
-    renderParticipantMedia(identity);
-  };
-
-  const removeTrack = (identity: string, sid: string) => {
-    const entries = participantTracks.get(identity) || [];
-    const next: MediaTrackEntry[] = [];
-    for (const entry of entries) {
-      if (entry.sid === sid) {
-        entry.element.remove();
-      } else {
-        next.push(entry);
-      }
-    }
-    participantTracks.set(identity, next);
-    renderParticipantMedia(identity);
+    callCam.removeTrack(identity);
   };
 
   const setMediaHost = (identity: string, element?: HTMLDivElement) => {
@@ -182,20 +141,14 @@ export function CallsApp() {
   };
 
   const clearVideoState = () => {
-    for (const entries of participantTracks.values()) {
-      for (const entry of entries) {
-        entry.element.remove();
-      }
-    }
-    participantTracks.clear();
+    callCam.stopCamera();
     for (const host of mediaHosts.values()) {
-      host.innerHTML = '';
+      while (host.firstChild) host.removeChild(host.firstChild);
       host.classList.remove(styles.hasVideo);
     }
   };
 
   const resetCallUi = () => {
-    disconnectLiveKit();
     clearVideoState();
     removeActivity('call');
     batch(() => {
@@ -342,61 +295,77 @@ export function CallsApp() {
   };
 
   const handleMuteToggle = async (nextMuted: boolean) => {
-    await setLiveKitMicrophoneEnabled(!nextMuted);
+    callCam.setMicEnabled(!nextMuted);
   };
 
   const startVideoCall = async () => {
     const currentCall = callInfo();
     if (!currentCall?.id) return;
 
-    setVideoStatus('Conectando video...');
-    const roomName = `call-${currentCall.id}`;
-    const tokenPayload = await fetchLiveKitToken(roomName, true, 300);
-    if (!tokenPayload?.success || !tokenPayload.token || !tokenPayload.url) {
-      setVideoStatus('No se pudo iniciar video');
-      return;
-    }
+    setVideoMode(true);
+    setVideoStatus(t('calls.video_connecting', language()));
 
     try {
-      await connectLiveKit(tokenPayload.url, tokenPayload.token, tokenPayload.maxDuration || 300, {
-        onParticipantConnected: (identity) => {
-          upsertParticipant(identity);
+      await callCam.startCamera();
+
+      const mySessionId = await callCam.initViewer({
+        onRemoteStream: (remotePeerId, stream) => {
+          upsertParticipant(remotePeerId);
+          const video = stream.getVideoTracks()[0];
+          const audio = stream.getAudioTracks()[0];
+          if (video) {
+            const el = document.createElement('video');
+            el.srcObject = new MediaStream([video]);
+            el.autoplay = true;
+            el.playsInline = true;
+            callCam.addTrack(remotePeerId, { sid: video.id, kind: 'video', element: el });
+            renderParticipantMedia(remotePeerId);
+          }
+          if (audio) {
+            const el = document.createElement('audio');
+            el.srcObject = new MediaStream([audio]);
+            el.autoplay = true;
+            callCam.addTrack(remotePeerId, { sid: audio.id, kind: 'audio', element: el });
+            renderParticipantMedia(remotePeerId);
+          }
         },
-        onParticipantDisconnected: (identity) => {
-          removeParticipant(identity);
+        onRemoteDisconnected: (remotePeerId) => {
+          removeParticipant(remotePeerId);
         },
-        onTrackSubscribed: ({ participantIdentity, trackSid, kind, element }) => {
-          addTrack(participantIdentity, { sid: trackSid, kind, element });
-        },
-        onTrackUnsubscribed: ({ participantIdentity, trackSid }) => {
-          removeTrack(participantIdentity, trackSid);
-        },
-        onLocalTrackPublished: ({ participantIdentity, trackSid, kind, element }) => {
-          addTrack(participantIdentity, { sid: trackSid, kind, element });
-        },
-        onLocalTrackUnpublished: ({ participantIdentity, trackSid }) => {
-          removeTrack(participantIdentity, trackSid);
-        },
-        onCallTimeout: () => {
+        onTimeout: () => {
           setVideoStatus(t('calls.video_timeout', language()));
           resetCallUi();
         },
       });
 
-      await setLiveKitCameraEnabled(true);
-      await setLiveKitMicrophoneEnabled(true);
+      try {
+        await callCam.publishVideo();
 
-      const local = tokenPayload.identity || 'local';
-      const remote = currentCall.receiverNum || 'participant';
-      setLocalVideoIdentity(local);
+        const previewEl = callCam.createPreviewElement();
+        if (previewEl) {
+          callCam.addTrack(mySessionId, { sid: 'local-preview', kind: 'video', element: previewEl });
+          renderParticipantMedia(mySessionId);
+        }
+      } catch (e) {
+        console.warn('[calls] Failed to publish game view:', e);
+      }
 
-      upsertParticipant(local);
-      upsertParticipant(remote);
-      setVideoMode(true);
+      await callCam.enableMic();
+
+      const channel = `call-${currentCall.id}`;
+      await fetchNui('webrtcRegisterSession', { sessionId: mySessionId, channel }, true);
+      await fetchNui('videoPeerReady', { callId: currentCall.id, sessionId: mySessionId }, true);
+
+      setLocalVideoIdentity(mySessionId);
+      upsertParticipant(mySessionId);
       setVideoStatus(t('calls.video_active', language()));
     } catch (_err) {
       setVideoStatus(t('calls.video_error', language()));
-      disconnectLiveKit();
+      setTimeout(() => {
+        clearVideoState();
+        setVideoMode(false);
+        setVideoStatus('');
+      }, 2500);
     }
   };
 
@@ -434,6 +403,19 @@ export function CallsApp() {
       onStop: () => void endCall(),
       onNavigate: () => router.navigate('calls'),
     });
+  });
+
+  useNuiEvent<{ sessionId: string }>('videoPeerConnected', (payload) => {
+    if (!payload?.sessionId || !videoMode()) return;
+    const currentCall = callInfo();
+    if (!currentCall?.id) return;
+    allowPeer(payload.sessionId);
+    void createOffer(payload.sessionId, `call-${currentCall.id}`);
+  });
+
+  useNuiEvent<{ type: string; data: string; fromPeerId: string; channel: string }>('webrtcSignal', (signal) => {
+    if (!signal?.type || !signal?.fromPeerId) return;
+    void handleSignal(signal as Parameters<typeof handleSignal>[0]);
   });
 
   useNuiEvent<any>('callRejected', () => {
@@ -738,11 +720,12 @@ function ActiveCallView(props: { callInfo: any; framework: 'esx' | 'qbcore' | 'q
           class={styles.actionBtn}
           classList={{ [styles.active]: muted() }}
           onClick={() => {
-            setMuted(!muted())
-            void props.onToggleMute(!muted())
+            const next = !muted();
+            setMuted(next);
+            void props.onToggleMute(next);
           }}
         >
-          <span class={styles.icon}><img src="./img/icons_ios/mic-off.svg" alt={t('calls.mute', language())} /></span>
+          <span class={styles.icon}><img src={muted() ? './img/icons_ios/mic-off.svg' : './img/icons_ios/mic.svg'} alt={t('calls.mute', language())} /></span>
           <span class={styles.label}>{t('calls.mute', language())}</span>
         </button>
         <button

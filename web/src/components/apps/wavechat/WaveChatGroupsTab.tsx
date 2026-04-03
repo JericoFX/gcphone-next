@@ -1,9 +1,8 @@
 import { createSelector, For, Show } from 'solid-js';
 import type { Accessor } from 'solid-js';
 import { generateColorForString, formatPhoneNumber, timeAgo } from '../../../utils/misc';
-import { resolveMediaType } from '../../../utils/sanitize';
-import { sanitizePhone, sanitizeText } from '../../../utils/sanitize';
-import { isWaveSocketConnected, sendWaveTyping } from '../../../utils/socket';
+import { resolveMediaType, sanitizeMediaUrl, sanitizePhone, sanitizeText } from '../../../utils/sanitize';
+import { sendWaveTyping } from '../../../utils/chatBridge';
 import { getStoredLanguage, t } from '../../../i18n';
 import { LetterAvatar } from '../../shared/ui/LetterAvatar';
 import { EmojiPickerButton } from '../../shared/ui/EmojiPicker';
@@ -14,8 +13,13 @@ import { VirtualList } from '../../shared/ui/VirtualList';
 import type { WaveChatGroup, WaveChatInvite, WaveChatGroupMessage } from './WaveChatTypes';
 import styles from './WaveChatApp.module.scss';
 
+function escapeHtml(str: string): string {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
 function highlightMentions(text: string, getContactName: (num: string) => string): string {
-  return text.replace(/@(\S+)/g, '<span style="color: var(--tint); font-weight: 600;">@$1</span>');
+  const safe = escapeHtml(sanitizeText(text, 800) || '');
+  return safe.replace(/@(\S+)/g, '<span style="color: var(--tint); font-weight: 600;">@$1</span>');
 }
 
 interface SelectableContact {
@@ -31,7 +35,6 @@ export function WaveChatGroupsTab(props: {
   selectedGroupTypingList: Accessor<string[]>;
   groupMessageInput: Accessor<string>;
   setGroupMessageInput: (value: string) => void;
-  socketReady: Accessor<boolean>;
   isRecordingVoice: Accessor<boolean>;
   recordingSeconds: Accessor<number>;
   showCreateGroupModal: Accessor<boolean>;
@@ -129,7 +132,7 @@ export function WaveChatGroupsTab(props: {
                 <Show when={msg.message}>
                   <span innerHTML={highlightMentions(msg.message || '', props.getContactName)} />
                 </Show>
-                <Show when={msg.media_url}>
+                <Show when={sanitizeMediaUrl(msg.media_url)}>
                   {(mediaUrl) => {
                     const mediaType = resolveMediaType(mediaUrl());
                     return (
@@ -152,7 +155,7 @@ export function WaveChatGroupsTab(props: {
             <input value={props.groupMessageInput()} onInput={(e) => {
               const next = e.currentTarget.value;
               props.setGroupMessageInput(next);
-              if (props.selectedGroupId() && props.socketReady() && isWaveSocketConnected()) {
+              if (props.selectedGroupId()) {
                 sendWaveTyping(String(props.selectedGroupId()!), next.trim().length > 0);
               }
             }} placeholder={t('wavechat.group_message', language())} />

@@ -512,7 +512,10 @@ lib.callback.register('gcphone:wallet:respondRequest', function(source, data)
         return { success = false, error = 'INVALID_REQUEST' }
     end
 
-    local row = MySQL.single.await('SELECT * FROM phone_wallet_requests WHERE id = ? LIMIT 1', { requestId })
+    local row = MySQL.single.await([[
+        SELECT id, requester_identifier, requester_phone, target_identifier, amount, method, title, status
+        FROM phone_wallet_requests WHERE id = ? LIMIT 1
+    ]], { requestId })
     if not row then return { success = false, error = 'REQUEST_NOT_FOUND' } end
     if row.target_identifier ~= responderIdentifier then return { success = false, error = 'NOT_AUTHORIZED' } end
     if row.status ~= 'pending' then return { success = false, error = 'REQUEST_ALREADY_HANDLED' } end
@@ -526,9 +529,18 @@ lib.callback.register('gcphone:wallet:respondRequest', function(source, data)
         return { success = true, status = 'declined' }
     end
 
+    -- Atomically claim the request BEFORE transferring money to prevent double-spend
+    local claimed = MySQL.update.await(
+        'UPDATE phone_wallet_requests SET status = "accepted", responded_at = NOW() WHERE id = ? AND status = "pending"',
+        { requestId }
+    )
+    if not claimed or claimed < 1 then
+        return { success = false, error = 'REQUEST_ALREADY_HANDLED' }
+    end
+
     local requesterSource = Bridge.GetSourceFromIdentifier(row.requester_identifier)
     if not requesterSource then
-        MySQL.update.await('UPDATE phone_wallet_requests SET status = "expired", responded_at = NOW() WHERE id = ? AND status = "pending"', { requestId })
+        MySQL.update.await('UPDATE phone_wallet_requests SET status = "expired", responded_at = NOW() WHERE id = ?', { requestId })
         return { success = false, error = 'REQUESTER_OFFLINE' }
     end
     if not Bridge.IsPlayerActionAllowed(requesterSource) then
@@ -559,10 +571,10 @@ lib.callback.register('gcphone:wallet:respondRequest', function(source, data)
         row.title or 'Solicitud QR/NFC'
     )
     if not transferSuccess then
+        -- Rollback claim if transfer fails
+        MySQL.update.await('UPDATE phone_wallet_requests SET status = "pending", responded_at = NULL WHERE id = ?', { requestId })
         return { success = false, error = transferPayload.error or 'TRANSFER_FAILED' }
     end
-
-    MySQL.update.await('UPDATE phone_wallet_requests SET status = "accepted", responded_at = NOW() WHERE id = ? AND status = "pending"', { requestId })
 
     PushWalletNotification(source, 'Wallet', ('Pago %s enviado: $%s'):format(string.upper(row.method or 'qr'), math.floor(amount)))
     if requesterSource then

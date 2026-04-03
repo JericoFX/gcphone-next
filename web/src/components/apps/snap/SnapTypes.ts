@@ -53,13 +53,7 @@ export interface SnapLiveReaction {
   createdAt: number;
 }
 
-export type TrackKind = 'audio' | 'video';
-
-export interface MediaTrackEntry {
-  sid: string;
-  kind: TrackKind;
-  element: HTMLMediaElement;
-}
+export type { TrackKind, MediaTrackEntry } from '../../../hooks/liveCameraTypes';
 
 export interface SnapFollowRequest {
   id: number;

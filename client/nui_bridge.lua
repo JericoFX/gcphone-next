@@ -9,10 +9,12 @@ local function cbSuccess(success, message, extra)
         payload.message = message
     end
 
-    if extra ~= nil then
+    if type(extra) == 'table' then
         for k, v in pairs(extra) do
             payload[k] = v
         end
+    elseif extra ~= nil then
+        payload.error = tostring(extra)
     end
 
     return payload
@@ -256,6 +258,18 @@ RegisterNUICallback('setAirplaneMode', function(data, cb)
     PhoneState.airplaneMode = enabled
     TriggerServerEvent('gcphone:setAirplaneMode', enabled)
     cb(true)
+end)
+
+RegisterNUICallback('getWidgetLayout', function(_, cb)
+    lib.callback('gcphone:getWidgetLayout', false, function(layout)
+        cb(layout)
+    end)
+end)
+
+RegisterNUICallback('setWidgetLayout', function(data, cb)
+    lib.callback('gcphone:setWidgetLayout', false, function(success)
+        cb(success)
+    end, data and data.layout or nil)
 end)
 
 RegisterNUICallback('getAppLayout', function(_, cb)
@@ -1074,7 +1088,7 @@ end)
 
 RegisterNUICallback('snapStartLive', function(_, cb)
     lib.callback('gcphone:snap:startLive', false, function(success, payload)
-        cb(cbSuccess(success, nil, payload))
+        cb({ success = success and true or false, payload = type(payload) == 'table' and payload or nil })
     end)
 end)
 
@@ -1303,16 +1317,56 @@ RegisterNUICallback('getPlayerCoords', function(_, cb)
     cb({ x = coords.x or 0, y = coords.y or 0 })
 end)
 
-RegisterNUICallback('livekitGetToken', function(data, cb)
-    lib.callback('gcphone:livekit:getToken', false, function(payload)
-        cb(payload or { success = false, error = 'TOKEN_ERROR' })
+RegisterNUICallback('getWebRTCIceServers', function(_, cb)
+    lib.callback('gcphone:webrtc:getIceServers', false, function(servers)
+        cb(servers or {})
+    end)
+end)
+
+RegisterNUICallback('webrtcRegisterSession', function(data, cb)
+    lib.callback('gcphone:peer:register', false, function(result)
+        cb(result or { success = false })
     end, data)
 end)
 
-RegisterNUICallback('socketGetToken', function(data, cb)
-    lib.callback('gcphone:socket:getToken', false, function(payload)
-        cb(payload or { success = false, error = 'TOKEN_ERROR' })
-    end, data or {})
+RegisterNUICallback('webrtcSignal', function(data, cb)
+    lib.callback('gcphone:peer:signal', false, function(result)
+        cb(result or { success = false })
+    end, data)
+end)
+
+RegisterNetEvent('gcphone:peer:signal', function(payload)
+    SendNUIMessage({ action = 'webrtcSignal', data = payload })
+end)
+
+RegisterNUICallback('videoPeerReady', function(data, cb)
+    lib.callback('gcphone:peer:videoReady', false, function(result)
+        cb(result or { success = false })
+    end, data)
+end)
+
+RegisterNetEvent('gcphone:peer:videoConnected', function(payload)
+    SendNUIMessage({ action = 'videoPeerConnected', data = payload })
+end)
+
+RegisterNUICallback('snapLivePeerReady', function(data, cb)
+    lib.callback('gcphone:peer:snapLiveReady', false, function(result)
+        cb(result or { success = false })
+    end, data)
+end)
+
+RegisterNetEvent('gcphone:peer:snapLiveConnected', function(payload)
+    SendNUIMessage({ action = 'gcphone:snap:livePeerConnected', data = payload })
+end)
+
+RegisterNUICallback('newsLivePeerReady', function(data, cb)
+    lib.callback('gcphone:peer:newsLiveReady', false, function(result)
+        cb(result or { success = false })
+    end, data)
+end)
+
+RegisterNetEvent('gcphone:peer:newsLiveConnected', function(payload)
+    SendNUIMessage({ action = 'gcphone:news:livePeerConnected', data = payload })
 end)
 
 RegisterNetEvent('gcphone:contactsUpdated', function(contacts)
@@ -1914,27 +1968,92 @@ end)
 
 -- ── Flashlight ──
 
-local Flashlight = require 'client.flashlight'
+-- Flashlight NUI callbacks are registered in client/flashlight.lua (authoritative)
 
-RegisterNUICallback('cameraGetFlashlightSettings', function(_, cb)
-    cb({
-        enabled = Flashlight.IsPhoneFlashlightEnabled(),
-        brightness = Flashlight.GetFlashlightBrightness and Flashlight.GetFlashlightBrightness() or 100,
-    })
+-- ── WaveChat DM ──
+
+RegisterNUICallback('wavechatDmSend', function(data, cb)
+    lib.callback('gcphone:wavechat:dm:send', false, function(result)
+        cb(result or { success = false })
+    end, data)
 end)
 
-RegisterNUICallback('cameraToggleFlashlight', function(data, cb)
-    local enabled = type(data) == 'table' and data.enabled == true
-    Flashlight.SetPhoneFlashlightEnabled(enabled)
-    cb({ success = true, enabled = enabled })
+RegisterNUICallback('wavechatDmGetHistory', function(data, cb)
+    lib.callback('gcphone:wavechat:dm:getHistory', false, function(result)
+        cb(result or { success = false, messages = {} })
+    end, data)
 end)
 
-RegisterNUICallback('cameraSetFlashlightBrightness', function(data, cb)
-    local brightness = type(data) == 'table' and tonumber(data.brightness) or 100
-    if Flashlight.SetFlashlightBrightness then
-        Flashlight.SetFlashlightBrightness(brightness)
-    end
-    cb({ success = true })
+RegisterNUICallback('wavechatDmGetConversations', function(_, cb)
+    lib.callback('gcphone:wavechat:dm:getConversations', false, function(result)
+        cb(result or { success = false, conversations = {} })
+    end)
+end)
+
+RegisterNUICallback('wavechatDmTyping', function(data, cb)
+    lib.callback('gcphone:wavechat:dm:typing', false, function() cb({}) end, data)
+end)
+
+RegisterNUICallback('wavechatDmMarkRead', function(data, cb)
+    lib.callback('gcphone:wavechat:dm:markRead', false, function(result)
+        cb(result or { success = false })
+    end, data)
+end)
+
+RegisterNUICallback('wavechatDmDeleteConversation', function(data, cb)
+    lib.callback('gcphone:wavechat:dm:deleteConversation', false, function(result)
+        cb(result or { success = false })
+    end, data)
+end)
+
+RegisterNUICallback('wavechatDmDeleteMessage', function(data, cb)
+    lib.callback('gcphone:wavechat:dm:deleteMessage', false, function(result)
+        cb(result or { success = false })
+    end, data)
+end)
+
+RegisterNetEvent('gcphone:wavechat:dm:message', function(message)
+    SendNUIMessage({ action = 'wavechatDmMessage', data = message })
+end)
+
+RegisterNetEvent('gcphone:wavechat:dm:messageDeleted', function(payload)
+    SendNUIMessage({ action = 'wavechatDmMessageDeleted', data = payload })
+end)
+
+RegisterNetEvent('gcphone:wavechat:dm:typing', function(payload)
+    SendNUIMessage({ action = 'wavechatDmTyping', data = payload })
+end)
+
+-- ── WaveChat Group Typing ──
+
+RegisterNUICallback('wavechatGroupTyping', function(data, cb)
+    lib.callback('gcphone:wavechat:groupTyping', false, function() cb({}) end, data)
+end)
+
+RegisterNetEvent('gcphone:wavechat:groupTyping', function(payload)
+    SendNUIMessage({ action = 'wavechatGroupTyping', data = payload })
+end)
+
+-- ── SnapLive Chat ──
+
+RegisterNUICallback('snapJoinLiveChat', function(data, cb)
+    lib.callback('gcphone:snap:joinLiveChat', false, function(result)
+        cb(result or { success = false })
+    end, data)
+end)
+
+RegisterNUICallback('snapLeaveLiveChat', function(data, cb)
+    lib.callback('gcphone:snap:leaveLiveChat', false, function() cb({}) end, data)
+end)
+
+-- ── MatchMyLove Typing ──
+
+RegisterNUICallback('matchmyloveTyping', function(data, cb)
+    lib.callback('gcphone:matchmylove:typing', false, function() cb({}) end, data)
+end)
+
+RegisterNetEvent('gcphone:matchmylove:typing', function(payload)
+    SendNUIMessage({ action = 'matchmyloveTyping', data = payload })
 end)
 
 return {}

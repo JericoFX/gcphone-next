@@ -1,9 +1,25 @@
 let AccessToken = null;
 
+// livekit-server-sdk is ESM-only ("type": "module"), so require() fails.
+// FiveM's Node 22 runtime doesn't reliably support top-level await or dynamic import().
+// Workaround: require the CJS dist directly if available, otherwise try dynamic import on first use.
+const resourcePath = GetResourcePath(GetCurrentResourceName());
+
 try {
-  ({ AccessToken } = require('livekit-server-sdk'));
-} catch (e) {
-  AccessToken = null;
+  // Try loading the CommonJS build directly via absolute path
+  const sdkPath = `${resourcePath}/server/js/node_modules/livekit-server-sdk/dist/index.cjs`;
+  ({ AccessToken } = require(sdkPath));
+} catch (_) {
+  try {
+    ({ AccessToken } = require(`${resourcePath}/server/js/node_modules/livekit-server-sdk`));
+  } catch (_2) {
+    try {
+      ({ AccessToken } = require('livekit-server-sdk'));
+    } catch (_3) {
+      console.warn('[gcphone] livekit-server-sdk not found — LiveKit token generation disabled');
+      console.warn('[gcphone] Run: cd server/js && npm install');
+    }
+  }
 }
 
 const livekitHost = GetConvar('livekit_host', process.env.livekit_host || '');

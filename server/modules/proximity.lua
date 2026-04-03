@@ -161,7 +161,7 @@ lib.callback.register('gcphone:proximity:getSharedLocations', function(source)
     if not identifier then return {} end
 
     return MySQL.query.await(
-        'SELECT * FROM phone_shared_locations WHERE to_identifier = ? AND (expires_at IS NULL OR expires_at > NOW())',
+        'SELECT id, from_identifier, from_name, to_identifier, x, y, z, label, expires_at, created_at FROM phone_shared_locations WHERE to_identifier = ? AND (expires_at IS NULL OR expires_at > NOW()) LIMIT 100',
         { identifier }
     ) or {}
 end)

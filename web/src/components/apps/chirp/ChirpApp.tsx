@@ -1,4 +1,5 @@
 import { For, Show, createEffect, createMemo, createSignal, onMount } from 'solid-js';
+import { Motion } from '@motionone/solid';
 import { useContextMenu } from '../../../hooks/useContextMenu';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { fetchNui } from '../../../utils/fetchNui';
@@ -22,6 +23,16 @@ import { SocialOnboardingModal, type SocialOnboardingPayload } from '../../share
 import { getStoredLanguage, t } from '../../../i18n';
 import type { ChirpTweet, ChirpComment, ChirpFollowRequest, ChirpAccount, TabMode } from './ChirpTypes';
 import styles from './ChirpApp.module.scss';
+
+function extractCoords(text?: string): { x: number; y: number } | null {
+  if (!text) return null;
+  const match = text.match(/LOC:([\-\d.]+),\s*([\-\d.]+)/i);
+  if (!match) return null;
+  const x = Number(match[1]);
+  const y = Number(match[2]);
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+  return { x, y };
+}
 
 export function ChirpApp() {
   const router = useRouter();
@@ -410,11 +421,13 @@ export function ChirpApp() {
     const tweetId = deleteTweetId();
     if (!tweetId) return;
 
-    await fetchNui('chirpDeleteTweet', tweetId);
-    setTweets(prev => prev.filter(t => t.id !== tweetId));
-    if (selectedTweet()?.id === tweetId) {
-      setViewMode('list');
-      setSelectedTweet(null);
+    const res = await fetchNui<{ success: boolean }>('chirpDeleteTweet', { tweetId });
+    if (res?.success) {
+      setTweets(prev => prev.filter(t => t.id !== tweetId));
+      if (selectedTweet()?.id === tweetId) {
+        setViewMode('list');
+        setSelectedTweet(null);
+      }
     }
     setDeleteTweetId(null);
   };
@@ -623,7 +636,7 @@ export function ChirpApp() {
           <span class={styles.icon}><img src="./img/icons_ios/ui-plane.svg" alt="" draggable={false} /></span>
         </button>
 
-        <Show when={tweet.is_own && props.onDelete}>
+        <Show when={(tweet.is_own || tweet.username === myAccount()?.username) && props.onDelete}>
           <button class={styles.actionBtn} onClick={(e) => props.onDelete?.(e, tweet.id)}>
             <span class={styles.icon}><img src="./img/icons_ios/ui-trash.svg" alt="" draggable={false} /></span>
           </button>
@@ -683,6 +696,13 @@ export function ChirpApp() {
         </Show>
         <Show when={tweet.activity_type !== 'rechirp'}>
           <p class={styles.tweetContent}>{tweet.content}</p>
+          <Show when={extractCoords(tweet.content)}>
+            {(coords) => (
+              <button class={styles.mapBtn} onClick={(e) => { e.stopPropagation(); router.navigate('maps', { x: coords().x, y: coords().y }); }}>
+                {t('messages.open_map', language())}
+              </button>
+            )}
+          </Show>
         </Show>
         
         <Show when={tweet.activity_type === 'rechirp'}>
@@ -761,7 +781,15 @@ export function ChirpApp() {
         </Show>
         
         <For each={tweets()}>
-          {(tweet) => <TweetCard tweet={tweet} />}
+          {(tweet, i) => (
+            <Motion.div
+              initial={{ opacity: 0, y: 14 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.28, delay: Math.min(i(), 10) * 0.04 }}
+            >
+              <TweetCard tweet={tweet} />
+            </Motion.div>
+          )}
         </For>
         
         <Show when={!loading() && tweets().length === 0}>
@@ -866,6 +894,13 @@ export function ChirpApp() {
             </Show>
             <Show when={tweet.activity_type !== 'rechirp'}>
               <p class={styles.detailText}>{tweet.content}</p>
+              <Show when={extractCoords(tweet.content)}>
+                {(coords) => (
+                  <button class={styles.mapBtn} onClick={() => router.navigate('maps', { x: coords().x, y: coords().y })}>
+                    {t('messages.open_map', language())}
+                  </button>
+                )}
+              </Show>
             </Show>
 
             <Show when={tweet.activity_type !== 'rechirp' && tweet.media_url}>
@@ -1214,7 +1249,7 @@ export function ChirpApp() {
               ctxMenu.close();
             },
           },
-          ...(ctxMenu.item()?.is_own ? [{
+          ...((ctxMenu.item()?.is_own || ctxMenu.item()?.username === myAccount()?.username) ? [{
             label: t('action.delete', language()),
             tone: 'danger' as const,
             onClick: () => {

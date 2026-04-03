@@ -80,7 +80,7 @@
 }
 
 .search-input {
-  min-height: 34px;
+  min-height: 44px;
   border: none;
   border-radius: 10px;
   background: var(--surface-overlay);
@@ -91,7 +91,7 @@
 }
 
 .unread-toggle {
-  min-height: 34px;
+  min-height: 44px;
   border: none;
   border-radius: 10px;
   padding: 0 10px;
@@ -123,7 +123,7 @@
 .delete-conversation-btn {
   border: none;
   border-radius: 999px;
-  min-height: 26px;
+  min-height: 44px;
   padding: 0 10px;
   background: rgba(224, 84, 84, 0.16);
   color: var(--danger);
@@ -792,4 +792,23 @@
 @keyframes bubbleGentle {
   0% { opacity: 0; transform: scale(0.8); }
   100% { opacity: 1; transform: scale(1); }
+}
+
+.mapBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 999px;
+  background: var(--accent, #007aff);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 4px;
+
+  &::before {
+    content: '📍';
+  }
 }

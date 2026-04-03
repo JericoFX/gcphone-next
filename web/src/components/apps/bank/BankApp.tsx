@@ -1,4 +1,5 @@
 import { createMemo, createSignal, Show, createEffect, For, onMount, batch } from 'solid-js';
+import { Motion } from '@motionone/solid';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { fetchNui } from '../../../utils/fetchNui';
 import { useNuiActions } from '../../../utils/useNui';
@@ -176,22 +177,28 @@ export function BankApp() {
             }>
               <div class={styles.transactionsList}>
                 <For each={filteredTransactions()}>
-                  {(tx) => (
-                    <div class={styles.transactionItem}>
-                      <div class={styles.transactionInfo}>
-                        <div class={styles.transactionTitle}>{tx.description || t('bank.transfer', language())}</div>
-                        <div class={styles.transactionDate}>{tx.time}</div>
+                  {(tx, i) => (
+                    <Motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.24, delay: Math.min(i(), 10) * 0.035 }}
+                    >
+                      <div class={styles.transactionItem}>
+                        <div class={styles.transactionInfo}>
+                          <div class={styles.transactionTitle}>{tx.description || t('bank.transfer', language())}</div>
+                          <div class={styles.transactionDate}>{tx.time}</div>
+                        </div>
+                        <div
+                          class={styles.transactionAmount}
+                          classList={{
+                            [styles.positive]: tx.amount >= 0,
+                            [styles.negative]: tx.amount < 0
+                          }}
+                        >
+                          {tx.amount >= 0 ? '+' : ''}{formatMoney(Math.abs(tx.amount))}
+                        </div>
                       </div>
-                      <div 
-                        class={styles.transactionAmount}
-                        classList={{ 
-                          [styles.positive]: tx.amount >= 0,
-                          [styles.negative]: tx.amount < 0
-                        }}
-                      >
-                        {tx.amount >= 0 ? '+' : ''}{formatMoney(Math.abs(tx.amount))}
-                      </div>
-                    </div>
+                    </Motion.div>
                   )}
                 </For>
               </div>

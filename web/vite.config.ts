@@ -33,9 +33,6 @@ export default defineConfig({
           if (id.includes('livekit-client')) {
             return 'vendor-livekit';
           }
-          if (id.includes('socket.io-client')) {
-            return 'vendor-socket';
-          }
           if (id.includes('/leaflet/') || id.includes('\\leaflet\\')) {
             return 'vendor-leaflet';
           }

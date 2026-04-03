@@ -79,6 +79,12 @@ local function GetProviderToken()
     return token ~= '' and token or nil
 end
 
+local function GetMediaHost()
+    local host = GetConvar('gcphone_media_host', '')
+    if host == '' then return nil end
+    return host:gsub('/+$', '')
+end
+
 --- Build the upload config for a given media type.
 --- Returns: provider, url, field, headers, successPath
 local function ResolveUploadConfig(mediaType)
@@ -87,6 +93,17 @@ local function ResolveUploadConfig(mediaType)
 
     if provider == 'server_folder' then
         return provider, '', '', {}, nil
+    end
+
+    if provider == 'local' then
+        local host = GetMediaHost()
+        if not host then
+            print('[gcphone:storage] WARNING: provider is "local" but gcphone_media_host is not set')
+            return provider, '', 'file', {}, nil
+        end
+        return provider, host .. '/upload', 'file', {
+            ['x-api-key'] = token or '',
+        }, 'data.url'
     end
 
     if provider == 'fivemanage' then
@@ -223,7 +240,7 @@ lib.callback.register('gcphone:storage:getUploadConfig', function(source, data)
         return { url = '', field = '', error = 'server_folder only supports images' }
     end
 
-    if provider == 'fivemanage' then
+    if provider == 'fivemanage' or provider == 'local' then
         return { provider = provider, useProxy = true, field = field, successPath = successPath }
     end
 
@@ -254,13 +271,51 @@ lib.callback.register('gcphone:storage:proxyUpload', function(source, data)
     local provider = GetProvider()
     local token = GetProviderToken()
 
-    if provider ~= 'fivemanage' or not token then
+    if provider ~= 'fivemanage' and provider ~= 'local' then
         return { error = 'PROVIDER_NOT_CONFIGURED' }
     end
+    if not token then
+        return { error = 'PROVIDER_TOKEN_MISSING' }
+    end
 
-    local filename = Utils.SafeText(data.filename or 'upload', 100) or 'upload'
-    local contentType = Utils.SafeText(data.contentType or 'application/octet-stream', 60) or 'application/octet-stream'
+    local filename = (Utils.SafeText(data.filename or 'upload', 100) or 'upload'):gsub('[\r\n"\\]', '')
+    local contentType = (Utils.SafeText(data.contentType or 'application/octet-stream', 60) or 'application/octet-stream'):gsub('[\r\n"\\]', '')
+    if not contentType:match('^[%w]+/[%w%-%+%.]+$') then
+        contentType = 'application/octet-stream'
+    end
 
+    if provider == 'local' then
+        local host = GetMediaHost()
+        if not host then return { error = 'MEDIA_HOST_NOT_SET' } end
+
+        local jsonBody = json.encode({
+            data = data.base64,
+            mimeType = contentType,
+            filename = filename,
+        })
+
+        local p = promise.new()
+        PerformHttpRequest(host .. '/upload', function(statusCode, responseBody)
+            if statusCode >= 200 and statusCode < 300 and responseBody then
+                local ok, parsed = pcall(json.decode, responseBody)
+                if ok and parsed then
+                    local uploadedUrl = parsed.data and parsed.data.url or parsed.url or ''
+                    p:resolve({ url = uploadedUrl })
+                else
+                    p:resolve({ error = 'PARSE_ERROR' })
+                end
+            else
+                p:resolve({ error = 'UPLOAD_FAILED_' .. tostring(statusCode) })
+            end
+        end, 'POST', jsonBody, {
+            ['x-api-key'] = token,
+            ['Content-Type'] = 'application/json',
+        })
+
+        return Citizen.Await(p)
+    end
+
+    -- Fivemanage: multipart upload
     local boundary = 'gcphone' .. tostring(os.time()) .. tostring(math.random(100000, 999999))
     local decoded = data.base64
 

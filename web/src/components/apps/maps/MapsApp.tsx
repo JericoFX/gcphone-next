@@ -226,7 +226,10 @@ export function MapsApp() {
   const shareSelectedCoords = async () => {
     setShareError('');
     const marker = selectedMarker();
-    if (!marker) return;
+    if (!marker) {
+      setShareError(t('maps.error.no_marker', language()));
+      return;
+    }
 
     if (shareApp() === 'messages') {
       const number = sanitizeText(shareNumber(), 20);
@@ -246,9 +249,13 @@ export function MapsApp() {
     }
 
     if (shareApp() === 'chirp') {
-      await fetchNui('chirpPublishTweet', {
+      const res = await fetchNui<{ success: boolean }>('chirpPublishTweet', {
         content: `📍 Punto de encuentro LOC:${marker.x.toFixed(2)},${marker.y.toFixed(2)}`,
       });
+      if (!res?.success) {
+        setShareError(t('maps.error.share_failed', language()));
+        return;
+      }
     }
 
     if (shareApp() === 'wavechat') {

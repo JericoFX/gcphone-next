@@ -28,8 +28,8 @@
 }
 
 .icon-btn {
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   padding: 0;
   border: none;
   border-radius: 999px;
@@ -49,8 +49,8 @@
 }
 
 .icon-btn img {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   object-fit: contain;
 }
 
@@ -400,6 +400,16 @@
     color: var(--text);
     border-bottom-left-radius: 4px;
   }
+
+  &.deleted {
+    opacity: 0.6;
+  }
+}
+
+.deleted-text {
+  font-size: 14px;
+  font-style: italic;
+  opacity: 0.7;
 }
 
 .message-text {
@@ -962,4 +972,23 @@
   padding: 0 4px;
   font-weight: 600;
   font-style: italic;
+}
+
+.mapBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 999px;
+  background: var(--accent, #007aff);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 4px;
+
+  &::before {
+    content: '📍';
+  }
 }
