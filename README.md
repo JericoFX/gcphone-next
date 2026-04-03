@@ -1,14 +1,8 @@
 # gcphone-next
 
-# ⚠️ WORK IN PROGRESS ⚠️
-
-**This resource has NOT been tested in a live FiveM environment.** Expect bugs, missing features, and breaking changes. Use at your own risk.
+A modernized FiveM phone resource built with **SolidJS**, **ox_lib**, and **oxmysql**.
 
 You are free to do whatever you want with this resource — fork it, modify it, sell it, burn it, print it and frame it on your wall. No restrictions beyond the GPL-3.0 license.
-
----
-
-A modernized FiveM phone resource built with **SolidJS**, **ox_lib**, and **oxmysql**.
 
 Fork of [gcphone](https://github.com/manueljlz/gcphone) by manueljlz — fully rewritten architecture.
 
@@ -18,8 +12,8 @@ Fork of [gcphone](https://github.com/manueljlz/gcphone) by manueljlz — fully r
 
 - **30+ apps**: Contacts, Messages, Calls, Chirp, Snap, Clips, Mail, Bank, Wallet, Documents, Gallery, Garage, Music, News, Dark Rooms, Yellow Pages, WaveChat, Notes, Weather, Maps, Clock, Camera, Notifications, Radio, Services, MatchMyLove, CityRide, and more
 - **SolidJS NUI** with iOS 18-inspired design
-- **LiveKit WebRTC** video/voice calls and live streaming
-- **FiveM native events** for real-time messaging (no external chat server needed)
+- **Native WebRTC** (P2P) video/voice calls and live streaming — no external media server needed
+- **FiveM native events** for real-time messaging and WebRTC signaling (no external servers needed)
 - **Native audio** system with custom AWC sounds
 - **QBCore, QBox, and ESX** framework support via bridge pattern
 - **ox_inventory** optional phone item requirement
@@ -38,8 +32,9 @@ Fork of [gcphone](https://github.com/manueljlz/gcphone) by manueljlz — fully r
 | Server | Lua 5.4, ox_lib, oxmysql |
 | Client | Lua 5.4, ox_lib |
 | NUI | SolidJS, TypeScript, Vite, SCSS |
-| Calls & Live | LiveKit (WebRTC) |
+| Calls & Live | Native WebRTC (P2P via RTCPeerConnection) |
 | Chat | FiveM native events |
+| Signaling | FiveM events (TriggerClientEvent / SendNUIMessage) |
 | Audio | GTA V AWC native sounds |
 
 ## Requirements
@@ -49,9 +44,9 @@ Fork of [gcphone](https://github.com/manueljlz/gcphone) by manueljlz — fully r
 - [oxmysql](https://github.com/overextended/oxmysql)
 - [gcphone_sounds](https://github.com/JericoFX/gcphone_sounds) (native audio bank)
 - QBCore, QBox, or ESX framework
-- **Node.js 18+** (for server-side JS: LiveKit tokens, YouTube search)
+- **Node.js 18+** (for server-side JS: YouTube search)
 - **Bun** (for building the NUI frontend)
-- A **LiveKit server** for video calls ([LiveKit Cloud](https://livekit.io/cloud) free tier recommended)
+- *(Optional)* **TURN server** for NAT traversal — Cloudflare TURN (1TB/month free) recommended
 
 ## Quick Start
 
@@ -66,7 +61,7 @@ bun run build
 
 # 3. Install server-side JS dependencies
 cd ../server/js
-npm install          # installs livekit-server-sdk, youtube-sr
+npm install          # installs youtube-sr
 
 # 4. Add to server.cfg
 ensure oxmysql
@@ -81,14 +76,7 @@ ensure gcphone-next
 ### server.cfg
 
 ```cfg
-# LiveKit (required for video calls and live streaming)
-setr livekit_host "wss://your-project.livekit.cloud"
-setr livekit_api_key "APIxxxxxxxx"
-setr livekit_api_secret "your-api-secret"
-setr livekit_room_prefix "gcphone"
-setr livekit_max_call_duration "300"
-
-# Cloudflare TURN (optional — better NAT traversal, 1TB/month free)
+# Cloudflare TURN (optional — better NAT traversal for WebRTC, 1TB/month free)
 set webrtc_turn_token_id "your-cloudflare-token-id"
 set webrtc_turn_api_token "your-cloudflare-api-token"
 
@@ -97,7 +85,7 @@ set gcphone_provider "fivemanage"
 set gcphone_provider_token "YOUR_FIVEMANAGE_API_TOKEN"
 ```
 
-See [LiveKit Setup Guide](docs/guides/livekit-setup.md) for details on getting LiveKit Cloud credentials and Cloudflare TURN setup.
+See [WebRTC & TURN Setup](docs/guides/livekit-setup.md) for TURN server options (Cloudflare, self-hosted coturn, or STUN-only).
 
 ### Config.lua
 
@@ -107,7 +95,7 @@ All configuration is in `shared/config.lua`:
 - `Config.Features` — Toggle apps on/off (AppStore, WaveChat, DarkRooms, Clips, etc.)
 - `Config.Security` — Rate limits per action
 - `Config.Storage` — Media upload provider (FiveManage, server folder, local, custom)
-- `Config.LiveKit` — Enable/disable LiveKit, max call duration
+- `Config.VideoCall` — Video call settings (max duration, resolution)
 - `Config.WebRTC` — TURN/ICE server configuration (Cloudflare or static)
 - Per-app config: `Config.Chirp`, `Config.Snap`, `Config.Wallet`, etc.
 
@@ -135,8 +123,9 @@ npx vitepress dev
 | Guide | Description |
 |-------|-------------|
 | [docs/index.md](docs/index.md) | Documentation index |
-| [docs/guides/livekit-setup.md](docs/guides/livekit-setup.md) | LiveKit + WebRTC TURN/ICE setup |
+| [docs/guides/livekit-setup.md](docs/guides/livekit-setup.md) | WebRTC & TURN/ICE setup |
 | [docs/guides/socket-setup.md](docs/guides/socket-setup.md) | Real-time chat (FiveM native events) |
+| [docs/guides/tools-scripts.md](docs/guides/tools-scripts.md) | Build tooling and scripts |
 | [docs/guides/storage-setup.md](docs/guides/storage-setup.md) | Media upload provider setup |
 | [docs/guides/adding-app.md](docs/guides/adding-app.md) | How to scaffold a new phone app |
 | [docs/guides/framework-bridge.md](docs/guides/framework-bridge.md) | Framework bridge pattern |
