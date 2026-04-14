@@ -1,47 +1,49 @@
 import { For } from 'solid-js';
 import { useIconPack } from './IconPackProvider';
 import { APP_BY_ID } from '../../../config/apps';
-import type { Folder } from '../../../types/home';
+import type { Folder, AllowedFolderColor } from '../../../types/home';
 import styles from './FolderIcon.module.scss';
 
 interface FolderIconProps {
   folder: Folder;
   editing: boolean;
   dragging: boolean;
-  onClick: () => void;
+  onClick: (triggerEl: HTMLElement) => void;
   onPointerDown?: (e: PointerEvent) => void;
 }
 
-const FOLDER_COLORS: Record<string, string> = {
-  blue: 'rgba(0, 122, 255, 0.2)',
-  purple: 'rgba(175, 82, 222, 0.2)',
-  pink: 'rgba(255, 45, 85, 0.2)',
-  red: 'rgba(255, 59, 48, 0.2)',
-  orange: 'rgba(255, 149, 0, 0.2)',
-  green: 'rgba(52, 199, 89, 0.2)',
-  teal: 'rgba(90, 200, 250, 0.2)',
+const COLOR_CLASS: Record<AllowedFolderColor, string> = {
+  blue: styles.colorBlue,
+  purple: styles.colorPurple,
+  pink: styles.colorPink,
+  red: styles.colorRed,
+  orange: styles.colorOrange,
+  green: styles.colorGreen,
+  teal: styles.colorTeal,
+  gray: styles.colorGray,
 };
 
 export function FolderIcon(props: FolderIconProps) {
   const { borderRadius } = useIconPack();
   const previewApps = () => props.folder.apps.slice(0, 4);
-  const bgColor = () => FOLDER_COLORS[props.folder.color] || FOLDER_COLORS.blue;
+  let rootEl: HTMLButtonElement | undefined;
 
   return (
     <button
+      ref={rootEl}
       class={styles.folderIcon}
       classList={{
         [styles.jiggle]: props.editing && !props.dragging,
+        [styles.dragging]: props.dragging,
+        [COLOR_CLASS[props.folder.color]]: true,
       }}
+      data-testid={`home-folder-${props.folder.id}`}
       onPointerDown={props.onPointerDown}
       onClick={() => {
-        if (!props.editing) props.onClick();
+        if (!props.editing && rootEl) props.onClick(rootEl);
       }}
     >
-      <div
-        class={styles.preview}
-        style={{ background: bgColor(), 'border-radius': borderRadius() }}
-      >
+      <div class={styles.preview} style={{ 'border-radius': borderRadius() }}>
         <For each={[0, 1, 2, 3]}>
           {(i) => {
             const app = () => {

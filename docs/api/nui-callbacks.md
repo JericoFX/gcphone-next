@@ -96,8 +96,8 @@ NUI: fetchNui('callbackName', data) -> client RegisterNUICallback -> lib.callbac
 | `setLockCode` | `{ code: string }` | `boolean` | nui_bridge.lua |
 | `factoryResetPhone` | -- | `boolean` | nui_bridge.lua |
 | `setAirplaneMode` | `{ enabled: boolean }` | -- | nui_bridge.lua |
-| `getAppLayout` | -- | `table` | nui_bridge.lua |
-| `setAppLayout` | `layout: table` | `boolean` | nui_bridge.lua |
+| `getAppLayout` | -- | `{ layout: table, version: integer }` | nui_bridge.lua |
+| `setAppLayout` | `{ layout: table, version: integer }` | `{ ok: boolean, version?: integer, layout?: table, reason?: string }` | nui_bridge.lua |
 
 ## Notifications
 

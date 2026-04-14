@@ -1,6 +1,7 @@
 -- Phone layout helpers and callbacks.
 -- Extracted from server/modules/phone.lua (OPT-07) to reduce file size.
--- Holds pure helpers; phone.lua retains ownership of read-only context state.
+-- Extended with folder support, optimistic concurrency (version) and
+-- per-source rate-limiting on setAppLayout.
 
 local M = {}
 
@@ -38,7 +39,8 @@ M.AllowedApps = {
 
 M.DefaultLayout = {
     home = { 'contacts', 'messages', 'mail', 'notifications', 'calls', 'settings', 'gallery', 'camera', 'bank', 'wallet', 'documents', 'wavechat', 'music', 'chirp', 'snap', 'clips', 'darkrooms', 'yellowpages', 'news', 'garage', 'clock', 'notes', 'maps', 'weather', 'matchmylove', 'radio', 'services', 'cityride' },
-    menu = { 'appstore' }
+    menu = { 'appstore' },
+    folders = {},
 }
 
 M.ForeignReadOnlyApps = {
@@ -50,6 +52,62 @@ M.ForeignReadOnlyApps = {
     gallery = true,
     documents = true,
 }
+
+M.PinnedHomeIds = { 'contacts', 'messages', 'mail' }
+
+M.AllowedFolderColors = {
+    blue = true, purple = true, pink = true, red = true,
+    orange = true, green = true, teal = true, gray = true,
+}
+
+M.DefaultFolderColor = 'blue'
+
+M.MAX_FOLDERS = 4
+M.MAX_APPS_PER_FOLDER = 4
+M.MAX_LAYOUT_BYTES = 16384
+M.FOLDER_NAME_MAX_BYTES = 60
+
+local RATE_LIMIT_MS = 1500
+local lastSetAt = {}
+
+local function isPinned(appId)
+    for _, id in ipairs(M.PinnedHomeIds) do
+        if id == appId then return true end
+    end
+    return false
+end
+
+local function trim(value)
+    if type(value) ~= 'string' then return nil end
+    return (value:gsub('^%s+', ''):gsub('%s+$', ''))
+end
+
+local function hasControlChars(value)
+    return value:find('[%z\1-\31\127]') ~= nil
+end
+
+function M.ValidateFolderName(raw)
+    local trimmed = trim(raw)
+    if not trimmed or trimmed == '' then return nil end
+    if #trimmed > M.FOLDER_NAME_MAX_BYTES then return nil end
+    if hasControlChars(trimmed) then return nil end
+    return trimmed
+end
+
+function M.ValidateFolderColor(raw)
+    if type(raw) ~= 'string' then return nil end
+    if M.AllowedFolderColors[raw] then return raw end
+    return nil
+end
+
+function M.ValidateFolderId(raw)
+    if type(raw) ~= 'string' then return nil end
+    if #raw ~= 17 then return nil end
+    if raw:sub(1, 7) ~= 'folder_' then return nil end
+    local suffix = raw:sub(8)
+    if not suffix:match('^[a-z0-9]+$') then return nil end
+    return raw
+end
 
 function M.GetFeatureFlags()
     local defaults = Config.Features or {}
@@ -120,47 +178,132 @@ function M.EnabledList(enabledApps)
     return out
 end
 
+-- Full normalizer. Mirrors web/src/utils/folderOps.ts:normalizeLayout.
 function M.NormalizeLayout(layout, enabledApps)
     enabledApps = enabledApps or M.AllowedApps
     if type(layout) ~= 'table' then
         layout = M.DefaultLayout
     end
 
-    local used = {}
-    local result = {
-        home = {},
-        menu = {}
-    }
+    local rawFolders = type(layout.folders) == 'table' and layout.folders or {}
+    local rawHome = type(layout.home) == 'table' and layout.home or {}
+    local rawMenu = type(layout.menu) == 'table' and layout.menu or {}
 
-    local function pushUnique(listName, values)
-        if type(values) ~= 'table' then return end
-        for _, appId in ipairs(values) do
-            if type(appId) == 'string' and enabledApps[appId] and not used[appId] then
-                local list = result[listName]
-                list[#list + 1] = appId
-                used[appId] = true
+    local folders = {}
+    local foldersById = {}
+    local usedApps = {}
+
+    for _, f in ipairs(rawFolders) do
+        if #folders >= M.MAX_FOLDERS then break end
+        if type(f) == 'table' then
+            local id = M.ValidateFolderId(f.id)
+            if id and not foldersById[id] then
+                local name = M.ValidateFolderName(f.name) or 'Folder'
+                local color = M.ValidateFolderColor(f.color) or M.DefaultFolderColor
+                local apps = {}
+                local seen = {}
+                local rawApps = type(f.apps) == 'table' and f.apps or {}
+                for _, appId in ipairs(rawApps) do
+                    if #apps >= M.MAX_APPS_PER_FOLDER then break end
+                    if type(appId) == 'string'
+                        and not seen[appId]
+                        and not usedApps[appId]
+                        and M.AllowedApps[appId]
+                        and enabledApps[appId]
+                        and not isPinned(appId)
+                    then
+                        apps[#apps + 1] = appId
+                        seen[appId] = true
+                        usedApps[appId] = true
+                    end
+                end
+
+                if #apps > 0 then
+                    local folder = { id = id, name = name, color = color, apps = apps }
+                    folders[#folders + 1] = folder
+                    foldersById[id] = folder
+                end
             end
         end
     end
 
-    pushUnique('home', layout.home)
-    pushUnique('menu', layout.menu)
+    local home = {}
+    local menu = {}
+    local homeSeen = {}
 
+    for _, entry in ipairs(rawHome) do
+        if type(entry) == 'string' and not homeSeen[entry] then
+            if entry:sub(1, 7) == 'folder:' then
+                local ref = entry:sub(8)
+                if foldersById[ref] then
+                    home[#home + 1] = entry
+                    homeSeen[entry] = true
+                end
+            elseif M.AllowedApps[entry] and enabledApps[entry] and not usedApps[entry] then
+                home[#home + 1] = entry
+                homeSeen[entry] = true
+                usedApps[entry] = true
+            end
+        end
+    end
+
+    for _, folder in ipairs(folders) do
+        local ref = 'folder:' .. folder.id
+        if not homeSeen[ref] then
+            home[#home + 1] = ref
+            homeSeen[ref] = true
+        end
+    end
+
+    for _, entry in ipairs(rawMenu) do
+        if type(entry) == 'string'
+            and M.AllowedApps[entry]
+            and enabledApps[entry]
+            and not usedApps[entry]
+        then
+            menu[#menu + 1] = entry
+            usedApps[entry] = true
+        end
+    end
+
+    local defaultHomeLookup = {}
     for _, appId in ipairs(M.DefaultLayout.home) do
-        if enabledApps[appId] and not used[appId] then
-            result.home[#result.home + 1] = appId
-            used[appId] = true
+        defaultHomeLookup[appId] = true
+    end
+
+    for appId, _ in pairs(M.AllowedApps) do
+        if enabledApps[appId] and not usedApps[appId] then
+            if defaultHomeLookup[appId] then
+                home[#home + 1] = appId
+            else
+                menu[#menu + 1] = appId
+            end
+            usedApps[appId] = true
         end
     end
 
-    for _, appId in ipairs(M.DefaultLayout.menu) do
-        if enabledApps[appId] and not used[appId] then
-            result.menu[#result.menu + 1] = appId
-            used[appId] = true
+    local pinnedSet = {}
+    local orderedHome = {}
+    for _, id in ipairs(M.PinnedHomeIds) do
+        if enabledApps[id] then
+            pinnedSet[id] = true
+            orderedHome[#orderedHome + 1] = id
+        end
+    end
+    for _, entry in ipairs(home) do
+        if not pinnedSet[entry] then
+            orderedHome[#orderedHome + 1] = entry
         end
     end
 
-    return result
+    local filteredMenu = {}
+    for _, entry in ipairs(menu) do
+        if not pinnedSet[entry] then
+            filteredMenu[#filteredMenu + 1] = entry
+        end
+    end
+
+    return { home = orderedHome, menu = filteredMenu, folders = folders }
 end
 
 function M.BuildReadOnlyEnabledApps()
@@ -173,6 +316,17 @@ function M.BuildReadOnlyEnabledApps()
     return enabled
 end
 
+local function ReadLayoutRow(identifier)
+    local row = MySQL.single.await(
+        'SELECT layout_json, version FROM phone_layouts WHERE identifier = ?',
+        { identifier }
+    )
+    if not row then return nil, 0 end
+    local ok, decoded = pcall(json.decode, row.layout_json or '')
+    if not ok then return nil, tonumber(row.version) or 0 end
+    return decoded, tonumber(row.version) or 0
+end
+
 -- Registers layout callbacks. phone.lua injects IsPhoneReadOnly since that
 -- guard depends on state (ActivePhoneContexts) owned by phone.lua.
 ---@param deps { Bridge: table, IsPhoneReadOnly: fun(src: integer): boolean }
@@ -181,37 +335,100 @@ function M.RegisterCallbacks(deps)
     local IsPhoneReadOnly = deps.IsPhoneReadOnly
 
     lib.callback.register('gcphone:getAppLayout', function(source)
-        local identifier = Bridge.GetIdentifier(source)
         local enabledApps = M.BuildEnabledApps(M.GetFeatureFlags())
-        if not identifier then return M.NormalizeLayout(M.DefaultLayout, enabledApps) end
-
-        local layoutRaw = MySQL.scalar.await(
-            'SELECT layout_json FROM phone_layouts WHERE identifier = ?',
-            { identifier }
-        )
-
-        if not layoutRaw or layoutRaw == '' then
-            return M.NormalizeLayout(M.DefaultLayout, enabledApps)
+        local identifier = Bridge.GetIdentifier(source)
+        if not identifier then
+            return { layout = M.NormalizeLayout(M.DefaultLayout, enabledApps), version = 0 }
         end
 
-        local decoded = json.decode(layoutRaw)
-        return M.NormalizeLayout(decoded, enabledApps)
+        local decoded, version = ReadLayoutRow(identifier)
+        if not decoded then
+            return { layout = M.NormalizeLayout(M.DefaultLayout, enabledApps), version = version }
+        end
+
+        return { layout = M.NormalizeLayout(decoded, enabledApps), version = version }
     end)
 
-    lib.callback.register('gcphone:setAppLayout', function(source, layout)
-        if IsPhoneReadOnly(source) then return false end
+    lib.callback.register('gcphone:setAppLayout', function(source, payload)
+        if IsPhoneReadOnly(source) then
+            return { ok = false, reason = 'read_only' }
+        end
+
+        local now = GetGameTimer()
+        local last = lastSetAt[source] or 0
+        if now - last < RATE_LIMIT_MS then
+            return { ok = false, reason = 'rate_limited' }
+        end
+
+        if type(payload) ~= 'table' then
+            return { ok = false, reason = 'invalid_payload' }
+        end
+
+        local clientVersion = tonumber(payload.version)
+        if not clientVersion or clientVersion < 0 then
+            return { ok = false, reason = 'invalid_version' }
+        end
+
         local identifier = Bridge.GetIdentifier(source)
-        if not identifier then return false end
+        if not identifier then
+            return { ok = false, reason = 'no_identity' }
+        end
 
-        local normalized = M.NormalizeLayout(layout, M.BuildEnabledApps(M.GetFeatureFlags()))
+        local enabledApps = M.BuildEnabledApps(M.GetFeatureFlags())
+        local normalized = M.NormalizeLayout(payload.layout, enabledApps)
         local encoded = json.encode(normalized)
+        if type(encoded) ~= 'string' or #encoded > M.MAX_LAYOUT_BYTES then
+            return { ok = false, reason = 'too_large' }
+        end
 
-        MySQL.insert.await(
-            'INSERT INTO phone_layouts (identifier, layout_json) VALUES (?, ?) ON DUPLICATE KEY UPDATE layout_json = VALUES(layout_json)',
-            { identifier, encoded }
+        local currentLayout, currentVersion = ReadLayoutRow(identifier)
+
+        if currentVersion == 0 and not currentLayout then
+            local ok = pcall(function()
+                MySQL.insert.await(
+                    'INSERT INTO phone_layouts (identifier, layout_json, version) VALUES (?, ?, 1)',
+                    { identifier, encoded }
+                )
+            end)
+            if not ok then
+                local raceLayout, raceVersion = ReadLayoutRow(identifier)
+                return {
+                    ok = false,
+                    reason = 'version_conflict',
+                    version = raceVersion,
+                    layout = M.NormalizeLayout(raceLayout, enabledApps),
+                }
+            end
+            lastSetAt[source] = now
+            return { ok = true, version = 1, layout = normalized }
+        end
+
+        if clientVersion ~= currentVersion then
+            return {
+                ok = false,
+                reason = 'version_conflict',
+                version = currentVersion,
+                layout = M.NormalizeLayout(currentLayout, enabledApps),
+            }
+        end
+
+        local affected = MySQL.update.await(
+            'UPDATE phone_layouts SET layout_json = ?, version = version + 1 WHERE identifier = ? AND version = ?',
+            { encoded, identifier, clientVersion }
         )
 
-        return true
+        if not affected or affected < 1 then
+            local raceLayout, raceVersion = ReadLayoutRow(identifier)
+            return {
+                ok = false,
+                reason = 'version_conflict',
+                version = raceVersion,
+                layout = M.NormalizeLayout(raceLayout, enabledApps),
+            }
+        end
+
+        lastSetAt[source] = now
+        return { ok = true, version = clientVersion + 1, layout = normalized }
     end)
 
     lib.callback.register('gcphone:getWidgetLayout', function(source)
@@ -246,5 +463,9 @@ function M.RegisterCallbacks(deps)
         return true
     end)
 end
+
+AddEventHandler('playerDropped', function()
+    lastSetAt[source] = nil
+end)
 
 return M

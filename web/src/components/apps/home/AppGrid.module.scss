@@ -47,8 +47,67 @@
 }
 
 .merge-target {
-  transform: scale(1.12);
-  box-shadow: 0 0 0 3px rgba(var(--tint-rgb), 0.5);
+  transform: scale(0.92);
+  box-shadow: 0 0 0 3px rgba(var(--tint-rgb), 0.6);
   border-radius: 18px;
   transition: transform 200ms ease, box-shadow 200ms ease;
 }
+
+.ghost {
+  position: fixed;
+  z-index: 40;
+  pointer-events: none;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  opacity: 0.92;
+  transform: scale(1.08);
+  transition: transform 120ms ease;
+  filter: drop-shadow(0 10px 24px rgba(0, 0, 0, 0.45));
+}
+
+.ghost-inner {
+  width: 62px;
+  height: 62px;
+  border-radius: 16px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+
+  img {
+    width: 100%;
+    height: 100%;
+    border-radius: 16px;
+    object-fit: cover;
+  }
+}
+
+.ghost-folder {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3px;
+  padding: 8px;
+  box-sizing: border-box;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.18);
+
+  img, span {
+    width: 100%;
+    height: 100%;
+    border-radius: 4px;
+    object-fit: cover;
+  }
+}
+
+.color-blue   .ghost-folder { background: rgba(0, 122, 255, 0.32); }
+.color-purple .ghost-folder { background: rgba(175, 82, 222, 0.32); }
+.color-pink   .ghost-folder { background: rgba(255, 45, 85, 0.32); }
+.color-red    .ghost-folder { background: rgba(255, 59, 48, 0.32); }
+.color-orange .ghost-folder { background: rgba(255, 149, 0, 0.32); }
+.color-green  .ghost-folder { background: rgba(52, 199, 89, 0.32); }
+.color-teal   .ghost-folder { background: rgba(90, 200, 250, 0.32); }
+.color-gray   .ghost-folder { background: rgba(142, 142, 147, 0.32); }

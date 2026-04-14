@@ -1384,21 +1384,55 @@ export async function handleBrowserNui<T = unknown>(eventName: string, data?: un
   }
 
   if (eventName === 'getAppLayout') {
+    const rawFolders = (state.appLayout as unknown as { folders?: unknown }).folders;
+    const folders = Array.isArray(rawFolders)
+      ? (rawFolders as Array<{ id: string; name: string; color: string; apps: string[] }>).map((f) => ({
+          id: f.id,
+          name: f.name,
+          color: f.color,
+          apps: [...f.apps],
+        }))
+      : [];
     return {
-      home: [...state.appLayout.home],
-      menu: [...state.appLayout.menu]
+      layout: {
+        home: [...state.appLayout.home],
+        menu: [...state.appLayout.menu],
+        folders,
+      },
+      version: (state as unknown as { layoutVersion?: number }).layoutVersion ?? 0,
     } as T;
   }
 
   if (eventName === 'setAppLayout') {
-    const layout = payload.layout as { home?: string[]; menu?: string[] } | undefined;
+    const layout = payload.layout as {
+      home?: string[];
+      menu?: string[];
+      folders?: Array<{ id: string; name: string; color: string; apps: string[] }>;
+    } | undefined;
+    const clientVersion = typeof payload.version === 'number' ? payload.version : 0;
+    const currentVersion = (state as unknown as { layoutVersion?: number }).layoutVersion ?? 0;
+
+    if (clientVersion !== currentVersion) {
+      return {
+        ok: false,
+        reason: 'version_conflict',
+        version: currentVersion,
+        layout: state.appLayout,
+      } as T;
+    }
+
     if (layout && Array.isArray(layout.home) && Array.isArray(layout.menu)) {
       state.appLayout = {
         home: [...layout.home],
-        menu: [...layout.menu]
-      };
+        menu: [...layout.menu],
+        folders: Array.isArray(layout.folders)
+          ? layout.folders.map((f) => ({ id: f.id, name: f.name, color: f.color, apps: [...f.apps] }))
+          : [],
+      } as typeof state.appLayout;
     }
-    return true as T;
+    const nextVersion = currentVersion + 1;
+    (state as unknown as { layoutVersion?: number }).layoutVersion = nextVersion;
+    return { ok: true, version: nextVersion, layout: state.appLayout } as T;
   }
 
   if (eventName === 'phoneGetSetupState') {

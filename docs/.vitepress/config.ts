@@ -64,6 +64,7 @@ export default defineConfig({
         collapsed: false,
         items: [
           { text: 'Adding an App', link: '/guides/adding-app' },
+          { text: 'Home Screen Folders', link: '/guides/home-folders' },
           { text: 'WebRTC & TURN Setup', link: '/guides/livekit-setup' },
           { text: 'Real-Time Chat', link: '/guides/socket-setup' },
           { text: 'Framework Bridge', link: '/guides/framework-bridge' },

@@ -252,6 +252,7 @@ CREATE TABLE IF NOT EXISTS `phone_layouts` (
     `id` INT AUTO_INCREMENT PRIMARY KEY,
     `identifier` VARCHAR(50) NOT NULL,
     `layout_json` LONGTEXT NOT NULL,
+    `version` INT NOT NULL DEFAULT 1,
     `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     UNIQUE KEY `idx_identifier` (`identifier`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

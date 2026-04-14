@@ -135,6 +135,7 @@ export interface PhoneState {
   stolenReason?: string | null;
   settings: PhoneSettings;
   appLayout: AppLayout;
+  layoutVersion: number;
   enabledApps: string[];
   featureFlags: PhoneFeatureFlags;
   requiresSetup: boolean;

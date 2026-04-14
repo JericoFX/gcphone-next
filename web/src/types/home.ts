@@ -1,10 +1,29 @@
 export type IconShape = 'squircle' | 'circle' | 'rounded' | 'square';
 
+export const ALLOWED_FOLDER_COLORS = [
+  'blue',
+  'purple',
+  'pink',
+  'red',
+  'orange',
+  'green',
+  'teal',
+  'gray',
+] as const;
+
+export type AllowedFolderColor = typeof ALLOWED_FOLDER_COLORS[number];
+
+export const DEFAULT_FOLDER_COLOR: AllowedFolderColor = 'blue';
+
+export const FOLDER_ID_RE = /^folder_[a-z0-9]{10}$/;
+export const FOLDER_NAME_RE = /^[\p{L}\p{N}][\p{L}\p{N} _.\-]{0,19}$/u;
+export const FOLDER_NAME_MAX = 20;
+
 export interface Folder {
   id: string;
   name: string;
   apps: string[];
-  color: string;
+  color: AllowedFolderColor;
 }
 
 export type WidgetType = 'maps' | 'nowPlaying' | 'contacts' | 'notes' | 'chirp' | 'clock' | 'weather' | 'bank' | 'gallery' | 'radio';
@@ -40,7 +59,8 @@ export const WIDGET_DEFINITIONS: Record<WidgetType, { name: string; icon: string
   radio: { name: 'Radio', icon: './img/icons_ios/radio.svg', sizes: ['sm', 'md'] },
 };
 
-export const MAX_FOLDERS = 8;
-export const MAX_APPS_PER_FOLDER = 12;
+export const MAX_FOLDERS = 4;
+export const MAX_APPS_PER_FOLDER = 4;
 export const MAX_WIDGETS = 10;
+export const MAX_LAYOUT_JSON_BYTES = 8192;
 export const PINNED_APP_IDS = ['contacts', 'messages', 'mail'] as const;

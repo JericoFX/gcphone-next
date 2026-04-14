@@ -24,6 +24,8 @@ export function HomeScreen() {
   const [touchStartX, setTouchStartX] = createSignal<number | null>(null);
   const [pageTransition, setPageTransition] = createSignal<'next' | 'prev' | null>(null);
   const [openFolder, setOpenFolder] = createSignal<Folder | null>(null);
+  const [folderOrigin, setFolderOrigin] = createSignal<{ x: number; y: number; width: number; height: number } | null>(null);
+  let homeRootRef: HTMLDivElement | undefined;
 
   const language = createMemo(() => state.settings.language || 'es');
   const { currentTime, desktopPage, setDesktopPage, musicNowPlaying, radioStation, bankBalance } = useHomeDesktopState(language);
@@ -127,7 +129,7 @@ export function HomeScreen() {
 
   return (
     <IconPackProvider>
-      <div class={styles.homeScreen} style={{ 'background-image': `url(${state.settings.wallpaper})` }}>
+      <div ref={homeRootRef} class={styles.homeScreen} style={{ 'background-image': `url(${state.settings.wallpaper})` }}>
         <div class={styles.statusBar}>
           <div class={styles.time}>{formatTime(currentTime())}</div>
           <div class={styles.icons}>
@@ -181,7 +183,12 @@ export function HomeScreen() {
                 items={() => visibleItems()}
                 editing={editing()}
                 language={language}
-                onOpenFolder={(folder) => setOpenFolder(folder)}
+                frameRef={() => homeRootRef}
+                onOpenFolder={(folder, originEl) => {
+                  const r = originEl.getBoundingClientRect();
+                  setFolderOrigin({ x: r.left, y: r.top, width: r.width, height: r.height });
+                  setOpenFolder(folder);
+                }}
                 onPageEdge={(dir) => {
                   if (dir === 'left' && desktopPage() > -1) goToPage(desktopPage() - 1);
                   if (dir === 'right' && desktopPage() < pageCount() - 1) goToPage(desktopPage() + 1);
@@ -206,7 +213,12 @@ export function HomeScreen() {
             <FolderModal
               folder={folder()}
               language={language}
-              onClose={() => setOpenFolder(null)}
+              originRect={folderOrigin()}
+              containerRef={() => homeRootRef}
+              onClose={() => {
+                setOpenFolder(null);
+                setFolderOrigin(null);
+              }}
             />
           )}
         </Show>

@@ -12,7 +12,7 @@
   color: #fff;
   touch-action: none;
   user-select: none;
-  transition: transform 170ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition: transform 170ms cubic-bezier(0.2, 0.8, 0.2, 1), opacity 140ms ease;
 
   .preview {
     width: 62px;
@@ -24,7 +24,8 @@
     box-sizing: border-box;
     border-radius: 16px;
     box-shadow: 0 6px 16px rgba(0, 0, 0, 0.28), 0 1px 3px rgba(0, 0, 0, 0.15);
-    transition: transform 200ms cubic-bezier(0.2, 0.8, 0.2, 1), border-radius 200ms ease;
+    transition: transform 200ms cubic-bezier(0.2, 0.8, 0.2, 1), border-radius 200ms ease, background 200ms ease;
+    background: rgba(255, 255, 255, 0.18);
   }
 
   .mini-icon {
@@ -57,6 +58,19 @@
   &:active .preview {
     transform: scale(0.92);
   }
+}
+
+.color-blue   .preview { background: rgba(0, 122, 255, 0.32); }
+.color-purple .preview { background: rgba(175, 82, 222, 0.32); }
+.color-pink   .preview { background: rgba(255, 45, 85, 0.32); }
+.color-red    .preview { background: rgba(255, 59, 48, 0.32); }
+.color-orange .preview { background: rgba(255, 149, 0, 0.32); }
+.color-green  .preview { background: rgba(52, 199, 89, 0.32); }
+.color-teal   .preview { background: rgba(90, 200, 250, 0.32); }
+.color-gray   .preview { background: rgba(142, 142, 147, 0.32); }
+
+.dragging {
+  opacity: 0;
 }
 
 .jiggle {

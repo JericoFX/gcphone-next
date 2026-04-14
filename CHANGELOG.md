@@ -2,6 +2,23 @@
 
 All notable changes to gcphone-next will be documented in this file.
 
+## [3.1.2] - 2026-04-14
+
+### Added
+- **Home screen folders** — iOS-style drag-to-merge folders with a limit of 4 folders per device and 4 apps per folder
+- Folder modal with color picker (8 colors), rename and delete actions; animated open/close with shared transform origin
+- Server-side layout normalizer mirroring the client validation: folders, pinned apps, enabled-app filtering and 16KB payload ceiling
+- Optimistic concurrency on `phone_layouts` via a new `version` column; conflicts reconcile the client to the latest server layout
+- Per-source rate-limit (1.5s) on `setAppLayout` to blunt spam/DoS
+- Client-side 400ms debounced persistence for layout mutations
+- SQL upgrade `sql/upgrades/opt-folders-v2.sql` adding the `version` column
+
+### Changed
+- `gcphone:getAppLayout` now returns `{ layout, version }`
+- `gcphone:setAppLayout` now returns `{ ok, version, layout?, reason? }` with structured error reasons (`version_conflict`, `rate_limited`, `too_large`, …)
+- `NormalizeLayout` in `server/modules/phone_layouts.lua` processes folders, pinned ordering and default fill-in as a single pipeline
+- Docs: new `guides/home-folders.md`, updated `api/callbacks.md` and `api/nui-callbacks.md` to reflect the new contract
+
 ## [3.1.1] - 2026-04-13
 
 ### Changed

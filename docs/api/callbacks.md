@@ -26,8 +26,8 @@ All callbacks are registered via `lib.callback.register` (ox_lib) and invoked fr
 | `gcphone:setTheme` | `source, data: table` | `boolean` | Set the phone theme. |
 | `gcphone:setLanguage` | `source, data: table` | `boolean` | Set the phone language. |
 | `gcphone:setAudioProfile` | `source, data: table` | `boolean` | Set the audio profile. |
-| `gcphone:getAppLayout` | `source` | `table` | Get the app layout/order. |
-| `gcphone:setAppLayout` | `source, layout: table` | `boolean` | Set the app layout/order. |
+| `gcphone:getAppLayout` | `source` | `{ layout: table, version: integer }` | Get the normalized app layout (home, menu, folders) and its version. |
+| `gcphone:setAppLayout` | `source, { layout: table, version: integer }` | `{ ok: boolean, version?: integer, layout?: table, reason?: string }` | Persist a layout with optimistic concurrency. See [Home Screen Folders](../guides/home-folders.md). |
 | `gcphone:getPhoneMetadata` | `source, phoneId: integer` | `table` | Get metadata for a specific phone (dropped phone context). |
 
 ## Contacts
