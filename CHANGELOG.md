@@ -2,6 +2,23 @@
 
 All notable changes to gcphone-next will be documented in this file.
 
+## [3.1.1] - 2026-04-13
+
+### Changed
+- Split `server/modules/phone.lua` into `phone_layouts.lua` and `phone_settings.lua`
+- Split `server/modules/snap.lua`, extracting live logic into `snap_live.lua`
+- Split `client/nui_bridge.lua` per domain into `client/nui/{events,darkrooms,radio,cityride}.lua`
+- Break `MessagesApp`, `ChirpApp` and `NewsApp` into dedicated modal/view sub-components
+
+### Added
+- Database indexes on `phone_messages`, `phone_calls` and `phone_social_notifications` (+ upgrade script in `sql/upgrades/opt-12-perf-indexes.sql`)
+- `Config.Startup`, `Config.SDK` and `Config.Callbacks` sections in `shared/config.lua`
+- `@apps/*` path alias for `web/src/components/apps/*`
+- Startup log listing active entries in `Config.Phone.ExportAllowlist`
+
+### Fixed
+- Sync `fxmanifest.lua` version with `version.txt` (was stuck at `2.10.0`)
+
 ## [3.1.0] - 2026-04-02
 
 ### Added
