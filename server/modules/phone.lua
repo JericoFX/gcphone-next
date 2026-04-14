@@ -3,6 +3,8 @@
 local Bridge = require 'server.bridge'
 local Hooks = require 'server.modules.hooks'
 local Utils = require 'server.lib.utils'
+local Layouts = require 'server.modules.phone_layouts'
+local Settings = require 'server.modules.phone_settings'
 
 local PhoneExists
 local RESOURCE_NAME = GetCurrentResourceName()
@@ -10,6 +12,17 @@ local RESOURCE_NAME = GetCurrentResourceName()
 local isTruthy = Utils.isTruthy
 
 local StreamerModePlayers = {}
+
+-- Layout helpers extracted to server/modules/phone_layouts.lua (OPT-07).
+-- Aliased locally so in-file references keep working.
+local AllowedApps = Layouts.AllowedApps
+local DefaultLayout = Layouts.DefaultLayout
+local ForeignReadOnlyApps = Layouts.ForeignReadOnlyApps
+local GetFeatureFlags = Layouts.GetFeatureFlags
+local BuildEnabledApps = Layouts.BuildEnabledApps
+local EnabledList = Layouts.EnabledList
+local NormalizeLayout = Layouts.NormalizeLayout
+local BuildReadOnlyEnabledApps = Layouts.BuildReadOnlyEnabledApps
 
 ---@class GCPhoneLookupOwner
 ---@field identifier string
@@ -82,179 +95,13 @@ local function SafeString(value, maxLen)
     return trimmed
 end
 
-local function SafeTheme(value)
-    if value == 'auto' or value == 'light' or value == 'dark' then
-        return value
-    end
-    return nil
-end
-
-local function SafeAudioProfile(value)
-    if value == 'normal' or value == 'street' or value == 'vehicle' or value == 'silent' then
-        return value
-    end
-    return nil
-end
-
-local function SafeToneId(value)
-    if type(value) ~= 'string' then return nil end
-    local tone = value:gsub('[^%w%._%-]', '')
-    if tone == '' then return nil end
-    return tone:sub(1, 64)
-end
-
-local function NativeAudioDefaults()
-    return (Config.NativeAudio and Config.NativeAudio.DefaultByCategory) or {}
-end
-
-local function NativeAudioCatalog()
-    return (Config.NativeAudio and Config.NativeAudio.Catalog) or {}
-end
-
-local function NativeAudioLegacyMap()
-    return (Config.NativeAudio and Config.NativeAudio.LegacyMap) or {}
-end
-
-local function DefaultToneId(category)
-    local defaults = NativeAudioDefaults()
-    if category == 'ringtone' then
-        return defaults.ringtone or 'call_1'
-    end
-    if category == 'notification' then
-        return defaults.notification or 'notif_1'
-    end
-    if category == 'message' then
-        return defaults.message or 'msg_1'
-    end
-    if category == 'vibrate' then
-        return defaults.vibrate or 'buzz_short_01'
-    end
-    return defaults.ringtone or 'call_1'
-end
-
-local function ResolveToneId(value, category)
-    local tone = SafeToneId(value)
-    local catalog = NativeAudioCatalog()
-    local legacy = NativeAudioLegacyMap()
-    local defaultTone = DefaultToneId(category)
-
-    if not tone then return defaultTone end
-    if catalog[tone] then return tone end
-
-    local mapped = legacy[tone]
-    if mapped and catalog[mapped] then
-        return mapped
-    end
-
-    return defaultTone
-end
-
-local AllowedApps = {
-    contacts = true,
-    messages = true,
-    mail = true,
-    calls = true,
-    settings = true,
-    notifications = true,
-    gallery = true,
-    camera = true,
-    bank = true,
-    wallet = true,
-    documents = true,
-    appstore = true,
-    wavechat = true,
-    music = true,
-    chirp = true,
-    snap = true,
-    clips = true,
-    darkrooms = true,
-    yellowpages = true,
-    news = true,
-    garage = true,
-    clock = true,
-    notes = true,
-    maps = true,
-    weather = true,
-    matchmylove = true,
-    radio = true,
-    services = true,
-    cityride = true,
-}
-
-local DefaultLayout = {
-    home = { 'contacts', 'messages', 'mail', 'notifications', 'calls', 'settings', 'gallery', 'camera', 'bank', 'wallet', 'documents', 'wavechat', 'music', 'chirp', 'snap', 'clips', 'darkrooms', 'yellowpages', 'news', 'garage', 'clock', 'notes', 'maps', 'weather', 'matchmylove', 'radio', 'services', 'cityride' },
-    menu = { 'appstore' }
-}
-
-local ForeignReadOnlyApps = {
-    contacts = true,
-    messages = true,
-    notifications = true,
-    calls = true,
-    settings = true,
-    gallery = true,
-    documents = true,
-}
+-- Settings validators extracted to server/modules/phone_settings.lua (OPT-07 pass 2).
+local SafeTheme = Settings.SafeTheme
+local SafeAudioProfile = Settings.SafeAudioProfile
+local ResolveToneId = Settings.ResolveToneId
+local SafeLanguage = Settings.SafeLanguage
 
 local ActivePhoneContexts = {}
-
-local function GetFeatureFlags()
-    local defaults = Config.Features or {}
-
-    local function resolveConvarBool(name, fallback)
-        local raw = GetConvar(name, fallback and '1' or '0')
-        return raw == '1' or raw == 'true' or raw == 'TRUE'
-    end
-
-    local function hasClipStorageSupport()
-        local provider = tostring(GetConvar('gcphone_storage_provider', tostring(Config.Storage and Config.Storage.Provider or 'custom'))):lower()
-        if provider == 'direct' then provider = 'custom' end
-
-        if provider == 'server_folder' then
-            local publicUrl = tostring(GetConvar('gcphone_storage_server_folder_public_url', tostring(Config.Storage and Config.Storage.ServerFolder and Config.Storage.ServerFolder.PublicBaseUrl or '')))
-            return publicUrl:match('^https?://') ~= nil
-        end
-
-        local uploadUrl = ''
-        if provider == 'fivemanage' then
-            uploadUrl = tostring(GetConvar('gcphone_storage_fivemanage_url', tostring(Config.Storage and Config.Storage.FiveManage and Config.Storage.FiveManage.Endpoint or '')))
-        elseif provider == 'local' then
-            uploadUrl = tostring(GetConvar('gcphone_storage_local_url', ''))
-        else
-            uploadUrl = tostring(GetConvar('gcphone_storage_custom_url', tostring(Config.Storage and Config.Storage.Custom and Config.Storage.Custom.UploadUrl or '')))
-        end
-
-        return uploadUrl:match('^https?://') ~= nil
-    end
-
-    return {
-        appstore = resolveConvarBool('gcphone_feature_appstore', defaults.AppStore ~= false),
-        wavechat = resolveConvarBool('gcphone_feature_wavechat', defaults.WaveChat ~= false),
-        darkrooms = resolveConvarBool('gcphone_feature_darkrooms', defaults.DarkRooms ~= false),
-        clips = resolveConvarBool('gcphone_feature_clips', defaults.Clips ~= false) and hasClipStorageSupport(),
-        wallet = resolveConvarBool('gcphone_feature_wallet', defaults.Wallet ~= false),
-        documents = resolveConvarBool('gcphone_feature_documents', defaults.Documents ~= false),
-        music = resolveConvarBool('gcphone_feature_music', defaults.Music ~= false),
-        yellowpages = resolveConvarBool('gcphone_feature_yellowpages', defaults.YellowPages ~= false),
-        mail = resolveConvarBool('gcphone_feature_mail', defaults.Mail ~= false),
-    }
-end
-
-local function SafeLanguage(value)
-    if type(value) ~= 'string' then return nil end
-
-    local normalized = value:lower():gsub('%-', '_')
-    if normalized == 'es' or normalized == 'es_es' then return 'es' end
-    if normalized == 'en' or normalized == 'en_us' then return 'en' end
-    if normalized == 'pt' or normalized == 'pt_br' then return 'pt' end
-    if normalized == 'fr' or normalized == 'fr_fr' then return 'fr' end
-    if normalized == 'de' or normalized == 'de_de' then return 'de' end
-    if normalized == 'it' or normalized == 'it_it' then return 'it' end
-    if normalized == 'pl' or normalized == 'pl_pl' then return 'pl' end
-    if normalized == 'ru' or normalized == 'ru_ru' then return 'ru' end
-
-    return nil
-end
 
 local function SafePin(value)
     if type(value) ~= 'string' then return nil end
@@ -391,76 +238,6 @@ local function ResolveSetupState(identifier)
         mailDomain = featureFlags.mail and MailDomain() or nil,
         emergencyContacts = ResolveEmergencyContacts(),
     }
-end
-
-local function BuildEnabledApps(flags)
-    local enabled = {}
-    for appId, _ in pairs(AllowedApps) do
-        enabled[appId] = true
-    end
-
-    if not flags.appstore then enabled.appstore = nil end
-    if not flags.wavechat then enabled.wavechat = nil end
-    if not flags.darkrooms then enabled.darkrooms = nil end
-    if not flags.clips then enabled.clips = nil end
-    if not flags.wallet then enabled.wallet = nil end
-    if not flags.mail then enabled.mail = nil end
-    if not flags.documents then enabled.documents = nil end
-    if not flags.music then enabled.music = nil end
-    if not flags.yellowpages then enabled.yellowpages = nil end
-    return enabled
-end
-
-local function EnabledList(enabledApps)
-    local out = {}
-    for appId, active in pairs(enabledApps) do
-        if active then out[#out + 1] = appId end
-    end
-    table.sort(out)
-    return out
-end
-
-local function NormalizeLayout(layout, enabledApps)
-    enabledApps = enabledApps or AllowedApps
-    if type(layout) ~= 'table' then
-        layout = DefaultLayout
-    end
-
-    local used = {}
-    local result = {
-        home = {},
-        menu = {}
-    }
-
-    local function pushUnique(listName, values)
-        if type(values) ~= 'table' then return end
-        for _, appId in ipairs(values) do
-            if type(appId) == 'string' and enabledApps[appId] and not used[appId] then
-                local list = result[listName]
-                list[#list + 1] = appId
-                used[appId] = true
-            end
-        end
-    end
-
-    pushUnique('home', layout.home)
-    pushUnique('menu', layout.menu)
-
-    for _, appId in ipairs(DefaultLayout.home) do
-        if enabledApps[appId] and not used[appId] then
-            result.home[#result.home + 1] = appId
-            used[appId] = true
-        end
-    end
-
-    for _, appId in ipairs(DefaultLayout.menu) do
-        if enabledApps[appId] and not used[appId] then
-            result.menu[#result.menu + 1] = appId
-            used[appId] = true
-        end
-    end
-
-    return result
 end
 
 PhoneExists = function(phoneNumber)
@@ -610,16 +387,6 @@ end
 
 local function VerifyPhonePinForIdentifier(identifier, pin)
     return VerifyPinForIdentifier(identifier, pin)
-end
-
-local function BuildReadOnlyEnabledApps()
-    local enabled = {}
-    for appId, active in pairs(ForeignReadOnlyApps) do
-        if active then
-            enabled[appId] = true
-        end
-    end
-    return enabled
 end
 
 local function GetPhoneAccessContext(source)
@@ -1067,110 +834,71 @@ lib.callback.register('gcphone:phone:reportImeiViewed', function(source, data)
     return { success = true, imei = phone.imei }
 end)
 
-lib.callback.register('gcphone:setWallpaper', function(source, data)
-    if IsPhoneReadOnly(source) then return false end
-    local identifier = Bridge.GetIdentifier(source)
-    if not identifier then return false end
-    local url = SafeString(type(data) == 'table' and data.url or nil, 500)
-    if not url then return false end
-    
-    MySQL.update.await(
-        'UPDATE phone_numbers SET wallpaper = ? WHERE identifier = ?',
-        { url, identifier }
-    )
-    
-    return true
-end)
+-- OPT-05: unified phone-setting specs. Each entry maps an event name to a
+-- validator + SQL + param builder. A single handler loop below registers
+-- all of them, replacing ~180 lines of near-identical callbacks.
+local PHONE_SETTING_SPECS = {
+    { event = 'gcphone:setWallpaper',
+      parse = function(data) return SafeString(type(data) == 'table' and data.url or nil, 500) end,
+      sql = 'UPDATE phone_numbers SET wallpaper = ? WHERE identifier = ?' },
+    { event = 'gcphone:setRingtone',
+      parse = function(data) return ResolveToneId(type(data) == 'table' and data.ringtone or nil, 'ringtone') end,
+      sql = 'UPDATE phone_numbers SET ringtone = ?, call_ringtone = ? WHERE identifier = ?',
+      params = function(v) return { v, v } end },
+    { event = 'gcphone:setCallRingtone',
+      parse = function(data) return ResolveToneId(type(data) == 'table' and data.ringtone or nil, 'ringtone') end,
+      sql = 'UPDATE phone_numbers SET call_ringtone = ?, ringtone = ? WHERE identifier = ?',
+      params = function(v) return { v, v } end },
+    { event = 'gcphone:setNotificationTone',
+      parse = function(data) return ResolveToneId(type(data) == 'table' and data.tone or nil, 'notification') end,
+      sql = 'UPDATE phone_numbers SET notification_tone = ? WHERE identifier = ?' },
+    { event = 'gcphone:setMessageTone',
+      parse = function(data) return ResolveToneId(type(data) == 'table' and data.tone or nil, 'message') end,
+      sql = 'UPDATE phone_numbers SET message_tone = ? WHERE identifier = ?' },
+    { event = 'gcphone:setVolume',
+      parse = function(data) return Utils.SafeNumber(type(data) == 'table' and data.volume or nil, 0.0, 1.0) end,
+      sql = 'UPDATE phone_numbers SET volume = ? WHERE identifier = ?' },
+    { event = 'gcphone:setLockCode',
+      parse = function(data) return SafeString(type(data) == 'table' and data.code or nil, 16) end,
+      sql = 'UPDATE phone_numbers SET lock_code = ?, pin_hash = SHA2(?, 256) WHERE identifier = ?',
+      params = function(v) return { v, v } end },
+    { event = 'gcphone:setTheme',
+      parse = function(data) return SafeTheme(type(data) == 'table' and data.theme or nil) end,
+      sql = 'UPDATE phone_numbers SET theme = ? WHERE identifier = ?' },
+    { event = 'gcphone:setLanguage',
+      parse = function(data) return SafeLanguage(type(data) == 'table' and data.language or nil) end,
+      sql = 'UPDATE phone_numbers SET language = ? WHERE identifier = ?' },
+    { event = 'gcphone:setAudioProfile',
+      parse = function(data)
+          local profile = SafeString(type(data) == 'table' and data.audioProfile or nil, 16)
+          if profile ~= 'normal' and profile ~= 'street' and profile ~= 'vehicle' and profile ~= 'silent' then return nil end
+          return profile
+      end,
+      sql = 'UPDATE phone_numbers SET audio_profile = ? WHERE identifier = ?' },
+    { event = 'gcphone:setStreamerMode',
+      parse = function(data)
+          local enabled = type(data) == 'table' and data.enabled == true
+          return { enabled = enabled, db = enabled and 1 or 0 }
+      end,
+      sql = 'UPDATE phone_numbers SET streamer_mode = ? WHERE identifier = ?',
+      params = function(v) return { v.db } end,
+      after = function(source, v) StreamerModePlayers[source] = v.enabled or nil end },
+}
 
-lib.callback.register('gcphone:setRingtone', function(source, data)
-    if IsPhoneReadOnly(source) then return false end
-    local identifier = Bridge.GetIdentifier(source)
-    if not identifier then return false end
-    local ringtone = ResolveToneId(type(data) == 'table' and data.ringtone or nil, 'ringtone')
-    if not ringtone then return false end
-    
-    MySQL.update.await(
-        'UPDATE phone_numbers SET ringtone = ?, call_ringtone = ? WHERE identifier = ?',
-        { ringtone, ringtone, identifier }
-    )
-    
-    return true
-end)
-
-lib.callback.register('gcphone:setCallRingtone', function(source, data)
-    if IsPhoneReadOnly(source) then return false end
-    local identifier = Bridge.GetIdentifier(source)
-    if not identifier then return false end
-    local ringtone = ResolveToneId(type(data) == 'table' and data.ringtone or nil, 'ringtone')
-    if not ringtone then return false end
-
-    MySQL.update.await(
-        'UPDATE phone_numbers SET call_ringtone = ?, ringtone = ? WHERE identifier = ?',
-        { ringtone, ringtone, identifier }
-    )
-
-    return true
-end)
-
-lib.callback.register('gcphone:setNotificationTone', function(source, data)
-    if IsPhoneReadOnly(source) then return false end
-    local identifier = Bridge.GetIdentifier(source)
-    if not identifier then return false end
-    local tone = ResolveToneId(type(data) == 'table' and data.tone or nil, 'notification')
-    if not tone then return false end
-
-    MySQL.update.await(
-        'UPDATE phone_numbers SET notification_tone = ? WHERE identifier = ?',
-        { tone, identifier }
-    )
-
-    return true
-end)
-
-lib.callback.register('gcphone:setMessageTone', function(source, data)
-    if IsPhoneReadOnly(source) then return false end
-    local identifier = Bridge.GetIdentifier(source)
-    if not identifier then return false end
-    local tone = ResolveToneId(type(data) == 'table' and data.tone or nil, 'message')
-    if not tone then return false end
-
-    MySQL.update.await(
-        'UPDATE phone_numbers SET message_tone = ? WHERE identifier = ?',
-        { tone, identifier }
-    )
-
-    return true
-end)
-
-lib.callback.register('gcphone:setVolume', function(source, data)
-    if IsPhoneReadOnly(source) then return false end
-    local identifier = Bridge.GetIdentifier(source)
-    if not identifier then return false end
-    local volume = Utils.SafeNumber(type(data) == 'table' and data.volume or nil, 0.0, 1.0)
-    if not volume then return false end
-    
-    MySQL.update.await(
-        'UPDATE phone_numbers SET volume = ? WHERE identifier = ?',
-        { volume, identifier }
-    )
-    
-    return true
-end)
-
-lib.callback.register('gcphone:setLockCode', function(source, data)
-    if IsPhoneReadOnly(source) then return false end
-    local identifier = Bridge.GetIdentifier(source)
-    if not identifier then return false end
-    local code = SafeString(type(data) == 'table' and data.code or nil, 16)
-    if not code then return false end
-    
-    MySQL.update.await(
-        'UPDATE phone_numbers SET lock_code = ?, pin_hash = SHA2(?, 256) WHERE identifier = ?',
-        { code, code, identifier }
-    )
-    
-    return true
-end)
+for _, spec in ipairs(PHONE_SETTING_SPECS) do
+    lib.callback.register(spec.event, function(source, data)
+        if IsPhoneReadOnly(source) then return false end
+        local identifier = Bridge.GetIdentifier(source)
+        if not identifier then return false end
+        local value = spec.parse(data)
+        if value == nil or value == false then return false end
+        local params = spec.params and spec.params(value) or { value }
+        params[#params + 1] = identifier
+        MySQL.update.await(spec.sql, params)
+        if spec.after then spec.after(source, value) end
+        return true
+    end)
+end
 
 lib.callback.register('gcphone:factoryResetPhone', function(source)
     if IsPhoneReadOnly(source) then return { success = false, error = 'READ_ONLY' } end
@@ -1185,134 +913,7 @@ lib.callback.register('gcphone:factoryResetPhone', function(source)
     return payload
 end)
 
-lib.callback.register('gcphone:setTheme', function(source, data)
-    if IsPhoneReadOnly(source) then return false end
-    local identifier = Bridge.GetIdentifier(source)
-    if not identifier then return false end
-    local theme = SafeTheme(type(data) == 'table' and data.theme or nil)
-    if not theme then return false end
-
-    MySQL.update.await(
-        'UPDATE phone_numbers SET theme = ? WHERE identifier = ?',
-        { theme, identifier }
-    )
-
-    return true
-end)
-
-lib.callback.register('gcphone:setLanguage', function(source, data)
-    if IsPhoneReadOnly(source) then return false end
-    local identifier = Bridge.GetIdentifier(source)
-    if not identifier then return false end
-    local language = SafeLanguage(type(data) == 'table' and data.language or nil)
-    if not language then return false end
-
-    MySQL.update.await(
-        'UPDATE phone_numbers SET language = ? WHERE identifier = ?',
-        { language, identifier }
-    )
-
-    return true
-end)
-
-lib.callback.register('gcphone:setAudioProfile', function(source, data)
-    if IsPhoneReadOnly(source) then return false end
-    local identifier = Bridge.GetIdentifier(source)
-    if not identifier then return false end
-    local profile = SafeString(type(data) == 'table' and data.audioProfile or nil, 16)
-    if profile ~= 'normal' and profile ~= 'street' and profile ~= 'vehicle' and profile ~= 'silent' then
-        return false
-    end
-
-    MySQL.update.await(
-        'UPDATE phone_numbers SET audio_profile = ? WHERE identifier = ?',
-        { profile, identifier }
-    )
-
-    return true
-end)
-
-lib.callback.register('gcphone:setStreamerMode', function(source, data)
-    if IsPhoneReadOnly(source) then return false end
-    local identifier = Bridge.GetIdentifier(source)
-    if not identifier then return false end
-    local enabled = type(data) == 'table' and data.enabled == true
-    local dbVal = enabled and 1 or 0
-
-    MySQL.update.await(
-        'UPDATE phone_numbers SET streamer_mode = ? WHERE identifier = ?',
-        { dbVal, identifier }
-    )
-
-    StreamerModePlayers[source] = enabled or nil
-    return true
-end)
-
-lib.callback.register('gcphone:getAppLayout', function(source)
-    local identifier = Bridge.GetIdentifier(source)
-    local enabledApps = BuildEnabledApps(GetFeatureFlags())
-    if not identifier then return NormalizeLayout(DefaultLayout, enabledApps) end
-
-    local layoutRaw = MySQL.scalar.await(
-        'SELECT layout_json FROM phone_layouts WHERE identifier = ?',
-        { identifier }
-    )
-
-    if not layoutRaw or layoutRaw == '' then
-        return NormalizeLayout(DefaultLayout, enabledApps)
-    end
-
-    local decoded = json.decode(layoutRaw)
-    return NormalizeLayout(decoded, enabledApps)
-end)
-
-lib.callback.register('gcphone:setAppLayout', function(source, layout)
-    if IsPhoneReadOnly(source) then return false end
-    local identifier = Bridge.GetIdentifier(source)
-    if not identifier then return false end
-
-    local normalized = NormalizeLayout(layout, BuildEnabledApps(GetFeatureFlags()))
-    local encoded = json.encode(normalized)
-
-    MySQL.insert.await(
-        'INSERT INTO phone_layouts (identifier, layout_json) VALUES (?, ?) ON DUPLICATE KEY UPDATE layout_json = VALUES(layout_json)',
-        { identifier, encoded }
-    )
-
-    return true
-end)
-
-lib.callback.register('gcphone:getWidgetLayout', function(source)
-    local identifier = Bridge.GetIdentifier(source)
-    if not identifier then return nil end
-
-    local raw = MySQL.scalar.await(
-        'SELECT widget_json FROM phone_layouts WHERE identifier = ?',
-        { identifier }
-    )
-
-    if not raw or raw == '' then return nil end
-
-    local ok, decoded = pcall(json.decode, raw)
-    if not ok or type(decoded) ~= 'table' then return nil end
-    return decoded
-end)
-
-lib.callback.register('gcphone:setWidgetLayout', function(source, layout)
-    if IsPhoneReadOnly(source) then return false end
-    local identifier = Bridge.GetIdentifier(source)
-    if not identifier then return false end
-
-    if type(layout) ~= 'table' then return false end
-    local encoded = json.encode(layout)
-
-    MySQL.update.await(
-        'UPDATE phone_layouts SET widget_json = ? WHERE identifier = ?',
-        { encoded, identifier }
-    )
-
-    return true
-end)
+Layouts.RegisterCallbacks({ Bridge = Bridge, IsPhoneReadOnly = IsPhoneReadOnly })
 
 lib.callback.register('gcphone:getPhoneMetadata', function(source, phoneId)
     local identifier = Bridge.GetIdentifier(source)

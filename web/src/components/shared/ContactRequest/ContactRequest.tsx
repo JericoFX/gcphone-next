@@ -53,19 +53,19 @@ export function ContactRequestNotification() {
     if (!request) return;
     
     await fetchNui('acceptFriendRequest', {
-      fromIdentifier: request.fromServerId,
+      fromServerId: request.fromServerId,
       type: request.type
     });
-    
+
     setFriendRequest(null);
   };
-  
+
   const handleRejectFriend = async () => {
     const request = friendRequest();
     if (!request) return;
-    
+
     await fetchNui('rejectFriendRequest', {
-      fromIdentifier: request.fromServerId,
+      fromServerId: request.fromServerId,
       type: request.type
     });
     

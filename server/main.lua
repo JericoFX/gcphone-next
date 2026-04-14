@@ -85,6 +85,21 @@ do
     print('')
     print(string.format('^2  v%s ^7| ^5By JericoFX ^7| ^3Core: %s^7', Version, fw))
     print('')
+
+    local allowlist = Config.Phone and Config.Phone.ExportAllowlist or {}
+    local allowedNames, count = {}, 0
+    for name, enabled in pairs(allowlist) do
+        if enabled == true then
+            count = count + 1
+            allowedNames[#allowedNames + 1] = name
+        end
+    end
+    if count == 0 then
+        print('^3[gcphone] Config.Phone.ExportAllowlist vacío: sólo se permiten llamadas internas a exports del teléfono.^7')
+    else
+        print(string.format('^2[gcphone] ExportAllowlist (%d): %s^7', count, table.concat(allowedNames, ', ')))
+    end
+    print('')
 end
 
 ---@alias GCPhoneNotificationPriority 'low'|'normal'|'high'

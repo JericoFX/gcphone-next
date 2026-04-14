@@ -8,10 +8,10 @@ local OpenHandlers = {}
 local VisibilityOverrides = {}
 local RateLimits = {}
 
-local MAX_REGISTERED_PER_RESOURCE = 20
-local RATE_WINDOW_MS = 10000
-local RATE_MAX_PER_RESOURCE = 3
-local RATE_MAX_PER_PLAYER = 5
+local MAX_REGISTERED_PER_RESOURCE = (Config.SDK and Config.SDK.MaxRegisteredPerResource) or 20
+local RATE_WINDOW_MS = (Config.SDK and Config.SDK.RateWindowMs) or 10000
+local RATE_MAX_PER_RESOURCE = (Config.SDK and Config.SDK.RateMaxPerResource) or 3
+local RATE_MAX_PER_PLAYER = (Config.SDK and Config.SDK.RateMaxPerPlayer) or 5
 
 local function SanitizeString(value, maxLen)
     if type(value) ~= 'string' then return '' end

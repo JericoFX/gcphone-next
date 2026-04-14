@@ -107,7 +107,8 @@ CREATE TABLE IF NOT EXISTS `phone_messages` (
     KEY `idx_receiver` (`receiver`),
     KEY `idx_time` (`time`),
     KEY `idx_messages_transmitter_receiver` (`transmitter`, `receiver`),
-    KEY `idx_phone_messages_time` (`time`)
+    KEY `idx_phone_messages_time` (`time`),
+    KEY `idx_messages_receiver_unread` (`receiver`, `is_read`, `owner`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Chat groups (V1)
@@ -212,7 +213,8 @@ CREATE TABLE IF NOT EXISTS `phone_calls` (
     KEY `idx_num` (`num`),
     KEY `idx_time` (`time`),
     KEY `idx_calls_owner_time` (`owner`, `time`),
-    KEY `idx_phone_calls_time` (`time`)
+    KEY `idx_phone_calls_time` (`time`),
+    KEY `idx_calls_owner_num` (`owner`, `num`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================
@@ -516,7 +518,8 @@ CREATE TABLE IF NOT EXISTS `phone_social_notifications` (
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE KEY `idx_notification_unique` (`account_identifier`, `from_identifier`, `app_type`, `notification_type`, `reference_id`),
     KEY `idx_account_unread` (`account_identifier`, `is_read`, `created_at`),
-    KEY `idx_created` (`created_at`)
+    KEY `idx_created` (`created_at`),
+    KEY `idx_social_notif_from` (`from_identifier`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Persistent notification inbox (V12)

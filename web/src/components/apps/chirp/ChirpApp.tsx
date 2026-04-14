@@ -22,6 +22,11 @@ import { ShareSheet, type SharePayload } from '../../shared/ui/ShareSheet';
 import { SocialOnboardingModal, type SocialOnboardingPayload } from '../../shared/ui/SocialOnboardingModal';
 import { getStoredLanguage, t } from '../../../i18n';
 import type { ChirpTweet, ChirpComment, ChirpFollowRequest, ChirpAccount, TabMode } from './ChirpTypes';
+import { ChirpRequestsModal } from './ChirpRequestsModal';
+import { ChirpProfileModal } from './ChirpProfileModal';
+import { ChirpAttachUrlModal } from './ChirpAttachUrlModal';
+import { ChirpComposerModal } from './ChirpComposerModal';
+import { ChirpRechirpModal } from './ChirpRechirpModal';
 import styles from './ChirpApp.module.scss';
 
 function extractCoords(text?: string): { x: number; y: number } | null {
@@ -994,118 +999,47 @@ export function ChirpApp() {
         <ListView />
       </Show>
 
-      {/* Composer Modal */}
-      <Modal 
-        open={showComposer()} 
-        title={t('chirp.new', language())} 
+      <ChirpComposerModal
+        open={showComposer}
         onClose={() => setShowComposer(false)}
-        size="md"
-      >
-        <div class={styles.composerContent}>
-          <SheetIntro title={t('chirp.new', language())} description={t('chirp.new_desc', language())} />
-          <EmojiPickerButton value={composerText()} onChange={setComposerText} maxLength={280} />
-          <textarea class={styles.composerTextarea}
-            placeholder={t('chirp.placeholder', language())}
-            value={composerText()}
-            onInput={(e) => setComposerText(e.currentTarget.value)}
-            maxlength={280}
-            rows={4}
-          />
-          
-          <div class={styles.charCounter}>
-            <span classList={{ [styles.limitReached]: charCount() >= 280 }}>
-              {charCount()}/280
-            </span>
-          </div>
-          
-          <Show when={composerMedia()}>
-            <MediaAttachmentPreview url={composerMedia()} />
-          </Show>
-          
-          <div class={styles.composerActions}>
-            <MediaActionButtons
-              actions={[
-                { icon: './img/icons_ios/camera.svg', label: t('chirp.camera', language()), onClick: openCamera },
-                { icon: './img/icons_ios/gallery.svg', label: t('chirp.gallery', language()), onClick: attachFromGallery },
-                { icon: './img/icons_ios/ui-link.svg', label: 'URL', onClick: attachByUrl },
-                ...(composerMedia() ? [{ icon: './img/icons_ios/ui-close.svg', label: t('chirp.remove', language()), onClick: () => setComposerMedia(''), tone: 'danger' as const }] : []),
-              ]}
-              variant="compact"
-            />
-          </div>
+        language={language}
+        text={composerText}
+        setText={setComposerText}
+        charCount={charCount}
+        media={composerMedia}
+        setMedia={setComposerMedia}
+        crossPostSnap={crossPostSnap}
+        setCrossPostSnap={setCrossPostSnap}
+        loading={loading}
+        onPublish={publishTweet}
+        onOpenCamera={() => openCamera()}
+        onAttachFromGallery={attachFromGallery}
+        onAttachByUrl={() => attachByUrl()}
+      />
 
-          <Show when={composerMedia()}>
-            <label class={styles.crossPostToggle}>
-              <input type="checkbox" checked={crossPostSnap()} onChange={(e) => setCrossPostSnap(e.currentTarget.checked)} />
-              <span>{t('chirp.cross_post_snap', language()) || 'Publicar en Snap'}</span>
-            </label>
-          </Show>
-        </div>
-        
-        <ModalActions>
-          <ModalButton label={t('action.cancel', language())} onClick={() => setShowComposer(false)} />
-          <ModalButton 
-            label={loading() ? t('chirp.publishing', language()) : t('chirp.publish', language())} 
-            onClick={() => void publishTweet()}
-            tone="primary"
-            disabled={!composerText().trim() || charCount() > 280 || loading()}
-          />
-        </ModalActions>
-      </Modal>
+      <ChirpRechirpModal
+        open={showRechirpModal}
+        onClose={() => { setShowRechirpModal(false); setRechirpTarget(null); setRechirpComment(''); setRechirpMedia(''); }}
+        language={language}
+        target={rechirpTarget}
+        comment={rechirpComment}
+        setComment={setRechirpComment}
+        media={rechirpMedia}
+        setMedia={setRechirpMedia}
+        onCameraClick={() => { const tgt = rechirpTarget(); if (tgt) openCamera('chirp-rechirp', getActionTweetId(tgt)); }}
+        onGalleryClick={async () => { setAttachUrlTarget('rechirp'); await attachFromGallery(); }}
+        onUrlClick={() => attachByUrl('rechirp')}
+        onSubmit={() => { const tgt = rechirpTarget(); if (tgt) void submitRechirp(tgt, rechirpComment(), rechirpMedia()); }}
+      />
 
-      <Modal
-        open={showRechirpModal()}
-        title={t('chirp.rechirp', language())}
-        onClose={() => { setShowRechirpModal(false); setRechirpTarget(null); setRechirpComment(''); }}
-        size="md"
-      >
-        <div class={styles.composerContent}>
-          <SheetIntro title={t('chirp.rechirp', language())} description={t('chirp.rechirp_desc', language())} />
-          <FormTextarea label={t('chirp.optional_comment', language())} value={rechirpComment()} onChange={(value) => setRechirpComment(sanitizeText(value, 280))} placeholder={t('chirp.rechirp_placeholder', language())} rows={4} />
-          <Show when={rechirpMedia()}>
-            <MediaAttachmentPreview url={rechirpMedia()} />
-          </Show>
-          <div class={styles.composerActions}>
-            <MediaActionButtons
-              actions={[
-                { icon: './img/icons_ios/camera.svg', label: t('chirp.camera', language()), onClick: () => rechirpTarget() && openCamera('chirp-rechirp', getActionTweetId(rechirpTarget()!)) },
-                { icon: './img/icons_ios/gallery.svg', label: t('chirp.gallery', language()), onClick: async () => { setAttachUrlTarget('rechirp'); await attachFromGallery(); } },
-                { icon: './img/icons_ios/ui-link.svg', label: 'URL', onClick: () => attachByUrl('rechirp') },
-                ...(rechirpMedia() ? [{ icon: './img/icons_ios/ui-close.svg', label: t('chirp.remove', language()), onClick: () => setRechirpMedia(''), tone: 'danger' as const }] : []),
-              ]}
-              variant="compact"
-            />
-          </div>
-          <Show when={rechirpTarget()}>
-            {(target) => (
-              <div class={styles.quoteCard}>
-                <div class={styles.quoteHeader}>
-                  <strong>{target().display_name || t('chirp.user', language())}</strong>
-                  <span class={styles.username}>@{target().username || 'user'}</span>
-                </div>
-                <p class={styles.quoteContent}>{target().content}</p>
-              </div>
-            )}
-          </Show>
-        </div>
-        <ModalActions>
-          <ModalButton label={t('action.cancel', language())} onClick={() => { setShowRechirpModal(false); setRechirpTarget(null); setRechirpComment(''); setRechirpMedia(''); }} />
-          <ModalButton label={t('chirp.rechirp_action', language())} tone="primary" onClick={() => rechirpTarget() && void submitRechirp(rechirpTarget()!, rechirpComment(), rechirpMedia())} />
-        </ModalActions>
-      </Modal>
-
-      <Modal
-        open={showAttachUrlModal()}
-        title={t('chirp.attach_url', language())}
+      <ChirpAttachUrlModal
+        open={showAttachUrlModal}
         onClose={() => setShowAttachUrlModal(false)}
-        size="sm"
-      >
-        <FormField label={t('chirp.media_url', language())} value={attachUrlInput()} onChange={setAttachUrlInput} placeholder="https://..." />
-        <ModalActions>
-          <ModalButton label={t('action.cancel', language())} onClick={() => setShowAttachUrlModal(false)} />
-          <ModalButton label={t('messages.attach', language())} tone="primary" onClick={confirmAttachUrl} />
-        </ModalActions>
-      </Modal>
+        language={language}
+        value={attachUrlInput}
+        setValue={setAttachUrlInput}
+        onConfirm={confirmAttachUrl}
+      />
 
       <SocialOnboardingModal
         open={showOnboarding()}
@@ -1120,85 +1054,27 @@ export function ChirpApp() {
         onClose={() => setShowOnboarding(false)}
       />
 
-      <Modal
-        open={showRequestsModal()}
-        title={t('chirp.requests', language())}
+      <ChirpRequestsModal
+        open={showRequestsModal}
         onClose={() => setShowRequestsModal(false)}
-        size="md"
-      >
-        <div class={styles.requestsWrap}>
-          <div class={styles.requestsSection}>
-            <h4>{t('chirp.requests_received', language())}</h4>
-            <Show when={!requestsLoading()} fallback={<p>{t('state.loading', language())}</p>}>
-              <For each={pendingRequests()}>
-                {(request) => (
-                  <div class={styles.requestRow}>
-                    <div class={styles.requestIdentity}>
-                      <strong>{request.display_name || request.username || t('chirp.user', language())}</strong>
-                      <span>@{request.username || 'user'}</span>
-                    </div>
-                    <div class={styles.requestActions}>
-                      <button class={styles.ghostBtn} onClick={() => void respondFollowRequest(request.id, false)}>{t('wallet.reject', language())}</button>
-                      <button class={styles.primaryBtn} onClick={() => void respondFollowRequest(request.id, true)}>{t('chirp.accept', language())}</button>
-                    </div>
-                  </div>
-                )}
-              </For>
-              <Show when={pendingRequests().length === 0}>
-                <p>{t('chirp.no_pending_requests', language())}</p>
-              </Show>
-            </Show>
-          </div>
+        pendingRequests={pendingRequests}
+        sentRequests={sentRequests}
+        requestsLoading={requestsLoading}
+        language={language}
+        onRespond={respondFollowRequest}
+        onCancel={cancelSentRequest}
+      />
 
-          <div class={styles.requestsSection}>
-            <h4>{t('chirp.requests_sent', language())}</h4>
-            <Show when={!requestsLoading()} fallback={<p>{t('state.loading', language())}</p>}>
-              <For each={sentRequests()}>
-                {(request) => (
-                  <div class={styles.requestRow}>
-                    <div class={styles.requestIdentity}>
-                      <strong>{request.display_name || request.username || t('chirp.user', language())}</strong>
-                      <span>@{request.username || 'user'}</span>
-                    </div>
-                    <div class={styles.requestActions}>
-                      <button class={styles.ghostBtn} onClick={() => void cancelSentRequest(request.account_id)}>{t('action.cancel', language())}</button>
-                    </div>
-                  </div>
-                )}
-              </For>
-              <Show when={sentRequests().length === 0}>
-                <p>{t('chirp.no_sent_requests', language())}</p>
-              </Show>
-            </Show>
-          </div>
-        </div>
-
-        <ModalActions>
-          <ModalButton label={t('control.close', language())} onClick={() => setShowRequestsModal(false)} />
-        </ModalActions>
-      </Modal>
-
-      <Modal
-        open={showProfileModal()}
-        title={t('chirp.edit_profile', language())}
+      <ChirpProfileModal
+        open={showProfileModal}
         onClose={() => setShowProfileModal(false)}
-        size="md"
-      >
-        <SheetIntro title={t('chirp.profile_title', language())} description={t('chirp.profile_desc', language())} />
-        <FormField label={t('chirp.visible_name', language())} value={profileDisplayName()} onChange={setProfileDisplayName} placeholder={t('chirp.your_name', language())} disabled />
-        <label class={styles.privateToggle}>
-          <input
-            type="checkbox"
-            checked={profilePrivate()}
-            onChange={(e) => setProfilePrivate(e.currentTarget.checked)}
-          />
-          <span>{t('chirp.private_account', language())}</span>
-        </label>
-        <ModalActions>
-          <ModalButton label={t('action.cancel', language())} onClick={() => setShowProfileModal(false)} />
-          <ModalButton label={t('notes.save', language())} tone="primary" onClick={() => void saveProfile()} />
-        </ModalActions>
-      </Modal>
+        language={language}
+        displayName={profileDisplayName}
+        setDisplayName={setProfileDisplayName}
+        isPrivate={profilePrivate}
+        setIsPrivate={setProfilePrivate}
+        onSave={saveProfile}
+      />
 
       <Modal
         open={deleteTweetId() !== null}

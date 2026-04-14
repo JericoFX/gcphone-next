@@ -261,17 +261,17 @@ lib.callback.register('gcphone:proximity:acceptFriendRequest', function(source, 
     if not identifier then return false end
     if type(data) ~= 'table' then return false end
 
-    local fromIdentifier = data.fromIdentifier
-    if not fromIdentifier and data.fromServerId then
-        fromIdentifier = Bridge.GetIdentifier(tonumber(data.fromServerId))
-    end
+    local fromServerId = tonumber(data.fromServerId)
+    if not fromServerId then return false end
+    local fromIdentifier = Bridge.GetIdentifier(fromServerId)
     local requestType = data.type
     if not fromIdentifier or not requestType then return false end
 
-    MySQL.update.await(
-        'UPDATE phone_friend_requests SET status = "accepted" WHERE from_identifier = ? AND to_identifier = ? AND type = ?',
+    local affected = MySQL.update.await(
+        'UPDATE phone_friend_requests SET status = "accepted" WHERE from_identifier = ? AND to_identifier = ? AND type = ? AND status = "pending"',
         { fromIdentifier, identifier, requestType }
     )
+    if not affected or affected < 1 then return false end
 
     local fromSource = Bridge.GetSourceFromIdentifier(fromIdentifier)
     if fromSource then
@@ -290,17 +290,17 @@ lib.callback.register('gcphone:proximity:rejectFriendRequest', function(source, 
     if not identifier then return false end
     if type(data) ~= 'table' then return false end
 
-    local fromIdentifier = data.fromIdentifier
-    if not fromIdentifier and data.fromServerId then
-        fromIdentifier = Bridge.GetIdentifier(tonumber(data.fromServerId))
-    end
+    local fromServerId = tonumber(data.fromServerId)
+    if not fromServerId then return false end
+    local fromIdentifier = Bridge.GetIdentifier(fromServerId)
     local requestType = data.type
     if not fromIdentifier or not requestType then return false end
 
-    MySQL.update.await(
-        'UPDATE phone_friend_requests SET status = "rejected" WHERE from_identifier = ? AND to_identifier = ? AND type = ?',
+    local affected = MySQL.update.await(
+        'UPDATE phone_friend_requests SET status = "rejected" WHERE from_identifier = ? AND to_identifier = ? AND type = ? AND status = "pending"',
         { fromIdentifier, identifier, requestType }
     )
+    if not affected or affected < 1 then return false end
 
     return true
 end)

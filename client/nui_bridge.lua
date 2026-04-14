@@ -147,19 +147,19 @@ end)
 
 RegisterNUICallback('notificationsMarkRead', function(data, cb)
     lib.callback('gcphone:notifications:markRead', false, function(success)
-        cb({ success = success == true })
+        cb(cbSuccess(success == true))
     end, data or {})
 end)
 
 RegisterNUICallback('notificationsMarkAllRead', function(_, cb)
     lib.callback('gcphone:notifications:markAllRead', false, function(success)
-        cb({ success = success == true })
+        cb(cbSuccess(success == true))
     end)
 end)
 
 RegisterNUICallback('notificationsDelete', function(data, cb)
     lib.callback('gcphone:notifications:delete', false, function(success)
-        cb({ success = success == true })
+        cb(cbSuccess(success == true))
     end, data or {})
 end)
 
@@ -183,67 +183,67 @@ end)
 
 RegisterNUICallback('setWallpaper', function(data, cb)
     lib.callback('gcphone:setWallpaper', false, function(success)
-        cb(success)
+        cb(cbSuccess(success))
     end, data)
 end)
 
 RegisterNUICallback('setRingtone', function(data, cb)
     lib.callback('gcphone:setRingtone', false, function(success)
-        cb(success)
+        cb(cbSuccess(success))
     end, data)
 end)
 
 RegisterNUICallback('setCallRingtone', function(data, cb)
     lib.callback('gcphone:setCallRingtone', false, function(success)
-        cb(success)
+        cb(cbSuccess(success))
     end, data)
 end)
 
 RegisterNUICallback('setNotificationTone', function(data, cb)
     lib.callback('gcphone:setNotificationTone', false, function(success)
-        cb(success)
+        cb(cbSuccess(success))
     end, data)
 end)
 
 RegisterNUICallback('setMessageTone', function(data, cb)
     lib.callback('gcphone:setMessageTone', false, function(success)
-        cb(success)
+        cb(cbSuccess(success))
     end, data)
 end)
 
 RegisterNUICallback('setVolume', function(data, cb)
     lib.callback('gcphone:setVolume', false, function(success)
-        cb(success)
+        cb(cbSuccess(success))
     end, data)
 end)
 
 RegisterNUICallback('setTheme', function(data, cb)
     lib.callback('gcphone:setTheme', false, function(success)
-        cb(success)
+        cb(cbSuccess(success))
     end, data)
 end)
 
 RegisterNUICallback('setLanguage', function(data, cb)
     lib.callback('gcphone:setLanguage', false, function(success)
-        cb(success)
+        cb(cbSuccess(success))
     end, data)
 end)
 
 RegisterNUICallback('setAudioProfile', function(data, cb)
     lib.callback('gcphone:setAudioProfile', false, function(success)
-        cb(success)
+        cb(cbSuccess(success))
     end, data)
 end)
 
 RegisterNUICallback('setStreamerMode', function(data, cb)
     lib.callback('gcphone:setStreamerMode', false, function(success)
-        cb(success)
+        cb(cbSuccess(success))
     end, data)
 end)
 
 RegisterNUICallback('setLockCode', function(data, cb)
     lib.callback('gcphone:setLockCode', false, function(success)
-        cb(success)
+        cb(cbSuccess(success))
     end, data)
 end)
 
@@ -268,7 +268,7 @@ end)
 
 RegisterNUICallback('setWidgetLayout', function(data, cb)
     lib.callback('gcphone:setWidgetLayout', false, function(success)
-        cb(success)
+        cb(cbSuccess(success))
     end, data and data.layout or nil)
 end)
 
@@ -280,7 +280,7 @@ end)
 
 RegisterNUICallback('setAppLayout', function(data, cb)
     lib.callback('gcphone:setAppLayout', false, function(success)
-        cb(success)
+        cb(cbSuccess(success))
     end, data and data.layout or nil)
 end)
 
@@ -336,7 +336,7 @@ end)
 RegisterNUICallback('deletePhoto', function(data, cb)
     local photoId = tonumber(data.photoId) or tonumber(data.id)
     lib.callback('gcphone:deletePhoto', false, function(success)
-        cb(success)
+        cb(cbSuccess(success))
     end, photoId)
 end)
 
@@ -1369,177 +1369,6 @@ RegisterNetEvent('gcphone:peer:newsLiveConnected', function(payload)
     SendNUIMessage({ action = 'gcphone:news:livePeerConnected', data = payload })
 end)
 
-RegisterNetEvent('gcphone:contactsUpdated', function(contacts)
-    SendNUIMessage({
-        action = 'contactsUpdated',
-        data = contacts or {}
-    })
-end)
-
-RegisterNetEvent('gcphone:messageSent', function(message)
-    SendNUIMessage({
-        action = 'messageSent',
-        data = message
-    })
-end)
-
-RegisterNetEvent('gcphone:messageReceived', function(message)
-    SendNUIMessage({
-        action = 'messageReceived',
-        data = message
-    })
-end)
-
-RegisterNetEvent('gcphone:wallpaperUpdated', function(url)
-    SendNUIMessage({
-        action = 'phone:show',
-        data = {
-            wallpaper = url
-        }
-    })
-end)
-
-RegisterNetEvent('gcphone:bankTransferReceived', function(payload)
-    SendNUIMessage({
-        action = 'bankTransferReceived',
-        data = payload
-    })
-
-    SendNUIMessage({
-        action = 'bankInvoiceReceived',
-        data = payload
-    })
-end)
-
-RegisterNetEvent('gcphone:snap:newPost', function(post)
-    SendNUIMessage({
-        action = 'gcphone:snap:newPost',
-        data = post
-    })
-end)
-
-RegisterNetEvent('gcphone:snap:newStory', function(story)
-    SendNUIMessage({
-        action = 'gcphone:snap:newStory',
-        data = story
-    })
-end)
-
-RegisterNetEvent('gcphone:snap:liveStarted', function(live)
-    SendNUIMessage({
-        action = 'gcphone:snap:liveStarted',
-        data = live
-    })
-end)
-
-RegisterNetEvent('gcphone:snap:liveEnded', function(liveId)
-    SendNUIMessage({
-        action = 'gcphone:snap:liveEnded',
-        data = liveId
-    })
-end)
-
-RegisterNetEvent('gcphone:snap:liveViewersUpdated', function(payload)
-    SendNUIMessage({
-        action = 'gcphone:snap:liveViewersUpdated',
-        data = payload
-    })
-end)
-
-RegisterNetEvent('gcphone:snap:liveMessage', function(payload)
-    SendNUIMessage({
-        action = 'gcphone:snap:liveMessage',
-        data = payload
-    })
-end)
-
-RegisterNetEvent('gcphone:snap:liveReaction', function(payload)
-    SendNUIMessage({
-        action = 'gcphone:snap:liveReaction',
-        data = payload
-    })
-end)
-
-RegisterNetEvent('gcphone:snap:liveMessageRemoved', function(payload)
-    SendNUIMessage({
-        action = 'gcphone:snap:liveMessageRemoved',
-        data = payload
-    })
-end)
-
-RegisterNetEvent('gcphone:snap:liveUserMuted', function(payload)
-    SendNUIMessage({
-        action = 'gcphone:snap:liveUserMuted',
-        data = payload
-    })
-end)
-
-RegisterNetEvent('gcphone:news:newArticle', function(article)
-    SendNUIMessage({
-        action = 'gcphone:news:newArticle',
-        data = article
-    })
-end)
-
-RegisterNetEvent('gcphone:news:liveStarted', function(article)
-    SendNUIMessage({
-        action = 'gcphone:news:liveStarted',
-        data = article
-    })
-end)
-
-RegisterNetEvent('gcphone:news:liveEnded', function(articleId)
-    SendNUIMessage({
-        action = 'gcphone:news:liveEnded',
-        data = articleId
-    })
-end)
-
-RegisterNetEvent('gcphone:news:scaleformUpdated', function(articleId, scaleform)
-    SendNUIMessage({
-        action = 'gcphone:news:scaleformUpdated',
-        data = {
-            articleId = articleId,
-            scaleform = scaleform
-        }
-    })
-end)
-
-RegisterNetEvent('gcphone:news:viewersUpdated', function(payload)
-    SendNUIMessage({
-        action = 'gcphone:news:viewersUpdated',
-        data = payload
-    })
-end)
-
-RegisterNetEvent('gcphone:news:liveMessage', function(payload)
-    SendNUIMessage({
-        action = 'gcphone:news:liveMessage',
-        data = payload
-    })
-end)
-
-RegisterNetEvent('gcphone:news:liveReaction', function(payload)
-    SendNUIMessage({
-        action = 'gcphone:news:liveReaction',
-        data = payload
-    })
-end)
-
-RegisterNetEvent('gcphone:news:liveMessageRemoved', function(payload)
-    SendNUIMessage({
-        action = 'gcphone:news:liveMessageRemoved',
-        data = payload
-    })
-end)
-
-RegisterNetEvent('gcphone:news:liveUserMuted', function(payload)
-    SendNUIMessage({
-        action = 'gcphone:news:liveUserMuted',
-        data = payload
-    })
-end)
-
 RegisterNUICallback('wavechatGetGroups', function(_, cb)
     lib.callback('gcphone:wavechatGetGroups', false, function(groups)
         cb(groups or {})
@@ -1598,54 +1427,6 @@ RegisterNUICallback('wavechatSendGroupMessage', function(data, cb)
     lib.callback('gcphone:wavechatSendGroupMessage', false, function(success, payload)
         cb(cbSuccess(success, success and nil or payload, success and { message = payload } or nil))
     end, data)
-end)
-
-RegisterNUICallback('darkroomsGetRooms', function(_, cb)
-    lib.callback('gcphone:darkrooms:getRooms', false, function(rooms)
-        cb(rooms or {})
-    end)
-end)
-
-RegisterNUICallback('darkroomsCreateRoom', function(data, cb)
-    lib.callback('gcphone:darkrooms:createRoom', false, function(payload)
-        cb(payload or { success = false })
-    end, data or {})
-end)
-
-RegisterNUICallback('darkroomsJoinRoom', function(data, cb)
-    lib.callback('gcphone:darkrooms:joinRoom', false, function(payload)
-        cb(payload or { success = false })
-    end, data)
-end)
-
-RegisterNUICallback('darkroomsGetPosts', function(data, cb)
-    lib.callback('gcphone:darkrooms:getPosts', false, function(posts)
-        cb(posts or {})
-    end, data or {})
-end)
-
-RegisterNUICallback('darkroomsCreatePost', function(data, cb)
-    lib.callback('gcphone:darkrooms:createPost', false, function(payload)
-        cb(payload or { success = false })
-    end, data or {})
-end)
-
-RegisterNUICallback('darkroomsVotePost', function(data, cb)
-    lib.callback('gcphone:darkrooms:votePost', false, function(payload)
-        cb(payload or { success = false })
-    end, data or {})
-end)
-
-RegisterNUICallback('darkroomsGetComments', function(data, cb)
-    lib.callback('gcphone:darkrooms:getComments', false, function(comments)
-        cb(comments or {})
-    end, data or {})
-end)
-
-RegisterNUICallback('darkroomsCreateComment', function(data, cb)
-    lib.callback('gcphone:darkrooms:createComment', false, function(payload)
-        cb(payload or { success = false })
-    end, data or {})
 end)
 
 RegisterNetEvent('gcphone:wavechatGroupMessage', function(payload)
@@ -1746,220 +1527,6 @@ RegisterNUICallback('getGameTime', function(_, cb)
     })
 end)
 
--- Radio
-RegisterNUICallback('radioGetStations', function(_, cb)
-    lib.callback('gcphone:radio:getStations', false, function(stations)
-        cb(stations or {})
-    end)
-end)
-
-RegisterNUICallback('radioCreateStation', function(data, cb)
-    lib.callback('gcphone:radio:createStation', false, function(result)
-        cb(result or { success = false })
-    end, data or {})
-end)
-
-RegisterNUICallback('radioJoinStation', function(data, cb)
-    lib.callback('gcphone:radio:joinStation', false, function(result)
-        cb(result or { success = false })
-    end, data or {})
-end)
-
-RegisterNUICallback('radioLeaveStation', function(data, cb)
-    lib.callback('gcphone:radio:leaveStation', false, function(result)
-        cb(result or { success = false })
-    end, data or {})
-end)
-
-RegisterNUICallback('radioEndStation', function(data, cb)
-    lib.callback('gcphone:radio:endStation', false, function(result)
-        cb(result or { success = false })
-    end, data or {})
-end)
-
-RegisterNUICallback('radioSearchMusic', function(data, cb)
-    lib.callback('gcphone:radio:searchMusic', false, function(result)
-        cb(result or { success = false, results = {} })
-    end, data or {})
-end)
-
-RegisterNUICallback('radioPlayMusic', function(data, cb)
-    lib.callback('gcphone:radio:playMusic', false, function(result)
-        cb(result or { success = false })
-    end, data or {})
-end)
-
-RegisterNUICallback('radioStopMusic', function(data, cb)
-    lib.callback('gcphone:radio:stopMusic', false, function(result)
-        cb(result or { success = false })
-    end, data or {})
-end)
-
-RegisterNUICallback('radioSetMusicVolume', function(data, cb)
-    lib.callback('gcphone:radio:setMusicVolume', false, function(result)
-        cb(result or { success = false })
-    end, data or {})
-end)
-
-RegisterNetEvent('gcphone:radio:stationEnded', function(stationId)
-    SendNUIMessage({ action = 'gcphone:radio:stationEnded', data = stationId })
-end)
-
-RegisterNetEvent('gcphone:radio:musicUpdate', function(data)
-    SendNUIMessage({ action = 'gcphone:radio:musicUpdate', data = data })
-end)
-
-RegisterNUICallback('radioSavePlaylist', function(data, cb)
-    lib.callback('gcphone:radio:savePlaylist', false, function(payload)
-        cb(payload or {})
-    end, data)
-end)
-
-RegisterNUICallback('radioGetPlaylists', function(_, cb)
-    lib.callback('gcphone:radio:getPlaylists', false, function(payload)
-        cb(payload or {})
-    end)
-end)
-
-RegisterNUICallback('radioDeletePlaylist', function(data, cb)
-    lib.callback('gcphone:radio:deletePlaylist', false, function(payload)
-        cb(payload or {})
-    end, data)
-end)
-
-RegisterNUICallback('radioMusicDuck', function(data, cb)
-    lib.callback('gcphone:radio:musicDuck', false, function(payload)
-        cb(payload or {})
-    end, data)
-end)
-
-RegisterNUICallback('radioMusicUnduck', function(data, cb)
-    lib.callback('gcphone:radio:musicUnduck', false, function(payload)
-        cb(payload or {})
-    end, data)
-end)
-
-RegisterNetEvent('gcphone:radio:musicDucked', function(data)
-    SendNUIMessage({ action = 'gcphone:radio:musicDucked', data = data })
-end)
-
--- ── CityRide ──
-
-RegisterNUICallback('cityrideRegisterDriver', function(data, cb)
-    lib.callback('gcphone:cityride:registerDriver', false, function(payload)
-        cb(payload or { success = false, error = 'NO_RESPONSE' })
-    end, data or {})
-end)
-
-RegisterNUICallback('cityrideGetDriverProfile', function(_, cb)
-    lib.callback('gcphone:cityride:getDriverProfile', false, function(payload)
-        cb(payload or false)
-    end)
-end)
-
-RegisterNUICallback('cityrideUpdateDriver', function(data, cb)
-    lib.callback('gcphone:cityride:updateDriver', false, function(payload)
-        cb(payload or { success = false, error = 'NO_RESPONSE' })
-    end, data or {})
-end)
-
-RegisterNUICallback('cityrideSetDriverAvailability', function(data, cb)
-    lib.callback('gcphone:cityride:setDriverAvailability', false, function(payload)
-        cb(payload or { success = false, error = 'NO_RESPONSE' })
-    end, data or {})
-end)
-
-RegisterNUICallback('cityrideRequestRide', function(data, cb)
-    lib.callback('gcphone:cityride:requestRide', false, function(payload)
-        cb(payload or { success = false, error = 'NO_RESPONSE' })
-    end, data or {})
-end)
-
-RegisterNUICallback('cityrideGetAvailableRides', function(_, cb)
-    lib.callback('gcphone:cityride:getAvailableRides', false, function(payload)
-        cb(payload or {})
-    end)
-end)
-
-RegisterNUICallback('cityrideAcceptRide', function(data, cb)
-    lib.callback('gcphone:cityride:acceptRide', false, function(payload)
-        cb(payload or { success = false, error = 'NO_RESPONSE' })
-    end, data or {})
-end)
-
-RegisterNUICallback('cityrideConfirmPickup', function(data, cb)
-    lib.callback('gcphone:cityride:confirmPickup', false, function(payload)
-        cb(payload or { success = false, error = 'NO_RESPONSE' })
-    end, data or {})
-end)
-
-RegisterNUICallback('cityrideCompleteRide', function(data, cb)
-    lib.callback('gcphone:cityride:completeRide', false, function(payload)
-        cb(payload or { success = false, error = 'NO_RESPONSE' })
-    end, data or {})
-end)
-
-RegisterNUICallback('cityrideCancelRide', function(data, cb)
-    lib.callback('gcphone:cityride:cancelRide', false, function(payload)
-        cb(payload or { success = false, error = 'NO_RESPONSE' })
-    end, data or {})
-end)
-
-RegisterNUICallback('cityrideGetActiveRide', function(_, cb)
-    lib.callback('gcphone:cityride:getActiveRide', false, function(payload)
-        cb(payload or false)
-    end)
-end)
-
-RegisterNUICallback('cityrideGetRideHistory', function(_, cb)
-    lib.callback('gcphone:cityride:getRideHistory', false, function(payload)
-        cb(payload or {})
-    end)
-end)
-
-RegisterNUICallback('cityrideGetRouteHistory', function(_, cb)
-    lib.callback('gcphone:cityride:getRouteHistory', false, function(routes)
-        cb(routes or {})
-    end)
-end)
-
-RegisterNUICallback('cityrideRateDriver', function(data, cb)
-    lib.callback('gcphone:cityride:rateDriver', false, function(payload)
-        cb(payload or { success = false, error = 'NO_RESPONSE' })
-    end, data or {})
-end)
-
-RegisterNUICallback('cityrideEstimatePrice', function(data, cb)
-    lib.callback('gcphone:cityride:estimatePrice', false, function(payload)
-        cb(payload or { price = 0, distance = 0 })
-    end, data or {})
-end)
-
-RegisterNUICallback('cityrideGetAvailableDriverCount', function(_, cb)
-    lib.callback('gcphone:cityride:getAvailableDriverCount', false, function(payload)
-        cb(payload or { count = 0 })
-    end)
-end)
-
-RegisterNUICallback('cityrideSetWaypoint', function(data, cb)
-    if type(data) == 'table' and data.x and data.y then
-        SetNewWaypoint(tonumber(data.x) + 0.0, tonumber(data.y) + 0.0)
-        cb(cbSuccess(true))
-    else
-        cb(cbSuccess(false))
-    end
-end)
-
-RegisterNUICallback('cityrideGetPlayerCoords', function(_, cb)
-    local ped = cache.ped
-    local coords = GetEntityCoords(ped)
-    cb({
-        x = coords.x,
-        y = coords.y,
-        z = coords.z,
-    })
-end)
-
 RegisterNUICallback('documentsUpdatePhoto', function(data, cb)
     lib.callback('gcphone:documents:updatePhoto', false, function(payload)
         cb(payload or {})
@@ -2055,5 +1622,11 @@ end)
 RegisterNetEvent('gcphone:matchmylove:typing', function(payload)
     SendNUIMessage({ action = 'matchmyloveTyping', data = payload })
 end)
+
+-- OPT-04: dominios extraídos (ver client/nui/*.lua)
+require 'client.nui.events'
+require 'client.nui.darkrooms'
+require 'client.nui.radio'
+require 'client.nui.cityride'
 
 return {}

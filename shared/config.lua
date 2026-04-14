@@ -416,6 +416,23 @@ Config.Security = {
     }
 }
 
+Config.Startup = {
+    ClientInitDelayMs = 1000,
+}
+
+Config.SDK = {
+    MaxRegisteredPerResource = 20,
+    RateWindowMs = 10000,
+    RateMaxPerResource = 3,
+    RateMaxPerPlayer = 5,
+}
+
+-- Default timeout (ms) applied to lib.callback calls passed `false` as timeout.
+-- Prevents UI hangs when a server handler never responds.
+Config.Callbacks = {
+    DefaultTimeoutMs = 15000,
+}
+
 Config.Wallet = {
     InitialBalance = 2500,
     MaxTransferAmount = 500000,

@@ -13,6 +13,7 @@
     "paths": {
       "@/*": ["./src/*"],
       "@components/*": ["./src/components/*"],
+      "@apps/*": ["./src/components/apps/*"],
       "@hooks/*": ["./src/hooks/*"],
       "@store/*": ["./src/store/*"],
       "@utils/*": ["./src/utils/*"],

@@ -18,6 +18,8 @@ import { Modal, ModalActions, ModalButton } from '../../shared/ui/Modal';
 import { SearchInput } from '../../shared/ui/SearchInput';
 import { SheetIntro } from '../../shared/ui/SheetIntro';
 import { SocialOnboardingModal, type SocialOnboardingPayload } from '../../shared/ui/SocialOnboardingModal';
+import { NewsComposeModal } from './NewsComposeModal';
+import { NewsProfileModal } from './NewsProfileModal';
 import { AppFAB, AppScaffold } from '../../shared/layout';
 import { useLiveFlashlight } from '../../../hooks/useLiveFlashlight';
 import { useNotifications } from '../../../store/notifications';
@@ -949,66 +951,40 @@ export function NewsApp() {
           </Show>
         </div>
 
-        <Modal open={showCompose()} title={t('news.publish', language())} onClose={() => setShowCompose(false)} size="lg">
-          <div class={styles.modalContent}>
-            <SheetIntro title="Nueva cobertura" description="Publica un titular claro, agrega contexto y adjunta media si ayuda a contar la historia." />
-            <input type="text" placeholder="Titulo" value={title()} onInput={(event) => setTitle(event.currentTarget.value)} />
-            <textarea placeholder="Contenido" value={content()} onInput={(event) => setContent(event.currentTarget.value)} />
-            <div class={styles.composeAttachments}>
-              <MediaActionButtons
-                actions={[
-                  { icon: './img/icons_ios/gallery.svg', label: t('camera.gallery', language()), onClick: media.attachFromGallery },
-                  { icon: './img/icons_ios/camera.svg', label: t('chirp.camera', language()), onClick: media.attachFromCamera },
-                  { icon: './img/icons_ios/ui-link.svg', label: 'URL', onClick: () => void media.attachByUrl() },
-                  ...(mediaUrl() ? [{ icon: './img/icons_ios/ui-close.svg', label: 'Quitar', onClick: () => setMediaUrl(''), tone: 'danger' as const }] : []),
-                ]}
-                variant="compact"
-                class={styles.composeMediaButtons}
-              />
-              <input type="text" placeholder="URL media (opcional)" value={mediaUrl()} onInput={(event) => setMediaUrl(sanitizeMediaUrl(event.currentTarget.value))} />
-            </div>
-            <MediaAttachmentPreview url={mediaUrl()} mediaClass={styles.composePreviewMedia} onOpen={() => setViewerUrl(mediaUrl())} />
-            <input type="text" placeholder="Categoria" value={category()} onInput={(event) => setCategory(sanitizeText(event.currentTarget.value, 30))} />
-            <ModalActions>
-              <ModalButton label={t('action.cancel', language())} onClick={() => setShowCompose(false)} />
-              <ModalButton label={t('news.post', language())} tone="primary" onClick={() => void publish()} />
-            </ModalActions>
-          </div>
-        </Modal>
+        <NewsComposeModal
+          open={showCompose}
+          onClose={() => setShowCompose(false)}
+          language={language}
+          title={title}
+          setTitle={setTitle}
+          content={content}
+          setContent={setContent}
+          mediaUrl={mediaUrl}
+          setMediaUrl={setMediaUrl}
+          category={category}
+          setCategory={setCategory}
+          onAttachFromGallery={media.attachFromGallery}
+          onAttachFromCamera={media.attachFromCamera}
+          onAttachByUrl={() => void media.attachByUrl()}
+          onOpenMedia={() => setViewerUrl(mediaUrl())}
+          onPublish={publish}
+        />
 
-        <Modal open={showProfileModal()} title={t('news.profile_title', language())} onClose={() => setShowProfileModal(false)} size="md">
-          <div class={styles.modalContent}>
-            <SheetIntro title={t('news.editorial_profile', language())} description={t('news.editorial_profile_desc', language())} />
-            <input
-              type="text"
-              placeholder="Nombre visible"
-              value={profileDisplayName()}
-              onInput={(event) => setProfileDisplayName(event.currentTarget.value)}
-            />
-            <textarea
-              placeholder="Bio o firma editorial"
-              value={profileBio()}
-              onInput={(event) => setProfileBio(event.currentTarget.value)}
-            />
-            <div class={styles.composeAttachments}>
-              <MediaActionButtons
-                actions={[
-                  { icon: './img/icons_ios/gallery.svg', label: t('camera.gallery', language()), onClick: attachProfileFromGallery },
-                  { icon: './img/icons_ios/camera.svg', label: t('chirp.camera', language()), onClick: attachProfileFromCamera },
-                  ...(profileAvatar() ? [{ icon: './img/icons_ios/ui-close.svg', label: 'Quitar', onClick: () => setProfileAvatar(''), tone: 'danger' as const }] : []),
-                ]}
-                variant="compact"
-                class={styles.composeMediaButtons}
-              />
-              <input type="text" placeholder="URL de avatar" value={profileAvatar()} onInput={(event) => setProfileAvatar(sanitizeMediaUrl(event.currentTarget.value) || '')} />
-            </div>
-            <MediaAttachmentPreview url={profileAvatar()} mediaClass={styles.composePreviewMedia} onOpen={() => setViewerUrl(profileAvatar())} />
-            <ModalActions>
-              <ModalButton label={t('action.cancel', language())} onClick={() => setShowProfileModal(false)} />
-              <ModalButton label={t('news.save_profile', language())} tone="primary" onClick={() => void saveProfile()} />
-            </ModalActions>
-          </div>
-        </Modal>
+        <NewsProfileModal
+          open={showProfileModal}
+          onClose={() => setShowProfileModal(false)}
+          language={language}
+          displayName={profileDisplayName}
+          setDisplayName={setProfileDisplayName}
+          bio={profileBio}
+          setBio={setProfileBio}
+          avatar={profileAvatar}
+          setAvatar={setProfileAvatar}
+          onAttachFromGallery={() => void attachProfileFromGallery()}
+          onAttachFromCamera={() => void attachProfileFromCamera()}
+          onOpenAvatar={() => setViewerUrl(profileAvatar())}
+          onSave={saveProfile}
+        />
 
         <Show when={activeLive()}>
           <div class={styles.liveViewer}>

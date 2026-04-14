@@ -187,7 +187,6 @@ local function ResolveInvoiceTarget(source, data)
 
     local targetServerId = tonumber(data.targetServerId)
     local targetPhone = Utils.SafeString(data.targetPhone, 20)
-    local targetIdentifier = Utils.SafeString(data.targetIdentifier, 80)
 
     if targetServerId then
         local targetId = Bridge.GetIdentifier(targetServerId)
@@ -208,14 +207,6 @@ local function ResolveInvoiceTarget(source, data)
         if not targetSource then return nil, nil, nil, 'TARGET_OFFLINE' end
         if not Bridge.IsPlayerActionAllowed(targetSource) then return nil, nil, nil, 'TARGET_UNAVAILABLE' end
         return targetSource, targetId, 'remote'
-    end
-
-    if targetIdentifier then
-        if targetIdentifier == fromIdentifier then return nil, nil, nil, 'INVALID_TARGET' end
-        local targetSource = Bridge.GetSourceFromIdentifier(targetIdentifier)
-        if not targetSource then return nil, nil, nil, 'TARGET_OFFLINE' end
-        if not Bridge.IsPlayerActionAllowed(targetSource) then return nil, nil, nil, 'TARGET_UNAVAILABLE' end
-        return targetSource, targetIdentifier, 'remote'
     end
 
     return nil, nil, nil, 'INVALID_TARGET'

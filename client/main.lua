@@ -1,5 +1,20 @@
 local PhoneState = require 'client.state'
 
+-- Default timeout shim for lib.callback: replaces `false` (wait forever) with
+-- Config.Callbacks.DefaultTimeoutMs. `lib` is resource-local in ox_lib, so this
+-- patch only affects this resource.
+do
+    local original = lib.callback
+    local defaultTimeoutMs = (Config.Callbacks and tonumber(Config.Callbacks.DefaultTimeoutMs)) or 15000
+    lib.callback = setmetatable({}, {
+        __call = function(_, name, timeout, cb, ...)
+            if timeout == false then timeout = defaultTimeoutMs end
+            return original(name, timeout, cb, ...)
+        end,
+        __index = original,
+    })
+end
+
 ---@alias GCPhoneNotificationPriority 'low'|'normal'|'high'
 
 ---@class GCPhoneNotificationPayload
@@ -105,7 +120,7 @@ RegisterNUICallback = function(name, handler)
 end
 
 CreateThread(function()
-    Wait(1000)
+    Wait((Config.Startup and Config.Startup.ClientInitDelayMs) or 1000)
     print('^2[gcphone-next]^7 Client initialized')
 
     lib.callback('gcphone:getPhoneData', false, function(data)
