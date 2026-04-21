@@ -1,7 +1,7 @@
 {
   "name": "gcphone-next",
   "private": true,
-  "version": "3.1.4",
+  "version": "3.1.5",
   "description": "Server-side Node.js runtime dependencies for gcphone-next (YouTube search).",
   "dependencies": {
     "youtube-sr": "^4.3.11"

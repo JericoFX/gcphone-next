@@ -2,6 +2,17 @@
 
 All notable changes to gcphone-next will be documented in this file.
 
+## [3.1.5] - 2026-04-21
+
+### Changed
+- Node runtime deps moved from `server/js/` to resource root: run `npm install` (or bun / yarn / pnpm install) at the resource root instead of inside `server/js/`
+- `server/js/youtube_search.js` resolves `node_modules` via `GetResourcePath` against the root
+- Release zip now ships root `package.json` and `package-lock.json` so a fresh install from the zip works end-to-end
+
+### Removed
+- `server/js/livekit.js` and `livekit-server-sdk` / `jsonwebtoken` dependencies — LiveKit has been superseded by native WebRTC since 3.1.0; the SDK-based token generator is no longer used
+- Stale LiveKit warning block in `server/init.lua`
+
 ## [3.1.4] - 2026-04-21
 
 ### Fixed
@@ -9,14 +20,8 @@ All notable changes to gcphone-next will be documented in this file.
 - Multichar character-load: client now listens to `esx:playerLoaded` and `QBCore:Client:OnPlayerLoaded` to fetch phone data once the character is actually loaded
 - `/restart gcphone` with players already online: server now rehydrates every connected player via `onResourceStart`, waiting for the framework bridge before pushing `gcphone:init`
 
-### Changed
-- Node runtime deps moved from `server/js/` to resource root: run `npm install` (or bun / yarn / pnpm install) at the resource root instead of inside `server/js/`
-- `server/js/youtube_search.js` and `server/js/livekit.js` (removed) resolve `node_modules` via `GetResourcePath` against the root
-- Release zip now ships root `package.json` and `package-lock.json` so a fresh install from the zip works end-to-end
-
 ### Removed
 - `Config.Startup.ClientInitDelayMs` (orphan after dropping the fixed-timer pull)
-- `server/js/livekit.js` and `livekit-server-sdk` / `jsonwebtoken` dependencies — LiveKit has been superseded by native WebRTC since 3.1.0; the SDK-based token generator is no longer used
 
 ## [3.1.3] - 2026-04-20
 
