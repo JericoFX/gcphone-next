@@ -119,33 +119,7 @@ RegisterNUICallback = function(name, handler)
     end)
 end
 
-CreateThread(function()
-    Wait((Config.Startup and Config.Startup.ClientInitDelayMs) or 1000)
-    print('^2[gcphone-next]^7 Client initialized')
-
-    lib.callback('gcphone:getPhoneData', false, function(data)
-        if data then
-            PhoneState.phoneNumber = data.phoneNumber
-            PhoneState.wallpaper = data.wallpaper
-            PhoneState.ringtone = data.ringtone
-            PhoneState.callRingtone = data.callRingtone or data.ringtone
-            PhoneState.notificationTone = data.notificationTone
-            PhoneState.messageTone = data.messageTone
-            PhoneState.volume = data.volume
-            PhoneState.lockCode = data.lockCode
-            PhoneState.language = data.language
-            PhoneState.audioProfile = data.audioProfile
-            data.nuiAuthToken = RotateNuiAuthToken()
-
-            SendNUIMessage({
-                action = 'initPhone',
-                data = data
-            })
-        end
-    end)
-end)
-
-RegisterNetEvent('gcphone:init', function(data)
+local function ApplyPhoneInit(data)
     if type(data) ~= 'table' then return end
     PhoneState.phoneNumber = data.phoneNumber
     PhoneState.wallpaper = data.wallpaper
@@ -163,7 +137,22 @@ RegisterNetEvent('gcphone:init', function(data)
         action = 'initPhone',
         data = data
     })
-end)
+end
+
+RegisterNetEvent('gcphone:init', ApplyPhoneInit)
+
+-- Client-driven fetch on character-load. Covers multichar (ESX/QBCore/QBox)
+-- where the server-side playerLoaded event may race the bridge's framework init.
+local function FetchPhoneOnCharacterReady()
+    lib.callback('gcphone:getPhoneData', false, function(data)
+        if data and not data.blocked then
+            ApplyPhoneInit(data)
+        end
+    end)
+end
+
+RegisterNetEvent('esx:playerLoaded', FetchPhoneOnCharacterReady)
+RegisterNetEvent('QBCore:Client:OnPlayerLoaded', FetchPhoneOnCharacterReady)
 
 RegisterNUICallback('nuiReady', function(_, cb)
     cb(true)

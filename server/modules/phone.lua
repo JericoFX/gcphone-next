@@ -960,6 +960,32 @@ AddEventHandler('esx:playerLoaded', function(playerId)
     end
 end)
 
+-- Rehydrate players whose character was already loaded when this resource restarts.
+-- On first boot GetPlayers() is empty so this is a no-op; only matters on `/restart gcphone`.
+AddEventHandler('onResourceStart', function(resourceName)
+    if resourceName ~= RESOURCE_NAME then return end
+
+    CreateThread(function()
+        lib.waitFor(function()
+            local fw = Bridge.GetFramework()
+            if fw and fw ~= 'unknown' then return true end
+        end, 'gcphone-next rehydrate: framework not ready', 15000)
+
+        for _, playerId in ipairs(GetPlayers()) do
+            local source = tonumber(playerId)
+            if source and source > 0 then
+                local identifier = Bridge.GetIdentifier(source)
+                if identifier then
+                    local phone = GetOrCreatePhone(source)
+                    if phone then
+                        TriggerClientEvent('gcphone:init', source, BuildPhonePayload(phone, source))
+                    end
+                end
+            end
+        end
+    end)
+end)
+
 RegisterNetEvent('QBCore:Server:OnPlayerUnload', function(source)
     ClearPhoneAccessContext(source)
 end)

@@ -416,10 +416,6 @@ Config.Security = {
     }
 }
 
-Config.Startup = {
-    ClientInitDelayMs = 1000,
-}
-
 Config.SDK = {
     MaxRegisteredPerResource = 20,
     RateWindowMs = 10000,
