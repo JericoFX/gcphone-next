@@ -281,8 +281,10 @@ export const PhoneProvider: ParentComponent = (props) => {
       setState('visible', true);
     },
     hide: () => {
-      setState('visible', false);
-      setState('locked', state.settings.screenLockEnabled !== false);
+      batch(() => {
+        setState('visible', false);
+        setState('locked', state.settings.screenLockEnabled !== false);
+      });
     },
     toggle: () => {
       setState('visible', v => !v);
@@ -312,11 +314,13 @@ export const PhoneProvider: ParentComponent = (props) => {
         { success: false, requiresSetup: true, setup: { ...defaultSetupState, requiresSetup: true } },
       );
 
-      setState('requiresSetup', payload?.requiresSetup === true);
-      setState('setup', {
-        ...defaultSetupState,
-        ...(payload?.setup || {}),
-        requiresSetup: payload?.requiresSetup === true,
+      batch(() => {
+        setState('requiresSetup', payload?.requiresSetup === true);
+        setState('setup', {
+          ...defaultSetupState,
+          ...(payload?.setup || {}),
+          requiresSetup: payload?.requiresSetup === true,
+        });
       });
     },
     completeSetup: async (payload) => {
@@ -328,17 +332,19 @@ export const PhoneProvider: ParentComponent = (props) => {
       );
 
       if (response?.success) {
-        if (payload.theme) setState('settings', 'theme', payload.theme);
-        if (payload.language) {
-          setState('settings', 'language', payload.language);
-          window.localStorage.setItem('gcphone:language', payload.language);
-        }
-        if (payload.audioProfile) setState('settings', 'audioProfile', payload.audioProfile);
-        setState('requiresSetup', response.requiresSetup === true);
-        setState('setup', {
-          ...defaultSetupState,
-          ...(response.setup || {}),
-          requiresSetup: response.requiresSetup === true,
+        batch(() => {
+          if (payload.theme) setState('settings', 'theme', payload.theme);
+          if (payload.language) {
+            setState('settings', 'language', payload.language);
+            window.localStorage.setItem('gcphone:language', payload.language);
+          }
+          if (payload.audioProfile) setState('settings', 'audioProfile', payload.audioProfile);
+          setState('requiresSetup', response.requiresSetup === true);
+          setState('setup', {
+            ...defaultSetupState,
+            ...(response.setup || {}),
+            requiresSetup: response.requiresSetup === true,
+          });
         });
       }
 
@@ -354,14 +360,18 @@ export const PhoneProvider: ParentComponent = (props) => {
     },
     setRingtone: (ringtone: string) => {
       if (isReadOnly()) return;
-      setState('settings', 'ringtone', ringtone);
-      setState('settings', 'callRingtone', ringtone);
+      batch(() => {
+        setState('settings', 'ringtone', ringtone);
+        setState('settings', 'callRingtone', ringtone);
+      });
       fetchNui('setRingtone', { ringtone });
     },
     setCallRingtone: (ringtone: string) => {
       if (isReadOnly()) return;
-      setState('settings', 'ringtone', ringtone);
-      setState('settings', 'callRingtone', ringtone);
+      batch(() => {
+        setState('settings', 'ringtone', ringtone);
+        setState('settings', 'callRingtone', ringtone);
+      });
       fetchNui('setCallRingtone', { ringtone });
     },
     setNotificationTone: (tone: string) => {
@@ -434,11 +444,13 @@ export const PhoneProvider: ParentComponent = (props) => {
     setScreenLockEnabled: (enabled: boolean) => {
       if (isReadOnly()) return;
       const next = enabled === true;
-      setState('settings', 'screenLockEnabled', next);
       window.localStorage.setItem('gcphone:screenLockEnabled', next ? '1' : '0');
-      if (!next) {
-        setState('locked', false);
-      }
+      batch(() => {
+        setState('settings', 'screenLockEnabled', next);
+        if (!next) {
+          setState('locked', false);
+        }
+      });
     },
     factoryReset: async () => {
       if (isReadOnly()) return false;
@@ -560,13 +572,15 @@ export const PhoneProvider: ParentComponent = (props) => {
         return;
       }
 
-      setState('appLayout', from, (current) => current.filter((id) => id !== appId));
-      setState('appLayout', to, (current) => {
-        if (current.includes(appId)) return current;
-        const next = [...current];
-        const at = typeof targetIndex === 'number' ? Math.max(0, Math.min(targetIndex, next.length)) : next.length;
-        next.splice(at, 0, appId);
-        return next;
+      batch(() => {
+        setState('appLayout', from, (current) => current.filter((id) => id !== appId));
+        setState('appLayout', to, (current) => {
+          if (current.includes(appId)) return current;
+          const next = [...current];
+          const at = typeof targetIndex === 'number' ? Math.max(0, Math.min(targetIndex, next.length)) : next.length;
+          next.splice(at, 0, appId);
+          return next;
+        });
       });
 
       scheduleSave();

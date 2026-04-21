@@ -127,7 +127,8 @@ local function SafeUsername(value)
     if username == '' then return nil end
     if #username < 3 or #username > 32 then return nil end
     if not username:match('%a') then return nil end
-    if username:match('^[._-]') or username:match('[._-]$') then return nil end
+    if username:match('^[._-]') then return nil end
+    if username:match('[._-][._-]+') then return nil end
     return username
 end
 
@@ -203,7 +204,7 @@ local function ResolveSetupState(identifier)
     local featureFlags = GetFeatureFlags()
 
     local phone = MySQL.single.await(
-        'SELECT is_setup, clips_username FROM phone_numbers WHERE identifier = ? LIMIT 1',
+        'SELECT is_setup, clips_username, pin_hash FROM phone_numbers WHERE identifier = ? LIMIT 1',
         { identifier }
     )
 
@@ -224,9 +225,10 @@ local function ResolveSetupState(identifier)
     local hasChirp = type(chirp) == 'string' and chirp ~= ''
     local hasClips = phone and type(phone.clips_username) == 'string' and phone.clips_username ~= ''
     local hasMail = not featureFlags.mail or (type(mail) == 'string' and mail ~= '')
+    local hasPin = phone and type(phone.pin_hash) == 'string' and phone.pin_hash ~= ''
 
     local explicitlySetup = phone and isTruthy(phone.is_setup)
-    local complete = explicitlySetup and hasSnap and hasChirp and hasClips and hasMail
+    local complete = explicitlySetup and hasPin and hasSnap and hasChirp and hasClips and hasMail
 
 
     return {

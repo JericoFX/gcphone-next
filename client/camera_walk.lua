@@ -244,7 +244,9 @@ local function StartAdvancedPhoneCamera(data)
     end
 
     EnsureScriptCamera()
-    require('client.phone_animation').PhonePlayCamera()
+    -- Clear any in-progress phone anim so the ped's hand/phone prop is not held out in front of the scripted cam
+    ClearPedTasks(cache.ped)
+    ClearPedSecondaryTask(cache.ped)
     -- Hide ped + phone prop in rear mode (first-person), show in selfie
     SetFirstPersonVisibility(not scriptedCamera.selfie)
     UpdateScriptCameraTransform()

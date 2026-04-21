@@ -15,6 +15,9 @@ files {
     'web/dist/index.html',
     'version.txt',
 
+    'sql/schema.sql',
+    'sql/upgrades/*.sql',
+
     'shared/config.lua',
     'shared/locales/*.json',
 

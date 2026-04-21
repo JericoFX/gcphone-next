@@ -25,7 +25,8 @@ function isValidHandle(value: string) {
     value.length >= 3 &&
     value.length <= 32 &&
     hasAlphaCharacter(value) &&
-    !/^[._-]|[._-]$/.test(value)
+    !/^[._-]/.test(value) &&
+    !/[._-]{2,}/.test(value)
   );
 }
 

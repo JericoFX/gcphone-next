@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS `phone_numbers` (
     `volume` FLOAT DEFAULT 0.5,
     `lock_code` VARCHAR(10) DEFAULT '0000',
     `pin_hash` CHAR(64) NULL,
-    `is_setup` TINYINT(1) NOT NULL DEFAULT 1,
+    `is_setup` TINYINT(1) NOT NULL DEFAULT 0,
     `theme` VARCHAR(10) DEFAULT 'light',
     `language` VARCHAR(8) DEFAULT 'es',
     `audio_profile` VARCHAR(16) DEFAULT 'normal',
@@ -1775,7 +1775,7 @@ CREATE TABLE IF NOT EXISTS `phone_wavechat_dm_messages` (
 
 -- Trigger: cap each conversation pair at 50 messages (oldest removed on INSERT)
 DROP TRIGGER IF EXISTS `trg_wavechat_dm_cap`;
-DELIMITER $$
+DELIMITER //
 CREATE TRIGGER `trg_wavechat_dm_cap` AFTER INSERT ON `phone_wavechat_dm_messages`
 FOR EACH ROW
 BEGIN
@@ -1799,18 +1799,18 @@ BEGIN
             ) AS overflow
         );
     END IF;
-END$$
+END//
 DELIMITER ;
 
 -- Trigger: remove messages older than 14 days on each INSERT
 DROP TRIGGER IF EXISTS `trg_wavechat_dm_expire`;
-DELIMITER $$
+DELIMITER //
 CREATE TRIGGER `trg_wavechat_dm_expire` AFTER INSERT ON `phone_wavechat_dm_messages`
 FOR EACH ROW
 BEGIN
     DELETE FROM `phone_wavechat_dm_messages`
     WHERE created_at < DATE_SUB(NOW(), INTERVAL 14 DAY);
-END$$
+END//
 DELIMITER ;
 
 -- Daily fallback sweep for expired messages (catches idle conversations)
