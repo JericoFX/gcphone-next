@@ -245,7 +245,7 @@ Config.VideoCall = {
 }
 
 -- WebRTC TURN/ICE configuration for NAT traversal
--- If your players have connectivity issues with LiveKit (behind strict NATs, firewalls),
+-- If your players have connectivity issues (behind strict NATs, firewalls),
 -- configure a TURN server. Cloudflare TURN is supported out of the box.
 Config.WebRTC = {
     -- Dynamic credential generation (recommended for production)

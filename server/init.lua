@@ -12,14 +12,6 @@ if GetResourceState('yarn') == 'started' then
     return
 end
 
-local resourcePath = GetResourcePath(cache.resource)
-local nodeModules = resourcePath .. '/node_modules'
-if not LoadResourceFile(cache.resource, 'node_modules/livekit-server-sdk/package.json') then
-    print('^3[gcphone] WARNING: node_modules not installed or livekit-server-sdk missing.^0')
-    print('^3[gcphone] Run: cd ' .. resourcePath .. ' && npm install^0')
-    print('^3[gcphone] LiveKit features (calls, SnapLive) will not work without it.^0')
-end
-
 require 'server.modules.database'
 require 'server.main'
 require 'server.modules.hooks'

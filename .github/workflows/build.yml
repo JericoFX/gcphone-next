@@ -128,6 +128,8 @@ jobs:
 
           zip -r "$ZIP_NAME" \
             fxmanifest.lua \
+            package.json \
+            package-lock.json \
             shared/ \
             client/ \
             server/ \
@@ -137,7 +139,8 @@ jobs:
             LICENSE.md \
             -x "*.git*" \
             -x "*.local*" \
-            -x "docs/*"
+            -x "docs/*" \
+            -x "node_modules/*"
 
           echo "ZIP_NAME=$ZIP_NAME" >> "$GITHUB_ENV"
           echo "VERSION=$VERSION" >> "$GITHUB_ENV"

@@ -1,16 +1,14 @@
 let YouTube = null;
+const ytResourcePath = GetResourcePath(GetCurrentResourceName());
 try {
-  YouTube = require('server/js/node_modules/youtube-sr').default;
+  YouTube = require(`${ytResourcePath}/node_modules/youtube-sr`).default;
 } catch (e) {
   try {
-    YouTube = require('./server/js/node_modules/youtube-sr').default;
+    YouTube = require('youtube-sr').default;
   } catch (e2) {
-    try {
-      YouTube = require('youtube-sr').default;
-    } catch (e3) {
-      YouTube = null;
-      console.warn('[gcphone] youtube-sr not found — music search disabled');
-    }
+    YouTube = null;
+    console.warn('[gcphone] youtube-sr not found — music search disabled');
+    console.warn('[gcphone] Run `npm install` (or bun / yarn / pnpm install) in the resource root');
   }
 }
 

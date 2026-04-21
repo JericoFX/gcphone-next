@@ -59,9 +59,10 @@ cd gcphone-next/web
 bun install
 bun run build
 
-# 3. Install server-side JS dependencies
-cd ../server/js
-npm install          # installs youtube-sr
+# 3. Install server-side Node dependencies (root of the resource)
+cd ..
+npm install          # or: bun install  /  yarn install  /  pnpm install
+# Installs youtube-sr (music search) into ./node_modules.
 
 # 4. Add to server.cfg
 ensure oxmysql

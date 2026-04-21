@@ -1,8 +1,0 @@
-{
-  "name": "gcphone-server-js",
-  "private": true,
-  "version": "1.0.0",
-  "dependencies": {
-    "youtube-sr": "^4.3.11"
-  }
-}
