@@ -161,6 +161,15 @@ jobs:
             https://github.com/lone17k/olisound/releases/download/Stable/olisound.zip
           echo "OLISOUND_ZIP=olisound.zip" >> "$GITHUB_ENV"
 
+      - name: Generate SHA-256 checksums
+        run: |
+          sha256sum "$ZIP_NAME" > "${ZIP_NAME}.sha256"
+          sha256sum "$SOUNDS_ZIP" > "${SOUNDS_ZIP}.sha256"
+          sha256sum "$OLISOUND_ZIP" > "${OLISOUND_ZIP}.sha256"
+          echo "ZIP_SHA=${ZIP_NAME}.sha256" >> "$GITHUB_ENV"
+          echo "SOUNDS_SHA=${SOUNDS_ZIP}.sha256" >> "$GITHUB_ENV"
+          echo "OLISOUND_SHA=${OLISOUND_ZIP}.sha256" >> "$GITHUB_ENV"
+
       - name: Extract changelog for this version
         run: |
           VERSION="${{ needs.build.outputs.version }}"
@@ -177,7 +186,10 @@ jobs:
           body_path: release_notes.md
           files: |
             ${{ env.ZIP_NAME }}
+            ${{ env.ZIP_SHA }}
             ${{ env.SOUNDS_ZIP }}
+            ${{ env.SOUNDS_SHA }}
             ${{ env.OLISOUND_ZIP }}
+            ${{ env.OLISOUND_SHA }}
           draft: false
           prerelease: false
