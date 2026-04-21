@@ -2,6 +2,19 @@
 
 All notable changes to gcphone-next will be documented in this file.
 
+## [3.1.3] - 2026-04-20
+
+### Fixed
+- PIN setup prompt: `ResolveSetupState` now requires `pin_hash` so legacy phones with `is_setup=1` but no PIN get re-prompted; `phone_numbers.is_setup` default changed from `1` to `0`
+- Handle validation: client `isValidHandle` and server `SafeUsername` accept trailing `._-` (e.g. `jericofx_`)
+- SQL triggers: unified delimiter from `$` to `//` in `trg_wavechat_dm_cap` and `trg_wavechat_dm_expire` for MariaDB compatibility
+- Phone camera: `ClearPedTasks` on advanced camera entry so the ped's hand/phone prop no longer appears in frame
+- Release zip: `sql/` and `version.txt` are now bundled, fixing the resource reporting `0.0.0` and spamming "new version available"
+
+### Changed
+- `fxmanifest.lua` now ships `sql/schema.sql` and `sql/upgrades/*.sql` via the `files` block
+- `web/src/store/phone.tsx` wraps multi-`setState` sites in `batch()` (hide, refreshSetupState, completeSetup, ringtones, screen lock toggle, moveApp)
+
 ## [3.1.2] - 2026-04-14
 
 ### Added
