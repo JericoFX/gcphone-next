@@ -131,6 +131,7 @@ jobs:
             shared/ \
             client/ \
             server/ \
+            sql/ \
             web/dist/ \
             CHANGELOG.md \
             LICENSE.md \
