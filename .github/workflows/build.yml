@@ -136,7 +136,6 @@ jobs:
             CHANGELOG.md \
             LICENSE.md \
             -x "*.git*" \
-            -x "version.txt" \
             -x "*.local*" \
             -x "docs/*"
 
