@@ -2,6 +2,16 @@
 
 All notable changes to gcphone-next will be documented in this file.
 
+## [3.1.4] - 2026-04-21
+
+### Fixed
+- Phone init race on connect: client no longer fires `lib.callback('gcphone:getPhoneData')` on a fixed 1s timer (raced server module load and fired before character select in multichar)
+- Multichar character-load: client now listens to `esx:playerLoaded` and `QBCore:Client:OnPlayerLoaded` to fetch phone data once the character is actually loaded
+- `/restart gcphone` with players already online: server now rehydrates every connected player via `onResourceStart`, waiting for the framework bridge before pushing `gcphone:init`
+
+### Removed
+- `Config.Startup.ClientInitDelayMs` (orphan after dropping the fixed-timer pull)
+
 ## [3.1.3] - 2026-04-20
 
 ### Fixed
