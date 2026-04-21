@@ -152,6 +152,12 @@ jobs:
 
           echo "SOUNDS_ZIP=$SOUNDS_ZIP" >> "$GITHUB_ENV"
 
+      - name: Fetch olisound dependency (MIT, lone17k/olisound)
+        run: |
+          curl -fL -o olisound.zip \
+            https://github.com/lone17k/olisound/releases/download/Stable/olisound.zip
+          echo "OLISOUND_ZIP=olisound.zip" >> "$GITHUB_ENV"
+
       - name: Extract changelog for this version
         run: |
           VERSION="${{ needs.build.outputs.version }}"
@@ -169,5 +175,6 @@ jobs:
           files: |
             ${{ env.ZIP_NAME }}
             ${{ env.SOUNDS_ZIP }}
+            ${{ env.OLISOUND_ZIP }}
           draft: false
           prerelease: false
