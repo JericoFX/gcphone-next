@@ -111,8 +111,7 @@ local function EnsureDefaultRooms()
     end
 end
 
-CreateThread(function()
-    Wait(1000)
+MySQL.ready(function()
     EnsureDefaultRooms()
 end)
 

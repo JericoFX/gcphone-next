@@ -17,26 +17,8 @@ local REQUIRED_TABLES = {
 }
 
 local function CheckSchema()
-    local started = lib.waitFor(function()
-        if GetResourceState('oxmysql') == 'started' then
-            return true
-        end
-    end, nil, 3000)
-
-    if not started then
+    if GetResourceState('oxmysql') ~= 'started' then
         print('^1[gcphone-next] ERROR: oxmysql not started, cannot check database^7')
-        return false
-    end
-
-    local ready = lib.waitFor(function()
-        local ok = pcall(MySQL.query.await, 'SELECT 1')
-        if ok then
-            return true
-        end
-    end, nil, 2000)
-
-    if not ready then
-        print('^1[gcphone-next] ERROR: oxmysql did not finish initializing in time^7')
         return false
     end
 
@@ -61,7 +43,7 @@ local function CheckSchema()
     return true
 end
 
-CreateThread(function()
+MySQL.ready(function()
     CheckSchema()
 end)
 

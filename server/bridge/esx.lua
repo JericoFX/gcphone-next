@@ -34,8 +34,14 @@ CreateThread(function()
 
     ESX = exports['es_extended']:getSharedObject()
     Framework = 'esx'
-    ensureESXPhoneColumn()
     print(('[gcphone-next] Framework detected: %s'):format(Framework))
+
+    -- ALTER TABLE requires both ESX present AND oxmysql handshake done.
+    -- Running outside MySQL.ready masked failures because safeQuery pcalls
+    -- and never logs, so a race-failed migration stayed silent forever.
+    MySQL.ready(function()
+        ensureESXPhoneColumn()
+    end)
 end)
 
 local function IsTruthy(value)

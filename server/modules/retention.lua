@@ -36,8 +36,7 @@ local function EnsureRetentionIndexes()
     EnsureIndex('phone_social_notifications', 'idx_social_notifications_created', 'ALTER TABLE phone_social_notifications ADD INDEX idx_social_notifications_created (`created_at`)')
 end
 
-CreateThread(function()
-    Wait(3000)
+MySQL.ready(function()
     EnsureRetentionIndexes()
 end)
 
