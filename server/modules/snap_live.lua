@@ -291,9 +291,21 @@ function M.RegisterCallbacks(deps)
         local id = tonumber(postId)
         if not id or id < 1 then return false end
 
+        -- Ownership must be verified for every call, including the case where
+        -- the in-memory stream has been evicted (restart, crash, race). Trusting
+        -- the in-memory absence previously let any caller hard-delete a row
+        -- that was still flagged is_live = 1 in the DB.
         local stream = ActiveStreams[id]
-        if stream and stream.identifier ~= identifier then
-            return false
+        if stream then
+            if stream.identifier ~= identifier then return false end
+        else
+            local owner = MySQL.scalar.await([[
+                SELECT a.identifier
+                FROM phone_snap_posts p
+                JOIN phone_snap_accounts a ON p.account_id = a.id
+                WHERE p.id = ? AND p.is_live = 1 LIMIT 1
+            ]], { id })
+            if not owner or owner ~= identifier then return false end
         end
 
         MySQL.update.await(
