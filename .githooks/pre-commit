@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# Pre-commit hook: run the antipattern lint before accepting a commit.
+# Enable once per clone:  git config core.hooksPath .githooks
+
+set -e
+bash "$(git rev-parse --show-toplevel)/scripts/lint-antipatterns.sh"

@@ -7,8 +7,18 @@ on:
     branches: [main]
 
 jobs:
+  lint-antipatterns:
+    name: Lint antipatterns
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run antipattern lint
+        run: bash scripts/lint-antipatterns.sh
+
   build:
     name: Build
+    needs: lint-antipatterns
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.version.outputs.version }}
