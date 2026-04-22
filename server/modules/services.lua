@@ -251,6 +251,18 @@ lib.callback.register('gcphone:services:rateWorker', function(source, data)
         if blocked then return false, 'Blocked' end
     end
 
+    -- Proof of interaction: at least one accepted call in either direction between
+    -- rater and worker must exist. Without this gate any player can bomb any
+    -- worker's rating without ever having used the service.
+    if not myNumber or not targetNumber then return false, 'NO_INTERACTION' end
+    local interacted = MySQL.scalar.await([[
+        SELECT 1 FROM phone_calls
+        WHERE accepts = 1
+          AND ((owner = ? AND num = ?) OR (owner = ? AND num = ?))
+        LIMIT 1
+    ]], { myNumber, targetNumber, targetNumber, myNumber })
+    if not interacted then return false, 'NO_INTERACTION' end
+
     -- Check if already rated, get old score
     local existing = MySQL.single.await(
         'SELECT score FROM phone_services_ratings WHERE service_id = ? AND rater_identifier = ?',
