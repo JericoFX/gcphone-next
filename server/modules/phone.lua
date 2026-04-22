@@ -941,23 +941,41 @@ RegisterNetEvent('gcphone:clearPhoneAccessContext', function()
     ClearPhoneAccessContext(source)
 end)
 
-RegisterNetEvent('QBCore:Server:PlayerLoaded', function(Player)
-    if not Player or not Player.PlayerData or not Player.PlayerData.source then return end
+-- Dedupe a brief window so back-to-back playerLoaded signals (e.g. a server
+-- that emits both qb-core legacy and qbx_core variants, or a multichar swap
+-- that fires twice) do not rotate the NUI auth token mid-request.
+local LastPhoneInitAt = {}
+local PHONE_INIT_DEDUPE_MS = 2000
 
-    local phone = GetOrCreatePhone(Player.PlayerData.source)
-    if phone then
-        TriggerClientEvent('gcphone:init', Player.PlayerData.source, BuildPhonePayload(phone, Player.PlayerData.source))
-    end
-end)
-
-AddEventHandler('esx:playerLoaded', function(playerId)
-    local source = tonumber(playerId)
+local function PushPhoneInit(source)
     if not source or source <= 0 then return end
+
+    local now = GetGameTimer()
+    local last = LastPhoneInitAt[source]
+    if last and (now - last) < PHONE_INIT_DEDUPE_MS then return end
+    LastPhoneInitAt[source] = now
 
     local phone = GetOrCreatePhone(source)
     if phone then
         TriggerClientEvent('gcphone:init', source, BuildPhonePayload(phone, source))
     end
+end
+
+-- qb-core emits `QBCore:Server:PlayerLoaded` with a Player table.
+RegisterNetEvent('QBCore:Server:PlayerLoaded', function(Player)
+    if not Player or not Player.PlayerData or not Player.PlayerData.source then return end
+    PushPhoneInit(Player.PlayerData.source)
+end)
+
+-- qbx_core emits `QBCore:Server:OnPlayerLoaded` with no arguments; the
+-- firing source is exposed via the event `source`. Verified: qbox-docs
+-- /qbox-project/qbox-docs resources/qbx_core/events/server.mdx.
+RegisterNetEvent('QBCore:Server:OnPlayerLoaded', function()
+    PushPhoneInit(source)
+end)
+
+AddEventHandler('esx:playerLoaded', function(playerId)
+    PushPhoneInit(tonumber(playerId))
 end)
 
 -- Rehydrate players whose character was already loaded when this resource restarts.
@@ -997,6 +1015,7 @@ end)
 AddEventHandler('playerDropped', function()
     ClearPhoneAccessContext(source)
     StreamerModePlayers[source] = nil
+    LastPhoneInitAt[source] = nil
 end)
 
 ---Get a phone number by owner identifier.
