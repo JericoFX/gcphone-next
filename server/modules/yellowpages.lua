@@ -166,8 +166,10 @@ lib.callback.register('gcphone:yellowpages:getSellerInfo', function(source, list
     local id = tonumber(listingId)
     if not id then return nil end
 
+    -- Do not expose the seller's internal identifier to the buyer. Phone
+    -- number + display fields are enough to contact them.
     local listing = MySQL.single.await([[
-        SELECT identifier, phone_number, seller_name, seller_avatar, location_shared, location_x, location_y, location_z
+        SELECT phone_number, seller_name, seller_avatar, location_shared, location_x, location_y, location_z
         FROM phone_market
         WHERE id = ? AND status = 'active'
     ]], { id })
@@ -188,15 +190,26 @@ lib.callback.register('gcphone:yellowpages:recordContact', function(source, data
     if type(data) ~= 'table' then return false end
 
     local listingId = tonumber(data.listingId)
-    local sellerId = data.sellerId
     local contactType = data.contactType -- 'call' or 'message'
 
-    if not listingId or not sellerId or not contactType then return false end
+    if not listingId then return false end
+    if contactType ~= 'call' and contactType ~= 'message' then return false end
+
+    if Utils.HitRateLimit(source, 'yp_record_contact', 2000, 3) then return false end
+
+    -- Seller identifier must be derived from the listing row, not trusted
+    -- from the client. Previously the buyer could write any value into
+    -- phone_yellowpages_contacts.seller_identifier and pollute the ledger.
+    local sellerIdentifier = MySQL.scalar.await(
+        'SELECT identifier FROM phone_market WHERE id = ? AND status = "active"',
+        { listingId }
+    )
+    if not sellerIdentifier then return false end
 
     MySQL.insert.await([[
         INSERT INTO phone_yellowpages_contacts (listing_id, buyer_identifier, seller_identifier, contact_type)
         VALUES (?, ?, ?, ?)
-    ]], { listingId, identifier, sellerId, contactType })
+    ]], { listingId, identifier, sellerIdentifier, contactType })
 
     return true
 end)

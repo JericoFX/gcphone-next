@@ -188,19 +188,25 @@ end)
 lib.callback.register('gcphone:market:contactSeller', function(source, data)
     local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false end
-    
+    if type(data) ~= 'table' then return false end
+
+    local listingId = tonumber(data.listingId)
+    if not listingId then return false end
+
+    -- Explicit column list so we never hand back the seller's internal
+    -- identifier alongside the phone number.
     local listing = MySQL.single.await(
-        'SELECT * FROM phone_market WHERE id = ?',
-        { data.listingId }
+        'SELECT phone_number FROM phone_market WHERE id = ?',
+        { listingId }
     )
-    
+
     if not listing then return false end
-    
+
     MySQL.update.await(
         'UPDATE phone_market SET views = views + 1 WHERE id = ?',
-        { data.listingId }
+        { listingId }
     )
-    
+
     return {
         phoneNumber = listing.phone_number
     }
