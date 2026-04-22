@@ -2,6 +2,27 @@
 
 All notable changes to gcphone-next will be documented in this file.
 
+## [3.1.6] - 2026-04-21
+
+### Fixed
+- `server/modules/phone_drop.lua`: persisted phone drops now wait for `MySQL.ready` before rehydrating — oxmysql may not have finished its handshake when the module is required, silently dropping the SELECT on cold start
+- `server/modules/darkrooms.lua`, `server/modules/retention.lua`, `server/modules/database.lua`, `server/bridge/esx.lua`: DB init gated on `MySQL.ready` instead of magic `Wait(N)` delays that raced oxmysql on slow first boot
+- `server/modules/calls.lua`, `client/calls.lua`: pma-voice detection is re-evaluated per call via `IsUsingPmaVoice()` instead of a boolean cached at module load, so a later `/start pma-voice` is picked up without a gcphone restart
+- `server/modules/phone_drop.lua`: ox_inventory `swapItems` hook re-registers on `ox_inventory` restart; previously a single top-level registration was lost whenever the inventory resource cycled
+- `client/main.lua`: `gcphone:init` payload is buffered until the NUI signals `nuiReady`, preventing a blank phone on cold connect when the SolidJS mount raced the first SendNUIMessage
+- `server/modules/calls.lua`: active calls are reset on `onResourceStop` (pma-voice channels cleared, incoming-call state bags cleared, accepted calls persisted), eliminating phantom voice channels after `/restart gcphone`
+- `server/modules/phone.lua`: qbx_core servers now receive `gcphone:init` on fresh join — the handler for the legacy `QBCore:Server:PlayerLoaded` event was the only path, missing qbx_core's `QBCore:Server:OnPlayerLoaded` (verified via qbox-docs)
+- `server/modules/wavechat_dm.lua`: `CREATE TABLE` / `ALTER TABLE` migrations now run inside `MySQL.ready` with `ADD COLUMN IF NOT EXISTS`, same race class as above
+
+### Changed
+- Dropped-phone broadcast now flows through `GlobalState.gcphone_drops` instead of `gcphone:phoneDropped` / `gcphone:phonePickedUp` net events plus a `Wait(500) + lib.callback` bootstrap; clients subscribe with `AddStateBagChangeHandler`. `gcphone:getDroppedPhones` callback removed — late-joining clients read the bag directly
+- Active calls are published as a minimal snapshot under `GlobalState.gcphone_active_calls` so external resources can observe call state without the `GetActiveCalls` export hop
+- `server/modules/garage.lua`, `server/modules/mail.lua`, `server/modules/sdk.lua`, `server/modules/wallet.lua`: notification / receipt `pcall` wrappers capture the error and `warn()` it instead of swallowing silently, so regressions become visible during dev
+
+### Added
+- `scripts/lint-antipatterns.sh` — static check for the three bug classes fixed in this release (top-level `MySQL.await`, cached `GetResourceState`, `CreateThread + Wait + lib.callback` bootstrap). Wired into CI as the `lint-antipatterns` job gating the build. Opt-in pre-commit hook under `.githooks/pre-commit` (enable with `git config core.hooksPath .githooks`)
+- `.gitattributes` pins `*.sh` and `.githooks/*` to LF so commits from Windows do not ship CRLF to the Linux CI runner
+
 ## [3.1.5] - 2026-04-21
 
 ### Changed
