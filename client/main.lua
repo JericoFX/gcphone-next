@@ -119,6 +119,14 @@ RegisterNUICallback = function(name, handler)
     end)
 end
 
+-- NUI mount race: on cold connect the `initPhone` SendNUIMessage can fire
+-- before the Vue/React frame has bound its listeners, causing the phone to
+-- start blank. Buffer the most recent init payload until the NUI signals
+-- `nuiReady`, then flush. Subsequent inits (multichar switch, live config
+-- update) send through immediately since NUI is already mounted.
+local nuiIsReady = false
+local pendingInit = nil
+
 local function ApplyPhoneInit(data)
     if type(data) ~= 'table' then return end
     PhoneState.phoneNumber = data.phoneNumber
@@ -132,6 +140,11 @@ local function ApplyPhoneInit(data)
     PhoneState.language = data.language
     PhoneState.audioProfile = data.audioProfile
     data.nuiAuthToken = RotateNuiAuthToken()
+
+    if not nuiIsReady then
+        pendingInit = data
+        return
+    end
 
     SendNUIMessage({
         action = 'initPhone',
@@ -155,6 +168,17 @@ RegisterNetEvent('esx:playerLoaded', FetchPhoneOnCharacterReady)
 RegisterNetEvent('QBCore:Client:OnPlayerLoaded', FetchPhoneOnCharacterReady)
 
 RegisterNUICallback('nuiReady', function(_, cb)
+    nuiIsReady = true
+
+    if pendingInit then
+        local data = pendingInit
+        pendingInit = nil
+        SendNUIMessage({
+            action = 'initPhone',
+            data = data
+        })
+    end
+
     cb(true)
 end)
 
