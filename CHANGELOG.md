@@ -2,6 +2,14 @@
 
 All notable changes to gcphone-next will be documented in this file.
 
+## [3.1.10] - 2026-04-22
+
+### Security
+- `server/modules/messages.lua`: `gcphone:getMessageReactions` now joins `phone_messages` and requires the caller's phone number to be the transmitter or receiver of the row. Previously any caller could enumerate reactions on any private thread by guessing message IDs
+- `server/modules/phone_layouts.lua`: `gcphone:setWidgetLayout` enforces the same `MAX_LAYOUT_BYTES` (16 KB) gate already present on `setAppLayout`, so a client cannot persist an arbitrarily large JSON blob per account
+- `server/modules/market.lua`, `server/modules/yellowpages.lua`: `market:contactSeller` and `yellowpages:getSellerInfo` switched from `SELECT *` / wide column lists to explicit column sets that exclude the seller's internal identifier
+- `server/modules/yellowpages.lua`: `yellowpages:recordContact` now derives `seller_identifier` from the listing row (not the client payload), validates `contactType` against a `call`/`message` allow-list, and rate-limits to 3 inserts per 2s per source. Previously any caller could write arbitrary foreign keys into the contact ledger
+
 ## [3.1.9] - 2026-04-22
 
 ### Security
