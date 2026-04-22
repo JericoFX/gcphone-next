@@ -62,7 +62,14 @@ local function LoadDroppedPhones()
     end
 end
 
-LoadDroppedPhones()
+-- Wait for oxmysql to finish its DB handshake before reading phone_dropped.
+-- CreateThread so the module `require` chain in server/init.lua is not blocked
+-- while oxmysql warms up.
+CreateThread(function()
+    MySQL.ready(function()
+        LoadDroppedPhones()
+    end)
+end)
 
 local function BuildForensicReport(ownerIdentifier, phoneNumber, imei)
     local lines = {}
