@@ -14,18 +14,25 @@ local function GetSourceByPhone(phone)
     return Bridge.GetSourceFromIdentifier(identifier)
 end
 
-MySQL.query.await([[
-    CREATE TABLE IF NOT EXISTS phone_wavechat_dm_hidden (
-        phone VARCHAR(20) NOT NULL,
-        partner VARCHAR(20) NOT NULL,
-        hidden_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        PRIMARY KEY (phone, partner)
-    )
-]])
+-- Running MySQL.query.await at the top of the module races the oxmysql
+-- handshake the same way phone_drop.lua did before it was gated. Defer
+-- the defensive schema patch until MySQL.ready, and use ADD COLUMN IF
+-- NOT EXISTS so we do not need pcall to swallow "duplicate column".
+CreateThread(function()
+    MySQL.ready(function()
+        MySQL.query.await([[
+            CREATE TABLE IF NOT EXISTS phone_wavechat_dm_hidden (
+                phone VARCHAR(20) NOT NULL,
+                partner VARCHAR(20) NOT NULL,
+                hidden_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (phone, partner)
+            )
+        ]])
 
--- Add deleted_at column if missing (soft delete for "delete for everyone")
-pcall(function()
-    MySQL.query.await('ALTER TABLE phone_wavechat_dm_messages ADD COLUMN deleted_at DATETIME DEFAULT NULL')
+        MySQL.query.await(
+            'ALTER TABLE phone_wavechat_dm_messages ADD COLUMN IF NOT EXISTS deleted_at DATETIME DEFAULT NULL'
+        )
+    end)
 end)
 
 lib.callback.register('gcphone:wavechat:dm:send', function(source, data)
