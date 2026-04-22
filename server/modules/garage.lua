@@ -392,6 +392,13 @@ lib.callback.register('gcphone:garage:shareLocation', function(source, data)
     local identifier = Bridge.GetIdentifier(source)
     if not identifier or type(data) ~= 'table' then return false end
 
+    -- Triggers a notification on the target client with attacker-controlled
+    -- content. Without a rate limit any player can harass another one by
+    -- flooding gcphone:receiveSharedLocation events.
+    if Utils.HitRateLimit(source, 'garage_share_location', 3000, 2) then
+        return false
+    end
+
     local plate = data.plate
     local targetPhone = data.phoneNumber
 
