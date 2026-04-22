@@ -1,4 +1,4 @@
-import { createEffect, For, onMount, Show } from 'solid-js';
+import { createEffect, For, onCleanup, onMount, Show } from 'solid-js';
 import { formatPhoneNumber, timeAgo } from '../../../utils/misc';
 import { resolveMediaType, sanitizeText } from '../../../utils/sanitize';
 import { parseSharedContactMessage } from '../../../utils/contactShare';
@@ -42,9 +42,17 @@ export function WaveChatConversationView(props: {
 }) {
   const language = () => getStoredLanguage();
   let messagesEnd: HTMLDivElement | undefined;
+  let sendHoldTimer: number | undefined;
 
   onMount(() => {
     messagesEnd?.scrollIntoView({ behavior: 'auto' });
+  });
+
+  onCleanup(() => {
+    if (sendHoldTimer) {
+      clearTimeout(sendHoldTimer);
+      sendHoldTimer = undefined;
+    }
   });
 
   createEffect(() => {
@@ -161,8 +169,9 @@ export function WaveChatConversationView(props: {
           class={styles.sendBtn}
           classList={{ [styles.sendBtnRecording]: props.isRecordingVoice }}
           onPointerDown={() => {
-            (window as any).__gcSendTimer = setTimeout(() => {
-              (window as any).__gcSendTimer = null;
+            if (sendHoldTimer) clearTimeout(sendHoldTimer);
+            sendHoldTimer = window.setTimeout(() => {
+              sendHoldTimer = undefined;
               if (props.isRecordingVoice) {
                 props.onStopVoiceRecording();
               } else {
@@ -171,16 +180,16 @@ export function WaveChatConversationView(props: {
             }, 500);
           }}
           onPointerUp={() => {
-            if ((window as any).__gcSendTimer) {
-              clearTimeout((window as any).__gcSendTimer);
-              (window as any).__gcSendTimer = null;
+            if (sendHoldTimer) {
+              clearTimeout(sendHoldTimer);
+              sendHoldTimer = undefined;
               props.onSend();
             }
           }}
           onPointerLeave={() => {
-            if ((window as any).__gcSendTimer) {
-              clearTimeout((window as any).__gcSendTimer);
-              (window as any).__gcSendTimer = null;
+            if (sendHoldTimer) {
+              clearTimeout(sendHoldTimer);
+              sendHoldTimer = undefined;
             }
           }}
         >

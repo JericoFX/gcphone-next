@@ -3,6 +3,7 @@ import {
   useContext, 
   ParentComponent,
   onMount,
+  onCleanup,
   batch,
   createMemo
 } from 'solid-js';
@@ -272,9 +273,16 @@ export const PhoneProvider: ParentComponent = (props) => {
     if (saveTimer) clearTimeout(saveTimer);
     saveTimer = setTimeout(() => {
       saveTimer = undefined;
-      scheduleSave();
+      void actions.saveAppLayout();
     }, SAVE_DEBOUNCE_MS);
   };
+
+  onCleanup(() => {
+    if (saveTimer) {
+      clearTimeout(saveTimer);
+      saveTimer = undefined;
+    }
+  });
   
   const actions = {
     show: () => {

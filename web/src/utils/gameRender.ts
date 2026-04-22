@@ -189,6 +189,7 @@ export function createGameView(canvas: HTMLCanvasElement): GameView {
 
   let paused = false;
   let recorder: MediaRecorder | null = null;
+  let recordingAudioStream: MediaStream | null = null;
   let recordStartTime = 0;
   let viewportX = 0;
   let viewportY = 0;
@@ -305,7 +306,11 @@ export function createGameView(canvas: HTMLCanvasElement): GameView {
       gameView.pause();
       if (recorder && recorder.state === 'recording') {
         recorder.stop();
-        recorder = null;
+      }
+      recorder = null;
+      if (recordingAudioStream) {
+        recordingAudioStream.getTracks().forEach((t) => t.stop());
+        recordingAudioStream = null;
       }
       const ext = gl.getExtension('WEBGL_lose_context');
       ext?.loseContext();
@@ -359,6 +364,7 @@ export function createGameView(canvas: HTMLCanvasElement): GameView {
         audioStream = await navigator.mediaDevices.getUserMedia({
           audio: { autoGainControl: false, noiseSuppression: false, echoCancellation: false },
         });
+        recordingAudioStream = audioStream;
       } catch {
         // No mic available
       }
@@ -387,6 +393,9 @@ export function createGameView(canvas: HTMLCanvasElement): GameView {
         recorder = null;
         if (audioStream) {
           audioStream.getTracks().forEach((t) => t.stop());
+        }
+        if (recordingAudioStream === audioStream) {
+          recordingAudioStream = null;
         }
         onComplete(blob, duration);
       };

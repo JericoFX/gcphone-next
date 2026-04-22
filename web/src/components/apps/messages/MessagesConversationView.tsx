@@ -196,9 +196,17 @@ export function ConversationView(props: ConversationViewProps) {
   const [showAttachSheet, setShowAttachSheet] = createSignal(false);
   const [selectedMessage, setSelectedMessage] = createSignal<any>(null);
   const [reactionPickerMsg, setReactionPickerMsg] = createSignal<number | null>(null);
+  let sendHoldTimer: number | undefined;
 
   onMount(() => {
     messagesEnd?.scrollIntoView({ behavior: 'auto' });
+  });
+
+  onCleanup(() => {
+    if (sendHoldTimer) {
+      clearTimeout(sendHoldTimer);
+      sendHoldTimer = undefined;
+    }
   });
 
   createEffect(() => {
@@ -388,22 +396,23 @@ export function ConversationView(props: ConversationViewProps) {
           <button
             class={styles.sendBtn}
             onPointerDown={() => {
-              (window as any).__gcMsgSendTimer = setTimeout(() => {
-                (window as any).__gcMsgSendTimer = null;
+              if (sendHoldTimer) clearTimeout(sendHoldTimer);
+              sendHoldTimer = window.setTimeout(() => {
+                sendHoldTimer = undefined;
                 props.onRecordVoice();
               }, 500);
             }}
             onPointerUp={() => {
-              if ((window as any).__gcMsgSendTimer) {
-                clearTimeout((window as any).__gcMsgSendTimer);
-                (window as any).__gcMsgSendTimer = null;
+              if (sendHoldTimer) {
+                clearTimeout(sendHoldTimer);
+                sendHoldTimer = undefined;
                 props.onSend();
               }
             }}
             onPointerLeave={() => {
-              if ((window as any).__gcMsgSendTimer) {
-                clearTimeout((window as any).__gcMsgSendTimer);
-                (window as any).__gcMsgSendTimer = null;
+              if (sendHoldTimer) {
+                clearTimeout(sendHoldTimer);
+                sendHoldTimer = undefined;
               }
             }}
           >

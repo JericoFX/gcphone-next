@@ -2,6 +2,14 @@
 
 All notable changes to gcphone-next will be documented in this file.
 
+## [3.1.11] - 2026-04-22
+
+### Fixed
+- `web/src/components/apps/messages/MessagesApp.tsx`, `web/src/utils/audioRecorder.ts`: `recordAndSendVoice` now stores the returned `AudioRecorderHandle` and cancels it from `onCleanup`. Previously unmounting the Messages app while holding the send button left the microphone `MediaStream` live for up to 30s — OS-visible mic indicator would stay on and the stream was not GC'd until the recorder's internal timeout fired
+- `web/src/utils/gameRender.ts`: `destroy()` now explicitly stops the audio `MediaStream` captured for video recording. Previously the stream only stopped inside `recorder.onstop`, so tearing down the GameRender instance while recording (or with a recorder in a non-`recording` state) could leave the mic track open
+- `web/src/store/phone.tsx`: `scheduleSave` was calling itself recursively instead of invoking `actions.saveAppLayout`, so app-layout edits never persisted and the debounce timer rescheduled forever. Replaced with a call to `saveAppLayout` plus an `onCleanup` that clears the pending `setTimeout` on provider teardown
+- `web/src/components/apps/messages/MessagesConversationView.tsx`, `web/src/components/apps/wavechat/WaveChatConversationView.tsx`, `web/src/components/apps/wavechat/WaveChatGroupsTab.tsx`: replaced the `window.__gcMsgSendTimer` / `__gcSendTimer` / `__gcGrpSendTimer` globals on the send button's long-press handler with a component-scope `sendHoldTimer` and `onCleanup` that clears it on unmount. The globals survived unmount and collided across mounts, potentially firing a voice-record start on an already-gone view
+
 ## [3.1.10] - 2026-04-22
 
 ### Security

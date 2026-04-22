@@ -1,4 +1,4 @@
-import { createSelector, For, Show } from 'solid-js';
+import { createSelector, For, onCleanup, Show } from 'solid-js';
 import type { Accessor } from 'solid-js';
 import { generateColorForString, formatPhoneNumber, timeAgo } from '../../../utils/misc';
 import { resolveMediaType, sanitizeMediaUrl, sanitizePhone, sanitizeText } from '../../../utils/sanitize';
@@ -59,6 +59,14 @@ export function WaveChatGroupsTab(props: {
 }) {
   const language = () => getStoredLanguage();
   const isSelectedGroup = createSelector(props.selectedGroupId);
+  let sendHoldTimer: number | undefined;
+
+  onCleanup(() => {
+    if (sendHoldTimer) {
+      clearTimeout(sendHoldTimer);
+      sendHoldTimer = undefined;
+    }
+  });
 
   return (
     <>
@@ -163,22 +171,23 @@ export function WaveChatGroupsTab(props: {
               class={styles.sendBtn}
               classList={{ [styles.sendBtnRecording]: props.isRecordingVoice() }}
               onPointerDown={() => {
-                (window as any).__gcGrpSendTimer = setTimeout(() => {
-                  (window as any).__gcGrpSendTimer = null;
+                if (sendHoldTimer) clearTimeout(sendHoldTimer);
+                sendHoldTimer = window.setTimeout(() => {
+                  sendHoldTimer = undefined;
                   if (props.isRecordingVoice()) { props.onStopVoiceRecording(); } else { props.onStartVoiceRecording(); }
                 }, 500);
               }}
               onPointerUp={() => {
-                if ((window as any).__gcGrpSendTimer) {
-                  clearTimeout((window as any).__gcGrpSendTimer);
-                  (window as any).__gcGrpSendTimer = null;
+                if (sendHoldTimer) {
+                  clearTimeout(sendHoldTimer);
+                  sendHoldTimer = undefined;
                   props.onSendGroupMessage();
                 }
               }}
               onPointerLeave={() => {
-                if ((window as any).__gcGrpSendTimer) {
-                  clearTimeout((window as any).__gcGrpSendTimer);
-                  (window as any).__gcGrpSendTimer = null;
+                if (sendHoldTimer) {
+                  clearTimeout(sendHoldTimer);
+                  sendHoldTimer = undefined;
                 }
               }}
             >{props.isRecordingVoice() ? `⏹ ${props.recordingSeconds()}s` : '➤'}</button>
