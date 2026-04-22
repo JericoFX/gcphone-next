@@ -278,7 +278,14 @@ lib.callback.register('gcphone:storage:proxyUpload', function(source, data)
         return { error = 'PROVIDER_TOKEN_MISSING' }
     end
 
-    local filename = (Utils.SafeText(data.filename or 'upload', 100) or 'upload'):gsub('[\r\n"\\]', '')
+    -- Reject any path-traversal tokens before the filename reaches a disk-backed
+    -- provider (`local`). Previously only `\r\n"\\` were stripped, leaving `/`
+    -- and `..` intact so `../../etc/foo.png` could escape the upload directory.
+    local rawFilename = (Utils.SafeText(data.filename or 'upload', 100) or 'upload'):gsub('[\r\n"\\]', '')
+    if rawFilename:find('[/\\]') or rawFilename:find('%.%.') then
+        return { error = 'INVALID_FILENAME' }
+    end
+    local filename = rawFilename
     local contentType = (Utils.SafeText(data.contentType or 'application/octet-stream', 60) or 'application/octet-stream'):gsub('[\r\n"\\]', '')
     if not contentType:match('^[%w]+/[%w%-%+%.]+$') then
         contentType = 'application/octet-stream'
