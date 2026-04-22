@@ -30,6 +30,21 @@ AddEventHandler('gcphone:live:create', function(clipId, avatar)
 
     if not identifier then return end
 
+    -- Do not let a second caller steal ownership of an active live room.
+    if ActiveLives[clipId] then return end
+
+    -- Verify the caller actually owns the underlying clip. Without this check
+    -- any client can open a live chat room bound to someone else's clipId.
+    local clipIdNum = tonumber(clipId)
+    if not clipIdNum then return end
+    local ownerIdentifier = MySQL.scalar.await([[
+        SELECT a.identifier
+        FROM phone_clips_posts c
+        JOIN phone_clips_accounts a ON c.account_id = a.id
+        WHERE c.id = ? LIMIT 1
+    ]], { clipIdNum })
+    if not ownerIdentifier or ownerIdentifier ~= identifier then return end
+
     ActiveLives[clipId] = {
         owner = source,
         ownerIdentifier = identifier,
