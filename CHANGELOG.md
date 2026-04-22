@@ -2,6 +2,11 @@
 
 All notable changes to gcphone-next will be documented in this file.
 
+## [3.1.12] - 2026-04-22
+
+### CI
+- `scripts/lint-antipatterns.sh`: added rules D/E/F to catch the frontend leak classes shipped in 3.1.11 before they regress. D flags `(window as any).__<Name>Timer` / `= setTimeout(...)` stashes, E flags `startAudioRecording(` calls whose handle is discarded, F flags files that open `getUserMedia(` without any `.getTracks(` cleanup call
+
 ## [3.1.11] - 2026-04-22
 
 ### Fixed
