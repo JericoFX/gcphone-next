@@ -248,7 +248,7 @@ local function SendMailFromAccount(account, payload)
     end
 
     if recipient and recipient.identifier then
-        pcall(function()
+        local ok, err = pcall(function()
             exports[GetCurrentResourceName()]:AddPersistentNotification(recipient.identifier, {
                 appId = 'mail',
                 title = 'Nuevo mail',
@@ -262,6 +262,9 @@ local function SendMailFromAccount(account, payload)
                 }
             })
         end)
+        if not ok then
+            warn(('[gcphone-next] mail notification failed (%s): %s'):format(recipient.identifier, tostring(err)))
+        end
     end
 
     return { success = true, id = mailId }

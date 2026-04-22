@@ -858,7 +858,7 @@ lib.callback.register('gcphone:wallet:chatTransfer', function(source, data)
     end
 
     -- Auto-create receipt document
-    pcall(function()
+    local ok, err = pcall(function()
         local senderName = Bridge.GetName(source) or 'Desconocido'
         local receiverName = receiverSource and Bridge.GetName(receiverSource) or targetPhone
         local receiptTitle = string.format('Recibo $%s - %s', math.floor(amount), receiverName)
@@ -868,6 +868,9 @@ lib.callback.register('gcphone:wallet:chatTransfer', function(source, data)
             { identifier, 'receipt', receiptTitle, senderName, targetPhone, string.format('%08X', math.random(0, 0xFFFFFFFF)), 0 }
         )
     end)
+    if not ok then
+        warn(('[gcphone-next] wallet receipt insert failed (%s): %s'):format(identifier, tostring(err)))
+    end
 
     return { success = true, balance = payload.balance }
 end)

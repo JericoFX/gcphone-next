@@ -496,7 +496,7 @@ exports('SyncVehicle', function(identifier, plate, model, modelName, garageName,
 
     -- Notify player when vehicle is impounded
     if impounded then
-        pcall(function()
+        local ok, err = pcall(function()
             exports[RESOURCE_NAME]:AddPersistentNotification(identifier, {
                 appId = 'garage',
                 title = 'Vehiculo incautado',
@@ -504,6 +504,9 @@ exports('SyncVehicle', function(identifier, plate, model, modelName, garageName,
                 meta = { plate = plate, model = modelName },
             })
         end)
+        if not ok then
+            warn(('[gcphone-next] garage impound notification failed (%s): %s'):format(identifier, tostring(err)))
+        end
     end
 
     -- Update location if coords provided
@@ -529,7 +532,7 @@ end)
 
 exports('NotifyImpound', function(identifier, plate, modelName, reason)
     if not identifier or not plate then return false end
-    pcall(function()
+    local ok, err = pcall(function()
         exports[RESOURCE_NAME]:AddPersistentNotification(identifier, {
             appId = 'garage',
             title = 'Vehiculo incautado',
@@ -537,6 +540,9 @@ exports('NotifyImpound', function(identifier, plate, modelName, reason)
             meta = { plate = plate, model = modelName, reason = reason },
         })
     end)
+    if not ok then
+        warn(('[gcphone-next] NotifyImpound notification failed (%s): %s'):format(identifier, tostring(err)))
+    end
     return true
 end)
 

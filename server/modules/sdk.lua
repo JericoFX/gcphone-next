@@ -308,7 +308,7 @@ local function SendPromoNotification(source, appId, def)
 
     MarkPromoSeen(identifier, appId)
 
-    pcall(function()
+    local ok, err = pcall(function()
         exports[GetCurrentResourceName()]:SendPhoneNotification(source, {
             id = 'sdk_promo_' .. appId,
             appId = 'directorio',
@@ -318,6 +318,9 @@ local function SendPromoNotification(source, appId, def)
             route = 'directorio',
         })
     end)
+    if not ok then
+        warn(('[gcphone-next] sdk promo notification failed (%s): %s'):format(appId, tostring(err)))
+    end
 end
 
 local function CreateController(appId)
