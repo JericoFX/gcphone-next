@@ -23,8 +23,27 @@ local function IsUsingPmaVoice()
 end
 local LastCallStartBySource = {}
 
+-- Publish a minimal snapshot of active calls so external resources and
+-- admin tooling can see call state without a cross-resource export hop.
+-- Full payload (rtcOffer, extraData, etc.) stays in the server-side table.
+local ACTIVE_CALLS_BAG = 'gcphone_active_calls'
+
 local function SyncActiveCallsToGlobalState()
+    local snapshot = {}
+    for callId, call in pairs(ActiveCalls) do
+        snapshot[tostring(callId)] = {
+            id = callId,
+            transmitterSrc = call.transmitterSrc,
+            receiverSrc = call.receiverSrc,
+            accepts = call.accepts and true or false,
+            startTime = call.startTime,
+        }
+    end
+    GlobalState[ACTIVE_CALLS_BAG] = snapshot
 end
+
+-- Seed on load so late-joining clients always see a defined bag.
+GlobalState[ACTIVE_CALLS_BAG] = {}
 
 local function IsValidCallId(value)
     local callId = tonumber(value)
@@ -626,6 +645,32 @@ lib.callback.register('gcphone:emergencySOS', function(source)
     end
 
     return { success = true, notified = notified, x = coords.x, y = coords.y }
+end)
+
+-- When the resource stops (restart, convar change, dev reload) pma-voice
+-- keeps every call channel alive because it is a separate resource. Without
+-- this cleanup the participants are stuck routed to a dead call channel
+-- until they re-join. Reset channels, clear incoming-call state bags, and
+-- persist open calls so history is not lost.
+AddEventHandler('onResourceStop', function(resourceName)
+    if resourceName ~= GetCurrentResourceName() then return end
+
+    for callId, call in pairs(ActiveCalls) do
+        ResetCallChannelForCall(call)
+        if call.receiverSrc then ClearIncomingCallState(call.receiverSrc) end
+
+        if call.accepts and call.startTime then
+            call.duration = os.time() - call.startTime
+            local ok, err = pcall(SaveCall, call)
+            if not ok then
+                print(('^3[gcphone-next] failed to persist call %s on resource stop: %s^7'):format(tostring(callId), tostring(err)))
+            end
+        end
+
+        ActiveCalls[callId] = nil
+    end
+
+    GlobalState[ACTIVE_CALLS_BAG] = {}
 end)
 
 return {}
