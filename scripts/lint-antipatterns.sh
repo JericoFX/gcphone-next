@@ -16,6 +16,15 @@
 #   C  `CreateThread + Wait(<magic>) + lib.callback` bootstrap. Why:
 #      "sleep until it's probably ready" races framework/DB/NUI init and
 #      fails intermittently under load or on slow first connect.
+#   D  `(window as any).__<name>` timer/handle stash in web/src. Why:
+#      survives component unmount, collides across mounts, leaks
+#      setTimeout/setInterval IDs. Use a component-scope `let` + onCleanup.
+#   E  `startAudioRecording(` call whose returned AudioRecorderHandle is
+#      discarded (no assignment, no return). Why: caller cannot cancel
+#      the live MediaStream from onCleanup; mic stays open up to 30s.
+#   F  file that opens `navigator.mediaDevices.getUserMedia(` but never
+#      calls `.getTracks(` for teardown. Why: MediaStream tracks leak
+#      until GC, OS-visible mic/camera indicator stays on.
 #
 # Exit codes:
 #   0  clean
@@ -87,6 +96,62 @@ if [ -s .lint_c_output ]; then
     done < .lint_c_output
 fi
 rm -f .lint_c_output
+
+# --------------------------------------------------------------------
+# Rule D: setTimeout/setInterval handle stashed on `window`
+# --------------------------------------------------------------------
+# Cross-mount collision + unmount leak. Flagged forms:
+#   (window as any).__<Name>Timer = ...
+#   (window as any).__<Name> = setTimeout(...)
+#   (window as any).__<Name> = setInterval(...)
+# Debug bridges like `(window as any).__gcphonePermissions = actions;`
+# are not timer handles and are intentionally not flagged.
+if [ -d web/src ]; then
+    if rule_d=$(grep -rnE '\(window as any\)\.__[A-Za-z_][A-Za-z0-9_]*(Timer|Timeout|Interval)([[:space:]]|=)|\(window as any\)\.__[A-Za-z_][A-Za-z0-9_]*[[:space:]]*=[[:space:]]*(setTimeout|setInterval)\(' web/src 2>/dev/null); then
+        while IFS= read -r line; do
+            report D "timer handle stashed on window (use component-scope let + onCleanup): $line"
+        done <<<"$rule_d"
+    fi
+fi
+
+# --------------------------------------------------------------------
+# Rule E: startAudioRecording(...) handle discarded
+# --------------------------------------------------------------------
+# The function returns { stop, cancel }. A call whose result is thrown
+# away cannot be cancelled on unmount, so the mic stream leaks.
+# Acceptable forms:
+#   const handle = await startAudioRecording(...)
+#   voiceRecorder = await startAudioRecording(...)
+#   return startAudioRecording(...)
+# Reject:
+#   await startAudioRecording(...)
+#   startAudioRecording(...)
+# at the start of a statement (after leading whitespace).
+if [ -d web/src ]; then
+    if rule_e=$(grep -rnE '^[[:space:]]*(await[[:space:]]+)?startAudioRecording\(' web/src 2>/dev/null); then
+        while IFS= read -r line; do
+            report E "startAudioRecording handle discarded (store it and cancel() from onCleanup): $line"
+        done <<<"$rule_e"
+    fi
+fi
+
+# --------------------------------------------------------------------
+# Rule F: getUserMedia without paired getTracks teardown
+# --------------------------------------------------------------------
+# Per-file heuristic: if a file opens a camera/mic stream, it must also
+# contain at least one `.getTracks(` call (typical cleanup is
+# `stream.getTracks().forEach(t => t.stop())` or similar).
+if [ -d web/src ]; then
+    getusermedia_files=$(grep -rlE 'navigator\.mediaDevices\.getUserMedia\(' web/src 2>/dev/null || true)
+    if [ -n "$getusermedia_files" ]; then
+        while IFS= read -r f; do
+            [ -z "$f" ] && continue
+            if ! grep -qE '\.getTracks\(' "$f"; then
+                report F "getUserMedia without getTracks() cleanup (stream leaks until GC): $f"
+            fi
+        done <<<"$getusermedia_files"
+    fi
+fi
 
 if [ "$fail" -ne 0 ]; then
     echo
