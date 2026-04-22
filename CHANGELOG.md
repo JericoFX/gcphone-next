@@ -2,6 +2,13 @@
 
 All notable changes to gcphone-next will be documented in this file.
 
+## [3.1.9] - 2026-04-22
+
+### Security
+- `server/modules/services.lua`: `gcphone:services:rateWorker` now requires at least one accepted call between the rater and worker (either direction) in `phone_calls` before recording a rating. Without this gate any player could review-bomb (or collusion-inflate) any worker without ever having used the service
+- `server/modules/proximity.lua`, `web/src/components/shared/ContactRequest/ContactRequest.tsx`: contact-share flow now stores a server-held pending entry keyed by `(targetSource, senderSource)` with a 60s TTL. `acceptContact` requires the target's NUI to echo back `fromServerId`; the saved phone number is derived from the sender's own phone record, not the client payload. Previously any nearby attacker could inject a spoofed `(display, number)` pair into another player's phonebook (e.g. `"Police Chief"` → enemy's real number)
+- `server/modules/storage.lua`: `gcphone:storage:proxyUpload` rejects filenames containing `/`, `\`, or `..`. The `local` provider forwards the filename verbatim to a disk-backed HTTP host, so the previous `\r\n"\\`-only strip left path-traversal tokens intact
+
 ## [3.1.8] - 2026-04-22
 
 ### Security
