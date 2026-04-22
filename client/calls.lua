@@ -5,7 +5,11 @@ local Anim = require 'client.phone_animation'
 local inCall = false
 local useRTC = false
 local currentCallId = nil
-local usingPmaVoice = GetResourceState('pma-voice') == 'started'
+-- Re-evaluated on each call so a later start/restart of pma-voice is picked
+-- up without requiring a gcphone restart.
+local function IsUsingPmaVoice()
+    return GetResourceState('pma-voice') == 'started'
+end
 
 local function IsNativeIncomingToneEnabled()
     local resource = GetCurrentResourceName()
@@ -26,7 +30,7 @@ end
 
 local function SetCallVoice(callId)
     if not callId then return end
-    if usingPmaVoice then
+    if IsUsingPmaVoice() then
         exports['pma-voice']:setCallChannel(callId)
         return
     end
@@ -36,7 +40,7 @@ local function SetCallVoice(callId)
 end
 
 local function ResetCallVoice()
-    if usingPmaVoice then
+    if IsUsingPmaVoice() then
         exports['pma-voice']:setCallChannel(0)
         return
     end
@@ -252,7 +256,7 @@ end)
 
 AddEventHandler('onResourceStart', function(resourceName)
     if resourceName ~= GetCurrentResourceName() then return end
-    if not usingPmaVoice then
+    if not IsUsingPmaVoice() then
         NetworkSetTalkerProximity(2.5)
     end
 end)

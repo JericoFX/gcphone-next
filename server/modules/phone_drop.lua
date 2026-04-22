@@ -212,7 +212,16 @@ lib.callback.register('gcphone:dropPhone', function(source)
     return PerformPhoneDrop(source)
 end)
 
-if Config.Phone.RequireItem and GetResourceState('ox_inventory') == 'started' then
+-- Hooks registered on ox_inventory do not survive a restart of the
+-- provider resource, and registering at require time misses the case
+-- where ox_inventory starts after gcphone. Wrap the registration in a
+-- helper and also fire it whenever ox_inventory (re)starts.
+local oxInventoryHookRegistered = false
+local function RegisterOxInventoryHook()
+    if not Config.Phone.RequireItem then return end
+    if GetResourceState('ox_inventory') ~= 'started' then return end
+    if oxInventoryHookRegistered then return end
+
     exports.ox_inventory:registerHook('swapItems', function(payload)
         if payload.toType ~= 'drop' then return true end
 
@@ -228,7 +237,18 @@ if Config.Phone.RequireItem and GetResourceState('ox_inventory') == 'started' th
     end, {
         itemFilter = { [Config.Phone.ItemName or 'phone'] = true },
     })
+
+    oxInventoryHookRegistered = true
 end
+
+RegisterOxInventoryHook()
+
+AddEventHandler('onResourceStart', function(resourceName)
+    if resourceName == 'ox_inventory' then
+        oxInventoryHookRegistered = false
+        RegisterOxInventoryHook()
+    end
+end)
 
 lib.callback.register('gcphone:getDroppedPhones', function(source)
     local list = {}

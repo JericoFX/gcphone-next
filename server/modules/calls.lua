@@ -16,7 +16,11 @@ local function GenerateCallId()
     return id
 end
 local AirplaneModeBySource = {}
-local UsingPmaVoice = GetResourceState('pma-voice') == 'started'
+-- Re-evaluated on each call so that pma-voice starting or restarting after
+-- gcphone does not leave us permanently thinking it is absent.
+local function IsUsingPmaVoice()
+    return GetResourceState('pma-voice') == 'started'
+end
 local LastCallStartBySource = {}
 
 local function SyncActiveCallsToGlobalState()
@@ -56,7 +60,7 @@ end
 
 local function SetPlayerCallChannel(source, channel)
     if not source or source <= 0 then return end
-    if not UsingPmaVoice then return end
+    if not IsUsingPmaVoice() then return end
     exports['pma-voice']:setPlayerCall(source, channel)
 end
 
