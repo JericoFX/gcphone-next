@@ -922,6 +922,13 @@ end)
 lib.callback.register('gcphone:getMessageReactions', function(source, messageIds)
     if type(messageIds) ~= 'table' or #messageIds == 0 or #messageIds > 50 then return {} end
 
+    -- Reactions are only visible to participants of the underlying thread.
+    -- Previously any caller could query reactions for arbitrary message IDs.
+    local identifier = Bridge.GetIdentifier(source)
+    if not identifier then return {} end
+    local myNumber = Bridge.GetPhoneNumber(identifier)
+    if not myNumber then return {} end
+
     local ids = {}
     for _, id in ipairs(messageIds) do
         local n = ToPositiveInt(id)
@@ -930,9 +937,18 @@ lib.callback.register('gcphone:getMessageReactions', function(source, messageIds
     if #ids == 0 then return {} end
 
     local placeholders = string.rep('?,', #ids - 1) .. '?'
+    local params = {}
+    for i = 1, #ids do params[i] = ids[i] end
+    params[#params + 1] = myNumber
+    params[#params + 1] = myNumber
+
     return MySQL.query.await(
-        'SELECT message_id, sender_phone, emoji FROM phone_message_reactions WHERE message_id IN (' .. placeholders .. ')',
-        ids
+        'SELECT r.message_id, r.sender_phone, r.emoji '
+        .. 'FROM phone_message_reactions r '
+        .. 'JOIN phone_messages m ON m.id = r.message_id '
+        .. 'WHERE r.message_id IN (' .. placeholders .. ') '
+        .. 'AND (m.transmitter = ? OR m.receiver = ?)',
+        params
     ) or {}
 end)
 
