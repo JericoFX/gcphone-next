@@ -36,6 +36,7 @@ export function ContactRequestNotification() {
     if (!request) return;
     
     await fetchNui('acceptContactRequest', {
+      fromServerId: request.fromServerId,
       display: request.contact.display,
       number: request.contact.number,
       avatar: request.contact.avatar

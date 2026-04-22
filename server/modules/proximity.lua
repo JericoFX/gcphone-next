@@ -11,6 +11,31 @@ local SharedLocationLabels = {
     fr = 'Position partagee',
 }
 
+-- Pending contact shares, keyed by the target source. A sender can only
+-- register one pending share per target at a time; the receiver must echo
+-- `fromServerId` back when accepting so the server can pair the request with
+-- a server-derived phone number instead of trusting the client payload.
+local PendingShares = {}
+local PENDING_SHARE_TTL = 60
+
+local function PurgeSharesForTarget(targetSource)
+    local bucket = PendingShares[targetSource]
+    if not bucket then return end
+    local now = os.time()
+    for senderSource, entry in pairs(bucket) do
+        if entry.expiresAt < now then bucket[senderSource] = nil end
+    end
+    if next(bucket) == nil then PendingShares[targetSource] = nil end
+end
+
+AddEventHandler('playerDropped', function()
+    local src = source
+    PendingShares[src] = nil
+    for _, bucket in pairs(PendingShares) do
+        bucket[src] = nil
+    end
+end)
+
 local function LocaleText(source, labels, fallback)
     local lang = Phone.GetPhoneLanguageForSource(source, true) or 'es'
     return labels[lang] or labels.es or fallback
@@ -63,6 +88,22 @@ lib.callback.register('gcphone:proximity:shareContact', function(source, data)
         return false, 'RATE_LIMITED'
     end
 
+    -- The phone number to be saved must come from the sender's record, not
+    -- from client-supplied `contact.number`. Previously a nearby attacker
+    -- could craft `acceptContact` with any `display`/`number` pair to inject
+    -- a spoofed contact ("Police Chief" -> enemy's real number) into the
+    -- victim's phonebook.
+    local senderPhone = Bridge.GetPhoneNumber(identifier)
+    if not senderPhone then return false, 'NO_PHONE' end
+
+    PurgeSharesForTarget(targetSource)
+    PendingShares[targetSource] = PendingShares[targetSource] or {}
+    PendingShares[targetSource][source] = {
+        senderPhone = senderPhone,
+        senderIdentifier = identifier,
+        expiresAt = os.time() + PENDING_SHARE_TTL,
+    }
+
     local name = Bridge.GetName(source)
 
     TriggerClientEvent('gcphone:receiveContactRequest', targetSource, {
@@ -70,7 +111,7 @@ lib.callback.register('gcphone:proximity:shareContact', function(source, data)
         fromServerId = source,
         contact = {
             display = contact.display,
-            number = contact.number,
+            number = senderPhone,
             avatar = contact.avatar
         }
     })
@@ -81,8 +122,17 @@ end)
 lib.callback.register('gcphone:proximity:acceptContact', function(source, data)
     local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false end
+    if type(data) ~= 'table' then return false, 'Invalid data' end
 
-    local number = Utils.SafePhone(data.number)
+    local senderSource = tonumber(data.fromServerId)
+    if not senderSource then return false, 'INVALID_SENDER' end
+
+    PurgeSharesForTarget(source)
+    local bucket = PendingShares[source]
+    local pending = bucket and bucket[senderSource]
+    if not pending then return false, 'NO_PENDING_SHARE' end
+
+    local number = pending.senderPhone
     local display = Utils.SafeText(data.display, 64)
     local avatar = Utils.SanitizeMediaUrl(data.avatar, {'.png','.jpg','.jpeg','.webp','.gif'}, 500)
 
@@ -96,6 +146,7 @@ lib.callback.register('gcphone:proximity:acceptContact', function(source, data)
     )
 
     if existing then
+        bucket[senderSource] = nil
         return false, 'Contact already exists'
     end
 
@@ -104,6 +155,7 @@ lib.callback.register('gcphone:proximity:acceptContact', function(source, data)
         { identifier, number, display, avatar }
     )
 
+    bucket[senderSource] = nil
     return true
 end)
 
