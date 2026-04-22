@@ -96,6 +96,13 @@ lib.callback.register('gcphone:webrtc:getIceServers', function(source)
     local cfg = Config.WebRTC
     if not cfg then return nil end
 
+    -- Issuing a Cloudflare TURN credential hits a metered API. Rate-limit
+    -- per source so a spammy / malicious client cannot inflate the bill.
+    -- The static fallback is cheap but we still want to cap churn.
+    if Utils.HitRateLimit(source, 'webrtc_ice_servers', 30000, 2) then
+        return nil
+    end
+
     if cfg.DynamicTURN and cfg.DynamicTURN.Enabled then
         if cfg.DynamicTURN.Service == 'cloudflare' then
             local servers = GetCloudflareIceServers(source)
