@@ -2,6 +2,13 @@
 
 All notable changes to gcphone-next will be documented in this file.
 
+## [3.1.7] - 2026-04-22
+
+### Security
+- `server/modules/snap_live.lua`: `gcphone:snap:endLive` now re-derives the live post's owner from `phone_snap_accounts` when the in-memory stream is missing. Previously the ownership check short-circuited whenever `ActiveStreams[id]` was nil (eviction, restart, race), letting any caller hard-delete another user's `phone_snap_posts` row that was still flagged `is_live = 1`
+- `server/modules/live.lua`: `gcphone:live:create` rejects calls that would overwrite an existing live room and verifies the caller's identifier matches the clip owner via `phone_clips_posts` → `phone_clips_accounts`. Previously any client could hijack a live chat room for someone else's clip by passing the victim's `clipId`
+- `server/modules/darkrooms.lua`: `getPosts` and `getComments` no longer return `author_identifier` / `author_name` for rows marked `is_anonymous = 1`. The SELECT nulls the identifier and forces the display name to `Anonimo` at the DB layer, so a reader cannot de-anonymize posts or comments
+
 ## [3.1.6] - 2026-04-21
 
 ### Fixed
