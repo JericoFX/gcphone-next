@@ -238,7 +238,10 @@ lib.callback.register('gcphone:darkrooms:getPosts', function(source, data)
     local offset = math.max(0, tonumber(type(data) == 'table' and data.offset or 0) or 0)
 
     local sql = ([[
-        SELECT p.id, p.room_id, p.author_identifier, p.author_name, p.title, p.content, p.media_url, p.is_anonymous,
+        SELECT p.id, p.room_id,
+               CASE WHEN p.is_anonymous = 1 THEN NULL ELSE p.author_identifier END AS author_identifier,
+               CASE WHEN p.is_anonymous = 1 THEN 'Anonimo' ELSE p.author_name END AS author_name,
+               p.title, p.content, p.media_url, p.is_anonymous,
                p.score, p.comments_count, p.created_at,
                COALESCE(v.value, 0) AS my_vote
         FROM phone_darkrooms_posts p
@@ -335,7 +338,11 @@ lib.callback.register('gcphone:darkrooms:getComments', function(source, data)
     if not postId then return {} end
 
     return MySQL.query.await(
-        'SELECT id, post_id, author_identifier, author_name, content, media_url, is_anonymous, created_at FROM phone_darkrooms_comments WHERE post_id = ? ORDER BY created_at ASC LIMIT 200',
+        [[SELECT id, post_id,
+                 CASE WHEN is_anonymous = 1 THEN NULL ELSE author_identifier END AS author_identifier,
+                 CASE WHEN is_anonymous = 1 THEN 'Anonimo' ELSE author_name END AS author_name,
+                 content, media_url, is_anonymous, created_at
+          FROM phone_darkrooms_comments WHERE post_id = ? ORDER BY created_at ASC LIMIT 200]],
         { postId }
     ) or {}
 end)
