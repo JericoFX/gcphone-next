@@ -5,7 +5,6 @@ local Phone = require 'server.modules.phone'
 local Utils = require 'server.lib.utils'
 
 local PICKUP_DISTANCE = 2.0
-local DISCOVERY_DISTANCE = 25.0
 local droppedPhones = {}
 
 local function GetPlayerCoords(source)
@@ -47,6 +46,17 @@ local function BuildDroppedPhonePayload(row)
     }
 end
 
+local function RepublishGlobalState()
+    local snapshot = {}
+    for _, drop in pairs(droppedPhones) do
+        snapshot[#snapshot + 1] = {
+            phoneId = drop.phoneId,
+            coords = drop.coords,
+        }
+    end
+    GlobalState.gcphone_drops = snapshot
+end
+
 local function LoadDroppedPhones()
     local rows = MySQL.query.await(
         'SELECT phone_id, coords_x, coords_y, coords_z FROM phone_dropped WHERE picked_up = 0'
@@ -60,7 +70,13 @@ local function LoadDroppedPhones()
             droppedPhones[payload.phoneId] = payload
         end
     end
+
+    RepublishGlobalState()
 end
+
+-- Publish an empty snapshot immediately so late-joining clients always see
+-- a defined GlobalState.gcphone_drops (even before the DB rehydrate finishes).
+GlobalState.gcphone_drops = {}
 
 -- Wait for oxmysql to finish its DB handshake before reading phone_dropped.
 -- CreateThread so the module `require` chain in server/init.lua is not blocked
@@ -199,7 +215,7 @@ local function PerformPhoneDrop(source)
     }
 
     droppedPhones[phoneId] = payload
-    TriggerClientEvent('gcphone:phoneDropped', -1, payload)
+    RepublishGlobalState()
 
     return {
         success = true,
@@ -250,22 +266,6 @@ AddEventHandler('onResourceStart', function(resourceName)
     end
 end)
 
-lib.callback.register('gcphone:getDroppedPhones', function(source)
-    local list = {}
-
-    for _, phoneData in pairs(droppedPhones) do
-        local near = IsWithinDropDistance(source, phoneData, DISCOVERY_DISTANCE)
-        if near then
-            list[#list + 1] = phoneData
-        end
-    end
-
-    return {
-        success = true,
-        phones = list,
-    }
-end)
-
 lib.callback.register('gcphone:pickupPhone', function(source, data)
     local phoneId = data and data.phoneId
     if not phoneId then
@@ -301,7 +301,7 @@ lib.callback.register('gcphone:pickupPhone', function(source, data)
     end
 
     droppedPhones[phoneId] = nil
-    TriggerClientEvent('gcphone:phonePickedUp', -1, phoneId)
+    RepublishGlobalState()
 
     local ownerName = ResolveOwnerName(droppedPhone.owner_identifier)
 

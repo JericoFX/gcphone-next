@@ -302,7 +302,6 @@ All callbacks are registered via `lib.callback.register` (ox_lib) and invoked fr
 | Callback | Parameters | Return | Description |
 |----------|-----------|--------|-------------|
 | `gcphone:dropPhone` | `source` | `table` | Drop the phone in the world. |
-| `gcphone:getDroppedPhones` | `source` | `table[]` | Get nearby dropped phones. |
 | `gcphone:pickupPhone` | `source, data: table` | `table` | Pick up a dropped phone. |
 | `gcphone:getPhoneInfo` | `source, data: table` | `table` | Get info about a dropped phone. |
 | `gcphone:unlockDroppedPhone` | `source, data: table` | `table` | Attempt to unlock a dropped phone. |

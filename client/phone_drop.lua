@@ -224,54 +224,55 @@ local function CreatePhonePoint(phoneId, coords)
 end
 
 
-RegisterNetEvent('gcphone:phoneDropped', function(data)
-    if not data or not data.phoneId or not data.coords then return end
-    
-    currentDroppedPhones[data.phoneId] = data
-    
-    local phoneObj = CreatePhoneObject(data.coords)
-    phoneObjects[data.phoneId] = phoneObj
-    CreatePhonePoint(data.phoneId, data.coords)
-end)
-
-RegisterNetEvent('gcphone:phonePickedUp', function(phoneId)
-    if not phoneId then return end
-    
-    RemovePhonePoint(phoneId)
-    RemovePhoneObject(phoneId)
-    currentDroppedPhones[phoneId] = nil
-end)
-
 RegisterNUICallback('getPhoneMetadata', function(_, cb)
     lib.callback('gcphone:getPhoneMetadata', false, function(result)
         cb(result or { success = false })
     end)
 end)
 
-CreateThread(function()
-    Wait(500)
+local function ApplyDropsSnapshot(list)
+    if type(list) ~= 'table' then list = {} end
 
-    lib.callback('gcphone:getDroppedPhones', false, function(result)
-        if not result or not result.success or type(result.phones) ~= 'table' then return end
-
-        for i = 1, #result.phones do
-            local phoneData = result.phones[i]
-
-            if phoneData and phoneData.phoneId and phoneData.coords then
-                if not currentDroppedPhones[phoneData.phoneId] then
-                    currentDroppedPhones[phoneData.phoneId] = phoneData
-                end
-
-                if not phoneObjects[phoneData.phoneId] then
-                    phoneObjects[phoneData.phoneId] = CreatePhoneObject(phoneData.coords)
-                end
-
-                if not phonePoints[phoneData.phoneId] then
-                    CreatePhonePoint(phoneData.phoneId, phoneData.coords)
-                end
+    local keep = {}
+    for i = 1, #list do
+        local drop = list[i]
+        if drop and drop.phoneId and drop.coords then
+            keep[drop.phoneId] = true
+            if not currentDroppedPhones[drop.phoneId] then
+                currentDroppedPhones[drop.phoneId] = drop
+            end
+            if not phoneObjects[drop.phoneId] then
+                phoneObjects[drop.phoneId] = CreatePhoneObject(drop.coords)
+            end
+            if not phonePoints[drop.phoneId] then
+                CreatePhonePoint(drop.phoneId, drop.coords)
             end
         end
-    end)
+    end
+
+    for phoneId in pairs(currentDroppedPhones) do
+        if not keep[phoneId] then
+            RemovePhonePoint(phoneId)
+            RemovePhoneObject(phoneId)
+            currentDroppedPhones[phoneId] = nil
+            pinAttempts[phoneId] = nil
+        end
+    end
+end
+
+AddStateBagChangeHandler('gcphone_drops', 'global', function(_, _, value)
+    ApplyDropsSnapshot(value)
+end)
+
+CreateThread(function()
+    -- GlobalState auto-replicates on join, but the bag may not be populated
+    -- yet at script load on a fresh connect. Retry briefly until the server
+    -- has published a snapshot (the server seeds an empty table on boot).
+    for _ = 1, 50 do
+        if GlobalState.gcphone_drops ~= nil then break end
+        Wait(100)
+    end
+    ApplyDropsSnapshot(GlobalState.gcphone_drops)
 end)
 
 AddEventHandler('onResourceStop', function(resourceName)

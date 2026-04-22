@@ -200,12 +200,7 @@ All events use `RegisterNetEvent` and are triggered via `TriggerClientEvent` or 
 
 ## Phone Drop
 
-### Client Events
-
-| Event | Parameters | Description |
-|-------|-----------|-------------|
-| `gcphone:phoneDropped` | `data: table` | A phone was dropped in the world. |
-| `gcphone:phonePickedUp` | `phoneId: integer` | A dropped phone was picked up. |
+Dropped phones are published via `GlobalState.gcphone_drops` (array of `{ phoneId, coords }`). Clients subscribe with `AddStateBagChangeHandler('gcphone_drops', 'global', ...)` — no net events are emitted.
 
 ## Flashlight (Server)
 
