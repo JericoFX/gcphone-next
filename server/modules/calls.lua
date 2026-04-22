@@ -615,6 +615,13 @@ lib.callback.register('gcphone:emergencySOS', function(source)
     local identifier = Bridge.GetIdentifier(source)
     if not identifier then return { success = false } end
 
+    -- SOS fans out a high-priority notification to every configured emergency
+    -- contact. Without a rate limit a bad client can spam global emergency
+    -- notifications / false alarms.
+    if Utils.HitRateLimit(source, 'emergency_sos', 60000, 2) then
+        return { success = false, error = 'RATE_LIMITED' }
+    end
+
     local myNumber = Bridge.GetPhoneNumber(identifier)
     if not myNumber then return { success = false } end
 
