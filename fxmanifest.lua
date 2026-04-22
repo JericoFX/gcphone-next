@@ -73,4 +73,5 @@ dependencies {
     'ox_lib',
     'oxmysql',
     'gcphone_sounds',
+    "olisound"
 }

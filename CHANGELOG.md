@@ -7,6 +7,7 @@ All notable changes to gcphone-next will be documented in this file.
 ### Fixed
 - `web/src/components/apps/messages/MessagesApp.tsx`: closed a race where unmounting Messages while `await startAudioRecording(...)` was still pending would let `getUserMedia` resolve after `onCleanup`, stash the handle in a now-dead variable, and leak the microphone stream. Added a `disposed` flag that is set in `onCleanup`; the handle is assigned to `voiceRecorder` only when still alive, otherwise immediately cancelled
 - `web/src/utils/gameRender.ts`: closed the mirrored race in `startRecording` — if `destroy()` fires between `await getUserMedia` and the `MediaRecorder` constructor, the newly-opened audio/video streams are now explicitly stopped instead of being handed to a recorder attached to a torn-down WebGL context. Added a `destroyed` flag set in `destroy()` and short-circuits at every post-await checkpoint
+- `web/src/App.scss`: fix notification preview position and scale
 
 ## [3.1.12] - 2026-04-22
 
