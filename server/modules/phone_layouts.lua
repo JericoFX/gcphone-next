@@ -455,6 +455,13 @@ function M.RegisterCallbacks(deps)
         if type(layout) ~= 'table' then return false end
         local encoded = json.encode(layout)
 
+        -- Apply the same MAX_LAYOUT_BYTES gate as setAppLayout. Without it any
+        -- client can store an arbitrarily large JSON blob per account and
+        -- inflate the phone_layouts row / DB size.
+        if type(encoded) ~= 'string' or #encoded > M.MAX_LAYOUT_BYTES then
+            return false
+        end
+
         MySQL.update.await(
             'UPDATE phone_layouts SET widget_json = ? WHERE identifier = ?',
             { encoded, identifier }
