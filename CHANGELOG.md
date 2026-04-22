@@ -2,6 +2,14 @@
 
 All notable changes to gcphone-next will be documented in this file.
 
+## [3.1.8] - 2026-04-22
+
+### Security
+- `server/modules/calls.lua`: `gcphone:emergencySOS` rate-limited to 2 calls per 60s per source. The handler fans out high-priority notifications plus the caller's GPS to every emergency contact, so an unrated handler let any client trigger a global SOS notification flood
+- `server/modules/garage.lua`: `gcphone:garage:shareLocation` rate-limited to 2 calls per 3s per source. Handler delivers an attacker-controlled message to the target's client, so the rate cap blocks popup-harassment campaigns
+- `server/modules/webrtc.lua`: `gcphone:webrtc:getIceServers` rate-limited to 2 calls per 30s per source. Each call minted fresh Cloudflare TURN credentials via a metered API, letting a spammy client inflate the bill and churn credentials for legitimate users
+- `server/modules/nearby_voice.lua`: `gcphone:nearbyVoice:setPeerId` now requires an authenticated identifier, rejects non-string / oversized (`>128`) peerIds, and rate-limits to 3 calls per 500ms. The handler issued an unrated global (`-1`) `TriggerClientEvent` on every call, so a malicious client could flood every connected player with start/stop peer events
+
 ## [3.1.7] - 2026-04-22
 
 ### Security
