@@ -47,6 +47,7 @@ export function MessagesApp() {
   let typingTimeout: number | undefined;
   let typingDebounce: number | undefined;
   let voiceRecorder: { stop: () => void; cancel: () => void } | null = null;
+  let disposed = false;
   const language = () => phoneState.settings.language || 'es';
 
   const handleTypingInput = (value: string) => {
@@ -67,6 +68,7 @@ export function MessagesApp() {
   });
 
   onCleanup(() => {
+    disposed = true;
     if (typingDebounce) clearTimeout(typingDebounce);
     if (typingTimeout) clearTimeout(typingTimeout);
     if (voiceRecorder) {
@@ -257,9 +259,12 @@ export function MessagesApp() {
       voiceRecorder = null;
     }
 
-    voiceRecorder = await startAudioRecording(
+    if (disposed) return;
+
+    const handle = await startAudioRecording(
       async (recording) => {
         voiceRecorder = null;
+        if (disposed) return;
         let audioUrl: string | null = null;
 
         if (config?.useProxy || config?.url) {
@@ -280,6 +285,12 @@ export function MessagesApp() {
         console.warn('[Messages] Voice recording error:', error);
       },
     );
+
+    if (disposed) {
+      handle.cancel();
+      return;
+    }
+    voiceRecorder = handle;
   };
 
   const handleReply = (messageId: number) => {

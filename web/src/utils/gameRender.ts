@@ -188,6 +188,7 @@ export function createGameView(canvas: HTMLCanvasElement): GameView {
   if (!gl) throw new Error('Could not get WebGL context');
 
   let paused = false;
+  let destroyed = false;
   let recorder: MediaRecorder | null = null;
   let recordingAudioStream: MediaStream | null = null;
   let recordStartTime = 0;
@@ -303,6 +304,7 @@ export function createGameView(canvas: HTMLCanvasElement): GameView {
     },
 
     destroy() {
+      destroyed = true;
       gameView.pause();
       if (recorder && recorder.state === 'recording') {
         recorder.stop();
@@ -356,6 +358,7 @@ export function createGameView(canvas: HTMLCanvasElement): GameView {
 
     async startRecording(onComplete, fps = 30) {
       if (recorder) return;
+      if (destroyed) return;
 
       const videoStream = canvas.captureStream(fps);
 
@@ -364,9 +367,19 @@ export function createGameView(canvas: HTMLCanvasElement): GameView {
         audioStream = await navigator.mediaDevices.getUserMedia({
           audio: { autoGainControl: false, noiseSuppression: false, echoCancellation: false },
         });
+        if (destroyed) {
+          audioStream.getTracks().forEach((t) => t.stop());
+          videoStream.getTracks().forEach((t) => t.stop());
+          return;
+        }
         recordingAudioStream = audioStream;
       } catch {
         // No mic available
+      }
+
+      if (destroyed) {
+        videoStream.getTracks().forEach((t) => t.stop());
+        return;
       }
 
       const tracks = [...videoStream.getVideoTracks()];
