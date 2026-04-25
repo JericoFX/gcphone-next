@@ -130,7 +130,6 @@ const lazyApps = {
       default: m.DarkRoomsApp,
     })),
   ),
-  // market: lazy(() => import('../apps/market/MarketApp').then(m => ({ default: m.MarketApp }))),
   news: lazy(() =>
     import('../apps/news/NewsApp').then((m) => ({ default: m.NewsApp })),
   ),
