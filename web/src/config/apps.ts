@@ -20,7 +20,6 @@ export const APP_DEFINITIONS: AppDefinition[] = [
   { id: 'bank', name: 'Bank', icon: './img/icons_ios/bank.svg', route: 'bank', defaultHome: true },
   { id: 'wallet', name: 'Wallet', icon: './img/icons_ios/wallet.svg', route: 'wallet', defaultHome: true },
   { id: 'documents', name: 'Docs', icon: './img/icons_ios/documents.svg', route: 'documents', defaultHome: true },
-  { id: 'appstore', name: 'App Store', icon: './img/icons_ios/appstore.svg', route: 'appstore', defaultHome: false },
   { id: 'wavechat', name: 'WaveChat', icon: './img/icons_ios/wavechat.svg', route: 'wavechat', defaultHome: true },
   { id: 'music', name: 'Music', icon: './img/icons_ios/music.svg', route: 'music', defaultHome: true },
   { id: 'chirp', name: 'Chirp', icon: './img/icons_ios/chirp.svg', route: 'chirp', defaultHome: true },
@@ -40,7 +39,7 @@ export const APP_DEFINITIONS: AppDefinition[] = [
   { id: 'radio', name: 'Radio', icon: './img/icons_ios/radio.svg', route: 'radio', defaultHome: true },
   { id: 'matchmylove', name: 'MatchMyLove', icon: './img/icons_ios/matchmylove.svg', route: 'matchmylove', defaultHome: true },
   { id: 'cityride', name: 'CityRide', icon: './img/icons_ios/cityride.svg', route: 'cityride', defaultHome: true },
-  { id: 'directorio', name: 'Directorio', icon: './img/icons_ios/appstore.svg', route: 'directorio', defaultHome: true },
+  { id: 'directorio', name: 'Directorio', icon: './img/icons_ios/directorio.svg', route: 'directorio', defaultHome: true },
 ];
 
 export const APP_IDS = APP_DEFINITIONS.map((app) => app.id);

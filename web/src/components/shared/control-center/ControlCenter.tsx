@@ -1,11 +1,12 @@
-import { For, Show, createMemo, createSignal, onMount, onCleanup } from 'solid-js';
-import { fetchNui } from '../../../utils/fetchNui';
+import { For, Show, createEffect, createMemo, createSignal, onMount, onCleanup } from 'solid-js';
+import { fetchKnownNui } from '../../../utils/fetchNui';
 import { useNotifications } from '../../../store/notifications';
 import { usePhone } from '../../../store/phone';
 import { APP_BY_ID } from '../../../config/apps';
 import { appName, formatDate, t } from '../../../i18n';
 import { useInternalEvent, emitInternalEvent } from '../../../utils/internalEvents';
 import type { FocusModeId } from '../../../store/notifications';
+import type { NearbyPlayerData } from '../../../types/nui';
 import styles from './ControlCenter.module.scss';
 
 const FOCUS_MODE_ICONS: Record<FocusModeId, string> = {
@@ -32,6 +33,70 @@ function focusModeLabel(mode: FocusModeId, lang: string): string {
   return FOCUS_MODE_LABELS[mode]?.[lang] || FOCUS_MODE_LABELS[mode]?.en || 'Focus';
 }
 
+function lockLabel(lang: string): string {
+  const labels: Record<string, string> = {
+    es: 'Bloquear',
+    en: 'Lock',
+    fr: 'Verrouiller',
+    de: 'Sperren',
+    pt: 'Bloquear',
+    ru: 'Lock',
+    pl: 'Zablokuj',
+    it: 'Blocca',
+  };
+  return labels[lang] || labels.en;
+}
+
+function nfcNoNearbyLabel(lang: string): string {
+  const labels: Record<string, string> = {
+    es: 'No hay personas cerca',
+    en: 'No people nearby',
+    fr: 'Personne a proximite',
+    de: 'Niemand in der Nahe',
+    pt: 'Nao ha pessoas por perto',
+    ru: 'No people nearby',
+    pl: 'Brak osob w poblizu',
+    it: 'Nessuno nelle vicinanze',
+  };
+  return labels[lang] || labels.en;
+}
+
+function nfcOffLabel(lang: string): string {
+  const labels: Record<string, string> = {
+    es: 'NFC desactivado',
+    en: 'NFC off',
+    fr: 'NFC desactive',
+    de: 'NFC aus',
+    pt: 'NFC desativado',
+    ru: 'NFC off',
+    pl: 'NFC wylaczony',
+    it: 'NFC disattivato',
+  };
+  return labels[lang] || labels.en;
+}
+
+function streamerControlLabel(lang: string): string {
+  const labels: Record<string, string> = {
+    es: 'Streamer',
+    en: 'Streamer',
+    fr: 'Streamer',
+    de: 'Streamer',
+    pt: 'Streamer',
+    ru: 'Streamer',
+    pl: 'Streamer',
+    it: 'Streamer',
+  };
+  return labels[lang] || labels.en;
+}
+
+function getInitialNfcEnabled(): boolean {
+  try {
+    return window.localStorage.getItem('gcphone:nfc-enabled') === '1';
+  } catch {
+    return false;
+  }
+}
+
 export function ControlCenter() {
   const [notifications, notificationsActions] = useNotifications();
   const [phoneState, phoneActions] = usePhone();
@@ -40,7 +105,13 @@ export function ControlCenter() {
   const [dragProgress, setDragProgress] = createSignal(0);
   const [liveLocationEnabled, setLiveLocationEnabled] = createSignal(false);
   const [flashlightEnabled, setFlashlightEnabled] = createSignal(false);
-  const [flashlightBrightness, setFlashlightBrightness] = createSignal(100);
+  const [flashlightLumens, setFlashlightLumens] = createSignal(1200);
+  const [flashlightMinLumens, setFlashlightMinLumens] = createSignal(350);
+  const [flashlightMaxLumens, setFlashlightMaxLumens] = createSignal(2200);
+  const [flashlightKelvin, setFlashlightKelvin] = createSignal(5200);
+  const [nfcEnabled, setNfcEnabled] = createSignal(getInitialNfcEnabled());
+  const [nearbyPlayers, setNearbyPlayers] = createSignal<NearbyPlayerData[]>([]);
+  const [nfcTargetServerId, setNfcTargetServerId] = createSignal<number | null>(null);
 
   let sheetGestureStartX = 0;
   let sheetGestureStartY = 0;
@@ -49,6 +120,20 @@ export function ControlCenter() {
 
   const volumePercent = () => Math.round(phoneState.settings.volume * 100);
   const brightnessPercent = () => Math.round(notifications.brightness * 100);
+  const flashlightPercent = () => {
+    const min = flashlightMinLumens();
+    const max = Math.max(min + 1, flashlightMaxLumens());
+    return Math.round(((flashlightLumens() - min) / (max - min)) * 100);
+  };
+  const selectedNfcTarget = createMemo(() => {
+    const selectedId = nfcTargetServerId();
+    return nearbyPlayers().find((player) => player.serverId === selectedId) || nearbyPlayers()[0] || null;
+  });
+  const selectedNfcTargetIndex = createMemo(() => {
+    const selected = selectedNfcTarget();
+    if (!selected) return -1;
+    return nearbyPlayers().findIndex((player) => player.serverId === selected.serverId);
+  });
 
   const groupedNotifications = createMemo(() => {
     const groups = new Map<string, Array<{ id: string; title: string; message: string; route?: string; data?: Record<string, unknown>; createdAt?: number }>>();
@@ -77,19 +162,22 @@ export function ControlCenter() {
   });
 
   async function syncLiveLocationState() {
-    const result = await fetchNui<{ success?: boolean; active?: boolean }>('getLiveLocationState', {}, { success: false, active: false });
+    const result = await fetchKnownNui('getLiveLocationState', {}, { success: false, active: false });
     setLiveLocationEnabled(result?.success === true && result.active === true);
   }
 
   async function syncFlashlightState() {
-    const result = await fetchNui<{ enabled?: boolean; brightness?: number }>('cameraGetFlashlightSettings', {}, { enabled: false });
+    const result = await fetchKnownNui('cameraGetFlashlightSettings', {}, { success: false, enabled: false });
     setFlashlightEnabled(result?.enabled === true);
-    if (typeof result?.brightness === "number") setFlashlightBrightness(Math.round(result.brightness));
+    if (typeof result?.lumens === 'number') setFlashlightLumens(Math.round(result.lumens));
+    if (typeof result?.minLumens === 'number') setFlashlightMinLumens(Math.round(result.minLumens));
+    if (typeof result?.maxLumens === 'number') setFlashlightMaxLumens(Math.round(result.maxLumens));
+    if (typeof result?.kelvin === 'number') setFlashlightKelvin(Math.round(result.kelvin));
   }
 
   async function toggleFlashlight() {
     const nextEnabled = !flashlightEnabled();
-    const result = await fetchNui<{ success?: boolean; enabled?: boolean }>(
+    const result = await fetchKnownNui(
       'cameraToggleFlashlight',
       { enabled: nextEnabled },
       { success: true, enabled: nextEnabled },
@@ -101,7 +189,7 @@ export function ControlCenter() {
 
   async function toggleGpsQuickAction() {
     if (liveLocationEnabled()) {
-      const stopResult = await fetchNui<{ success?: boolean }>('stopLiveLocation', {}, { success: false });
+      const stopResult = await fetchKnownNui('stopLiveLocation', {}, { success: false });
       if (stopResult?.success) {
         setLiveLocationEnabled(false);
         notificationsActions.receive({
@@ -114,7 +202,7 @@ export function ControlCenter() {
       return;
     }
 
-    const contacts = await fetchNui<Array<{ number: string }>>('getContacts', {}, []);
+    const contacts = await fetchKnownNui('getContacts', undefined, []);
     const recipients = (contacts || [])
       .map((row) => String(row?.number || '').trim())
       .filter((value) => value.length > 0);
@@ -129,8 +217,8 @@ export function ControlCenter() {
       return;
     }
 
-    await fetchNui('setLiveLocationInterval', { seconds: 10 }, { success: true });
-    const startResult = await fetchNui<{ success?: boolean; error?: string }>('startLiveLocation', {
+    await fetchKnownNui('setLiveLocationInterval', { seconds: 10 }, { success: true });
+    const startResult = await fetchKnownNui('startLiveLocation', {
       recipients,
       durationMinutes: 15,
       updateIntervalSeconds: 10,
@@ -154,6 +242,87 @@ export function ControlCenter() {
       title: 'GPS',
       message: startResult?.error || t('control.gps_failed', language()),
       priority: 'normal',
+    });
+  }
+
+  async function syncNearbyPlayers() {
+    if (!nfcEnabled()) {
+      setNearbyPlayers([]);
+      setNfcTargetServerId(null);
+      return;
+    }
+    const players = await fetchKnownNui('getNearbyPlayers', { maxDistance: 3.0 }, []);
+    setNearbyPlayers(players);
+    if (players.length === 0) {
+      setNfcTargetServerId(null);
+      return;
+    }
+    const selectedId = nfcTargetServerId();
+    if (!selectedId || !players.some((player) => player.serverId === selectedId)) {
+      setNfcTargetServerId(players[0].serverId);
+    }
+  }
+
+  function toggleNfc() {
+    const nextEnabled = !nfcEnabled();
+    setNfcEnabled(nextEnabled);
+    try {
+      window.localStorage.setItem('gcphone:nfc-enabled', nextEnabled ? '1' : '0');
+    } catch {
+      // localStorage is best-effort in browser preview and NUI.
+    }
+    if (nextEnabled) {
+      void syncNearbyPlayers();
+      return;
+    }
+    setNearbyPlayers([]);
+    setNfcTargetServerId(null);
+  }
+
+  function cycleNfcTarget() {
+    const players = nearbyPlayers();
+    if (players.length <= 1) return;
+    const currentIndex = Math.max(0, selectedNfcTargetIndex());
+    const next = players[(currentIndex + 1) % players.length];
+    setNfcTargetServerId(next.serverId);
+  }
+
+  function openNfcRoute(route: 'wallet' | 'gallery' | 'documents') {
+    if (!nfcEnabled()) {
+      notificationsActions.receive({
+        appId: 'settings',
+        title: 'NFC',
+        message: nfcOffLabel(language()),
+        priority: 'normal',
+      });
+      return;
+    }
+
+    const target = selectedNfcTarget();
+    if (!target) {
+      notificationsActions.receive({
+        appId: 'settings',
+        title: 'NFC',
+        message: nfcNoNearbyLabel(language()),
+        priority: 'normal',
+      });
+      return;
+    }
+
+    const nfcActionByRoute = {
+      wallet: 'create_invoice',
+      gallery: 'share_photo',
+      documents: 'share_document',
+    } as const;
+
+    notificationsActions.setControlCenterOpen(false);
+    emitInternalEvent('phone:openRoute', {
+      route,
+      data: {
+        nfcAction: nfcActionByRoute[route],
+        targetServerId: target.serverId,
+        requestId: Date.now(),
+      },
     });
   }
 
@@ -240,11 +409,13 @@ export function ControlCenter() {
   };
 
   const handleSheetPointerDown = (e: PointerEvent) => {
+    if ((e.target as HTMLElement | null)?.closest('[data-control-interactive="true"]')) return;
     sheetGestureStartX = e.clientX;
     sheetGestureStartY = e.clientY;
   };
 
   const handleSheetPointerUp = (e: PointerEvent, sheet: 'notifications' | 'control') => {
+    if ((e.target as HTMLElement | null)?.closest('[data-control-interactive="true"]')) return;
     const deltaX = e.clientX - sheetGestureStartX;
     const deltaY = e.clientY - sheetGestureStartY;
     const absX = Math.abs(deltaX);
@@ -311,6 +482,14 @@ export function ControlCenter() {
   onMount(() => {
     void syncLiveLocationState();
     void syncFlashlightState();
+    if (nfcEnabled()) void syncNearbyPlayers();
+  });
+
+  createEffect(() => {
+    if (!notifications.controlCenterOpen) return;
+    void syncLiveLocationState();
+    void syncFlashlightState();
+    if (nfcEnabled()) void syncNearbyPlayers();
   });
 
   useInternalEvent('phone:openControlCenter', () => notificationsActions.setControlCenterOpen(true));
@@ -439,164 +618,245 @@ export function ControlCenter() {
               <div class={styles.grabber} />
             </div>
 
-            {/* iOS 18 tile grid */}
-            <div class={styles.tileGrid}>
-              <button
-                class={styles.gridTile}
-                classList={{
-                  [styles.gridTileActive]: notifications.airplaneMode,
-                  [styles.gridTileBlue]: notifications.airplaneMode,
-                }}
-                onClick={() => notificationsActions.setAirplaneMode(!notifications.airplaneMode)}
+            <div class={styles.controlMosaic}>
+              <section
+                class={`${styles.controlModule} ${styles.nfcModule}`}
+                classList={{ [styles.nfcModuleOff]: !nfcEnabled() }}
               >
-                <span class={styles.gridTileIcon}>
-                  <img src="./img/icons_ios/ui-plane.svg" alt="" draggable={false} />
-                </span>
-                <span class={styles.gridTileLabel}>{t('control.airplane', language())}</span>
-              </button>
-
-              <button
-                class={styles.gridTile}
-                classList={{
-                  [styles.gridTileActive]: notifications.focusMode !== 'off',
-                  [styles.gridTilePurple]: notifications.focusMode !== 'off',
-                }}
-                onClick={() => notificationsActions.cycleFocusMode()}
-              >
-                <span class={styles.gridTileIcon}>
-                  <img src={focusModeIcon(notifications.focusMode)} alt="" draggable={false} />
-                </span>
-                <span class={styles.gridTileLabel}>{focusModeLabel(notifications.focusMode, language())}</span>
-              </button>
-
-              <button
-                class={styles.gridTile}
-                classList={{
-                  [styles.gridTileActive]: notifications.silentMode,
-                  [styles.gridTileRed]: notifications.silentMode,
-                }}
-                onClick={() => notificationsActions.setSilentMode(!notifications.silentMode)}
-              >
-                <span class={styles.gridTileIcon}>
-                  <img src="./img/icons_ios/ui-bell.svg" alt="" draggable={false} />
-                </span>
-                <span class={styles.gridTileLabel}>{t('control.silent', language())}</span>
-              </button>
-
-              <button
-                class={styles.gridTile}
-                classList={{
-                  [styles.gridTileActive]: liveLocationEnabled(),
-                  [styles.gridTileBlue]: liveLocationEnabled(),
-                }}
-                onClick={() => void toggleGpsQuickAction()}
-              >
-                <span class={styles.gridTileIcon}>
-                  <img src="./img/icons_ios/ui-location.svg" alt="" draggable={false} />
-                </span>
-                <span class={styles.gridTileLabel}>GPS</span>
-              </button>
-            </div>
-
-            {/* Quick actions row */}
-            <div class={styles.quickRow}>
-              <button
-                class={styles.quickTile}
-                classList={{ [styles.quickTileActive]: flashlightEnabled() }}
-                onClick={() => void toggleFlashlight()}
-              >
-                <img src="./img/icons_ios/ui-flashlight.svg" alt="" draggable={false} />
-              </button>
-
-              <button
-                class={styles.quickTile}
-                onClick={() => {
-                  notificationsActions.setControlCenterOpen(false);
-                  emitInternalEvent('phone:openRoute', { route: 'camera', data: {} });
-                }}
-              >
-                <img src="./img/icons_ios/camera.svg" alt="" draggable={false} />
-              </button>
-
-              <button
-                class={styles.quickTile}
-                onClick={() => {
-                  notificationsActions.setControlCenterOpen(false);
-                  emitInternalEvent('phone:lockPhone', {});
-                }}
-              >
-                <img src="./img/icons_ios/ui-lock.svg" alt="" draggable={false} />
-              </button>
-            </div>
-
-            {/* Brightness */}
-            <div class={styles.sliderModule}>
-              <div class={styles.sliderHeader}>
-                <img src="./img/icons_ios/ui-sun.svg" alt="" class={styles.sliderIcon} draggable={false} />
-                <span>{t('settings.brightness', language())}</span>
-                <strong>{brightnessPercent()}%</strong>
-              </div>
-              <input
-                class={`${styles.slider} ios-slider`}
-                type="range"
-                min="40"
-                max="120"
-                value={brightnessPercent()}
-                style={{ '--value-percent': `${((brightnessPercent() - 40) / 80) * 100}%` }}
-                onInput={(e) => {
-                  const val = Number(e.currentTarget.value);
-                  e.currentTarget.style.setProperty('--value-percent', `${((val - 40) / 80) * 100}%`);
-                  notificationsActions.setBrightness(val / 100);
-                }}
-              />
-            </div>
-
-            {/* Volume */}
-            <div class={styles.sliderModule}>
-              <div class={styles.sliderHeader}>
-                <img src="./img/icons_ios/ui-bell.svg" alt="" class={styles.sliderIcon} draggable={false} />
-                <span>{t('settings.volume', language())}</span>
-                <strong>{volumePercent()}%</strong>
-              </div>
-              <input
-                class={`${styles.slider} ios-slider`}
-                type="range"
-                min="0"
-                max="100"
-                value={volumePercent()}
-                style={{ '--value-percent': `${volumePercent()}%` }}
-                onInput={(e) => {
-                  const val = Number(e.currentTarget.value);
-                  e.currentTarget.style.setProperty('--value-percent', `${val}%`);
-                  phoneActions.setVolume(val / 100);
-                }}
-              />
-            </div>
-
-            {/* Flashlight brightness */}
-            <Show when={flashlightEnabled()}>
-              <div class={styles.sliderModule}>
-                <div class={styles.sliderHeader}>
-                  <img src="./img/icons_ios/ui-flashlight.svg" alt="" class={styles.sliderIcon} draggable={false} />
-                  <span>{t('control.flashlight', language())}</span>
-                  <strong>{flashlightBrightness()}%</strong>
+                <div class={styles.nfcHeader}>
+                  <button
+                    class={styles.nfcTogglePill}
+                    classList={{ [styles.nfcToggleActive]: nfcEnabled() }}
+                    onClick={toggleNfc}
+                    title={nfcEnabled() ? 'NFC on' : nfcOffLabel(language())}
+                  >
+                    NFC
+                  </button>
+                  <button
+                    class={styles.refreshButton}
+                    classList={{ [styles.refreshButtonActive]: nfcEnabled() }}
+                    onClick={() => nfcEnabled() ? void syncNearbyPlayers() : toggleNfc()}
+                    title={nfcEnabled() ? 'Actualizar NFC' : nfcOffLabel(language())}
+                  >
+                    <img src="./img/icons_ios/ui-location.svg" alt="" draggable={false} />
+                  </button>
                 </div>
-                <input
-                  class={`${styles.slider} ios-slider`}
-                  type="range"
-                  min="10"
-                  max="100"
-                  value={flashlightBrightness()}
-                  style={{ '--value-percent': `${((flashlightBrightness() - 10) / 90) * 100}%` }}
-                  onInput={(e) => {
-                    const val = Number(e.currentTarget.value);
-                    e.currentTarget.style.setProperty('--value-percent', `${((val - 10) / 90) * 100}%`);
-                    setFlashlightBrightness(val);
-                    void fetchNui('cameraSetFlashlightBrightness', { brightness: val }, { success: true });
+                <div class={styles.nfcRadarMini} aria-hidden="true">
+                  <span class={styles.nfcRadarPulse} />
+                  <span class={styles.nfcRadarDot} />
+                </div>
+                <button
+                  class={styles.nfcTarget}
+                  disabled={!nfcEnabled() || nearbyPlayers().length <= 1}
+                  onClick={cycleNfcTarget}
+                  title={nearbyPlayers().length > 1 ? 'Cambiar persona NFC' : undefined}
+                >
+                  <span>{t('nfc.nearby_people', language())}</span>
+                  <strong>
+                    <Show when={nfcEnabled()} fallback={nfcOffLabel(language())}>
+                      <Show when={selectedNfcTarget()} fallback={nfcNoNearbyLabel(language())}>
+                      {(target) => `${target().name} · ${target().distance.toFixed(1)}m`}
+                      </Show>
+                    </Show>
+                  </strong>
+                  <Show when={nfcEnabled() && nearbyPlayers().length > 1}>
+                    <small>{selectedNfcTargetIndex() + 1}/{nearbyPlayers().length}</small>
+                  </Show>
+                </button>
+                <Show when={nfcEnabled() && nearbyPlayers().length > 1}>
+                  <div class={styles.nfcPeopleRow}>
+                    <For each={nearbyPlayers()}>
+                      {(player) => (
+                        <button
+                          classList={{ [styles.nfcPersonActive]: player.serverId === selectedNfcTarget()?.serverId }}
+                          onClick={() => setNfcTargetServerId(player.serverId)}
+                          title={`${player.name} · ${player.distance.toFixed(1)}m`}
+                        />
+                      )}
+                    </For>
+                  </div>
+                </Show>
+                <div class={styles.nfcActionRow}>
+                  <button
+                    disabled={!nfcEnabled() || !selectedNfcTarget()}
+                    onClick={() => openNfcRoute('wallet')}
+                  >
+                    <img src="./img/icons_ios/wallet.svg" alt="" draggable={false} />
+                  </button>
+                  <button
+                    disabled={!nfcEnabled() || !selectedNfcTarget()}
+                    onClick={() => openNfcRoute('gallery')}
+                  >
+                    <img src="./img/icons_ios/gallery.svg" alt="" draggable={false} />
+                  </button>
+                  <button
+                    disabled={!nfcEnabled() || !selectedNfcTarget()}
+                    onClick={() => openNfcRoute('documents')}
+                  >
+                    <img src="./img/icons_ios/documents.svg" alt="" draggable={false} />
+                  </button>
+                </div>
+              </section>
+
+              <section class={`${styles.controlModule} ${styles.verticalSliderModule}`}>
+                <img src="./img/icons_ios/ui-sun.svg" alt="" class={styles.sliderIcon} draggable={false} />
+                <div
+                  class={styles.verticalSliderShell}
+                  style={{ '--slider-fill': `${((brightnessPercent() - 40) / 80) * 100}%` }}
+                  data-control-interactive="true"
+                  onPointerDown={(event) => event.stopPropagation()}
+                  onPointerMove={(event) => event.stopPropagation()}
+                  onPointerUp={(event) => event.stopPropagation()}
+                  onPointerCancel={(event) => event.stopPropagation()}
+                >
+                  <span class={styles.verticalSliderFill} />
+                  <input
+                    class={styles.verticalSliderInput}
+                    type="range"
+                    min="40"
+                    max="120"
+                    value={brightnessPercent()}
+                    onPointerDown={(event) => event.stopPropagation()}
+                    onInput={(e) => notificationsActions.setBrightness(Number(e.currentTarget.value) / 100)}
+                  />
+                </div>
+                <strong>{brightnessPercent()}%</strong>
+              </section>
+
+              <section class={`${styles.controlModule} ${styles.verticalSliderModule}`}>
+                <img src="./img/icons_ios/ui-bell.svg" alt="" class={styles.sliderIcon} draggable={false} />
+                <div
+                  class={`${styles.verticalSliderShell} ${styles.verticalSliderShellBlue}`}
+                  style={{ '--slider-fill': `${volumePercent()}%` }}
+                  data-control-interactive="true"
+                  onPointerDown={(event) => event.stopPropagation()}
+                  onPointerMove={(event) => event.stopPropagation()}
+                  onPointerUp={(event) => event.stopPropagation()}
+                  onPointerCancel={(event) => event.stopPropagation()}
+                >
+                  <span class={styles.verticalSliderFill} />
+                  <input
+                    class={styles.verticalSliderInput}
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={volumePercent()}
+                    onPointerDown={(event) => event.stopPropagation()}
+                    onInput={(e) => phoneActions.setVolume(Number(e.currentTarget.value) / 100)}
+                  />
+                </div>
+                <strong>{volumePercent()}%</strong>
+              </section>
+
+              <section class={`${styles.controlModule} ${styles.quickActionsModule}`}>
+                <button
+                  class={styles.controlRoundButton}
+                  classList={{ [styles.roundActiveBlue]: notifications.airplaneMode }}
+                  onClick={() => notificationsActions.setAirplaneMode(!notifications.airplaneMode)}
+                  title={t('control.airplane', language())}
+                >
+                  <img src="./img/icons_ios/ui-plane.svg" alt="" draggable={false} />
+                  <span>{t('control.airplane', language())}</span>
+                </button>
+                <button
+                  class={styles.controlRoundButton}
+                  classList={{ [styles.roundActivePurple]: notifications.focusMode !== 'off' }}
+                  onClick={() => notificationsActions.cycleFocusMode()}
+                  title={focusModeLabel(notifications.focusMode, language())}
+                >
+                  <img src={focusModeIcon(notifications.focusMode)} alt="" draggable={false} />
+                  <span>{focusModeLabel(notifications.focusMode, language())}</span>
+                </button>
+                <button
+                  class={styles.controlRoundButton}
+                  classList={{ [styles.roundActiveRed]: notifications.silentMode }}
+                  onClick={() => notificationsActions.setSilentMode(!notifications.silentMode)}
+                  title={t('control.silent', language())}
+                >
+                  <img src="./img/icons_ios/ui-bell.svg" alt="" draggable={false} />
+                  <span>{t('control.silent', language())}</span>
+                </button>
+                <button
+                  class={styles.controlRoundButton}
+                  classList={{ [styles.roundActiveBlue]: liveLocationEnabled() }}
+                  onClick={() => void toggleGpsQuickAction()}
+                  title="GPS"
+                >
+                  <img src="./img/icons_ios/ui-location.svg" alt="" draggable={false} />
+                  <span>GPS</span>
+                </button>
+                <button
+                  class={styles.controlRoundButton}
+                  classList={{ [styles.roundActiveYellow]: flashlightEnabled() }}
+                  onClick={() => void toggleFlashlight()}
+                  title={t('control.flashlight', language())}
+                >
+                  <img src="./img/icons_ios/ui-flashlight.svg" alt="" draggable={false} />
+                  <span>{t('control.flashlight', language())}</span>
+                </button>
+                <button
+                  class={styles.controlRoundButton}
+                  classList={{ [styles.roundActiveGreen]: phoneState.settings.streamerMode === true }}
+                  onClick={() => void phoneActions.setStreamerMode(!phoneState.settings.streamerMode)}
+                  title={t('settings.streamer_mode', language())}
+                >
+                  <img src="./img/icons_ios/ui-eye.svg" alt="" draggable={false} />
+                  <span>{streamerControlLabel(language())}</span>
+                </button>
+                <button
+                  class={styles.controlRoundButton}
+                  onClick={() => {
+                    notificationsActions.setControlCenterOpen(false);
+                    emitInternalEvent('phone:openRoute', { route: 'camera', data: {} });
                   }}
-                />
-              </div>
-            </Show>
+                  title={appName('camera', 'Camera', language())}
+                >
+                  <img src="./img/icons_ios/camera.svg" alt="" draggable={false} />
+                  <span>{appName('camera', 'Camera', language())}</span>
+                </button>
+                <button
+                  class={styles.controlRoundButton}
+                  onClick={() => {
+                    notificationsActions.setControlCenterOpen(false);
+                    emitInternalEvent('phone:lockPhone', {});
+                  }}
+                  title={lockLabel(language())}
+                >
+                  <img src="./img/icons_ios/ui-lock.svg" alt="" draggable={false} />
+                  <span>{lockLabel(language())}</span>
+                </button>
+              </section>
+
+              <Show when={flashlightEnabled()}>
+                <section class={`${styles.controlModule} ${styles.flashlightModule}`}>
+                  <div class={styles.flashlightHeader}>
+                    <img src="./img/icons_ios/ui-flashlight.svg" alt="" draggable={false} />
+                    <span>{t('control.flashlight', language())}</span>
+                    <strong>{Math.max(10, flashlightPercent())}%</strong>
+                  </div>
+                  <input
+                    class={`${styles.slider} ios-slider`}
+                    type="range"
+                    min="10"
+                    max="100"
+                    value={Math.max(10, flashlightPercent())}
+                    style={{ '--value-percent': `${Math.max(10, flashlightPercent())}%` }}
+                    data-control-interactive="true"
+                    onPointerDown={(event) => event.stopPropagation()}
+                    onPointerMove={(event) => event.stopPropagation()}
+                    onPointerUp={(event) => event.stopPropagation()}
+                    onPointerCancel={(event) => event.stopPropagation()}
+                    onInput={(e) => {
+                      const percent = Number(e.currentTarget.value);
+                      const lumens = Math.round(flashlightMinLumens() + ((flashlightMaxLumens() - flashlightMinLumens()) * percent) / 100);
+                      e.currentTarget.style.setProperty('--value-percent', `${percent}%`);
+                      setFlashlightLumens(lumens);
+                      void fetchKnownNui('cameraSetFlashlightSettings', { lumens, kelvin: flashlightKelvin() }, { success: true });
+                    }}
+                  />
+                </section>
+              </Show>
+            </div>
 
             <div class={styles.sheetFooter}>
               <button class={styles.closeBtn} onClick={() => notificationsActions.setControlCenterOpen(false)}>{t('control.close', language())}</button>

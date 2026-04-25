@@ -93,7 +93,6 @@ Controls which optional apps are available. Each flag enables/disables one or mo
 
 ```typescript
 interface PhoneFeatureFlags {
-  appstore: boolean;
   wavechat: boolean;
   darkrooms: boolean;
   clips: boolean;

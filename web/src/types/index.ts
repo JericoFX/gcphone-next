@@ -88,7 +88,6 @@ export interface PhoneSettings {
 export type PhoneFramework = 'esx' | 'qbcore' | 'qbox' | 'unknown';
 
 export interface PhoneFeatureFlags {
-  appstore: boolean;
   wavechat: boolean;
   darkrooms: boolean;
   clips: boolean;

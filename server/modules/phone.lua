@@ -127,7 +127,7 @@ local function SafeUsername(value)
     if username == '' then return nil end
     if #username < 3 or #username > 32 then return nil end
     if not username:match('%a') then return nil end
-    if username:match('^[._-]') then return nil end
+    if username:match('^[._-]') or username:match('[._-]$') then return nil end
     if username:match('[._-][._-]+') then return nil end
     return username
 end

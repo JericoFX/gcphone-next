@@ -115,7 +115,11 @@ RegisterNUICallback = function(name, handler)
             NuiLastSeq = providedSeq
         end
 
-        handler(payload, cb)
+        local ok, err = pcall(handler, payload, cb)
+        if not ok then
+            print(('[gcphone:nui] callback "%s" failed: %s'):format(tostring(name), tostring(err)))
+            cb({ success = false, message = 'CALLBACK_FAILED' })
+        end
     end)
 end
 

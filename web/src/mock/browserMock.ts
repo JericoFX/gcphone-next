@@ -620,7 +620,7 @@ const state: BrowserMockState = {
   ],
   appLayout: {
     home: ['contacts', 'messages', 'mail', 'calls', 'settings', 'gallery', 'camera', 'bank', 'wallet', 'documents', 'wavechat', 'music', 'chirp', 'snap', 'clips', 'darkrooms', 'yellowpages', 'news', 'garage', 'notes', 'maps', 'weather', 'notifications', 'clock', 'radio', 'services', 'matchmylove', 'cityride'],
-    menu: ['appstore']
+    menu: []
   },
   mailDomain: 'jericofx.gg',
   mailAccount: {
@@ -692,7 +692,6 @@ const phonePayload = () => ({
   appLayout: state.appLayout,
   enabledApps: [...state.appLayout.home, ...state.appLayout.menu],
   featureFlags: {
-    appstore: true,
     wavechat: true,
     darkrooms: true,
     clips: true,
@@ -743,7 +742,7 @@ const resetMockPhoneData = () => {
   state.flashlightEnabled = false;
   state.appLayout = {
     home: ['contacts', 'messages', 'mail', 'calls', 'settings', 'gallery', 'camera', 'bank', 'wallet', 'documents', 'wavechat', 'music', 'chirp', 'snap', 'clips', 'darkrooms', 'yellowpages', 'news', 'garage', 'notes', 'maps', 'weather', 'notifications', 'clock', 'radio', 'services', 'matchmylove', 'cityride'],
-    menu: ['appstore']
+    menu: []
   };
 };
 
@@ -1638,8 +1637,7 @@ export async function handleBrowserNui<T = unknown>(eventName: string, data?: un
     }
 
     const alias = String(payload.alias || '').trim().toLowerCase();
-    const password = String(payload.password || '').trim();
-    if (!/^[a-z0-9._-]{3,24}$/.test(alias) || password.length < 4) {
+    if (!/^[a-z0-9._-]{3,24}$/.test(alias)) {
       return { success: false, error: 'INVALID_DATA' } as T;
     }
 
@@ -2890,6 +2888,15 @@ export async function handleBrowserNui<T = unknown>(eventName: string, data?: un
 
   if (eventName === 'getPlayerCoords') {
     return { x: -268.42, y: -956.31 } as T;
+  }
+
+  if (eventName === 'getNearbyPlayers') {
+    const maxDistance = Number(payload.maxDistance || 3);
+    return [
+      { serverId: 12, name: 'Mateo', distance: Math.min(maxDistance, 1.2) },
+      { serverId: 21, name: 'Lucia', distance: Math.min(maxDistance, 2.1) },
+      { serverId: 34, name: 'Bruno', distance: Math.min(maxDistance, 2.8) },
+    ] as T;
   }
 
   if (eventName === 'setLiveLocationInterval') {

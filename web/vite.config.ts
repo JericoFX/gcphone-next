@@ -20,33 +20,51 @@ export default defineConfig({
         chunkFileNames: 'assets/[name].js',
         assetFileNames: 'assets/[name].[ext]',
         manualChunks(id) {
+          const normalizedId = id.replace(/\\/g, '/');
+
           if (
-            id.includes('MediaLightbox')
-            || id.includes('EmojiPicker')
-            || id.includes('MediaAttachmentPreview')
-            || id.includes('MediaActionButtons')
-            || id.includes('SocialOnboardingModal')
-            || id.includes('LiveFlashlightControl')
+            normalizedId.includes('MediaLightbox')
+            || normalizedId.includes('EmojiPicker')
+            || normalizedId.includes('MediaAttachmentPreview')
+            || normalizedId.includes('MediaActionButtons')
+            || normalizedId.includes('SocialOnboardingModal')
+            || normalizedId.includes('LiveFlashlightControl')
           ) {
             return 'shared-social';
           }
-          if (id.includes('livekit-client')) {
+          if (normalizedId.includes('livekit-client')) {
             return 'vendor-livekit';
           }
-          if (id.includes('/leaflet/') || id.includes('\\leaflet\\')) {
+          if (normalizedId.includes('/leaflet/')) {
             return 'vendor-leaflet';
           }
-          if (id.includes('node_modules')) {
+          if (normalizedId.includes('node_modules')) {
             return 'vendor';
           }
-          if (id.includes('solid-js')) {
+          if (normalizedId.includes('solid-js')) {
             return 'vendor';
           }
-          if (id.includes('components/shared') || id.includes('hooks/')) {
+          if (
+            normalizedId.includes('/src/components/Phone/')
+            || normalizedId.includes('/src/store/')
+            || normalizedId.includes('/src/config/')
+            || normalizedId.includes('/src/i18n')
+            || normalizedId.includes('/src/utils/')
+            || normalizedId.includes('/src/types/')
+          ) {
+            return 'phone-core';
+          }
+          if (
+            normalizedId.includes('/src/')
+            && !normalizedId.includes('/src/components/apps/')
+          ) {
+            return 'app-core';
+          }
+          if (normalizedId.includes('components/shared') || normalizedId.includes('hooks/')) {
             return 'shared';
           }
-          if (id.includes('components/apps/')) {
-            const match = id.match(/components\/apps\/([^/]+)/);
+          if (normalizedId.includes('components/apps/')) {
+            const match = normalizedId.match(/components\/apps\/([^/]+)/);
             if (match) {
               if (match[1] === 'home') {
                 return undefined;

@@ -36,7 +36,7 @@ const PERMISSION_LABELS: Record<string, string> = {
 
 function getAppIcon(appId: string): string {
   const def = APP_DEFINITIONS.find((a) => a.id === appId);
-  return def?.icon || './img/icons_ios/appstore.svg';
+  return def?.icon || './img/icons_ios/ui-grid.svg';
 }
 
 function getAppTitle(appId: string, lang: string): string {

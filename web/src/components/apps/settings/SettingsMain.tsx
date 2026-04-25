@@ -31,7 +31,7 @@ const SEARCH_INDEX: SearchEntry[] = [
   { id: 'sound',         icon: ICONS.sound,          iconBg: 'iconPink',   section: 'sound' },
   { id: 'security',      icon: ICONS.security,       iconBg: 'iconRed',    section: 'security' },
   { id: 'notifications', icon: ICONS.notifications,  iconBg: 'iconRed',    section: 'notifications' },
-  { id: 'appsandpermissions', icon: './img/icons_ios/appstore.svg', iconBg: 'iconBlue', section: 'appsandpermissions' },
+  { id: 'appsandpermissions', icon: './img/icons_ios/ui-grid.svg', iconBg: 'iconBlue', section: 'appsandpermissions' },
   { id: 'system',        icon: ICONS.location,       iconBg: 'iconBlue',   section: 'system' },
   { id: 'about',         icon: ICONS.info,           iconBg: 'iconGray',   section: 'about' },
 ];
@@ -283,7 +283,7 @@ export function SettingsMain(props: SettingsMainProps) {
             onClick={() => props.onNavigate('appsandpermissions')}
           >
             <div style={{ display: 'flex', 'align-items': 'center', gap: '8px', flex: '1' }}>
-              <SettingsIcon icon="./img/icons_ios/appstore.svg" bg="iconBlue" />
+              <SettingsIcon icon="./img/icons_ios/ui-grid.svg" bg="iconBlue" />
               <span class="ios18-cell__title">Apps y Permisos</span>
             </div>
             <div class={styles.chevron} />

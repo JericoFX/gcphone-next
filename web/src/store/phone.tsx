@@ -1,4 +1,4 @@
-import { 
+import {
   createContext, 
   useContext, 
   ParentComponent,
@@ -8,7 +8,7 @@ import {
   createMemo
 } from 'solid-js';
 import { createStore } from 'solid-js/store';
-import { fetchNui } from '../utils/fetchNui';
+import { fetchKnownNui, fetchNui } from '../utils/fetchNui';
 import { normalizeAppLanguage } from '../utils/misc';
 import type { AppLanguage } from '../i18n';
 import { useNuiCustomEvent } from '../utils/useNui';
@@ -19,6 +19,7 @@ import { APP_IDS, DEFAULT_HOME_APPS, DEFAULT_MENU_APPS } from '../config/apps';
 import * as folderOps from '../utils/folderOps';
 import type { NormalizeContext } from '../utils/folderOps';
 import { isEnvBrowser } from '../utils/misc';
+import type { NuiPhonePayload } from '../types/nui';
 
 export interface PhoneActions {
   show: () => void;
@@ -114,7 +115,6 @@ function readPhoneScalePreference(): number {
 }
 
 const defaultFeatureFlags: PhoneFeatureFlags = {
-  appstore: true,
   wavechat: true,
   darkrooms: true,
   clips: true,
@@ -139,24 +139,7 @@ const defaultLayout: AppLayout = {
   menu: [...DEFAULT_MENU_APPS]
 };
 
-type PhonePayload = PhoneSettings & {
-  framework?: PhoneFramework;
-  imei?: string;
-  deviceOwnerName?: string;
-  isStolen?: boolean;
-  stolenAt?: string | null;
-  stolenReason?: string | null;
-  appLayout?: AppLayout;
-  enabledApps?: string[];
-  featureFlags?: Partial<PhoneFeatureFlags>;
-  requiresSetup?: boolean;
-  setup?: PhoneSetupState;
-  useLockScreen?: boolean;
-  forceLockScreen?: boolean;
-  accessMode?: 'own' | 'foreign-readonly' | 'foreign-full';
-  accessOwnerName?: string;
-  accessPhoneId?: string;
-};
+type PhonePayload = NuiPhonePayload;
 
 const PINNED_HOME_APPS = ['contacts', 'messages', 'mail'] as const;
 const REQUIRED_ENABLED_APPS = ['contacts', 'messages', 'mail'] as const;
@@ -197,7 +180,6 @@ function normalizeLayout(layout?: Partial<AppLayout> | null, enabledApps: string
 
 function normalizeFeatureFlags(input?: Partial<PhoneFeatureFlags> | null): PhoneFeatureFlags {
   return {
-    appstore: input?.appstore !== false,
     wavechat: input?.wavechat !== false,
     darkrooms: input?.darkrooms !== false,
     clips: input?.clips !== false,
@@ -215,7 +197,6 @@ function normalizeLanguage(value?: string | null): AppLanguage {
 
 function enabledAppsFromFlags(flags: PhoneFeatureFlags): string[] {
   const byFlag: Record<keyof PhoneFeatureFlags, string[]> = {
-    appstore: ['appstore'],
     wavechat: ['wavechat'],
     darkrooms: ['darkrooms'],
     clips: ['clips'],
@@ -298,7 +279,7 @@ export const PhoneProvider: ParentComponent = (props) => {
       setState('visible', v => !v);
     },
     unlock: async (code: string) => {
-      const payload = await fetchNui<{ success?: boolean; unlocked?: boolean }>('phoneVerifyPin', { pin: code }, { success: false, unlocked: false });
+      const payload = await fetchKnownNui('phoneVerifyPin', { pin: code }, { success: false, unlocked: false });
       if (payload?.success && payload?.unlocked) {
         setState('locked', false);
         return true;
@@ -306,7 +287,7 @@ export const PhoneProvider: ParentComponent = (props) => {
       return false;
     },
     verifyPin: async (code: string) => {
-      const payload = await fetchNui<{ success?: boolean; unlocked?: boolean }>('phoneVerifyPin', { pin: code }, { success: false, unlocked: false });
+      const payload = await fetchKnownNui('phoneVerifyPin', { pin: code }, { success: false, unlocked: false });
       return payload?.success === true && payload?.unlocked === true;
     },
     unlockDirect: () => {
@@ -316,9 +297,9 @@ export const PhoneProvider: ParentComponent = (props) => {
       setState('locked', state.settings.screenLockEnabled !== false);
     },
     refreshSetupState: async () => {
-      const payload = await fetchNui<{ success?: boolean; requiresSetup?: boolean; setup?: PhoneSetupState }>(
+      const payload = await fetchKnownNui(
         'phoneGetSetupState',
-        {},
+        undefined,
         { success: false, requiresSetup: true, setup: { ...defaultSetupState, requiresSetup: true } },
       );
 
@@ -333,7 +314,7 @@ export const PhoneProvider: ParentComponent = (props) => {
     },
     completeSetup: async (payload) => {
       if (isReadOnly()) return { success: false, error: 'READ_ONLY' };
-      const response = await fetchNui<{ success?: boolean; error?: string; requiresSetup?: boolean; setup?: PhoneSetupState }>(
+      const response = await fetchKnownNui(
         'phoneCompleteSetup',
         payload,
         { success: false, error: 'NO_RESPONSE' },
@@ -353,6 +334,9 @@ export const PhoneProvider: ParentComponent = (props) => {
             ...(response.setup || {}),
             requiresSetup: response.requiresSetup === true,
           });
+          if (response.requiresSetup !== true) {
+            setState('locked', state.settings.screenLockEnabled !== false);
+          }
         });
       }
 
@@ -364,7 +348,7 @@ export const PhoneProvider: ParentComponent = (props) => {
     setWallpaper: (url: string) => {
       if (isReadOnly()) return;
       setState('settings', 'wallpaper', url);
-      fetchNui('setWallpaper', { url });
+      void fetchKnownNui('setWallpaper', { url });
     },
     setRingtone: (ringtone: string) => {
       if (isReadOnly()) return;
@@ -372,7 +356,7 @@ export const PhoneProvider: ParentComponent = (props) => {
         setState('settings', 'ringtone', ringtone);
         setState('settings', 'callRingtone', ringtone);
       });
-      fetchNui('setRingtone', { ringtone });
+      void fetchKnownNui('setRingtone', { ringtone });
     },
     setCallRingtone: (ringtone: string) => {
       if (isReadOnly()) return;
@@ -380,27 +364,27 @@ export const PhoneProvider: ParentComponent = (props) => {
         setState('settings', 'ringtone', ringtone);
         setState('settings', 'callRingtone', ringtone);
       });
-      fetchNui('setCallRingtone', { ringtone });
+      void fetchKnownNui('setCallRingtone', { ringtone });
     },
     setNotificationTone: (tone: string) => {
       if (isReadOnly()) return;
       setState('settings', 'notificationTone', tone);
-      fetchNui('setNotificationTone', { tone });
+      void fetchKnownNui('setNotificationTone', { tone });
     },
     setMessageTone: (tone: string) => {
       if (isReadOnly()) return;
       setState('settings', 'messageTone', tone);
-      fetchNui('setMessageTone', { tone });
+      void fetchKnownNui('setMessageTone', { tone });
     },
     setVolume: (volume: number) => {
       if (isReadOnly()) return;
       setState('settings', 'volume', volume);
-      fetchNui('setVolume', { volume });
+      void fetchKnownNui('setVolume', { volume });
     },
     setTheme: (theme: 'auto' | 'light' | 'dark') => {
       if (isReadOnly()) return;
       setState('settings', 'theme', theme);
-      fetchNui('setTheme', { theme });
+      void fetchKnownNui('setTheme', { theme });
     },
     setAccentColor: (color: string) => {
       if (isReadOnly()) return;
@@ -421,22 +405,22 @@ export const PhoneProvider: ParentComponent = (props) => {
       if (isReadOnly()) return;
       setState('settings', 'language', language);
       window.localStorage.setItem('gcphone:language', language);
-      fetchNui('setLanguage', { language });
+      void fetchKnownNui('setLanguage', { language });
     },
     setAudioProfile: (audioProfile: 'normal' | 'street' | 'vehicle' | 'silent') => {
       if (isReadOnly()) return;
       setState('settings', 'audioProfile', audioProfile);
-      fetchNui('setAudioProfile', { audioProfile });
+      void fetchKnownNui('setAudioProfile', { audioProfile });
     },
     setStreamerMode: (enabled: boolean) => {
       if (isReadOnly()) return;
       setState('settings', 'streamerMode', enabled);
-      fetchNui('setStreamerMode', { enabled });
+      void fetchKnownNui('setStreamerMode', { enabled });
     },
     setLockCode: (code: string) => {
       if (isReadOnly()) return;
       setState('settings', 'lockCode', code);
-      fetchNui('setLockCode', { code });
+      void fetchKnownNui('setLockCode', { code });
     },
     setPhoneScale: (scale: number) => {
       const clamped = Math.max(0.7, Math.min(1, Math.round(scale * 100) / 100));
@@ -462,7 +446,7 @@ export const PhoneProvider: ParentComponent = (props) => {
     },
     factoryReset: async () => {
       if (isReadOnly()) return false;
-      const response = await fetchNui<PhonePayload & { success?: boolean }>('factoryResetPhone', {}, { success: false } as PhonePayload & { success?: boolean });
+      const response = await fetchKnownNui('factoryResetPhone', undefined, { success: false } as PhonePayload & { success?: boolean });
       if (!response?.success) return false;
 
       window.localStorage.removeItem('gcphone:liveLocationInterval');
@@ -515,7 +499,7 @@ export const PhoneProvider: ParentComponent = (props) => {
       return true;
     },
     loadAppLayout: async () => {
-      const res = await fetchNui<{ layout?: AppLayout | null; version?: number } | AppLayout | null>('getAppLayout', {}, null);
+      const res = await fetchKnownNui('getAppLayout', {}, null);
       if (res && typeof res === 'object' && 'layout' in res) {
         setLayout(res.layout ?? null, state.enabledApps);
         setState('layoutVersion', typeof res.version === 'number' ? res.version : 0);
@@ -533,7 +517,7 @@ export const PhoneProvider: ParentComponent = (props) => {
       }
       const attempt = (async () => {
         const snapshot = state.appLayout;
-        const response = await fetchNui<{ ok?: boolean; version?: number; layout?: AppLayout; reason?: string } | null>(
+        const response = await fetchKnownNui(
           'setAppLayout',
           { layout: snapshot, version: state.layoutVersion },
           null,
@@ -696,14 +680,14 @@ export const PhoneProvider: ParentComponent = (props) => {
       window.localStorage.setItem('gcphone:iconShape', shape);
     },
     loadWidgetLayout: async () => {
-      const layout = await fetchNui<WidgetLayout | null>('getWidgetLayout', {});
+      const layout = await fetchKnownNui('getWidgetLayout', {}, null);
       if (layout && Array.isArray(layout.widgets)) {
         setState('widgetLayout', layout);
       }
     },
     saveWidgetLayout: async () => {
       if (isReadOnly()) return;
-      await fetchNui('setWidgetLayout', { layout: state.widgetLayout });
+      await fetchKnownNui('setWidgetLayout', { layout: state.widgetLayout });
     },
     addWidget: (type: WidgetType, size: WidgetSize) => {
       if (isReadOnly()) return;

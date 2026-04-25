@@ -6,7 +6,7 @@ title: Phone SDK Permissions
 
 The Phone UI SDK includes a permission system that controls access to sensitive phone APIs. Both internal phone apps and external third-party apps must request permissions before accessing protected features.
 
-> **Important:** A third-party app can be potentially harmful if it comes from an unknown or untrusted source. Malicious apps may request permissions to read contacts, send messages, or access the player's location. The permission system exists so that the player can make an informed decision before granting access. If an app seems suspicious (for example, a clothing store requesting access to contacts and messages), the player should deny the permissions. Blocked apps can be removed from Settings > Apps and Permissions.
+> **Important:** A third-party SDK shortcut can be potentially harmful if it comes from an unknown or untrusted resource. Malicious shortcuts may request permissions to read contacts, send messages, or access the player's location. The permission system exists so that the player can make an informed decision before granting access. If a shortcut seems suspicious (for example, a clothing shop requesting access to contacts and messages), the player should deny the permissions. Blocked shortcuts can be managed from Settings > Apps and Permissions.
 
 ---
 
@@ -217,21 +217,21 @@ end
 
 Players can manage permissions in the phone's Settings app:
 
-- View all apps (internal + external) that have requested permissions
+- View all internal apps and external SDK shortcuts that have requested permissions
 - See which permissions each app has (granted/denied)
 - Toggle individual permissions on/off
-- **"Remove app"** — uninstall a third-party app (revokes permissions, hides from Shortcuts, blocks future opens)
+- **"Block shortcut"** - revoke permissions, hide the SDK shortcut, and block future opens
 
-### Uninstalling / Blocking Apps
+### Blocking SDK Shortcuts
 
-When a player uninstalls a third-party app:
-- The app disappears from Shortcuts
+When a player blocks a third-party SDK shortcut:
+- The shortcut disappears from Directorio/Shortcuts
 - All permissions are revoked
 - Future `openPhoneUI` calls return `nil, 'APP_BLOCKED'`
 - The block persists in the database
-- The player can reinstall from Settings > Apps > Blocked
+- The player can unblock it later from Settings > Apps > Blocked
 
-Internal apps (WaveChat, Snap, etc.) cannot be uninstalled, only have their permissions toggled.
+Internal apps (WaveChat, Snap, etc.) cannot be blocked, only have their permissions toggled.
 
 ---
 
@@ -257,7 +257,7 @@ CREATE TABLE IF NOT EXISTS `phone_app_permissions` (
 
 ### `phone_app_blocks`
 
-Stores player app blocks (uninstalls).
+Stores player SDK shortcut blocks.
 
 ```sql
 CREATE TABLE IF NOT EXISTS `phone_app_blocks` (

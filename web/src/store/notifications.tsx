@@ -2,7 +2,7 @@ import { ParentComponent, batch, createContext, createEffect, createMemo, create
 import { createStore } from 'solid-js/store';
 import { useNuiCustomEvent } from '../utils/useNui';
 import { sanitizeText } from '../utils/sanitize';
-import { fetchNui } from '../utils/fetchNui';
+import { fetchKnownNui } from '../utils/fetchNui';
 import type { PhoneNotification } from '../types';
 
 export type FocusModeId = 'off' | 'personal' | 'work' | 'driving' | 'sleep';
@@ -275,7 +275,7 @@ export const NotificationsProvider: ParentComponent = (props) => {
     setAirplaneMode: (value) => {
       const next = !!value;
       setState('airplaneMode', next);
-      void fetchNui('setAirplaneMode', { enabled: next }, true);
+      void fetchKnownNui('setAirplaneMode', { enabled: next }, true);
     },
     setSilentMode: (value) => {
       setState('silentMode', !!value);

@@ -3,6 +3,7 @@
 
 local Bridge = require 'server.bridge'
 local Phone = require 'server.modules.phone'
+local Utils = require 'server.lib.utils'
 
 local function RecordTransaction(identifier, amount, txType, title, targetPhone)
     MySQL.insert.await('INSERT INTO phone_wallet_transactions (identifier, amount, type, title, target_phone) VALUES (?, ?, ?, ?, ?)',

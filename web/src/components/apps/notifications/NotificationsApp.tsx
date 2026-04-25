@@ -1,24 +1,14 @@
 import { For, Show, createSignal, createMemo, onMount, batch } from 'solid-js';
 import { AppScaffold } from '../../shared/layout/AppScaffold';
 import { useRouter } from '../../Phone/PhoneFrame';
-import { fetchNui } from '../../../utils/fetchNui';
+import { fetchKnownNui } from '../../../utils/fetchNui';
 import { useNotifications } from '../../../store/notifications';
 import { SkeletonList } from '../../shared/ui/SkeletonList';
 import { usePhone } from '../../../store/phone';
 import { APP_BY_ID } from '../../../config/apps';
 import { appName, t } from '../../../i18n';
+import type { InboxNotification } from '../../../types/nui';
 import styles from './NotificationsApp.module.scss';
-
-interface InboxNotification {
-  id: number;
-  app_id: string;
-  title: string;
-  content: string;
-  avatar?: string | null;
-  meta?: unknown;
-  is_read: number;
-  createdAt: number;
-}
 
 interface NotificationGroup {
   appId: string;
@@ -94,7 +84,7 @@ export function NotificationsApp() {
     setLoading(true);
     setError('');
 
-    const payload = await fetchNui<{ success?: boolean; notifications?: InboxNotification[]; unread?: number; error?: string }>(
+    const payload = await fetchKnownNui(
       'notificationsGet',
       { limit: 80, offset: 0 },
       { success: true, notifications: [], unread: 0 },
@@ -114,7 +104,7 @@ export function NotificationsApp() {
   const deleteGroup = async (appId: string) => {
     const groupItems = notifications().filter((entry) => (entry.app_id || 'system') === appId);
     for (const entry of groupItems) {
-      await fetchNui<{ success?: boolean }>('notificationsDelete', { id: entry.id }, { success: false });
+      await fetchKnownNui('notificationsDelete', { id: entry.id }, { success: false });
     }
     setNotifications((prev) => prev.filter((entry) => (entry.app_id || 'system') !== appId));
     setUnread((prev) => Math.max(0, prev - groupItems.filter((e) => Number(e.is_read) === 0).length));
@@ -122,7 +112,7 @@ export function NotificationsApp() {
   };
 
   const markAllRead = async () => {
-    await fetchNui<{ success?: boolean }>('notificationsMarkAllRead', {}, { success: false });
+    await fetchKnownNui('notificationsMarkAllRead', {}, { success: false });
     batch(() => {
       setNotifications((prev) => prev.map((entry) => ({ ...entry, is_read: 1 })));
       setUnread(0);
@@ -134,7 +124,7 @@ export function NotificationsApp() {
 
   const markRead = async (id: number) => {
     const target = notifications().find((entry) => Number(entry.id) === Number(id));
-    await fetchNui<{ success?: boolean }>('notificationsMarkRead', { id }, { success: false });
+    await fetchKnownNui('notificationsMarkRead', { id }, { success: false });
     setNotifications((prev) => prev.map((entry) => (
       Number(entry.id) === Number(id) ? { ...entry, is_read: 1 } : entry
     )));

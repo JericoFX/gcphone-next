@@ -1,6 +1,6 @@
 import { createContext, useContext, ParentComponent, batch, createMemo, onMount } from 'solid-js';
 import { createStore } from 'solid-js/store';
-import { fetchNui } from '../utils/fetchNui';
+import { fetchKnownNui } from '../utils/fetchNui';
 import { useNuiCustomEvent } from '../utils/useNui';
 import { sanitizeMediaUrl, sanitizePhone, sanitizeText } from '../utils/sanitize';
 import { emitInternalEvent } from '../utils/internalEvents';
@@ -79,7 +79,7 @@ export const MessagesProvider: ParentComponent = (props) => {
   const actions: MessagesActions = {
     fetch: async () => {
       setState('loading', true);
-      const messages = await fetchNui<Message[]>('getMessages', undefined, []);
+      const messages = await fetchKnownNui('getMessages', undefined, []);
       const list = Array.isArray(messages) ? messages : [];
       const unread = countUnread(list);
       batch(() => {
@@ -99,7 +99,7 @@ export const MessagesProvider: ParentComponent = (props) => {
       const nextMediaUrl = sanitizeMediaUrl(options.mediaUrl);
       if (!nextPhone || (!nextMessage && !nextMediaUrl && !options.audioData)) return false;
 
-      const result = await fetchNui<{ success: boolean }>(
+      const result = await fetchKnownNui(
         'sendMessage',
         {
           phoneNumber: nextPhone,
@@ -116,7 +116,7 @@ export const MessagesProvider: ParentComponent = (props) => {
     },
     
     delete: async (messageId: number) => {
-      const result = await fetchNui<{ success: boolean }>('deleteMessage', { id: messageId });
+      const result = await fetchKnownNui('deleteMessage', { id: messageId });
 
       if (result?.success) {
         const filtered = state.messages.filter(msg => msg.id !== messageId);
@@ -130,7 +130,7 @@ export const MessagesProvider: ParentComponent = (props) => {
     },
 
     deleteConversation: async (phoneNumber: string) => {
-      const result = await fetchNui<{ success: boolean }>('deleteConversation', { phoneNumber });
+      const result = await fetchKnownNui('deleteConversation', { phoneNumber });
 
       if (result?.success) {
         const filtered = state.messages.filter(msg => msg.transmitter !== phoneNumber && msg.receiver !== phoneNumber);
@@ -144,7 +144,7 @@ export const MessagesProvider: ParentComponent = (props) => {
     },
 
     markAsRead: async (phoneNumber: string) => {
-      const result = await fetchNui<{ success: boolean }>('markAsRead', { phoneNumber });
+      const result = await fetchKnownNui('markAsRead', { phoneNumber });
 
       if (result?.success) {
         const updated = state.messages.map(msg => (
@@ -164,12 +164,12 @@ export const MessagesProvider: ParentComponent = (props) => {
     getUnreadCount: () => state.unreadCount,
 
     react: async (messageId: number, emoji: string) => {
-      const result = await fetchNui<{ success: boolean }>('reactToMessage', { messageId, emoji });
+      const result = await fetchKnownNui('reactToMessage', { messageId, emoji });
       return result?.success ?? false;
     },
 
     removeReaction: async (messageId: number) => {
-      const result = await fetchNui<{ success: boolean }>('removeReaction', { messageId });
+      const result = await fetchKnownNui('removeReaction', { messageId });
       return result?.success ?? false;
     },
   };

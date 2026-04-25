@@ -1,6 +1,6 @@
 import { For, Show, createEffect, createMemo, createSignal, onMount, batch } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
-import { fetchNui } from '../../../utils/fetchNui';
+import { fetchKnownNui } from '../../../utils/fetchNui';
 import { useNuiActions } from '../../../utils/useNui';
 import { formatPhoneNumber } from '../../../utils/misc';
 import { usePhone } from '../../../store/phone';
@@ -122,10 +122,10 @@ export function WalletApp() {
   const load = async () => {
     setLoading(true);
     const [walletData, contactData, nearby, pendingData] = await Promise.all([
-      fetchNui<{ balance?: number; cards?: WalletCard[]; transactions?: WalletTx[] }>('walletGetState', {}, { balance: 0, cards: [], transactions: [] }),
-      fetchNui<{ display: string; number: string }[]>('getContactsForTransfer', {}, []),
-      fetchNui<NearbyPlayer[]>('getNearbyPlayers', {}, []),
-      fetchNui<{ incoming?: WalletRequest[]; outgoing?: WalletRequest[] }>('walletGetPendingRequests', {}, { incoming: [], outgoing: [] }),
+      fetchKnownNui('walletGetState', {}, { balance: 0, cards: [], transactions: [] }),
+      fetchKnownNui('getContactsForTransfer', undefined, []),
+      fetchKnownNui('getNearbyPlayers', {}, []),
+      fetchKnownNui('walletGetPendingRequests', {}, { incoming: [], outgoing: [] }),
     ]);
 
     batch(() => {
@@ -151,7 +151,7 @@ export function WalletApp() {
     const last4 = sanitizedCardLast4();
     if (!label || !/^\d{4}$/.test(last4)) return;
 
-    const result = await fetchNui<{ success?: boolean }>('walletAddCard', { label, last4, color: '#007aff' }, { success: false });
+    const result = await fetchKnownNui('walletAddCard', { label, last4, color: '#007aff' }, { success: false });
     if (result.success) {
       setShowAddCardModal(false);
       void load();
@@ -171,7 +171,7 @@ export function WalletApp() {
     const title = proximityTitleInput().trim() || 'Pago NFC';
     if (!phone || !Number.isFinite(amount) || amount <= 0) return;
 
-    const result = await fetchNui<{ success?: boolean; balance?: number; error?: string; distance?: number; maxDistance?: number }>(
+    const result = await fetchKnownNui(
       'walletProximityTransfer',
       { targetPhone: phone, amount, title, method: 'nfc' },
       { success: false }
@@ -198,7 +198,7 @@ export function WalletApp() {
   };
 
   const removeCard = async (cardId: number) => {
-    const result = await fetchNui<{ success?: boolean }>('walletRemoveCard', { cardId }, { success: false });
+    const result = await fetchKnownNui('walletRemoveCard', { cardId }, { success: false });
     if (result.success) void load();
   };
 
@@ -226,7 +226,7 @@ export function WalletApp() {
       payload.targetIdentifier = targetIdentifier().trim();
     }
 
-    const result = await fetchNui<{ success?: boolean; error?: string; channel?: 'nfc' | 'remote' }>('walletCreateInvoice', payload, { success: false });
+    const result = await fetchKnownNui('walletCreateInvoice', payload, { success: false });
     if (!result?.success) {
       uiAlert(result?.error || t('wallet.error.create_invoice', language()));
       return;
@@ -244,7 +244,7 @@ export function WalletApp() {
     const invoice = incomingInvoice();
     if (!invoice) return;
 
-    const result = await fetchNui<{ success?: boolean; error?: string }>('walletRespondInvoice', {
+    const result = await fetchKnownNui('walletRespondInvoice', {
       invoiceId: invoice.invoiceId,
       accept,
       paymentMethod,
@@ -260,7 +260,7 @@ export function WalletApp() {
   };
 
   const respondWalletRequest = async (requestId: number, accept: boolean) => {
-    const result = await fetchNui<{ success?: boolean }>('walletRespondRequest', { requestId, accept }, { success: false });
+    const result = await fetchKnownNui('walletRespondRequest', { requestId, accept }, { success: false });
     if (result?.success) void load();
     else if (accept) uiAlert(t('wallet.error.payment_failed', language()));
   };

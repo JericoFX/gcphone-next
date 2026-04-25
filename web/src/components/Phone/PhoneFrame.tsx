@@ -111,11 +111,6 @@ const lazyApps = {
       default: m.DocumentsApp,
     })),
   ),
-  appstore: lazy(() =>
-    import('../apps/appstore/AppStoreApp').then((m) => ({
-      default: m.AppStoreApp,
-    })),
-  ),
   gallery: lazy(() =>
     import('../apps/gallery/GalleryApp').then((m) => ({
       default: m.GalleryApp,

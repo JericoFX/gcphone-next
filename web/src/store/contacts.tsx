@@ -1,6 +1,6 @@
 import { createContext, useContext, ParentComponent, onMount, batch } from 'solid-js';
 import { createStore } from 'solid-js/store';
-import { fetchNui } from '../utils/fetchNui';
+import { fetchKnownNui } from '../utils/fetchNui';
 import { useNuiCustomEvent } from '../utils/useNui';
 import type { Contact } from '../types';
 
@@ -32,7 +32,7 @@ export const ContactsProvider: ParentComponent = (props) => {
   const actions: ContactsActions = {
     fetch: async () => {
       setState('loading', true);
-      const contacts = await fetchNui<Contact[]>('getContacts', undefined, []);
+      const contacts = await fetchKnownNui('getContacts', undefined, []);
       batch(() => {
         setState('contacts', Array.isArray(contacts) ? contacts : []);
         setState('loading', false);
@@ -40,7 +40,7 @@ export const ContactsProvider: ParentComponent = (props) => {
     },
     
     add: async (display: string, number: string, avatar?: string) => {
-      const result = await fetchNui<{ success: boolean; id?: number; message?: string }>(
+      const result = await fetchKnownNui(
         'addContact',
         { display, number, avatar }
       );
@@ -53,7 +53,7 @@ export const ContactsProvider: ParentComponent = (props) => {
     },
     
     update: async (id: number, display: string, number: string, avatar?: string) => {
-      const result = await fetchNui<{ success: boolean }>(
+      const result = await fetchKnownNui(
         'updateContact',
         { id, display, number, avatar }
       );
@@ -66,7 +66,7 @@ export const ContactsProvider: ParentComponent = (props) => {
     },
     
     remove: async (id: number) => {
-      const result = await fetchNui<{ success: boolean }>('deleteContact', { id });
+      const result = await fetchKnownNui('deleteContact', { id });
       
       if (result?.success) {
         setState('contacts', contacts => contacts.filter(contact => contact.id !== id));
@@ -76,7 +76,7 @@ export const ContactsProvider: ParentComponent = (props) => {
     },
     
     toggleFavorite: async (id: number) => {
-      const result = await fetchNui<{ success: boolean }>('toggleFavorite', { id });
+      const result = await fetchKnownNui('toggleFavorite', { id });
       
       if (result?.success) {
         await actions.fetch();

@@ -93,7 +93,7 @@ See [WebRTC & TURN Setup](docs/guides/livekit-setup.md) for TURN server options 
 All configuration is in `shared/config.lua`:
 
 - `Config.Phone` — Key bindings, number format, default settings, phone item requirement
-- `Config.Features` — Toggle apps on/off (AppStore, WaveChat, DarkRooms, Clips, etc.)
+- `Config.Features` — Toggle apps on/off (WaveChat, DarkRooms, Clips, etc.)
 - `Config.Security` — Rate limits per action
 - `Config.Storage` — Media upload provider (FiveManage, server folder, local, custom)
 - `Config.VideoCall` — Video call settings (max duration, resolution)

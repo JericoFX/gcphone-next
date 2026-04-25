@@ -116,6 +116,25 @@ local function GetMailBox(accountId)
     )
 end
 
+local function GetMailAccountPasswordHash(identifier)
+    if not identifier then return nil end
+
+    local phone = MySQL.single.await(
+        'SELECT lock_code, pin_hash FROM phone_numbers WHERE identifier = ? LIMIT 1',
+        { identifier }
+    )
+    if not phone then return nil end
+
+    if type(phone.pin_hash) == 'string' and phone.pin_hash ~= '' then
+        return phone.pin_hash
+    end
+
+    local lockCode = SafeText(tostring(phone.lock_code or ''), 24)
+    if not lockCode then return nil end
+
+    return MySQL.scalar.await('SELECT SHA2(?, 256)', { lockCode })
+end
+
 local function ParseAttachmentList(raw)
     if type(raw) == 'table' then
         return raw
@@ -337,8 +356,8 @@ lib.callback.register('gcphone:mail:createAccount', function(source, data)
     end
 
     local alias = SafeAlias(type(data) == 'table' and data.alias or nil)
-    local password = SafeText(type(data) == 'table' and data.password or nil, 120)
-    if not alias or not password or #password < 4 then
+    local passwordHash = GetMailAccountPasswordHash(identifier)
+    if not alias or not passwordHash then
         return { success = false, error = 'INVALID_DATA' }
     end
 
@@ -346,9 +365,9 @@ lib.callback.register('gcphone:mail:createAccount', function(source, data)
     local inserted = MySQL.insert.await(
         [[
             INSERT INTO phone_mail_accounts (identifier, alias, domain, email, password_hash, is_primary, last_login_at)
-            VALUES (?, ?, ?, ?, SHA2(?, 256), 1, NOW())
+            VALUES (?, ?, ?, ?, ?, 1, NOW())
         ]],
-        { identifier, alias, MailDomain(), email, password }
+        { identifier, alias, MailDomain(), email, passwordHash }
     )
 
     if not inserted then

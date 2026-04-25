@@ -2,7 +2,7 @@
   ╔═══════════════════════════════════════════════════════════════════╗
   ║              gcphone-next SDK — Referencia de Ejemplos           ║
   ║                                                                   ║
-  ║  Este archivo contiene TODOS los ejemplos del SDK para copiar    ║
+  ║  Este archivo contiene la coleccion completa del SDK para copiar ║
   ║  y pegar en tus recursos. No es un script ejecutable.            ║
   ╚═══════════════════════════════════════════════════════════════════╝
 

@@ -1,5 +1,6 @@
 import { isEnvBrowser } from './misc';
 import { handleBrowserNui } from '../mock/browserMock';
+import type { NuiEventName, NuiRequestData, NuiResponseData } from '../types/nui';
 
 let nuiRequestToken = '';
 let nuiRequestSeq = 0;
@@ -75,4 +76,12 @@ export async function fetchNui<T = unknown>(
     }
     return null as T;
   }
+}
+
+export function fetchKnownNui<TEvent extends NuiEventName>(
+  eventName: TEvent,
+  data?: NuiRequestData<TEvent>,
+  mockData?: NuiResponseData<TEvent>
+): Promise<NuiResponseData<TEvent>> {
+  return fetchNui<NuiResponseData<TEvent>>(eventName, data, mockData);
 }

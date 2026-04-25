@@ -368,7 +368,6 @@ Config.Music = {
 }
 
 Config.Features = {
-    AppStore = true,
     WaveChat = true,
     DarkRooms = true,
     Clips = true,

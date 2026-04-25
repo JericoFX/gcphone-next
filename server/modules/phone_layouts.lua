@@ -17,7 +17,6 @@ M.AllowedApps = {
     bank = true,
     wallet = true,
     documents = true,
-    appstore = true,
     wavechat = true,
     music = true,
     chirp = true,
@@ -39,7 +38,7 @@ M.AllowedApps = {
 
 M.DefaultLayout = {
     home = { 'contacts', 'messages', 'mail', 'notifications', 'calls', 'settings', 'gallery', 'camera', 'bank', 'wallet', 'documents', 'wavechat', 'music', 'chirp', 'snap', 'clips', 'darkrooms', 'yellowpages', 'news', 'garage', 'clock', 'notes', 'maps', 'weather', 'matchmylove', 'radio', 'services', 'cityride' },
-    menu = { 'appstore' },
+    menu = {},
     folders = {},
 }
 
@@ -139,7 +138,6 @@ function M.GetFeatureFlags()
     end
 
     return {
-        appstore = resolveConvarBool('gcphone_feature_appstore', defaults.AppStore ~= false),
         wavechat = resolveConvarBool('gcphone_feature_wavechat', defaults.WaveChat ~= false),
         darkrooms = resolveConvarBool('gcphone_feature_darkrooms', defaults.DarkRooms ~= false),
         clips = resolveConvarBool('gcphone_feature_clips', defaults.Clips ~= false) and hasClipStorageSupport(),
@@ -157,7 +155,6 @@ function M.BuildEnabledApps(flags)
         enabled[appId] = true
     end
 
-    if not flags.appstore then enabled.appstore = nil end
     if not flags.wavechat then enabled.wavechat = nil end
     if not flags.darkrooms then enabled.darkrooms = nil end
     if not flags.clips then enabled.clips = nil end

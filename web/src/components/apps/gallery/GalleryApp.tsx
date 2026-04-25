@@ -7,7 +7,7 @@ import { useContacts } from '../../../store/contacts';
 import { useNotifications } from '../../../store/notifications';
 import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { useNfcShare } from '../../../hooks/useNfcShare';
-import { fetchNui } from '../../../utils/fetchNui';
+import { fetchKnownNui, fetchNui } from '../../../utils/fetchNui';
 import { useAsyncData } from '../../../hooks/useAsyncData';
 import { useNuiEvent } from '../../../utils/useNui';
 import { resolveMediaType, sanitizeMediaUrl, sanitizePhone } from '../../../utils/sanitize';
@@ -50,7 +50,7 @@ export function GalleryApp() {
   const phoneActions = usePhoneActions();
   const [contactsState] = useContacts();
   const { data: photos, loading, setData: setPhotos, execute: loadPhotos } = useAsyncData(
-    () => fetchNui<any[]>('getGallery', undefined, []),
+    () => fetchKnownNui('getGallery', undefined, []),
     { initialData: [] as any[] }
   );
   const [selectedPhoto, setSelectedPhoto] = createSignal<any>(null);
@@ -71,14 +71,14 @@ export function GalleryApp() {
   const [showMoveToAlbum, setShowMoveToAlbum] = createSignal(false);
 
   const loadAlbums = async () => {
-    const result = await fetchNui<{ id: number; name: string; color: string }[]>('galleryGetAlbums', undefined, []);
+    const result = await fetchKnownNui('galleryGetAlbums', undefined, []);
     setAlbums(result || []);
   };
 
   const createAlbum = async () => {
     const name = albumName().trim();
     if (!name) return;
-    const result = await fetchNui<{ success?: boolean; id?: number; name?: string; color?: string }>(
+    const result = await fetchKnownNui(
       'galleryCreateAlbum',
       { name, color: albumColor() },
       { success: true, id: Date.now(), name, color: albumColor() }
@@ -92,7 +92,7 @@ export function GalleryApp() {
   };
 
   const deleteAlbum = async (albumId: number) => {
-    await fetchNui('galleryDeleteAlbum', { albumId });
+    await fetchKnownNui('galleryDeleteAlbum', { albumId }, { success: true });
     if (activeAlbum() === albumId) setActiveAlbum(null);
     await loadAlbums();
     await loadPhotos();
@@ -101,7 +101,7 @@ export function GalleryApp() {
   const movePhotoToAlbum = async (albumId: number | null) => {
     const photo = selectedPhoto();
     if (!photo) return;
-    await fetchNui('galleryMoveToAlbum', { photoId: photo.id, albumId }, { success: true });
+    await fetchKnownNui('galleryMoveToAlbum', { photoId: photo.id, albumId }, { success: true });
     setShowMoveToAlbum(false);
     setSelectedPhoto(null);
     await loadPhotos();
@@ -111,7 +111,7 @@ export function GalleryApp() {
     onShare: async (targetServerId) => {
       const photo = selectedPhoto();
       if (!photo) return { success: false, error: 'INVALID_DATA' };
-      return fetchNui('galleryShareNfc', { photoId: photo.id, targetServerId }, { success: false });
+      return fetchKnownNui('galleryShareNfc', { photoId: photo.id, targetServerId }, { success: false });
     },
     successMessage: 'Foto compartida por NFC',
   });

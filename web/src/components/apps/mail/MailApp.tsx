@@ -1,6 +1,6 @@
 import { For, Show, createEffect, createMemo, createSignal, onMount, batch } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
-import { fetchNui } from '../../../utils/fetchNui';
+import { fetchKnownNui, fetchNui } from '../../../utils/fetchNui';
 import { t } from '../../../i18n';
 import { usePhoneState } from '../../../store/phone';
 import { useContactsState } from '../../../store/contacts';
@@ -11,53 +11,10 @@ import { AppScaffold } from '../../shared/layout';
 import { LetterAvatar } from '../../shared/ui/LetterAvatar';
 import { ActionSheet } from '../../shared/ui/ActionSheet';
 import { SearchInput } from '../../shared/ui/SearchInput';
+import type { MailAccount, MailAttachment, MailMessage } from '../../../types/nui';
 import styles from './MailApp.module.scss';
 
 /* ─── Interfaces ─── */
-
-interface MailAccount {
-  id: number;
-  alias: string;
-  email: string;
-}
-
-interface MailMessage {
-  id: number;
-  sender_email?: string;
-  sender_alias?: string;
-  recipient_email: string;
-  recipient_alias?: string;
-  subject?: string;
-  body: string;
-  attachments?: MailAttachment[];
-  is_read?: number;
-  created_at: number;
-}
-
-interface MailAttachment {
-  type: 'image' | 'video' | 'document' | 'link';
-  url: string;
-  name?: string;
-  mime?: string;
-  size?: number;
-  sourceApp?: string;
-}
-
-interface MailStateResponse {
-  success: boolean;
-  hasAccount?: boolean;
-  account?: MailAccount | null;
-  inbox?: MailMessage[];
-  sent?: MailMessage[];
-  unread?: number;
-  domain?: string;
-  error?: string;
-}
-
-interface MailActionResponse {
-  success: boolean;
-  error?: string;
-}
 
 /* ─── Swipe threshold (px) ─── */
 
@@ -206,7 +163,7 @@ export function MailApp() {
     setLoading(true);
     setError('');
 
-    const payload = await fetchNui<MailStateResponse>(
+    const payload = await fetchKnownNui(
       'mailGetState',
       { limit: 40, offset: 0 },
       {
@@ -252,7 +209,7 @@ export function MailApp() {
     if (!alias) return;
     setLoading(true);
     setError('');
-    const res = await fetchNui<MailActionResponse>('mailCreateAccount', { alias }, { success: false });
+    const res = await fetchKnownNui('mailCreateAccount', { alias }, { success: false });
     setLoading(false);
     if (res?.success) {
       await loadState();
@@ -280,7 +237,7 @@ export function MailApp() {
     setLoading(true);
     setError('');
 
-    const payload = await fetchNui<MailActionResponse>(
+    const payload = await fetchKnownNui(
       'mailSend',
       { to, subject, body, attachments: attachments() },
       { success: false },
@@ -302,7 +259,7 @@ export function MailApp() {
     setView('detail');
 
     if (folder() === 'inbox' && Number(message.is_read) !== 1) {
-      await fetchNui<MailActionResponse>('mailMarkRead', { messageId: message.id }, { success: false });
+      await fetchKnownNui('mailMarkRead', { messageId: message.id }, { success: false });
       setInbox((prev) =>
         prev.map((e) => (Number(e.id) === Number(message.id) ? { ...e, is_read: 1 } : e)),
       );
@@ -315,7 +272,7 @@ export function MailApp() {
     const target = msg || selectedMessage();
     if (!target) return;
 
-    const res = await fetchNui<MailActionResponse>(
+    const res = await fetchKnownNui(
       'mailDelete',
       { messageId: target.id, folder: folder() },
       { success: true },
