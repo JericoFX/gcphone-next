@@ -7,12 +7,13 @@ import { IslandCall } from './IslandCall';
 import styles from './DynamicIsland.module.scss';
 
 export function DynamicIsland() {
-  const { activities, topActivity } = useLiveActivity();
+  const { activities } = useLiveActivity();
   const router = useRouter();
   const [expanded, setExpanded] = createSignal(false);
   const [activeIndex, setActiveIndex] = createSignal(0);
   const [minimized, setMinimized] = createSignal(false);
   let minimizeTimer: number | undefined;
+  let rotateTimer: number | undefined;
 
   const currentActivity = () => {
     const list = activities();
@@ -33,7 +34,7 @@ export function DynamicIsland() {
     const type = currentActivity()?.type;
     return type !== 'call' && type !== 'recording';
   };
-  const minimizeDelayMs = () => (shouldAutoMinimize() ? 5000 : 9000);
+  const minimizeDelayMs = () => (shouldAutoMinimize() ? 3200 : 6500);
 
   const dotColor = () => {
     const act = currentActivity();
@@ -81,8 +82,20 @@ export function DynamicIsland() {
     }, minimizeDelayMs());
   });
 
+  createEffect(() => {
+    activitySignature();
+    const expandedNow = expanded();
+    const homeNow = isHome();
+    if (rotateTimer) window.clearInterval(rotateTimer);
+    if (!multipleActivities() || expandedNow || !homeNow) return;
+    rotateTimer = window.setInterval(() => {
+      setActiveIndex((idx) => (idx + 1) % activities().length);
+    }, minimized() ? 2600 : 3400);
+  });
+
   onCleanup(() => {
     if (minimizeTimer) window.clearTimeout(minimizeTimer);
+    if (rotateTimer) window.clearInterval(rotateTimer);
   });
 
   return (
