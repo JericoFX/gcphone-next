@@ -106,6 +106,20 @@ function streamerControlLabel(lang: string): string {
   return labels[lang] || labels.en;
 }
 
+function notificationCountLabel(count: number, lang: string): string {
+  const labels: Record<string, (value: number) => string> = {
+    es: (value) => `${value} ${value === 1 ? 'notificacion' : 'notificaciones'}`,
+    en: (value) => `${value} ${value === 1 ? 'notification' : 'notifications'}`,
+    fr: (value) => `${value} ${value === 1 ? 'notification' : 'notifications'}`,
+    de: (value) => `${value} ${value === 1 ? 'Mitteilung' : 'Mitteilungen'}`,
+    pt: (value) => `${value} ${value === 1 ? 'notificacao' : 'notificacoes'}`,
+    ru: (value) => `${value} notifications`,
+    pl: (value) => `${value} ${value === 1 ? 'powiadomienie' : 'powiadomienia'}`,
+    it: (value) => `${value} ${value === 1 ? 'notifica' : 'notifiche'}`,
+  };
+  return (labels[lang] || labels.en)(count);
+}
+
 function getInitialNfcEnabled(): boolean {
   try {
     return window.localStorage.getItem('gcphone:nfc-enabled') === '1';
@@ -164,7 +178,7 @@ export function ControlCenter() {
       appId,
       items,
       icon: APP_BY_ID[appId]?.icon || './img/icons_ios/settings.svg',
-      title: appName(appId, APP_BY_ID[appId]?.name || appId, language()).toUpperCase(),
+      title: appName(appId, APP_BY_ID[appId]?.name || appId, language()),
     }));
   });
 
@@ -395,10 +409,12 @@ export function ControlCenter() {
       itemEl.style.transform = `translate3d(${deltaX}px, 0, 0)`;
 
       if (trackEl) {
-        const bgLeft = trackEl.querySelector('[data-swipe-bg-left]') as HTMLElement;
-        const bgRight = trackEl.querySelector('[data-swipe-bg-right]') as HTMLElement;
-        if (bgLeft) bgLeft.classList.toggle(styles.swipeBgVisible, deltaX < -30);
-        if (bgRight) bgRight.classList.toggle(styles.swipeBgVisible, deltaX > 30);
+        const bg = trackEl.querySelector('[data-swipe-bg]') as HTMLElement;
+        if (bg) {
+          bg.classList.toggle(styles.swipeBgVisible, Math.abs(deltaX) > 30);
+          bg.classList.toggle(styles.swipeBgLeft, deltaX < 0);
+          bg.classList.toggle(styles.swipeBgRight, deltaX > 0);
+        }
       }
     };
 
@@ -421,10 +437,8 @@ export function ControlCenter() {
         itemEl.style.transition = '';
         itemEl.style.transform = '';
         if (trackEl) {
-          const bgLeft = trackEl.querySelector('[data-swipe-bg-left]') as HTMLElement;
-          const bgRight = trackEl.querySelector('[data-swipe-bg-right]') as HTMLElement;
-          if (bgLeft) bgLeft.classList.remove(styles.swipeBgVisible);
-          if (bgRight) bgRight.classList.remove(styles.swipeBgVisible);
+          const bg = trackEl.querySelector('[data-swipe-bg]') as HTMLElement;
+          if (bg) bg.className = styles.swipeBg;
         }
       }
     };
@@ -584,10 +598,10 @@ export function ControlCenter() {
                     <div class={styles.notificationGroup}>
                       <div class={styles.groupTitle}>
                         <img src={group.icon} alt="" />
-                        <span>{group.title}</span>
-                        <Show when={group.items.length > 1}>
-                          <small>{group.items.length}</small>
-                        </Show>
+                        <div class={styles.groupMeta}>
+                          <span>{group.title}</span>
+                          <small>{notificationCountLabel(group.items.length, language())}</small>
+                        </div>
                         <button
                           class={styles.muteAppBtn}
                           onClick={() => notificationsActions.toggleMuteApp(group.appId)}
@@ -600,8 +614,7 @@ export function ControlCenter() {
                           const swipe = createSwipeHandlers(item.id);
                           return (
                             <div class={styles.swipeTrack}>
-                              <div class={`${styles.swipeBg} ${styles.swipeBgRight}`} data-swipe-bg-right aria-hidden="true">{t('control.delete', language())}</div>
-                              <div class={`${styles.swipeBg} ${styles.swipeBgLeft}`} data-swipe-bg-left aria-hidden="true">{t('control.delete', language())}</div>
+                              <div class={styles.swipeBg} data-swipe-bg aria-hidden="true">{t('control.delete', language())}</div>
                               <button
                                 class={styles.notificationItem}
                                 onPointerDown={swipe.onPointerDown}
@@ -614,9 +627,12 @@ export function ControlCenter() {
                                   openRoute(item.route, item.data);
                                 }}
                               >
+                                <span class={styles.itemMeta}>
+                                  {group.title}
+                                  <small>{formatTime(item.createdAt)}</small>
+                                </span>
                                 <strong>
                                   <span>{item.title}</span>
-                                  <small>{formatTime(item.createdAt)}</small>
                                 </strong>
                                 <span>{item.message}</span>
                               </button>

@@ -801,13 +801,13 @@
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: var(--s-4);
+  gap: var(--s-3);
   padding: 0 2px;
 }
 
 .notification-group {
   display: grid;
-  gap: var(--s-2);
+  gap: var(--s-1);
   width: 100%;
 }
 
@@ -815,37 +815,40 @@
   display: flex;
   align-items: center;
   gap: var(--s-2);
-  min-height: 26px;
-  padding: 0 2px;
+  min-height: 34px;
+  padding: 0 4px;
 
   img {
-    width: 20px;
-    height: 20px;
+    width: 22px;
+    height: 22px;
     border-radius: 6px;
     flex-shrink: 0;
     filter: brightness(0) invert(1);
     opacity: 0.78;
   }
+}
+
+.group-meta {
+  min-width: 0;
+  flex: 1;
+  display: grid;
+  gap: 1px;
 
   span {
-    font-size: var(--fs-caption2);
+    font-size: var(--fs-caption1);
     font-weight: 800;
-    color: var(--cc-text-muted);
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
+    color: var(--cc-text);
+    letter-spacing: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   small {
-    min-width: 20px;
-    height: 20px;
-    padding: 0 6px;
-    border-radius: var(--r-pill);
-    display: inline-grid;
-    place-items: center;
-    background: rgba(255, 255, 255, 0.14);
-    color: var(--cc-text-soft);
     font-size: var(--fs-caption2);
-    font-weight: 800;
+    font-weight: 700;
+    color: var(--cc-text-muted);
+    line-height: 1.1;
   }
 }
 
@@ -903,15 +906,15 @@
 .notification-item {
   position: relative;
   width: 100%;
-  min-height: 64px;
+  min-height: 70px;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: var(--r-xl);
+  border-radius: 18px;
   background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.08)),
-    rgba(255, 255, 255, 0.1);
+    linear-gradient(145deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.09)),
+    rgba(255, 255, 255, 0.12);
   color: var(--cc-text);
   text-align: left;
-  padding: 10px 12px;
+  padding: 10px 12px 11px;
   display: grid;
   gap: 4px;
   cursor: pointer;
@@ -929,18 +932,12 @@
 
   strong {
     font-size: var(--fs-footnote);
-    font-weight: 700;
+    font-weight: 800;
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 6px;
     color: var(--cc-text);
-
-    small {
-      font-size: var(--fs-caption2);
-      font-weight: 600;
-      color: var(--cc-text-muted);
-    }
   }
 
   span {
@@ -949,6 +946,26 @@
     line-height: var(--lh-normal);
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+}
+
+.item-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--cc-text-muted) !important;
+  font-size: var(--fs-caption2) !important;
+  font-weight: 800;
+  text-transform: uppercase;
+  line-height: 1;
+
+  small {
+    flex-shrink: 0;
+    color: var(--cc-text-muted);
+    font-size: var(--fs-caption2);
+    font-weight: 700;
+    text-transform: none;
   }
 }
 
