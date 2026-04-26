@@ -523,11 +523,50 @@
 }
 
 .appRowMuted {
-  background: rgba(var(--text-rgb), 0.035);
+  background:
+    linear-gradient(90deg, rgba(var(--danger-rgb), 0.08), rgba(var(--text-rgb), 0.025)),
+    rgba(var(--text-rgb), 0.025);
+
+  :global(.ios18-switch) {
+    opacity: 0.72;
+  }
 }
 
 .emptyMutedRow {
   min-height: 58px;
+}
+
+.notificationFocusBanner {
+  min-height: 58px;
+  border-radius: var(--r-lg);
+  background:
+    linear-gradient(135deg, rgba(var(--tint-rgb), 0.16), rgba(var(--text-rgb), 0.035)),
+    var(--surface);
+  border: 1px solid rgba(var(--tint-rgb), 0.16);
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-3);
+
+  strong {
+    width: 34px;
+    height: 34px;
+    border-radius: var(--r-pill);
+    background: var(--tint);
+    color: #fff;
+    display: grid;
+    place-items: center;
+    font-size: var(--fs-title3);
+    font-weight: 800;
+  }
+
+  span {
+    color: var(--text-2);
+    font-size: var(--fs-footnote);
+    font-weight: 650;
+    line-height: 1.2;
+  }
 }
 
 .appIcon {

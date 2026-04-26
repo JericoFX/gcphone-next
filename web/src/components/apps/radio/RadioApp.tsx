@@ -1,4 +1,4 @@
-import { Switch, Match, createSignal, onMount, onCleanup, batch } from 'solid-js';
+import { Switch, Match, createEffect, createSignal, onMount, onCleanup, batch } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { fetchNui } from '../../../utils/fetchNui';
 import { useLiveActivity } from '../../../store/liveActivity';
@@ -372,6 +372,20 @@ export function RadioApp() {
       onNavigate: () => router.navigate('radio'),
     });
   };
+
+  let lastNfcRouteKey = '';
+  createEffect(() => {
+    const params = router.params() as { nfcAction?: string; requestId?: number; stationId?: number | string; from?: string };
+    if (params.nfcAction !== 'received_radio') return;
+    const key = `${params.requestId || 0}:${params.stationId || ''}`;
+    if (key === lastNfcRouteKey) return;
+    const stationId = Number(params.stationId || 0);
+    if (!Number.isFinite(stationId) || stationId <= 0) return;
+
+    lastNfcRouteKey = key;
+    setError(params.from ? `${params.from} compartio esta radio` : null);
+    void handleJoin(stationId);
+  });
 
   const handleEndBroadcast = async () => {
     const station = activeStation();

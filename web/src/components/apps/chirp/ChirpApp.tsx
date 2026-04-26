@@ -292,6 +292,23 @@ export function ChirpApp() {
 
   const getActionTweetId = (tweet: ChirpTweet) => Number(tweet.original_tweet_id || tweet.id);
 
+  let lastNfcRouteKey = '';
+  createEffect(() => {
+    const params = router.params() as { nfcAction?: string; requestId?: number; chirpTweetId?: number | string; from?: string };
+    if (params.nfcAction !== 'received_chirp') return;
+    const key = `${params.requestId || 0}:${params.chirpTweetId || ''}`;
+    if (key === lastNfcRouteKey) return;
+
+    const targetId = Number(params.chirpTweetId || 0);
+    const targetTweet = tweets().find((tweet) => getActionTweetId(tweet) === targetId) || tweets()[0];
+    if (!targetTweet) return;
+
+    lastNfcRouteKey = key;
+    setCurrentTab('forYou');
+    setStatusMessage(`${params.from || 'NFC'} compartio este chirp`);
+    void openTweetDetail(targetTweet);
+  });
+
   const toggleLike = async (e: Event, tweet: ChirpTweet) => {
     e.stopPropagation();
     const tweetId = getActionTweetId(tweet);

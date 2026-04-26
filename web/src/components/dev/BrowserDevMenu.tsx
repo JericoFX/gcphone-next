@@ -183,11 +183,12 @@ export function BrowserDevMenu() {
       detail: 'Todos los recibidos mock que deben navegar por notificacion.',
       actions: [
         { label: 'Core burst', detail: 'Foto, contacto, nota y mapa.', run: mockNfcIncomingBurst, tone: 'primary' },
-        { label: 'Social burst', detail: 'Chirp, Snap, radio y servicios.', run: mockNfcIncomingSocialBurst },
+        { label: 'Social burst', detail: 'Chirp, Snap, Clip, radio y servicios.', run: mockNfcIncomingSocialBurst },
         { label: 'Full NFC tour', detail: 'Recorre todos los tipos actuales.', run: mockNfcIncomingFullTour },
         { label: 'Factura NFC', detail: 'Abre Wallet con modal Banco/Cash.', run: () => mockNfcIncoming('invoice') },
         { label: 'Foto NFC', detail: 'Gallery muestra recibir/guardar/descartar.', run: () => mockNfcIncoming('photo') },
         { label: 'Documento NFC', detail: 'Muestra licencia recibida.', run: () => mockNfcIncoming('document') },
+        { label: 'Clip NFC', detail: 'Abre Clips en el video compartido.', run: () => mockNfcIncoming('clips') },
       ],
     },
     {

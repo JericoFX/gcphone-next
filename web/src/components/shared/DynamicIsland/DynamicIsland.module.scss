@@ -136,6 +136,8 @@
 .pillCount,
 .miniCount {
   flex-shrink: 0;
+  appearance: none;
+  border: 0;
   border-radius: 999px;
   display: inline-grid;
   place-items: center;
@@ -143,6 +145,7 @@
   color: #fff;
   font-weight: 800;
   line-height: 1;
+  cursor: pointer;
 }
 
 .pillCount {
@@ -157,6 +160,10 @@
   height: 13px;
   padding: 0 3px;
   font-size: 8px;
+
+  &:active {
+    background: rgba(255, 255, 255, 0.3);
+  }
 }
 
 .pillSubtitle {

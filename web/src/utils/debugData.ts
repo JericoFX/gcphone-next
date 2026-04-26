@@ -6,7 +6,7 @@ interface DebugEvent<T = unknown> {
   data: T;
 }
 
-type MockNfcKind = 'photo' | 'contact' | 'note' | 'maps' | 'chirp' | 'snap' | 'document' | 'invoice' | 'radio' | 'services';
+type MockNfcKind = 'photo' | 'contact' | 'note' | 'maps' | 'chirp' | 'snap' | 'clips' | 'document' | 'invoice' | 'radio' | 'services';
 
 export function debugData<P>(events: DebugEvent<P>[], timer = 1000): void {
   if (isEnvBrowser()) {
@@ -242,33 +242,62 @@ function buildMockNfcNotification(kind: MockNfcKind) {
     };
   }
 
-  const socialRoutes: Record<Exclude<MockNfcKind, 'photo' | 'contact' | 'note' | 'maps' | 'document' | 'invoice'>, { appId: string; title: string; message: string; text: string }> = {
-    chirp: { appId: 'chirp', title: 'Chirp NFC', message: 'Te compartieron un chirp', text: 'CHIRP:1' },
-    snap: { appId: 'snap', title: 'Snap NFC', message: 'Te compartieron un snap', text: 'SNAP:1' },
-    radio: { appId: 'radio', title: 'Radio NFC', message: 'Te compartieron una radio', text: 'RADIO:LS-UNDERGROUND' },
-    services: { appId: 'services', title: 'Servicio NFC', message: 'Te compartieron un servicio', text: 'SERVICE:mechanic' },
-  };
-  const item = socialRoutes[kind];
+  if (kind === 'chirp') {
+    return {
+      id: `mock-nfc-chirp-${requestId}`,
+      appId: 'chirp',
+      title: 'Chirp NFC',
+      message: `${from} te compartio un chirp`,
+      route: 'chirp',
+      priority: 'normal',
+      data: { nfcAction: 'received_chirp', requestId, from, chirpTweetId: 1, nfcPayload: { appId: 'chirp', route: 'chirp', text: 'CHIRP:1' } },
+    };
+  }
+
+  if (kind === 'snap') {
+    return {
+      id: `mock-nfc-snap-${requestId}`,
+      appId: 'snap',
+      title: 'Snap NFC',
+      message: `${from} te compartio un snap`,
+      route: 'snap',
+      priority: 'normal',
+      data: { nfcAction: 'received_snap', requestId, from, storyIndex: 0, mediaUrl: './img/background/playa.jpg', nfcPayload: { appId: 'snap', route: 'snap', text: 'SNAP:1' } },
+    };
+  }
+
+  if (kind === 'clips') {
+    return {
+      id: `mock-nfc-clips-${requestId}`,
+      appId: 'clips',
+      title: 'Clip NFC',
+      message: `${from} te compartio un clip`,
+      route: 'clips',
+      priority: 'normal',
+      data: { nfcAction: 'received_clip', requestId, from, clipId: 902, nfcPayload: { appId: 'clips', route: 'clips', text: 'CLIP:902' } },
+    };
+  }
+
+  if (kind === 'radio') {
+    return {
+      id: `mock-nfc-radio-${requestId}`,
+      appId: 'radio',
+      title: 'Radio NFC',
+      message: `${from} te compartio Los Santos FM`,
+      route: 'radio',
+      priority: 'normal',
+      data: { nfcAction: 'received_radio', requestId, from, stationId: 1, nfcPayload: { appId: 'radio', route: 'radio', text: 'RADIO:1' } },
+    };
+  }
 
   return {
-    id: `mock-nfc-${kind}-${requestId}`,
-    appId: item.appId,
-    title: item.title,
-    message: item.message,
-    route: item.appId,
+    id: `mock-nfc-services-${requestId}`,
+    appId: 'services',
+    title: 'Servicio NFC',
+    message: `${from} te compartio Taller Norte`,
+    route: 'services',
     priority: 'normal',
-    data: {
-      nfcAction: 'received_payload',
-      requestId,
-      from,
-      nfcPayload: {
-        appId: item.appId,
-        route: item.appId,
-        title: item.title,
-        message: item.message,
-        text: item.text,
-      },
-    },
+    data: { nfcAction: 'received_service', requestId, from, serviceId: 1, category: 'mechanic', nfcPayload: { appId: 'services', route: 'services', text: 'SERVICE:1' } },
   };
 }
 
@@ -289,7 +318,7 @@ export function mockNfcIncomingBurst() {
 
 export function mockNfcIncomingSocialBurst() {
   if (!isEnvBrowser()) return;
-  const kinds: MockNfcKind[] = ['chirp', 'snap', 'radio', 'services'];
+  const kinds: MockNfcKind[] = ['chirp', 'snap', 'clips', 'radio', 'services'];
   kinds.forEach((kind, index) => {
     setTimeout(() => emitInternalEvent('phone:notification', buildMockNfcNotification(kind)), 140 + index * 520);
   });
@@ -297,7 +326,7 @@ export function mockNfcIncomingSocialBurst() {
 
 export function mockNfcIncomingFullTour() {
   if (!isEnvBrowser()) return;
-  const kinds: MockNfcKind[] = ['photo', 'contact', 'note', 'maps', 'document', 'invoice', 'chirp', 'snap', 'radio', 'services'];
+  const kinds: MockNfcKind[] = ['photo', 'contact', 'note', 'maps', 'document', 'invoice', 'chirp', 'snap', 'clips', 'radio', 'services'];
   kinds.forEach((kind, index) => {
     setTimeout(() => emitInternalEvent('phone:notification', buildMockNfcNotification(kind)), 140 + index * 430);
   });

@@ -19,6 +19,18 @@ Use this checklist after UI, NUI callback, setup, NFC, or routing changes.
 5. Verify slider drag does not switch to the notification area.
 6. Trigger Wallet, Gallery, and Documents NFC actions with a nearby target.
 
+## Browser Mock At http://127.0.0.1:52341/
+
+1. Start the web server and open `http://127.0.0.1:52341/`.
+2. Unlock with the default browser PIN `1234`.
+3. Open Settings, Gallery, and WaveChat; return home after each one.
+4. Move between desktop pages and verify icons remain visible after opening and closing an app.
+5. Open recent apps, close one app, then close all; verify the phone never falls back to an empty wallpaper-only view.
+6. Open Notification Center, trigger mock notifications, mute one app, and tap the muted summary to land on Settings > Notifications.
+7. Trigger incoming NFC mocks for photo, contact, invoice, document, Chirp, Snap, Clips, Notes, Maps, Radio, and Services.
+8. Tap each NFC notification and verify it opens the matching app view or modal.
+9. For invoice NFC, verify the modal shows payment options for `Banco` and `Cash`.
+
 ## Core Apps
 
 1. Open each visible home app once.

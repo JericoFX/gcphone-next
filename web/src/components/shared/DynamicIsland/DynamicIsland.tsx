@@ -69,6 +69,13 @@ export function DynamicIsland() {
     setMinimized(false);
   };
 
+  const cycleActivity = (e: MouseEvent) => {
+    e.stopPropagation();
+    if (!multipleActivities()) return;
+    setActiveIndex((idx) => (idx + 1) % activities().length);
+    setMinimized(false);
+  };
+
   createEffect(() => {
     activitySignature();
     const expandedNow = expanded();
@@ -116,6 +123,7 @@ export function DynamicIsland() {
             [styles.islandExpanded]: isHome() && expanded(),
           }}
           onClick={handlePillClick}
+          title={multipleActivities() ? 'Toca el contador para alternar actividad' : currentActivity()?.title}
         >
         {/* Mini mode: wave bars only (inside apps) */}
         <Show when={!isHome()}>
@@ -123,7 +131,9 @@ export function DynamicIsland() {
           <span class={styles.miniWave} />
           <span class={styles.miniWave} />
           <Show when={multipleActivities()}>
-            <span class={styles.miniCount}>{activityCount()}</span>
+            <button class={styles.miniCount} onClick={cycleActivity} aria-label="Alternar actividad">
+              {activityCount()}
+            </button>
           </Show>
         </Show>
 
@@ -142,7 +152,9 @@ export function DynamicIsland() {
         <Show when={isHome() && !expanded() && minimized()}>
           <span class={`${styles.dot} ${dotColor()}`} />
           <Show when={multipleActivities()}>
-            <span class={styles.miniCount}>{activityCount()}</span>
+            <button class={styles.miniCount} onClick={cycleActivity} aria-label="Alternar actividad">
+              {activityCount()}
+            </button>
           </Show>
         </Show>
 

@@ -184,6 +184,28 @@ export function ClipsApp() {
     setShowProfileModal(true);
   });
 
+  let lastNfcRouteKey = '';
+  createEffect(() => {
+    const params = router.params() as { nfcAction?: string; requestId?: number; clipId?: number | string; from?: string };
+    if (params.nfcAction !== 'received_clip') return;
+    const key = `${params.requestId || 0}:${params.clipId || ''}`;
+    if (key === lastNfcRouteKey) return;
+
+    const targetId = Number(params.clipId || 0);
+    const targetIndex = clips().findIndex((clip) => Number(clip.id) === targetId);
+    if (targetIndex < 0 && clips().length === 0) return;
+
+    lastNfcRouteKey = key;
+    setCurrentTab('feed');
+    const nextIndex = targetIndex >= 0 ? targetIndex : 0;
+    setCurrentClipIndex(nextIndex);
+    setStatusMessage(`${params.from || 'NFC'} compartio este clip`);
+    window.setTimeout(() => {
+      if (!scrollContainer) return;
+      scrollContainer.scrollTo({ top: nextIndex * scrollContainer.clientHeight, behavior: 'smooth' });
+    }, 80);
+  });
+
   usePhoneKeyHandler({
     Backspace: () => {
       if (showComments()) { setShowComments(false); return; }

@@ -573,12 +573,12 @@
   display: grid;
   gap: var(--s-2);
   background:
-    linear-gradient(180deg, rgba(44, 48, 58, 0.62), rgba(24, 27, 34, 0.48)),
-    rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.18);
+    linear-gradient(180deg, rgba(36, 42, 54, 0.78), rgba(16, 20, 28, 0.62)),
+    rgba(255, 255, 255, 0.075);
+  border: 1px solid rgba(255, 255, 255, 0.16);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.1),
-    0 18px 44px rgba(0, 0, 0, 0.28);
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 18px 44px rgba(0, 0, 0, 0.34);
 }
 
 // Grabber handle
@@ -638,8 +638,8 @@
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  border: 1.5px solid rgba(255, 255, 255, 0.5);
-  background: transparent;
+  border: 1.5px solid rgba(255, 255, 255, 0.62);
+  background: rgba(255, 255, 255, 0.06);
   transition:
     background 180ms ease,
     border-color 180ms ease,
@@ -679,7 +679,8 @@
 
 .error-msg {
   font-size: var(--fs-footnote);
-  color: rgba(var(--danger-rgb), 0.7);
+  color: rgba(var(--danger-rgb), 0.86);
+  font-weight: 750;
 }
 
 // ---------------------------------------------------------------------------
@@ -701,10 +702,10 @@
 
 .key {
   border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.06)),
-    rgba(255, 255, 255, 0.08);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.08)),
+    rgba(255, 255, 255, 0.105);
   color: var(--ls-text-primary);
   font-size: 26px;
   font-weight: 300;
@@ -717,7 +718,7 @@
 }
 
 .key:active {
-  background: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.27);
   transform: scale(0.94);
 }
 
@@ -735,11 +736,11 @@
 }
 
 .sheet-actions button:last-child {
-  color: rgba(13, 24, 38, 0.9);
+  color: rgba(9, 20, 34, 0.94);
   background: linear-gradient(
     180deg,
-    rgba(255, 255, 255, 0.96),
-    rgba(222, 236, 255, 0.88)
+    rgba(255, 255, 255, 0.98),
+    rgba(221, 235, 255, 0.94)
   );
   border-color: rgba(255, 255, 255, 0.4);
 }
@@ -875,15 +876,15 @@
   width: 44px;
   height: 44px;
   border-radius: 50%;
-  color: rgba(var(--danger-rgb), 0.3);
+  color: rgba(var(--danger-rgb), 0.78);
   font-size: 11px;
   font-weight: 700;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   appearance: none;
-  background: rgba(var(--danger-rgb), 0.2);
-  border: 1px solid rgba(var(--danger-rgb), 0.35);
+  background: rgba(var(--danger-rgb), 0.18);
+  border: 1px solid rgba(var(--danger-rgb), 0.42);
   box-shadow: var(--shadow-1);
   transition:
     background 180ms ease,

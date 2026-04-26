@@ -13,7 +13,11 @@ export function DesktopPager(props: DesktopPagerProps) {
 
   return (
     <div class={styles.pager}>
-      <button class={styles.pageBtn} onClick={() => props.onPageChange(props.currentPage() - 1)}>
+      <button
+        class={styles.pageBtn}
+        data-testid="desktop-page-prev"
+        onClick={() => props.onPageChange(props.currentPage() - 1)}
+      >
         <img src="./img/icons_ios/ui-chevron-left.svg" alt="" draggable={false} />
       </button>
       <div class={styles.pageDots}>
@@ -31,7 +35,11 @@ export function DesktopPager(props: DesktopPagerProps) {
           }}
         </For>
       </div>
-      <button class={styles.pageBtn} onClick={() => props.onPageChange(props.currentPage() + 1)}>
+      <button
+        class={styles.pageBtn}
+        data-testid="desktop-page-next"
+        onClick={() => props.onPageChange(props.currentPage() + 1)}
+      >
         <img src="./img/icons_ios/ui-chevron-right.svg" alt="" draggable={false} />
       </button>
     </div>

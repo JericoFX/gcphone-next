@@ -213,6 +213,9 @@ export function ControlCenter() {
       .slice(0, 3)
       .map((appId) => appName(appId, APP_BY_ID[appId]?.name || appId, language()))
   ));
+  const mutedSummaryLabel = createMemo(() => (
+    mutedAppsCount() > 0 ? mutedAppLabels().join(', ') : 'Ajustes de notificaciones'
+  ));
 
   const dayLabel = createMemo(() => {
     const now = new Date();
@@ -650,9 +653,9 @@ export function ControlCenter() {
               >
                 <span>{t('control.muted', language())}</span>
                 <strong>{mutedAppsCount()}</strong>
-                <Show when={mutedAppsCount() > 0} fallback={<small>{t('control.notifications', language())}</small>}>
+                <Show when={mutedAppsCount() > 0} fallback={<small>Abrir ajustes</small>}>
                   <small>
-                    {mutedAppLabels().join(', ')}
+                    {mutedSummaryLabel()}
                     <Show when={mutedAppsCount() > mutedAppLabels().length}> +{mutedAppsCount() - mutedAppLabels().length}</Show>
                   </small>
                 </Show>
@@ -660,7 +663,12 @@ export function ControlCenter() {
             </div>
 
             <div class={styles.notificationList}>
-              <Show when={groupedNotifications().length > 0} fallback={<div class={styles.empty}>{t('notifications.none_saved', language())}</div>}>
+              <Show when={groupedNotifications().length > 0} fallback={
+                <div class={styles.empty}>
+                  <strong>{t('notifications.none_saved', language())}</strong>
+                  <span>Las notificaciones nuevas apareceran agrupadas por app.</span>
+                </div>
+              }>
                 <For each={groupedNotifications()}>
                   {(group, groupIndex) => (
                     <Motion.div
@@ -684,7 +692,7 @@ export function ControlCenter() {
                           </div>
                           <small>
                             {notificationCountLabel(group.items.length, language())}
-                            <Show when={group.latestAt > 0}> · {formatTime(group.latestAt)}</Show>
+                            <Show when={group.latestAt > 0}> - {formatTime(group.latestAt)}</Show>
                           </small>
                         </div>
                       </div>
@@ -724,11 +732,11 @@ export function ControlCenter() {
                                 }}
                               >
                                 <span class={styles.itemMeta}>
-                                  {group.title}
+                                  <span>{item.title}</span>
                                   <small>{formatTime(item.createdAt)}</small>
                                 </span>
                                 <strong>
-                                  <span>{item.title}</span>
+                                  <span>{group.title}</span>
                                 </strong>
                                 <span>{item.message}</span>
                               </button>

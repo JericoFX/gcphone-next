@@ -537,6 +537,25 @@ export function SnapApp() {
     setStatusMessage(t('snap.avatar_ready', language()));
   });
 
+  let lastNfcRouteKey = '';
+  createEffect(() => {
+    const params = router.params() as { nfcAction?: string; requestId?: number; storyIndex?: number | string; mediaUrl?: string; from?: string };
+    if (params.nfcAction !== 'received_snap') return;
+    const key = `${params.requestId || 0}:${params.storyIndex || ''}:${params.mediaUrl || ''}`;
+    if (key === lastNfcRouteKey) return;
+
+    lastNfcRouteKey = key;
+    setActiveTab('feed');
+    const index = Number(params.storyIndex ?? 0);
+    if (Number.isFinite(index) && stories()[index]) {
+      setActiveStoryIndex(index);
+    } else {
+      const mediaUrl = sanitizeMediaUrl(typeof params.mediaUrl === 'string' ? params.mediaUrl : '');
+      if (mediaUrl) setViewerUrl(mediaUrl);
+    }
+    setStatusMessage(`${params.from || 'NFC'} compartio este snap`);
+  });
+
   onCleanup(() => {
     if (fabTimeout) window.clearTimeout(fabTimeout);
     clearFloatingTimers();

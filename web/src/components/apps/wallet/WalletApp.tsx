@@ -599,8 +599,8 @@ export function WalletApp() {
             <div class={styles.invoiceMethodLabel}>Metodo de pago</div>
             <div class={styles.invoiceActionsRow3}>
               <button class={styles.invoiceAction} onClick={() => void respondInvoice(false)}>{t('wallet.reject', language())}</button>
-              <button class={styles.invoiceAction} onClick={() => void respondInvoice(true, 'cash')}>{t('wallet.pay_cash_btn', language())}</button>
-              <button class={`${styles.invoiceAction} ${styles.invoiceActionPrimary}`} onClick={() => void respondInvoice(true, 'bank')}>{t('wallet.pay_bank_btn', language())}</button>
+              <button class={styles.invoiceAction} onClick={() => void respondInvoice(true, 'cash')}>Cash</button>
+              <button class={`${styles.invoiceAction} ${styles.invoiceActionPrimary}`} onClick={() => void respondInvoice(true, 'bank')}>Banco</button>
             </div>
           </Show>
         </Modal>

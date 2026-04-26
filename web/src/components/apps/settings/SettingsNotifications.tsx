@@ -78,6 +78,10 @@ export function SettingsNotifications(props: SettingsNotificationsProps) {
       </div>
 
       <Show when={props.focus === 'muted'}>
+        <div class={styles.notificationFocusBanner}>
+          <strong>{mutedApps().length}</strong>
+          <span>{mutedApps().length === 1 ? 'app silenciada desde el centro de notificaciones' : 'apps silenciadas desde el centro de notificaciones'}</span>
+        </div>
         <SectionHeader title="SILENCIADAS" />
         <div class="ios18-list">
           <Show when={mutedApps().length > 0} fallback={

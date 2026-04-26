@@ -735,7 +735,7 @@ const resetMockPhoneData = () => {
   state.notificationTone = 'notif_1';
   state.messageTone = 'msg_1';
   state.volume = 0.5;
-  state.lockCode = '0000';
+  state.lockCode = '1234';
   state.theme = 'light';
   state.language = 'es';
   state.audioProfile = 'normal';
@@ -1183,7 +1183,7 @@ const emitHiddenMockNotification = (payload?: Partial<Record<string, unknown>>) 
   }, 120);
 };
 
-type MockNfcKind = 'photo' | 'contact' | 'note' | 'maps' | 'chirp' | 'snap' | 'document' | 'invoice' | 'radio' | 'services';
+type MockNfcKind = 'photo' | 'contact' | 'note' | 'maps' | 'chirp' | 'snap' | 'clips' | 'document' | 'invoice' | 'radio' | 'services';
 
 const buildIncomingNfcNotification = (kind: MockNfcKind = 'photo') => {
   const requestId = Date.now() + Math.floor(Math.random() * 1000);
@@ -1315,10 +1315,95 @@ const buildIncomingNfcNotification = (kind: MockNfcKind = 'photo') => {
     };
   }
 
-  if (kind === 'chirp') return generic('chirp', 'Chirp NFC', 'Te compartieron un chirp', 'CHIRP:1');
-  if (kind === 'snap') return generic('snap', 'Snap NFC', 'Te compartieron un snap', 'SNAP:1');
-  if (kind === 'radio') return generic('radio', 'Radio NFC', 'Te compartieron una radio', 'RADIO:LS-UNDERGROUND');
-  return generic('services', 'Servicio NFC', 'Te compartieron un servicio', 'SERVICE:mechanic');
+  if (kind === 'chirp') {
+    return {
+      id: `mock-nfc-chirp-${requestId}`,
+      appId: 'chirp',
+      title: 'Chirp NFC',
+      message: `${from} te compartio un chirp`,
+      route: 'chirp',
+      priority: 'normal',
+      data: {
+        nfcAction: 'received_chirp',
+        requestId,
+        from,
+        chirpTweetId: 1,
+        nfcPayload: { appId: 'chirp', route: 'chirp', text: 'CHIRP:1' },
+      },
+    };
+  }
+
+  if (kind === 'snap') {
+    return {
+      id: `mock-nfc-snap-${requestId}`,
+      appId: 'snap',
+      title: 'Snap NFC',
+      message: `${from} te compartio un snap`,
+      route: 'snap',
+      priority: 'normal',
+      data: {
+        nfcAction: 'received_snap',
+        requestId,
+        from,
+        storyIndex: 0,
+        mediaUrl: './img/background/playa.jpg',
+        nfcPayload: { appId: 'snap', route: 'snap', text: 'SNAP:1' },
+      },
+    };
+  }
+
+  if (kind === 'clips') {
+    return {
+      id: `mock-nfc-clips-${requestId}`,
+      appId: 'clips',
+      title: 'Clip NFC',
+      message: `${from} te compartio un clip`,
+      route: 'clips',
+      priority: 'normal',
+      data: {
+        nfcAction: 'received_clip',
+        requestId,
+        from,
+        clipId: 902,
+        nfcPayload: { appId: 'clips', route: 'clips', text: 'CLIP:902' },
+      },
+    };
+  }
+
+  if (kind === 'radio') {
+    return {
+      id: `mock-nfc-radio-${requestId}`,
+      appId: 'radio',
+      title: 'Radio NFC',
+      message: `${from} te compartio Los Santos FM`,
+      route: 'radio',
+      priority: 'normal',
+      data: {
+        nfcAction: 'received_radio',
+        requestId,
+        from,
+        stationId: 1,
+        nfcPayload: { appId: 'radio', route: 'radio', text: 'RADIO:1' },
+      },
+    };
+  }
+
+  return {
+    id: `mock-nfc-services-${requestId}`,
+    appId: 'services',
+    title: 'Servicio NFC',
+    message: `${from} te compartio Taller Norte`,
+    route: 'services',
+    priority: 'normal',
+    data: {
+      nfcAction: 'received_service',
+      requestId,
+      from,
+      serviceId: 1,
+      category: 'mechanic',
+      nfcPayload: { appId: 'services', route: 'services', text: 'SERVICE:1' },
+    },
+  };
 };
 
 const chirpCloneTweets = (tab: MockChirpTab) =>
@@ -1381,7 +1466,11 @@ export function setupBrowserMock() {
     },
     showHome: () => {
       state.requiresSetup = false;
-      showMockPhone();
+      showMockPhone({ useLockScreen: false, forceLockScreen: false });
+    },
+    showUnlocked: () => {
+      state.requiresSetup = false;
+      showMockPhone({ useLockScreen: false, forceLockScreen: false });
     },
     showSetup: () => {
       state.requiresSetup = false;
@@ -1390,6 +1479,18 @@ export function setupBrowserMock() {
     showLocked: () => {
       state.requiresSetup = false;
       showMockPhone({ useLockScreen: true, forceLockScreen: true });
+    },
+    goHome: () => {
+      emitInternalEvent('phone:openRoute', { route: 'home', data: {} });
+    },
+    keyUp: (key = 'Backspace') => {
+      emitInternalEvent('phone:keyUp', String(key));
+    },
+    openControlCenter: () => {
+      emitInternalEvent('phone:openControlCenter', {});
+    },
+    openNotificationCenter: () => {
+      emitInternalEvent('phone:openNotificationCenter', {});
     },
     boot: () => {
       bootMockPhone();

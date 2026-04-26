@@ -176,6 +176,25 @@ export function ServicesApp() {
     setRateScore(0);
   };
 
+  let lastNfcRouteKey = '';
+  createEffect(() => {
+    const params = router.params() as { nfcAction?: string; requestId?: number; serviceId?: number | string; category?: string; from?: string };
+    if (params.nfcAction !== 'received_service') return;
+    const key = `${params.requestId || 0}:${params.serviceId || ''}:${params.category || ''}`;
+    if (key === lastNfcRouteKey) return;
+
+    const targetId = Number(params.serviceId || 0);
+    const category = sanitizeText(String(params.category || ''), 40);
+    if (category) setSelectedCategory(category);
+    setCurrentTab('browse');
+
+    const targetWorker = listings().find((worker) => Number(worker.id) === targetId) || listings()[0];
+    if (!targetWorker) return;
+
+    lastNfcRouteKey = key;
+    void openWorker(targetWorker);
+  });
+
   const callWorker = () => {
     const worker = selectedWorker();
     if (!worker?.phone_number) return;
