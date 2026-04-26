@@ -204,7 +204,7 @@ local function ResolveSetupState(identifier)
     local featureFlags = GetFeatureFlags()
 
     local phone = MySQL.single.await(
-        'SELECT is_setup, clips_username, pin_hash FROM phone_numbers WHERE identifier = ? LIMIT 1',
+        'SELECT is_setup, clips_username, lock_code, pin_hash FROM phone_numbers WHERE identifier = ? LIMIT 1',
         { identifier }
     )
 
@@ -225,7 +225,10 @@ local function ResolveSetupState(identifier)
     local hasChirp = type(chirp) == 'string' and chirp ~= ''
     local hasClips = phone and type(phone.clips_username) == 'string' and phone.clips_username ~= ''
     local hasMail = not featureFlags.mail or (type(mail) == 'string' and mail ~= '')
-    local hasPin = phone and type(phone.pin_hash) == 'string' and phone.pin_hash ~= ''
+    local hasPin = phone and (
+        (type(phone.pin_hash) == 'string' and phone.pin_hash ~= '') or
+        (type(phone.lock_code) == 'string' and phone.lock_code ~= '' and phone.lock_code ~= '0000')
+    )
 
     local explicitlySetup = phone and isTruthy(phone.is_setup)
     local complete = explicitlySetup and hasPin and hasSnap and hasChirp and hasClips and hasMail
