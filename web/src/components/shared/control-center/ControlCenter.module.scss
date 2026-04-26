@@ -45,7 +45,6 @@
   background:
     radial-gradient(120% 85% at 50% -15%, rgba(120, 165, 255, 0.16), transparent 52%),
     var(--cc-bg);
-  backdrop-filter: blur(18px) saturate(1.25);
   animation: cc-overlay-in 220ms ease-out;
 }
 
@@ -1009,12 +1008,10 @@
   from {
     opacity: 0;
     transform: translate3d(0, -26px, 0) scale(0.985);
-    filter: blur(3px);
   }
   to {
     opacity: 1;
     transform: translate3d(0, 0, 0) scale(1);
-    filter: blur(0);
   }
 }
 

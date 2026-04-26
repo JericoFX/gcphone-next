@@ -407,7 +407,6 @@ const openRealtimePanel = () => {
   root.style.overflow = 'auto';
   root.style.padding = '12px';
   root.style.background = 'rgba(14,18,24,0.92)';
-  root.style.backdropFilter = 'blur(8px)';
   root.style.border = '1px solid rgba(255,255,255,0.14)';
   root.style.borderRadius = '12px';
   root.style.zIndex = '999999';
