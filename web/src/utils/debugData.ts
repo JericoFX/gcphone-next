@@ -287,6 +287,72 @@ export function mockNfcIncomingBurst() {
   });
 }
 
+export function mockNfcIncomingSocialBurst() {
+  if (!isEnvBrowser()) return;
+  const kinds: MockNfcKind[] = ['chirp', 'snap', 'radio', 'services'];
+  kinds.forEach((kind, index) => {
+    setTimeout(() => emitInternalEvent('phone:notification', buildMockNfcNotification(kind)), 140 + index * 520);
+  });
+}
+
+export function mockNfcIncomingFullTour() {
+  if (!isEnvBrowser()) return;
+  const kinds: MockNfcKind[] = ['photo', 'contact', 'note', 'maps', 'document', 'invoice', 'chirp', 'snap', 'radio', 'services'];
+  kinds.forEach((kind, index) => {
+    setTimeout(() => emitInternalEvent('phone:notification', buildMockNfcNotification(kind)), 140 + index * 430);
+  });
+}
+
+export function mockNotificationBurst() {
+  if (!isEnvBrowser()) return;
+  const now = Date.now();
+  const notifications = [
+    {
+      id: `mock-notif-msg-${now}`,
+      appId: 'messages',
+      title: 'Mensajes',
+      message: 'Rafa: Llegamos en 5.',
+      icon: './img/icons_ios/messages.svg',
+      route: 'messages',
+      priority: 'normal',
+    },
+    {
+      id: `mock-notif-bank-${now}`,
+      appId: 'bank',
+      title: 'Banco',
+      message: 'Transferencia recibida: $2,500',
+      icon: './img/icons_ios/bank.svg',
+      route: 'bank',
+      priority: 'normal',
+    },
+    {
+      id: `mock-notif-chirp-${now}`,
+      appId: 'chirp',
+      title: 'Chirp',
+      message: 'Maria hizo rechirp de tu publicacion.',
+      icon: './img/icons_ios/chirp.svg',
+      route: 'chirp',
+      priority: 'normal',
+    },
+    {
+      id: `mock-notif-wallet-${now}`,
+      appId: 'wallet',
+      title: 'Wallet',
+      message: 'Factura NFC pendiente de pago.',
+      icon: './img/icons_ios/wallet.svg',
+      route: 'wallet',
+      priority: 'high',
+    },
+  ];
+
+  notifications.forEach((notification, index) => {
+    setTimeout(() => emitInternalEvent('phone:notification', {
+      ...notification,
+      durationMs: 3600,
+    }), 120 + index * 420);
+  });
+}
+
 export function mockContacts() {
   debugData([
     {
