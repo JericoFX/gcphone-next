@@ -16,7 +16,8 @@ $luaFiles = @(
   'client\nui\notifications.lua',
   'client\nui\settings.lua',
   'client\nui\gallery.lua',
-  'client\nui\bank_wallet.lua'
+  'client\nui\bank_wallet.lua',
+  'client\nui\sdk_permissions.lua'
 )
 
 function Invoke-Step {

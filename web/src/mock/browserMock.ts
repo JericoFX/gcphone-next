@@ -708,6 +708,7 @@ const phonePayload = () => ({
     hasChirp: !state.requiresSetup,
     hasClips: !state.requiresSetup,
     hasMail: !state.requiresSetup || Boolean(state.mailAccount),
+    hasPin: !state.requiresSetup && Boolean(state.lockCode),
     mailDomain: state.mailDomain,
     emergencyContacts: state.emergencyContacts,
   },

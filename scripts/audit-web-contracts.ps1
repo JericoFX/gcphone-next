@@ -12,6 +12,8 @@ $phoneFramePath = Join-Path $webSrc 'components\Phone\PhoneFrame.tsx'
 $nuiTypesPath = Join-Path $webSrc 'types\nui.ts'
 $localeDir = Join-Path $webSrc 'locales'
 $distDir = Join-Path $root 'web\dist\assets'
+$sdkPermissionsBridgePath = Join-Path $root 'client\nui\sdk_permissions.lua'
+$sdkServerPath = Join-Path $root 'server\modules\sdk.lua'
 
 function Fail($message) {
   throw "[audit-web-contracts] $message"
@@ -97,6 +99,34 @@ $unknownFetches = $fetchKnownNames | Where-Object { $_ -notin $responseMapKeys }
 if ($unknownFetches) { Fail "fetchKnownNui events missing NuiResponseMap entries: $($unknownFetches -join ', ')" }
 
 Write-Host "Typed fetchKnownNui events checked: $($fetchKnownNames.Count)"
+
+Write-Host '==> SDK permission bridge audit'
+
+$sdkBridge = ReadText $sdkPermissionsBridgePath
+$sdkServer = ReadText $sdkServerPath
+$sdkPermissionCallbacks = @(
+  @{ Nui = 'sdkGetAllAppPermissions'; Server = 'gcphone:sdk:getAllAppPermissions' },
+  @{ Nui = 'sdkGetBlockedApps'; Server = 'gcphone:sdk:getBlockedApps' },
+  @{ Nui = 'sdkSetPermission'; Server = 'gcphone:sdk:setPermission' },
+  @{ Nui = 'sdkGrantAllPermissions'; Server = 'gcphone:sdk:grantAllPermissions' },
+  @{ Nui = 'sdkDenyAllPermissions'; Server = 'gcphone:sdk:denyAllPermissions' },
+  @{ Nui = 'sdkBlockApp'; Server = 'gcphone:sdk:blockApp' },
+  @{ Nui = 'sdkUnblockApp'; Server = 'gcphone:sdk:unblockApp' }
+)
+
+foreach ($callback in $sdkPermissionCallbacks) {
+  if ($sdkBridge -notmatch [regex]::Escape("RegisterNUICallback('$($callback.Nui)'")) {
+    Fail "Missing NUI callback for $($callback.Nui)"
+  }
+  if ($sdkBridge -notmatch [regex]::Escape($callback.Server)) {
+    Fail "NUI callback $($callback.Nui) does not call $($callback.Server)"
+  }
+  if ($sdkServer -notmatch [regex]::Escape("lib.callback.register('$($callback.Server)'")) {
+    Fail "Missing server callback $($callback.Server)"
+  }
+}
+
+Write-Host "SDK permission callbacks checked: $($sdkPermissionCallbacks.Count)"
 
 Write-Host '==> Removed app runtime reference audit'
 

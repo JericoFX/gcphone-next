@@ -689,19 +689,6 @@ export function ControlCenter() {
                     <small>{selectedNfcTargetIndex() + 1}/{nearbyPlayers().length}</small>
                   </Show>
                 </button>
-                <Show when={nfcEnabled() && nearbyPlayers().length > 1}>
-                  <div class={styles.nfcPeopleRow}>
-                    <For each={nearbyPlayers()}>
-                      {(player) => (
-                        <button
-                          classList={{ [styles.nfcPersonActive]: player.serverId === selectedNfcTarget()?.serverId }}
-                          onClick={() => setNfcTargetServerId(player.serverId)}
-                          title={`${player.name} - ${player.distance.toFixed(1)}m`}
-                        />
-                      )}
-                    </For>
-                  </div>
-                </Show>
                 <div class={styles.nfcActionRow}>
                   <button
                     disabled={!nfcEnabled() || !selectedNfcTarget()}

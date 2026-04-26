@@ -67,7 +67,7 @@ export function LockScreen() {
   const swipeUnlockEnabled = () => phoneState.settings.swipeUnlock === true || !hasPinSet();
   const hasPinSet = () => {
     const lc = phoneState.settings.lockCode;
-    return !!lc && lc !== '0000';
+    return phoneState.setup?.hasPin === true || (!!lc && lc !== '0000');
   };
 
   let timer: number | undefined;

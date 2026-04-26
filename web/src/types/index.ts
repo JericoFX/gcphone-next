@@ -104,6 +104,7 @@ export interface PhoneSetupState {
   hasChirp?: boolean;
   hasClips?: boolean;
   hasMail?: boolean;
+  hasPin?: boolean;
   mailDomain?: string;
   emergencyContacts?: Array<{
     label: string;

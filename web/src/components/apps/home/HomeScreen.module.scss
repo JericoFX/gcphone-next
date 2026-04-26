@@ -59,6 +59,15 @@
   }
 }
 
+.home-actions {
+  position: relative;
+  z-index: 4;
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin: -4px 0 8px;
+}
+
 .edit-btn {
   border: none;
   border-radius: 999px;

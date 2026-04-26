@@ -306,21 +306,20 @@ export function YellowPagesApp() {
             </button>
           </div>
           
-          {/* Category Filter */}
-          <div class={styles.categoryFilter}>
-            <For each={categories()}>
-              {(cat) => (
-                <button
-                  class={styles.categoryChip}
-                  classList={{ [styles.active]: selectedCategory() === cat.id }}
-                  onClick={() => setSelectedCategory(cat.id)}
-                >
-                  <span class={styles.catIcon}><img src={getCategoryIcon(cat.id)} alt="" /></span>
-                  <span class={styles.catName}>{cat.name}</span>
-                </button>
-              )}
-            </For>
-          </div>
+          <label class={styles.categorySelectRow}>
+            <span class={styles.categorySelectIcon}>
+              <img src={getCategoryIcon(selectedCategory())} alt="" />
+            </span>
+            <select
+              class={styles.categorySelect}
+              value={selectedCategory()}
+              onChange={(event) => setSelectedCategory(event.currentTarget.value)}
+            >
+              <For each={categories()}>
+                {(cat) => <option value={cat.id}>{cat.name}</option>}
+              </For>
+            </select>
+          </label>
         </div>
 
         {/* Tabs */}

@@ -625,10 +625,14 @@ export function CameraApp() {
         <Show when={controlsOpen()}>
           <div class={styles.controlsPanel}>
             <div class={styles.controlsHeader}>
-              <div class={styles.controlsHeaderLeft}>
-                <svg class={styles.controlsChevron} viewBox="0 0 24 24" fill="none" onClick={() => setControlsOpen(false)}><path d="M6 15l6-6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <button
+                class={styles.controlsHeaderLeft}
+                type="button"
+                onClick={() => setControlsOpen(false)}
+              >
+                <svg class={styles.controlsChevron} viewBox="0 0 24 24" fill="none"><path d="M6 15l6-6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
                 <span class={styles.controlsTitle}>{t('camera.controls', language())}</span>
-              </div>
+              </button>
               <button class={styles.controlsResetBtn} onClick={() => resetControls()}>
                 {t('camera.reset', language())}
               </button>

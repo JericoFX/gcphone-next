@@ -132,12 +132,6 @@ export function HomeScreen() {
       <div ref={homeRootRef} class={styles.homeScreen} style={{ 'background-image': `url(${state.settings.wallpaper})` }}>
         <div class={styles.statusBar}>
           <div class={styles.time}>{formatTime(currentTime())}</div>
-          <div class={styles.icons}>
-            <button class={styles.editBtn} onClick={() => setEditing((v) => !v)}>
-              {editing() ? t('home.done', language()) : t('home.edit', language())}
-            </button>
-            <button class={styles.searchBtn} onClick={openSearch}>{t('home.search', language())}</button>
-          </div>
         </div>
 
         <Show when={state.isStolen}>
@@ -164,6 +158,13 @@ export function HomeScreen() {
         <div class={styles.homeTime}>
           <div class={styles.timeLarge}>{formatTime(currentTime())}</div>
           <div class={styles.date}>{formatDate(currentTime())}</div>
+        </div>
+
+        <div class={styles.homeActions}>
+          <button class={styles.editBtn} onClick={() => setEditing((v) => !v)}>
+            {editing() ? t('home.done', language()) : t('home.edit', language())}
+          </button>
+          <button class={styles.searchBtn} onClick={openSearch}>{t('home.search', language())}</button>
         </div>
 
         <div

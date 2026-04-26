@@ -24,7 +24,7 @@ export function SettingsSecurity(props: SettingsSecurityProps) {
 
   const hasPinSet = () => {
     const code = props.phoneState.settings.lockCode;
-    return code && code !== '0000';
+    return props.phoneState.setup?.hasPin === true || (code && code !== '0000');
   };
 
   const validateAndSavePin = () => {

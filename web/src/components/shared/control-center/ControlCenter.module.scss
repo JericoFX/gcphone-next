@@ -5,7 +5,7 @@
   top: 0;
   left: 0;
   right: 0;
-  height: 8px;
+  height: 34px;
   display: grid;
   grid-template-columns: 1fr 1fr;
   z-index: 56;
@@ -345,8 +345,8 @@
   grid-row: span 2;
   padding: 9px;
   display: grid;
-  grid-template-rows: auto 1fr auto auto auto;
-  gap: 3px;
+  grid-template-rows: auto 1fr auto auto;
+  gap: 5px;
 }
 
 .nfc-header {
@@ -440,12 +440,15 @@
   position: relative;
   align-self: center;
   justify-self: center;
-  width: 34px;
-  height: 34px;
+  width: 58px;
+  height: 58px;
   border-radius: 50%;
   background:
-    radial-gradient(circle, rgba(255, 255, 255, 0.28) 0 6px, transparent 7px),
-    radial-gradient(circle, rgba(0, 122, 255, 0.32), rgba(0, 122, 255, 0.04) 62%, transparent 63%);
+    radial-gradient(circle, rgba(255, 255, 255, 0.36) 0 8px, transparent 9px),
+    radial-gradient(circle, rgba(0, 122, 255, 0.38), rgba(0, 122, 255, 0.1) 58%, transparent 64%);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.18),
+    0 0 18px rgba(0, 122, 255, 0.22);
 }
 
 .nfc-radar-pulse,
@@ -461,7 +464,7 @@
 }
 
 .nfc-radar-dot {
-  inset: 14px;
+  inset: 24px;
   background: #fff;
   border: 0;
   box-shadow: 0 0 16px rgba(0, 122, 255, 0.9);
@@ -508,31 +511,6 @@
     font-size: 9px;
     font-weight: 800;
   }
-}
-
-.nfc-people-row {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  min-height: 7px;
-
-  button {
-    width: 7px;
-    height: 7px;
-    border: 0;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.26);
-    cursor: pointer;
-    transition:
-      width 120ms ease,
-      background 120ms ease;
-  }
-}
-
-.nfc-person-active {
-  width: 16px !important;
-  border-radius: var(--r-pill) !important;
-  background: rgba(255, 255, 255, 0.86) !important;
 }
 
 .nfc-action-row {

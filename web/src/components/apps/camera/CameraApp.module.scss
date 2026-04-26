@@ -655,6 +655,15 @@
   display: flex;
   align-items: center;
   gap: 6px;
+  min-height: 28px;
+  padding: 0 8px 0 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+
+  &:active {
+    opacity: 0.7;
+  }
 }
 
 .controlsTitle {
@@ -669,11 +678,6 @@
   width: 14px;
   height: 14px;
   color: rgba(255, 255, 255, 0.5);
-  cursor: pointer;
-
-  &:active {
-    opacity: 0.6;
-  }
 }
 
 .controlsResetBtn {

@@ -237,6 +237,7 @@ local function ResolveSetupState(identifier)
         hasChirp = hasChirp,
         hasClips = hasClips,
         hasMail = hasMail,
+        hasPin = hasPin,
         mailDomain = featureFlags.mail and MailDomain() or nil,
         emergencyContacts = ResolveEmergencyContacts(),
     }
