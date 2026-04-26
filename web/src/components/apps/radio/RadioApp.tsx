@@ -375,11 +375,21 @@ export function RadioApp() {
 
   let lastNfcRouteKey = '';
   createEffect(() => {
-    const params = router.params() as { nfcAction?: string; requestId?: number; stationId?: number | string; from?: string };
-    if (params.nfcAction !== 'received_radio') return;
-    const key = `${params.requestId || 0}:${params.stationId || ''}`;
+    const params = router.params() as {
+      nfcAction?: string;
+      requestId?: number;
+      stationId?: number | string;
+      from?: string;
+      nfcPayload?: { route?: string; appId?: string; text?: string };
+    };
+    const isGenericPayload = params.nfcAction === 'received_payload'
+      && ['radio'].includes(String(params.nfcPayload?.route || params.nfcPayload?.appId || ''));
+    if (params.nfcAction !== 'received_radio' && !isGenericPayload) return;
+
+    const parsedStationId = Number(String(params.nfcPayload?.text || '').match(/RADIO:(\d+)/i)?.[1] || 0);
+    const stationId = Number(params.stationId || parsedStationId || 0);
+    const key = `${params.requestId || 0}:${stationId}`;
     if (key === lastNfcRouteKey) return;
-    const stationId = Number(params.stationId || 0);
     if (!Number.isFinite(stationId) || stationId <= 0) return;
 
     lastNfcRouteKey = key;

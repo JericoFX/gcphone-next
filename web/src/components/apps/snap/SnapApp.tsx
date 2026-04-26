@@ -539,9 +539,28 @@ export function SnapApp() {
 
   let lastNfcRouteKey = '';
   createEffect(() => {
-    const params = router.params() as { nfcAction?: string; requestId?: number; storyIndex?: number | string; mediaUrl?: string; from?: string };
-    if (params.nfcAction !== 'received_snap') return;
-    const key = `${params.requestId || 0}:${params.storyIndex || ''}:${params.mediaUrl || ''}`;
+    const params = router.params() as {
+      nfcAction?: string;
+      requestId?: number;
+      storyIndex?: number | string;
+      mediaUrl?: string;
+      from?: string;
+      nfcPayload?: { route?: string; appId?: string; text?: string; mediaUrl?: string };
+    };
+    const isGenericPayload = params.nfcAction === 'received_payload'
+      && ['snap'].includes(String(params.nfcPayload?.route || params.nfcPayload?.appId || ''));
+    if (params.nfcAction !== 'received_snap' && !isGenericPayload) return;
+
+    const payloadText = String(params.nfcPayload?.text || '');
+    const payloadPostId = Number(payloadText.match(/SNAP:(\d+)/i)?.[1] || 0);
+    const resolvedMediaUrl = sanitizeMediaUrl(
+      typeof params.mediaUrl === 'string'
+        ? params.mediaUrl
+        : typeof params.nfcPayload?.mediaUrl === 'string'
+          ? params.nfcPayload.mediaUrl
+          : '',
+    );
+    const key = `${params.requestId || 0}:${params.storyIndex || ''}:${payloadPostId}:${resolvedMediaUrl}`;
     if (key === lastNfcRouteKey) return;
 
     lastNfcRouteKey = key;
@@ -550,8 +569,12 @@ export function SnapApp() {
     if (Number.isFinite(index) && stories()[index]) {
       setActiveStoryIndex(index);
     } else {
-      const mediaUrl = sanitizeMediaUrl(typeof params.mediaUrl === 'string' ? params.mediaUrl : '');
-      if (mediaUrl) setViewerUrl(mediaUrl);
+      const sharedPost = payloadPostId > 0 ? posts().find((post) => Number(post.id) === payloadPostId) : undefined;
+      if (sharedPost?.media_url) {
+        setViewerUrl(sharedPost.media_url);
+      } else if (resolvedMediaUrl) {
+        setViewerUrl(resolvedMediaUrl);
+      }
     }
     setStatusMessage(`${params.from || 'NFC'} compartio este snap`);
   });

@@ -186,12 +186,22 @@ export function ClipsApp() {
 
   let lastNfcRouteKey = '';
   createEffect(() => {
-    const params = router.params() as { nfcAction?: string; requestId?: number; clipId?: number | string; from?: string };
-    if (params.nfcAction !== 'received_clip') return;
-    const key = `${params.requestId || 0}:${params.clipId || ''}`;
+    const params = router.params() as {
+      nfcAction?: string;
+      requestId?: number;
+      clipId?: number | string;
+      from?: string;
+      nfcPayload?: { route?: string; appId?: string; text?: string };
+    };
+    const isGenericPayload = params.nfcAction === 'received_payload'
+      && ['clips'].includes(String(params.nfcPayload?.route || params.nfcPayload?.appId || ''));
+    if (params.nfcAction !== 'received_clip' && !isGenericPayload) return;
+
+    const parsedClipId = Number(String(params.nfcPayload?.text || '').match(/CLIP:(\d+)/i)?.[1] || 0);
+    const targetId = Number(params.clipId || parsedClipId || 0);
+    const key = `${params.requestId || 0}:${targetId}`;
     if (key === lastNfcRouteKey) return;
 
-    const targetId = Number(params.clipId || 0);
     const targetIndex = clips().findIndex((clip) => Number(clip.id) === targetId);
     if (targetIndex < 0 && clips().length === 0) return;
 

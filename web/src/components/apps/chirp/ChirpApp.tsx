@@ -294,12 +294,22 @@ export function ChirpApp() {
 
   let lastNfcRouteKey = '';
   createEffect(() => {
-    const params = router.params() as { nfcAction?: string; requestId?: number; chirpTweetId?: number | string; from?: string };
-    if (params.nfcAction !== 'received_chirp') return;
-    const key = `${params.requestId || 0}:${params.chirpTweetId || ''}`;
+    const params = router.params() as {
+      nfcAction?: string;
+      requestId?: number;
+      chirpTweetId?: number | string;
+      from?: string;
+      nfcPayload?: { route?: string; appId?: string; text?: string };
+    };
+    const isGenericPayload = params.nfcAction === 'received_payload'
+      && ['chirp'].includes(String(params.nfcPayload?.route || params.nfcPayload?.appId || ''));
+    if (params.nfcAction !== 'received_chirp' && !isGenericPayload) return;
+
+    const parsedTweetId = Number(String(params.nfcPayload?.text || '').match(/CHIRP:(\d+)/i)?.[1] || 0);
+    const targetId = Number(params.chirpTweetId || parsedTweetId || 0);
+    const key = `${params.requestId || 0}:${targetId}`;
     if (key === lastNfcRouteKey) return;
 
-    const targetId = Number(params.chirpTweetId || 0);
     const targetTweet = tweets().find((tweet) => getActionTweetId(tweet) === targetId) || tweets()[0];
     if (!targetTweet) return;
 

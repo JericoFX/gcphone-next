@@ -509,6 +509,14 @@ export function ControlCenter() {
     sheetGestureStartY = e.clientY;
   };
 
+  const stopControlPointer = (event: PointerEvent) => {
+    event.stopPropagation();
+  };
+
+  const stopControlClick = (event: MouseEvent) => {
+    event.stopPropagation();
+  };
+
   const handleSheetPointerUp = (e: PointerEvent, sheet: 'notifications' | 'control') => {
     if ((e.target as HTMLElement | null)?.closest('[data-control-interactive="true"]')) return;
     const deltaX = e.clientX - sheetGestureStartX;
@@ -796,6 +804,12 @@ export function ControlCenter() {
               <Motion.section
                 class={`${styles.controlModule} ${styles.nfcModule}`}
                 classList={{ [styles.nfcModuleOff]: !nfcEnabled() }}
+                data-control-interactive="true"
+                onPointerDown={stopControlPointer}
+                onPointerMove={stopControlPointer}
+                onPointerUp={stopControlPointer}
+                onPointerCancel={stopControlPointer}
+                onClick={stopControlClick}
                 initial={{ opacity: 0, y: 10, scale: 0.97 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 transition={{ duration: 0.2 }}
@@ -804,6 +818,7 @@ export function ControlCenter() {
                   <button
                     class={styles.nfcTogglePill}
                     classList={{ [styles.nfcToggleActive]: nfcEnabled() }}
+                    data-testid="control-center-nfc-toggle"
                     onClick={toggleNfc}
                     title={nfcEnabled() ? 'NFC on' : nfcOffLabel(language())}
                   >

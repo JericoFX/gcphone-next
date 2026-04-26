@@ -178,13 +178,27 @@ export function ServicesApp() {
 
   let lastNfcRouteKey = '';
   createEffect(() => {
-    const params = router.params() as { nfcAction?: string; requestId?: number; serviceId?: number | string; category?: string; from?: string };
-    if (params.nfcAction !== 'received_service') return;
-    const key = `${params.requestId || 0}:${params.serviceId || ''}:${params.category || ''}`;
+    const params = router.params() as {
+      nfcAction?: string;
+      requestId?: number;
+      serviceId?: number | string;
+      category?: string;
+      from?: string;
+      nfcPayload?: { route?: string; appId?: string; text?: string };
+    };
+    const isGenericPayload = params.nfcAction === 'received_payload'
+      && ['services'].includes(String(params.nfcPayload?.route || params.nfcPayload?.appId || ''));
+    if (params.nfcAction !== 'received_service' && !isGenericPayload) return;
+
+    const payloadMatch = String(params.nfcPayload?.text || '').match(/SERVICE:(\d+)(?::([a-z0-9_-]+))?/i);
+    const parsedServiceId = Number(payloadMatch?.[1] || 0);
+    const parsedCategory = payloadMatch?.[2] || '';
+    const targetId = Number(params.serviceId || parsedServiceId || 0);
+    const targetCategory = String(params.category || parsedCategory || '');
+    const key = `${params.requestId || 0}:${targetId}:${targetCategory}`;
     if (key === lastNfcRouteKey) return;
 
-    const targetId = Number(params.serviceId || 0);
-    const category = sanitizeText(String(params.category || ''), 40);
+    const category = sanitizeText(targetCategory, 40);
     if (category) setSelectedCategory(category);
     setCurrentTab('browse');
 

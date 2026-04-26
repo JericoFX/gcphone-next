@@ -73,6 +73,42 @@ async function goHomeWithBackspace(page: Page) {
   await expectHomeVisible(page);
 }
 
+async function emitGenericNfcPayload(page: Page, payload: {
+  appId: string;
+  route: string;
+  title: string;
+  message: string;
+  text: string;
+  mediaUrl?: string;
+}) {
+  await page.evaluate((data) => {
+    window.dispatchEvent(new MessageEvent('message', {
+      data: {
+        action: 'phone:notification',
+        data: {
+          id: `nfc-payload-${Date.now()}`,
+          appId: data.appId,
+          title: data.title,
+          message: data.message,
+          priority: 'normal',
+          route: data.route,
+          data: {
+            nfcAction: 'received_payload',
+            nfcPayload: {
+              appId: data.appId,
+              route: data.route,
+              text: data.text,
+              mediaUrl: data.mediaUrl,
+            },
+            from: 'Lucia Mock',
+            requestId: Date.now(),
+          },
+        },
+      },
+    }));
+  }, payload);
+}
+
 test('requires the default PIN before entering home', async ({ page }) => {
   await openLockedPhone(page);
   await unlockWithPin(page);
@@ -125,8 +161,9 @@ test('supports drag gestures for top control surfaces', async ({ page }) => {
   await page.evaluate(() => window.gcphoneMock?.openControlCenter?.());
 
   await expect(page.getByTestId('control-center-sheet')).toBeVisible();
-  await page.getByRole('button', { name: 'Cerrar' }).last().click();
-  await expect(page.getByTestId('control-center-sheet')).toHaveCount(0);
+  await page.getByTestId('control-center-nfc-toggle').click();
+  await expect(page.getByTestId('control-center-sheet')).toBeVisible();
+  await expect(page.getByText(/NFC activado|NFC desactivado/).first()).toBeVisible();
 
   await page.evaluate(() => window.gcphoneMock?.openNotificationCenter?.());
 
@@ -176,4 +213,34 @@ test('opens NFC invoice mock from notification into payment modal', async ({ pag
   await expect(page.getByText('Cobro NFC recibido')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Banco', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Cash', exact: true })).toBeVisible();
+});
+
+test('opens generic NFC payload notifications for chirp and clips', async ({ page }) => {
+  await openUnlockedPhone(page);
+
+  await emitGenericNfcPayload(page, {
+    appId: 'chirp',
+    route: 'chirp',
+    title: 'Payload Chirp',
+    message: 'Lucia compartio un chirp',
+    text: 'CHIRP:1',
+  });
+  await page.evaluate(() => window.gcphoneMock?.openNotificationCenter?.());
+  await expect(page.getByTestId('notification-center-sheet')).toBeVisible();
+  await page.getByRole('button', { name: /Payload Chirp/ }).first().click();
+  await expect(page.getByText('Comentarios')).toBeVisible();
+
+  await goHomeWithBackspace(page);
+
+  await emitGenericNfcPayload(page, {
+    appId: 'clips',
+    route: 'clips',
+    title: 'Payload Clips',
+    message: 'Lucia compartio un clip',
+    text: 'CLIP:902',
+  });
+  await page.evaluate(() => window.gcphoneMock?.openNotificationCenter?.());
+  await expect(page.getByTestId('notification-center-sheet')).toBeVisible();
+  await page.getByRole('button', { name: /Payload Clips/ }).first().click();
+  await expect(page.getByText(/New Dominator tuning/i)).toBeVisible();
 });
