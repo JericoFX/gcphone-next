@@ -114,6 +114,10 @@ try {
     }
   }
 
+  Invoke-Step 'Web contract audit' {
+    & (Join-Path $root 'scripts\audit-web-contracts.ps1') -SkipBundleBudget:$SkipBuild
+  }
+
   Write-Host ""
   Write-Host 'All local checks passed.'
 } finally {

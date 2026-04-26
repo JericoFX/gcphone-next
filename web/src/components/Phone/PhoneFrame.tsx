@@ -428,6 +428,29 @@ export const PhoneFrame: ParentComponent & { Router: () => JSX.Element } = (
                   <h2 id={multitaskTitleId} class={styles.srOnly}>
                     Apps recientes
                   </h2>
+                  <div class={styles.multitaskHeader}>
+                    <div>
+                      <strong>Apps recientes</strong>
+                      <span>{recentRoutes().length} abiertas</span>
+                    </div>
+                    <Show when={recentRoutes().length > 0}>
+                      <button
+                        type='button'
+                        onClick={() => {
+                          for (const route of recentRoutes()) closeApp(route);
+                          setMultitaskOpen(false);
+                        }}
+                      >
+                        Cerrar todo
+                      </button>
+                    </Show>
+                  </div>
+                  <Show when={recentRoutes().length === 0}>
+                    <div class={styles.multitaskEmpty}>
+                      <strong>Sin apps recientes</strong>
+                      <span>Abre una app para verla aqui.</span>
+                    </div>
+                  </Show>
                   <For each={recentRoutes()}>
                     {(route) => {
                       const app = APP_BY_ID[route];

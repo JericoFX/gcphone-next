@@ -16,13 +16,14 @@ export function ScreenState(props: ScreenStateProps) {
     <>
       <Show when={props.loading}>
         <div class={styles.stateWrap}>
-          <div class={styles.loader} />
+          <div class={styles.stateGlyph}><div class={styles.loader} /></div>
           <div class={styles.title}>{t('state.loading', getStoredLanguage())}</div>
         </div>
       </Show>
 
       <Show when={!props.loading && props.error}>
         <div class={styles.stateWrap}>
+          <div class={styles.stateGlyph}>!</div>
           <div class={styles.title}>{t('state.error', getStoredLanguage())}</div>
           <div class={styles.desc}>{props.error}</div>
         </div>
@@ -30,6 +31,7 @@ export function ScreenState(props: ScreenStateProps) {
 
       <Show when={!props.loading && !props.error && props.empty}>
         <div class={styles.stateWrap}>
+          <div class={styles.stateGlyph}>*</div>
           <div class={styles.title}>{props.emptyTitle || t('state.empty', getStoredLanguage())}</div>
           <div class={styles.desc}>{props.emptyDescription || t('state.empty_desc', getStoredLanguage())}</div>
         </div>

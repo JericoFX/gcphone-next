@@ -10,6 +10,22 @@
   color: var(--text-3);
 }
 
+.emptyGlyph {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background:
+    linear-gradient(180deg, rgba(var(--surface-rgb), 0.94), rgba(var(--surface-rgb), 0.72)),
+    radial-gradient(100% 100% at 50% 0%, rgba(var(--tint-rgb), 0.16), rgba(var(--tint-rgb), 0));
+  box-shadow: var(--shadow-1);
+  color: var(--tint);
+  font-size: 24px;
+  font-weight: 800;
+}
+
 .emptyState strong {
   font-size: var(--fs-body);
   font-weight: 700;

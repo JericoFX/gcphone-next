@@ -217,6 +217,12 @@ export function PhoneSetup() {
     return selected?.name || language();
   });
 
+  const setupHighlights = createMemo(() => [
+    { label: t('setup.step.language', currentLanguage()), value: selectedLanguageLabel() },
+    { label: t('setup.step.security', currentLanguage()), value: pin().length === 4 ? copy().hiddenPin : t('setup.security.pin', currentLanguage()) },
+    { label: t('setup.security.mail_alias', currentLanguage()), value: mailAlias() ? `${mailAlias()}@${mailDomain()}` : mailDomain() },
+  ]);
+
   return (
     <div class={styles.setupRoot}>
       <div class={styles.card}>
@@ -224,6 +230,16 @@ export function PhoneSetup() {
           <p class={styles.eyebrow}>{t('setup.hero.eyebrow', currentLanguage())}</p>
           <h2>{t('setup.hero.title', currentLanguage())}</h2>
           <p class={styles.lead}>{t('setup.hero.lead', currentLanguage())}</p>
+          <div class={styles.heroSummary}>
+            <For each={setupHighlights()}>
+              {(item) => (
+                <div class={styles.heroSummaryItem}>
+                  <span>{item.label}</span>
+                  <strong>{item.value}</strong>
+                </div>
+              )}
+            </For>
+          </div>
         </div>
 
         <div class={styles.progress}>

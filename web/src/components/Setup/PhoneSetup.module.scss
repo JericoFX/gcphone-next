@@ -50,6 +50,43 @@
   color: var(--text-2, rgba(17,17,17,.72));
 }
 
+.heroSummary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--s-2, 8px);
+  margin-top: var(--s-2, 8px);
+}
+
+.heroSummaryItem {
+  min-width: 0;
+  padding: 7px 8px;
+  border: 1px solid var(--border, rgba(0,0,0,.12));
+  border-radius: var(--r-md, 12px);
+  background: rgba(var(--surface-rgb, 255,255,255), 0.74);
+  box-shadow: var(--shadow-1, 0 1px 2px rgba(0,0,0,.08));
+  text-align: left;
+}
+
+.heroSummaryItem span,
+.heroSummaryItem strong {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.heroSummaryItem span {
+  font-size: var(--fs-caption2, 0.6875rem);
+  color: var(--text-3, rgba(17,17,17,.52));
+  font-weight: 700;
+}
+
+.heroSummaryItem strong {
+  margin-top: 2px;
+  font-size: var(--fs-caption1, 0.75rem);
+  color: var(--text, #111111);
+}
+
 /* Progress indicator - iOS style */
 .progress {
   display: flex;
@@ -389,11 +426,12 @@
 }
 
 .buttonRow {
-     display: flex;
-    justify-content: space-around;
-    width: 100%;
-    grid-template-columns: repeat(2, minmax(0, 2fr));
-    margin-bottom: 6px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s-2, 8px);
+  width: 100%;
+  padding: 0 var(--s-3, 12px);
+  margin-bottom: 6px;
 }
 
 .secondaryButton,
@@ -402,7 +440,7 @@
   border: 1px solid var(--border, rgba(0,0,0,.12));
   border-radius: var(--r-pill, 999px);
   padding: 10px 14px;
-  width:37%;
+  width: 100%;
   min-height: 40px;
   font-size: var(--fs-footnote, 0.8125rem);
   font-weight: 600;
