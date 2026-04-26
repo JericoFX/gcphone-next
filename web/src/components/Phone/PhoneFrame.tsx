@@ -399,7 +399,7 @@ export const PhoneFrame: ParentComponent<{ router?: boolean }> & { Router: () =>
             </div>
           </Show>
           {props.children}
-          <DynamicIsland />
+          <DynamicIsland locked={phoneState.locked} />
 
           <Show when={!phoneState.requiresSetup && !phoneState.locked}>
             <button

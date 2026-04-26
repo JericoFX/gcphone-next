@@ -8,6 +8,8 @@ type MockPhoneApi = {
   openControlCenter?: () => void;
   openNotificationCenter?: () => void;
   incomingNfc?: (kind?: string) => void;
+  setLiveActivities?: () => void;
+  clearLiveActivities?: () => void;
 };
 
 declare global {
@@ -291,6 +293,18 @@ test('opens muted notifications summary into settings notifications', async ({ p
   await expect(page.getByTestId('notification-center-sheet')).toBeVisible();
 
   await page.getByRole('button', { name: /Silenciar|Mute/i }).first().click();
+  await expect(page.getByTestId('phone-notification-banner')).toHaveCount(0, { timeout: 5000 });
+  await emitGenericNfcPayload(page, {
+    appId: 'notes',
+    route: 'notes',
+    title: 'Muted Payload Notes',
+    message: 'Entregado en silencio',
+    text: NFC_NOTE_TEXT,
+  });
+  await expect(page.getByTestId('notification-center-sheet')).toBeVisible();
+  await expect(page.getByTestId('phone-notification-banner')).toHaveCount(0);
+  await expect(page.getByTestId('notification-center-sheet').getByRole('button', { name: /Muted Payload Notes/i })).toBeVisible();
+
   await page.getByTestId('notification-muted-summary').click();
 
   await expect(page.getByRole('button', { name: /Marcar todas como leidas|Mark all as read/i })).toBeVisible();
@@ -341,6 +355,17 @@ test('opens NFC invoice mock from notification into payment modal', async ({ pag
   await expect(page.getByRole('button', { name: 'Banco', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Cash', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Banco', exact: true }).click();
+  await expect(page.getByText('Cobro NFC recibido')).toHaveCount(0);
+});
+
+test('pays NFC invoice mock with cash', async ({ page }) => {
+  await openUnlockedPhone(page);
+
+  await openIncomingNfcFromNotification(page, 'invoice', /Cobro NFC Ahora Wallet/);
+
+  await expect(page.getByText('Cobro NFC recibido')).toBeVisible();
+  await expect(page.getByText('Servicio mecanico')).toBeVisible();
+  await page.getByRole('button', { name: 'Cash', exact: true }).click();
   await expect(page.getByText('Cobro NFC recibido')).toHaveCount(0);
 });
 
@@ -458,6 +483,26 @@ test('keeps dynamic island stable with multiple activities and alternation', asy
   await expect(page.getByTestId('dynamic-island-overlay')).toBeVisible();
   await page.getByTestId('dynamic-island-overlay').click({ force: true });
   await expect(page.getByTestId('dynamic-island-overlay')).toHaveCount(0);
+});
+
+test('supports dynamic island with three activity instances', async ({ page }) => {
+  await openUnlockedPhone(page);
+  await page.evaluate(() => {
+    window.gcphoneMock?.clearLiveActivities?.();
+    window.gcphoneMock?.setLiveActivities?.();
+  });
+
+  const island = page.getByTestId('dynamic-island');
+  await expect(island).toHaveAttribute('data-activity-count', '3');
+  await expect(page.getByTestId('dynamic-island-activity-dot')).toHaveCount(3);
+
+  const firstActivityId = await island.getAttribute('data-active-activity-id');
+  await page.getByTestId('dynamic-island-activity-count').first().click();
+  await expect.poll(async () => island.getAttribute('data-active-activity-id')).not.toBe(firstActivityId);
+
+  await page.evaluate(() => window.gcphoneMock?.showLocked());
+  await expect(page.getByRole('button', { name: /Desbloquear|Unlock/i }).first()).toBeVisible();
+  await expect(island).toHaveAttribute('data-activity-count', '3');
 });
 
 test('unlocks from the compact PIN sheet and returns cleanly to home', async ({ page }) => {

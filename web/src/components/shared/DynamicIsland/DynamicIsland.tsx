@@ -30,6 +30,7 @@ function getActivityKey(activity?: LiveActivity): string {
 
   return [
     activity.type,
+    activity.id || '',
     activity.title,
     activity.subtitle || '',
     activity.icon || '',
@@ -98,7 +99,7 @@ function ActivityStack(props: { primary?: LiveActivity; secondary?: LiveActivity
   );
 }
 
-export function DynamicIsland() {
+export function DynamicIsland(props: { locked?: boolean }) {
   const { activities } = useLiveActivity();
   const router = useRouter();
   const [expanded, setExpanded] = createSignal(false);
@@ -122,6 +123,7 @@ export function DynamicIsland() {
   });
 
   const isHome = () => router.currentRoute() === 'home';
+  const isLocked = () => props.locked === true;
   const hasActivities = () => activities().length > 0;
   const multipleActivities = () => activities().length > 1;
   const activityCount = () => activities().length;
@@ -168,6 +170,8 @@ export function DynamicIsland() {
       router.navigate('home');
       return;
     }
+
+    if (isLocked()) return;
 
     if (expanded()) {
       currentActivity()?.onNavigate?.();
@@ -222,13 +226,13 @@ export function DynamicIsland() {
 
     if (!previousSignature) {
       setActiveIndex(0);
-      if (homeNow) {
+      if (homeNow && !isLocked()) {
         setMinimized(false);
         setExpanded(true);
       }
     } else if (previousSignature !== signature) {
       setActiveIndex(pickChangedActivity(previousKeys, nextKeys));
-      if (homeNow) {
+      if (homeNow && !isLocked()) {
         setMinimized(false);
         setExpanded(true);
       }
@@ -248,6 +252,12 @@ export function DynamicIsland() {
     if (minimizeTimer) window.clearTimeout(minimizeTimer);
 
     if (!hasActivities()) return;
+
+    if (isLocked()) {
+      setExpanded(false);
+      setMinimized(true);
+      return;
+    }
 
     if (!homeNow) {
       setExpanded(false);
@@ -291,15 +301,18 @@ export function DynamicIsland() {
 
   return (
     <Show when={hasActivities()}>
-      <Show when={expanded() && isHome()}>
+      <Show when={expanded() && isHome() && !isLocked()}>
         <div class={styles.overlay} data-testid="dynamic-island-overlay" onClick={collapse} />
       </Show>
 
-      <div class={styles.islandSlot}>
+      <div class={styles.islandSlot} classList={{ [styles.islandSlotLocked]: isLocked() }}>
         <Motion.div
           class={styles.island}
           data-testid="dynamic-island"
+          data-activity-count={activityCount()}
+          data-active-activity-id={currentActivity()?.id || currentActivity()?.type || ''}
           classList={{
+            [styles.islandLocked]: isLocked(),
             [styles.islandMini]: !isHome(),
             [styles.islandMiniWithCount]: !isHome() && multipleActivities(),
             [styles.islandAutoMini]: isHome() && !expanded() && minimized(),
@@ -426,7 +439,7 @@ export function DynamicIsland() {
                         onClick={cycleActivity}
                         aria-label="Alternar actividad"
                         animate={{ x: 0, opacity: 1 }}
-                        transition={{ duration: 0.18, easing: MOTION_EASING }}
+                        transition={prefersReducedMotion() ? NO_MOTION_TRANSITION : { duration: 0.18, easing: MOTION_EASING }}
                       >
                         <ActivityVisual activity={nextActivity()} compact />
                         <span class={styles.activityPeekLabel}>{nextTypeLabel()}</span>
@@ -438,6 +451,7 @@ export function DynamicIsland() {
                             <button
                               type="button"
                               class={styles.activityDot}
+                              data-testid="dynamic-island-activity-dot"
                               classList={{ [styles.activityDotActive]: index() === activeIndex() }}
                               onClick={(event) => focusActivity(event, index())}
                               aria-label={`Ver actividad ${index() + 1}: ${getActivityTypeLabel(activity)}`}

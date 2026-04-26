@@ -194,8 +194,6 @@ export const NotificationsProvider: ParentComponent = (props) => {
       const next = normalizeNotification(payload);
       if (!next) return;
 
-      if (state.mutedApps.includes(next.appId) && next.priority !== 'high') return;
-
       if (state.doNotDisturb && next.priority !== 'high') return;
 
       if (state.focusMode !== 'off' && next.priority !== 'high') {
@@ -204,6 +202,8 @@ export const NotificationsProvider: ParentComponent = (props) => {
       }
 
       setState('history', (current) => [next, ...current.filter((item) => item.id !== next.id)].slice(0, MAX_HISTORY));
+
+      if (state.mutedApps.includes(next.appId) && next.priority !== 'high') return;
 
       if (state.current?.id === next.id) {
         batch(() => {

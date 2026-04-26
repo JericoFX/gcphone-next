@@ -1582,6 +1582,18 @@ export function setupBrowserMock() {
         durationMs: 2600,
       }), 1910);
     },
+    setLiveActivities: () => {
+      emitInternalEvent('gcphone:mockLiveActivities', {
+        activities: [
+          { id: 'timer-main', type: 'timer', title: '00:42', subtitle: 'Timer', icon: './img/icons_ios/clock.svg' },
+          { id: 'timer-side', type: 'timer', title: '01:15', subtitle: 'Cronometro', icon: './img/icons_ios/clock.svg' },
+          { id: 'ride-main', type: 'cityride', title: 'CityRide', subtitle: 'Buscando conductor...', icon: './img/icons_ios/cityride.svg' },
+        ],
+      });
+    },
+    clearLiveActivities: () => {
+      emitInternalEvent('gcphone:mockLiveActivities', { clear: true });
+    },
     getRealtime: () => readRealtimeConfig(),
     setRealtime: (config: Partial<MockRealtimeConfig>) => {
       return updateRealtimeConfig(config);

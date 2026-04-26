@@ -93,6 +93,7 @@ export function PhoneNotificationBanner(props: Props) {
             <div
               class={styles.peekCard}
               classList={{ [styles.preview]: !!props.preview, [styles.enter]: phase() === 'enter', [styles.exit]: phase() === 'exit' }}
+              data-testid="phone-notification-banner"
               role="status"
               aria-live="polite"
               aria-atomic="true"
