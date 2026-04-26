@@ -261,21 +261,6 @@ export interface NewsArticle {
   createdAt: string;
 }
 
-export interface MarketListing {
-  id: number;
-  identifier: string;
-  phoneNumber: string;
-  title: string;
-  description?: string;
-  price: number;
-  category: string;
-  photos: string[];
-  views: number;
-  status: 'active' | 'sold' | 'expired';
-  expiresAt?: string;
-  createdAt: string;
-}
-
 export interface GarageVehicle {
   id: number;
   identifier: string;

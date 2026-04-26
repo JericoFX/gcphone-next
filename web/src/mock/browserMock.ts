@@ -2446,31 +2446,6 @@ export async function handleBrowserNui<T = unknown>(eventName: string, data?: un
     return { success: true } as T;
   }
 
-  if (eventName === 'marketGetListings') {
-    return [
-      { id: 1, title: 'Banshee', description: 'Excelente estado', price: 15000, category: 'vehiculos' },
-      { id: 2, title: 'Casa en Vinewood', description: 'Vista panoramica', price: 220000, category: 'propiedades' }
-    ] as T;
-  }
-
-  if (eventName === 'marketCreateListing') {
-    return { success: true, id: 99 } as T;
-  }
-
-  if (eventName === 'marketGetMyListings') {
-    return [
-      { id: 99, title: 'Mi Sultan', description: 'Unico dueno', price: 24000, category: 'vehiculos', status: 'active' }
-    ] as T;
-  }
-
-  if (eventName === 'marketMarkAsSold' || eventName === 'marketDeleteListing') {
-    return { success: true } as T;
-  }
-
-  if (eventName === 'marketContactSeller') {
-    return { phoneNumber: '555-2222' } as T;
-  }
-
   if (eventName === 'newsGetArticles') {
     const requestedCategory = String(payload?.category || 'all');
     const rows = requestedCategory === 'all'

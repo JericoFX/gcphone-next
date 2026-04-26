@@ -18,7 +18,7 @@ gcphone-next ships with 27+ built-in apps:
 | **Social** | Chirp (Twitter-like), Snap (Instagram-like), Clips (TikTok-like), News |
 | **Utilities** | Gallery, Camera, Flashlight, Notes, Clock, Weather, Maps, Notifications |
 | **Finance** | Bank, Wallet |
-| **Services** | Garage, Yellow Pages, Market, Documents |
+| **Services** | Garage, Yellow Pages, Documents |
 | **Community** | Dark Rooms (anonymous forum), Music (YouTube search + proximity playback) |
 | **System** | Proximity sharing, Location tracking, Phone drop/pickup |
 

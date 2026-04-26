@@ -262,17 +262,6 @@ NUI: fetchNui('callbackName', data) -> client RegisterNUICallback -> lib.callbac
 | `newsMuteLiveUser` | `data: table` | `boolean` | nui_bridge.lua |
 | `newsSetScaleform` | `data: table` | `boolean` | nui_bridge.lua |
 
-## Market
-
-| Callback | Data | Response | Source File |
-|----------|------|----------|-------------|
-| `marketGetListings` | `data: table` | `table[]` | nui_bridge.lua |
-| `marketCreateListing` | `data: table` | `table` | nui_bridge.lua |
-| `marketGetMyListings` | -- | `table[]` | nui_bridge.lua |
-| `marketMarkAsSold` | `{ listingId }` | `boolean` | nui_bridge.lua |
-| `marketDeleteListing` | `{ listingId }` | `boolean` | nui_bridge.lua |
-| `marketContactSeller` | `data: table` | `boolean` | nui_bridge.lua |
-
 ## Yellow Pages
 
 | Callback | Data | Response | Source File |

@@ -258,19 +258,6 @@ All callbacks are registered via `lib.callback.register` (ox_lib) and invoked fr
 | `gcphone:security:unblockNumber` | `source, data: table` | `boolean` | Unblock a phone number. |
 | `gcphone:security:reportUser` | `source, data: table` | `table` | Report a user. |
 
-## Market
-
-| Callback | Parameters | Return | Description |
-|----------|-----------|--------|-------------|
-| `gcphone:market:getListings` | `source, data: table` | `table[]` | Get market listings (paginated). |
-| `gcphone:market:getMyListings` | `source` | `table[]` | Get the player's own listings. |
-| `gcphone:market:createListing` | `source, data: table` | `table` | Create a market listing. |
-| `gcphone:market:updateListing` | `source, data: table` | `table` | Update a listing. |
-| `gcphone:market:deleteListing` | `source, listingId: integer` | `boolean` | Delete a listing. |
-| `gcphone:market:markAsSold` | `source, listingId: integer` | `boolean` | Mark a listing as sold. |
-| `gcphone:market:contactSeller` | `source, data: table` | `boolean` | Contact a seller. |
-| `gcphone:market:getCategories` | `source` | `table[]` | Get market categories. |
-
 ## Yellow Pages
 
 | Callback | Parameters | Return | Description |
