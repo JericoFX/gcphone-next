@@ -682,7 +682,11 @@ lib.callback.register('gcphone:sdk:getAllAppPermissions', function(source)
     local identifier = GetIdentifierForSource(source)
     if not identifier then return {} end
     return MySQL.query.await(
-        'SELECT app_id, permission, granted FROM phone_app_permissions WHERE identifier = ? ORDER BY app_id',
+        [[SELECT p.app_id, p.permission, p.granted
+          FROM phone_app_permissions p
+          LEFT JOIN phone_app_blocks b ON b.identifier = p.identifier AND b.app_id = p.app_id
+          WHERE p.identifier = ? AND b.app_id IS NULL
+          ORDER BY p.app_id]],
         { identifier }
     ) or {}
 end)
