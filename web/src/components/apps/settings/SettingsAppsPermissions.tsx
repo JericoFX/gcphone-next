@@ -21,6 +21,8 @@ interface BlockedAppEntry {
   app_id: string;
 }
 
+const isGranted = (value: unknown): boolean => value === true || value === 1 || value === '1';
+
 const PERMISSION_LABELS: Record<string, string> = {
   location: 'Ubicacion',
   contacts: 'Contactos',
@@ -58,7 +60,10 @@ export function SettingsAppsPermissions(props: SettingsAppsPermissionsProps) {
 
   const loadData = async () => {
     const perms = await permissions.getAllPermissions();
-    setAllPerms((perms || []) as AppPermissionEntry[]);
+    setAllPerms(((perms || []) as AppPermissionEntry[]).map((entry) => ({
+      ...entry,
+      granted: isGranted(entry.granted),
+    })));
     const blocked = await permissions.getBlockedApps();
     setBlockedApps((blocked || []) as BlockedAppEntry[]);
   };
@@ -82,7 +87,7 @@ export function SettingsAppsPermissions(props: SettingsAppsPermissionsProps) {
 
   const grantedCount = (appId: string): number => {
     const perms = groupedApps().get(appId) || [];
-    return perms.filter((p) => p.granted).length;
+    return perms.filter((p) => isGranted(p.granted)).length;
   };
 
   const appPerms = () => {
@@ -91,27 +96,49 @@ export function SettingsAppsPermissions(props: SettingsAppsPermissionsProps) {
     return groupedApps().get(id) || [];
   };
 
-  const handleToggle = (appId: string, permission: string, currentGranted: boolean) => {
-    permissions.setPermission(appId, permission, !currentGranted);
+  const handleToggle = async (appId: string, permission: string, currentGranted: boolean) => {
+    const nextGranted = !isGranted(currentGranted);
     setAllPerms((prev) =>
       prev.map((p) =>
         p.app_id === appId && p.permission === permission
-          ? { ...p, granted: !currentGranted }
+          ? { ...p, granted: nextGranted }
           : p
       )
     );
+    const success = await permissions.setPermission(appId, permission, nextGranted);
+    if (!success) {
+      setAllPerms((prev) =>
+        prev.map((p) =>
+          p.app_id === appId && p.permission === permission
+            ? { ...p, granted: isGranted(currentGranted) }
+            : p
+        )
+      );
+    }
   };
 
-  const handleBlock = (appId: string) => {
-    permissions.blockApp(appId);
+  const handleBlock = async (appId: string) => {
+    const previousPerms = allPerms();
+    const previousBlocked = blockedApps();
     setSelectedApp(null);
     setAllPerms((prev) => prev.filter((p) => p.app_id !== appId));
     setBlockedApps((prev) => [...prev, { app_id: appId }]);
+    const success = await permissions.blockApp(appId);
+    if (!success) {
+      setAllPerms(previousPerms);
+      setBlockedApps(previousBlocked);
+    }
   };
 
-  const handleUnblock = (appId: string) => {
-    permissions.unblockApp(appId);
+  const handleUnblock = async (appId: string) => {
+    const previousBlocked = blockedApps();
     setBlockedApps((prev) => prev.filter((b) => b.app_id !== appId));
+    const success = await permissions.unblockApp(appId);
+    if (!success) {
+      setBlockedApps(previousBlocked);
+    } else {
+      void loadData();
+    }
   };
 
   return (
@@ -168,7 +195,7 @@ export function SettingsAppsPermissions(props: SettingsAppsPermissionsProps) {
                       'font-weight': '600',
                       cursor: 'pointer',
                     }}
-                    onClick={() => handleUnblock(blocked.app_id)}
+                    onClick={() => void handleUnblock(blocked.app_id)}
                   >
                     Reinstalar
                   </button>
@@ -231,9 +258,9 @@ export function SettingsAppsPermissions(props: SettingsAppsPermissionsProps) {
                 <div
                   class="ios18-switch"
                   role="switch"
-                  aria-checked={perm.granted}
+                  aria-checked={isGranted(perm.granted)}
                   style={{ cursor: 'pointer' }}
-                  onClick={() => handleToggle(perm.app_id, perm.permission, perm.granted)}
+                  onClick={() => void handleToggle(perm.app_id, perm.permission, perm.granted)}
                 >
                   <div class="ios18-switch__thumb" />
                 </div>
@@ -255,7 +282,7 @@ export function SettingsAppsPermissions(props: SettingsAppsPermissionsProps) {
                   border: 'none',
                   'justify-content': 'center',
                 }}
-                onClick={() => handleBlock(selectedApp()!)}
+                onClick={() => void handleBlock(selectedApp()!)}
               >
                 <span style={{ color: 'var(--danger)', 'font-weight': '600', 'font-size': 'var(--fs-footnote)' }}>
                   Eliminar app

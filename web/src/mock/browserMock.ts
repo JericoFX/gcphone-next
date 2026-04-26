@@ -65,6 +65,8 @@ interface BrowserMockState {
   flashlightEnabled: boolean;
   flashlightKelvin: number;
   flashlightLumens: number;
+  appPermissions: Array<{ app_id: string; permission: string; granted: 0 | 1 }>;
+  blockedApps: Array<{ app_id: string; blocked_at: string }>;
 }
 
 type GalleryEntry = BrowserMockState['gallery'][number];
@@ -660,6 +662,15 @@ const state: BrowserMockState = {
   flashlightEnabled: false,
   flashlightKelvin: 5200,
   flashlightLumens: 1200,
+  appPermissions: [
+    { app_id: 'wavechat', permission: 'camera', granted: 1 },
+    { app_id: 'wavechat', permission: 'microphone', granted: 1 },
+    { app_id: 'wavechat', permission: 'contacts', granted: 1 },
+    { app_id: 'wavechat', permission: 'gallery', granted: 1 },
+    { app_id: 'mock_food', permission: 'notifications', granted: 1 },
+    { app_id: 'mock_food', permission: 'location', granted: 1 },
+  ],
+  blockedApps: [],
 };
 
 const emitMessage = (action: string, data?: unknown) => {
@@ -3453,38 +3464,76 @@ export async function handleBrowserNui<T = unknown>(eventName: string, data?: un
   }
 
   if (eventName === 'sdkGetAllAppPermissions') {
-    return [
-      { app_id: 'wavechat', permission: 'camera', granted: 1 },
-      { app_id: 'wavechat', permission: 'microphone', granted: 1 },
-      { app_id: 'wavechat', permission: 'contacts', granted: 1 },
-      { app_id: 'wavechat', permission: 'gallery', granted: 1 },
-      { app_id: 'mock_food', permission: 'notifications', granted: 1 },
-      { app_id: 'mock_food', permission: 'location', granted: 1 },
-    ] as T;
+    return state.appPermissions.filter(
+      (entry) => !state.blockedApps.some((blocked) => blocked.app_id === entry.app_id)
+    ) as T;
   }
 
   if (eventName === 'sdkGetBlockedApps') {
-    return [] as T;
+    return state.blockedApps as T;
   }
 
   if (eventName === 'sdkSetPermission') {
-    return true as T;
+    const payload = data as { appId?: string; permission?: string; granted?: boolean } | undefined;
+    const appId = String(payload?.appId || '').trim();
+    const permission = String(payload?.permission || '').trim();
+    if (!appId || !permission) return { success: false } as T;
+    const found = state.appPermissions.find((entry) => entry.app_id === appId && entry.permission === permission);
+    if (found) {
+      found.granted = payload?.granted === true ? 1 : 0;
+    } else {
+      state.appPermissions.push({ app_id: appId, permission, granted: payload?.granted === true ? 1 : 0 });
+    }
+    return { success: true } as T;
   }
 
   if (eventName === 'sdkGrantAllPermissions') {
-    return true as T;
+    const payload = data as { appId?: string; permissions?: string[] } | undefined;
+    const appId = String(payload?.appId || '').trim();
+    if (!appId || !Array.isArray(payload?.permissions)) return { success: false } as T;
+    for (const permission of payload.permissions) {
+      const key = String(permission || '').trim();
+      if (!key) continue;
+      const found = state.appPermissions.find((entry) => entry.app_id === appId && entry.permission === key);
+      if (found) found.granted = 1;
+      else state.appPermissions.push({ app_id: appId, permission: key, granted: 1 });
+    }
+    return { success: true } as T;
   }
 
   if (eventName === 'sdkDenyAllPermissions') {
-    return true as T;
+    const payload = data as { appId?: string; permissions?: string[] } | undefined;
+    const appId = String(payload?.appId || '').trim();
+    if (!appId || !Array.isArray(payload?.permissions)) return { success: false } as T;
+    for (const permission of payload.permissions) {
+      const key = String(permission || '').trim();
+      if (!key) continue;
+      const found = state.appPermissions.find((entry) => entry.app_id === appId && entry.permission === key);
+      if (found) found.granted = 0;
+      else state.appPermissions.push({ app_id: appId, permission: key, granted: 0 });
+    }
+    return { success: true } as T;
   }
 
   if (eventName === 'sdkBlockApp') {
-    return true as T;
+    const payload = data as { appId?: string } | undefined;
+    const appId = String(payload?.appId || '').trim();
+    if (!appId) return { success: false } as T;
+    if (!state.blockedApps.some((entry) => entry.app_id === appId)) {
+      state.blockedApps.push({ app_id: appId, blocked_at: nowIso() });
+    }
+    state.appPermissions = state.appPermissions.map((entry) =>
+      entry.app_id === appId ? { ...entry, granted: 0 } : entry
+    );
+    return { success: true } as T;
   }
 
   if (eventName === 'sdkUnblockApp') {
-    return true as T;
+    const payload = data as { appId?: string } | undefined;
+    const appId = String(payload?.appId || '').trim();
+    if (!appId) return { success: false } as T;
+    state.blockedApps = state.blockedApps.filter((entry) => entry.app_id !== appId);
+    return { success: true } as T;
   }
 
   if (eventName === 'sdkGetOpenData') {

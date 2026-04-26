@@ -29,13 +29,13 @@ export function PermissionModal() {
   const handleAllow = () => {
     const req = request();
     if (!req) return;
-    permissions.grantPermissions(req.appId, req.permissions);
+    void permissions.grantPermissions(req.appId, req.permissions);
   };
 
   const handleDeny = () => {
     const req = request();
     if (!req) return;
-    permissions.denyPermissions(req.appId, req.permissions);
+    void permissions.denyPermissions(req.appId, req.permissions);
   };
 
   return (

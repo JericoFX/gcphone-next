@@ -12,17 +12,25 @@ export interface PermissionRequest {
 
 export interface PermissionsActions {
   requestPermissions: (appId: string, appTitle: string, appIcon: string | undefined, permissions: string[]) => Promise<boolean>;
-  grantPermissions: (appId: string, permissions: string[]) => void;
-  denyPermissions: (appId: string, permissions: string[]) => void;
-  setPermission: (appId: string, permission: string, granted: boolean) => void;
-  blockApp: (appId: string) => void;
-  unblockApp: (appId: string) => void;
+  grantPermissions: (appId: string, permissions: string[]) => Promise<boolean>;
+  denyPermissions: (appId: string, permissions: string[]) => Promise<boolean>;
+  setPermission: (appId: string, permission: string, granted: boolean) => Promise<boolean>;
+  blockApp: (appId: string) => Promise<boolean>;
+  unblockApp: (appId: string) => Promise<boolean>;
   getAllPermissions: () => Promise<unknown[]>;
   getBlockedApps: () => Promise<unknown[]>;
   getPermissionRequest: () => PermissionRequest | null;
 }
 
 const PermissionsContext = createContext<PermissionsActions>();
+
+const isSuccessResponse = (result: unknown): boolean => {
+  if (result === true) return true;
+  if (result && typeof result === 'object' && 'success' in result) {
+    return (result as { success?: unknown }).success === true;
+  }
+  return false;
+};
 
 export const PermissionsProvider: ParentComponent = (props) => {
   const [permissionRequest, setPermissionRequest] = createSignal<PermissionRequest | null>(null);
@@ -39,34 +47,41 @@ export const PermissionsProvider: ParentComponent = (props) => {
     });
   };
 
-  const grantPermissions = (appId: string, permissions: string[]) => {
+  const grantPermissions = async (appId: string, permissions: string[]) => {
     const req = permissionRequest();
-    fetchNui('sdkGrantAllPermissions', { appId, permissions });
+    const result = await fetchNui('sdkGrantAllPermissions', { appId, permissions });
+    const success = isSuccessResponse(result);
     setPermissionRequest(null);
     if (req && req.appId === appId) {
-      req.resolve(true);
+      req.resolve(success);
     }
+    return success;
   };
 
-  const denyPermissions = (appId: string, permissions: string[]) => {
+  const denyPermissions = async (appId: string, permissions: string[]) => {
     const req = permissionRequest();
-    fetchNui('sdkDenyAllPermissions', { appId, permissions });
+    const result = await fetchNui('sdkDenyAllPermissions', { appId, permissions });
+    const success = isSuccessResponse(result);
     setPermissionRequest(null);
     if (req && req.appId === appId) {
       req.resolve(false);
     }
+    return success;
   };
 
-  const setPermission = (appId: string, permission: string, granted: boolean) => {
-    fetchNui('sdkSetPermission', { appId, permission, granted });
+  const setPermission = async (appId: string, permission: string, granted: boolean) => {
+    const result = await fetchNui('sdkSetPermission', { appId, permission, granted });
+    return isSuccessResponse(result);
   };
 
-  const blockApp = (appId: string) => {
-    fetchNui('sdkBlockApp', { appId });
+  const blockApp = async (appId: string) => {
+    const result = await fetchNui('sdkBlockApp', { appId });
+    return isSuccessResponse(result);
   };
 
-  const unblockApp = (appId: string) => {
-    fetchNui('sdkUnblockApp', { appId });
+  const unblockApp = async (appId: string) => {
+    const result = await fetchNui('sdkUnblockApp', { appId });
+    return isSuccessResponse(result);
   };
 
   const getAllPermissions = (): Promise<unknown[]> => {
