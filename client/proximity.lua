@@ -269,8 +269,16 @@ RegisterNetEvent('gcphone:receiveSharedPhoto', function(data)
     })
 
     SendNUIMessage({
-        action = 'phone:openRoute',
-        data = { route = 'gallery', data = { nfcAction = 'received_photo', sharedPhoto = data, requestId = GetGameTimer() } }
+        action = 'phone:notification',
+        data = {
+            id = ('nfc-photo-%s'):format(GetGameTimer()),
+            appId = 'gallery',
+            title = 'Foto recibida',
+            message = ((data and data.from) or 'Alguien') .. ' te compartio una foto',
+            priority = 'normal',
+            route = 'gallery',
+            data = { nfcAction = 'received_photo', sharedPhoto = data, requestId = GetGameTimer() }
+        }
     })
 
     lib.notify({

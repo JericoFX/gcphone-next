@@ -9,7 +9,6 @@ import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
 import { useNfcShare } from '../../../hooks/useNfcShare';
 import { fetchKnownNui, fetchNui } from '../../../utils/fetchNui';
 import { useAsyncData } from '../../../hooks/useAsyncData';
-import { useNuiEvent } from '../../../utils/useNui';
 import { resolveMediaType, sanitizeMediaUrl, sanitizePhone } from '../../../utils/sanitize';
 import { uiPrompt } from '../../../utils/uiDialog';
 import { SearchInput } from '../../shared/ui/SearchInput';
@@ -312,12 +311,6 @@ export function GalleryApp() {
 
   onMount(() => {
     void loadAlbums();
-  });
-
-  useNuiEvent<{ url?: string; from?: string }>('receiveSharedPhoto', (payload) => {
-    if (payload?.url) {
-      setReceivedPhotoUrl(payload.url);
-    }
   });
 
   const currentPhotoIndex = () => {
