@@ -735,22 +735,38 @@ export function ControlCenter() {
       </Presence>
 
       {/* ── Control Center ── */}
+      <Presence>
       <Show when={notifications.controlCenterOpen}>
-        <div class={styles.overlay} data-testid="control-center-sheet" onClick={() => notificationsActions.setControlCenterOpen(false)}>
-          <div
+        <Motion.div
+          class={styles.overlay}
+          data-testid="control-center-sheet"
+          onClick={() => notificationsActions.setControlCenterOpen(false)}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.16 }}
+        >
+          <Motion.div
             class={`${styles.sheet} ${styles.controlSheet}`}
             onClick={(event) => event.stopPropagation()}
             onPointerDown={handleSheetPointerDown}
             onPointerUp={(e) => handleSheetPointerUp(e, 'control')}
+            initial={{ y: -30, opacity: 0.94, scale: 0.98 }}
+            animate={{ y: 0, opacity: 1, scale: 1 }}
+            exit={{ y: -26, opacity: 0, scale: 0.98 }}
+            transition={{ duration: 0.26, easing: [0.32, 0.72, 0, 1] }}
           >
             <div class={styles.sheetHeader}>
               <div class={styles.grabber} />
             </div>
 
             <div class={styles.controlMosaic}>
-              <section
+              <Motion.section
                 class={`${styles.controlModule} ${styles.nfcModule}`}
                 classList={{ [styles.nfcModuleOff]: !nfcEnabled() }}
+                initial={{ opacity: 0, y: 10, scale: 0.97 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{ duration: 0.2 }}
               >
                 <div class={styles.nfcHeader}>
                   <button
@@ -812,9 +828,14 @@ export function ControlCenter() {
                     <img src="./img/icons_ios/documents.svg" alt="" draggable={false} />
                   </button>
                 </div>
-              </section>
+              </Motion.section>
 
-              <section class={`${styles.controlModule} ${styles.verticalSliderModule}`}>
+              <Motion.section
+                class={`${styles.controlModule} ${styles.verticalSliderModule}`}
+                initial={{ opacity: 0, y: 10, scale: 0.97 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{ duration: 0.2, delay: 0.03 }}
+              >
                 <img src="./img/icons_ios/ui-sun.svg" alt="" class={styles.sliderIcon} draggable={false} />
                 <div
                   class={styles.verticalSliderShell}
@@ -837,9 +858,14 @@ export function ControlCenter() {
                   />
                 </div>
                 <strong>{brightnessPercent()}%</strong>
-              </section>
+              </Motion.section>
 
-              <section class={`${styles.controlModule} ${styles.verticalSliderModule}`}>
+              <Motion.section
+                class={`${styles.controlModule} ${styles.verticalSliderModule}`}
+                initial={{ opacity: 0, y: 10, scale: 0.97 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{ duration: 0.2, delay: 0.06 }}
+              >
                 <img src="./img/icons_ios/ui-bell.svg" alt="" class={styles.sliderIcon} draggable={false} />
                 <div
                   class={`${styles.verticalSliderShell} ${styles.verticalSliderShellBlue}`}
@@ -862,9 +888,14 @@ export function ControlCenter() {
                   />
                 </div>
                 <strong>{volumePercent()}%</strong>
-              </section>
+              </Motion.section>
 
-              <section class={`${styles.controlModule} ${styles.quickActionsModule}`}>
+              <Motion.section
+                class={`${styles.controlModule} ${styles.quickActionsModule}`}
+                initial={{ opacity: 0, y: 10, scale: 0.97 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{ duration: 0.22, delay: 0.09 }}
+              >
                 <button
                   class={styles.controlRoundButton}
                   classList={{ [styles.roundActiveBlue]: notifications.airplaneMode }}
@@ -941,10 +972,16 @@ export function ControlCenter() {
                   <img src="./img/icons_ios/ui-lock.svg" alt="" draggable={false} />
                   <span>{lockLabel(language())}</span>
                 </button>
-              </section>
+              </Motion.section>
 
               <Show when={flashlightEnabled()}>
-                <section class={`${styles.controlModule} ${styles.flashlightModule}`}>
+                <Motion.section
+                  class={`${styles.controlModule} ${styles.flashlightModule}`}
+                  initial={{ opacity: 0, y: 10, scale: 0.97 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -8, scale: 0.98 }}
+                  transition={{ duration: 0.18 }}
+                >
                   <div class={styles.flashlightHeader}>
                     <img src="./img/icons_ios/ui-flashlight.svg" alt="" draggable={false} />
                     <span>{t('control.flashlight', language())}</span>
@@ -970,16 +1007,17 @@ export function ControlCenter() {
                       void fetchKnownNui('cameraSetFlashlightSettings', { lumens, kelvin: flashlightKelvin() }, { success: true });
                     }}
                   />
-                </section>
+                </Motion.section>
               </Show>
             </div>
 
             <div class={styles.sheetFooter}>
               <button class={styles.closeBtn} onClick={() => notificationsActions.setControlCenterOpen(false)}>{t('control.close', language())}</button>
             </div>
-          </div>
-        </div>
+          </Motion.div>
+        </Motion.div>
       </Show>
+      </Presence>
     </>
   );
 }
