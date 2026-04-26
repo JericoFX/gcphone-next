@@ -290,13 +290,16 @@ end)
 
 RegisterNetEvent('gcphone:receiveSharedDocument', function(data)
     SendNUIMessage({
-        action = 'receiveSharedDocument',
-        data = data
-    })
-
-    SendNUIMessage({
-        action = 'phone:openRoute',
-        data = { route = 'documents', data = { nfcAction = 'received_document', receivedDocument = data, requestId = GetGameTimer() } }
+        action = 'phone:notification',
+        data = {
+            id = ('nfc-document-%s'):format(GetGameTimer()),
+            appId = 'documents',
+            title = 'Documento recibido',
+            message = ((data and data.from) or 'Alguien') .. ' te mostro un documento',
+            priority = 'normal',
+            route = 'documents',
+            data = { nfcAction = 'received_document', receivedDocument = data, requestId = GetGameTimer() }
+        }
     })
     
     lib.notify({ 
@@ -308,13 +311,16 @@ end)
 
 RegisterNetEvent('gcphone:walletNfcInvoiceReceived', function(data)
     SendNUIMessage({
-        action = 'walletNfcInvoiceReceived',
-        data = data
-    })
-
-    SendNUIMessage({
-        action = 'phone:openRoute',
-        data = { route = 'wallet', data = { nfcAction = 'incoming_invoice', invoice = data, requestId = GetGameTimer() } }
+        action = 'phone:notification',
+        data = {
+            id = ('nfc-wallet-invoice-%s'):format(GetGameTimer()),
+            appId = 'wallet',
+            title = 'Cobro NFC',
+            message = ((data and data.fromName) or 'Alguien') .. ' te envio un cobro',
+            priority = 'high',
+            route = 'wallet',
+            data = { nfcAction = 'incoming_invoice', invoice = data, requestId = GetGameTimer() }
+        }
     })
 
     lib.notify({
@@ -341,13 +347,16 @@ end)
 
 RegisterNetEvent('gcphone:bankInvoiceReceived', function(data)
     SendNUIMessage({
-        action = 'bankInvoiceReceived',
-        data = data
-    })
-
-    SendNUIMessage({
-        action = 'phone:openRoute',
-        data = { route = 'bank', data = { nfcAction = 'incoming_invoice', invoice = data, requestId = GetGameTimer() } }
+        action = 'phone:notification',
+        data = {
+            id = ('bank-invoice-%s'):format(GetGameTimer()),
+            appId = 'bank',
+            title = 'Factura recibida',
+            message = ((data and data.fromName) or 'Alguien') .. ' te envio una factura',
+            priority = 'high',
+            route = 'bank',
+            data = { nfcAction = 'incoming_invoice', invoice = data, requestId = GetGameTimer() }
+        }
     })
 
     lib.notify({

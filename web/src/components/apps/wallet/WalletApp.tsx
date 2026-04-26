@@ -332,13 +332,8 @@ export function WalletApp() {
   });
 
   useNuiActions<{
-    walletNfcInvoiceReceived: InvoicePayload;
     walletNfcInvoiceResult: unknown;
   }>({
-    walletNfcInvoiceReceived: (payload) => {
-      if (!payload || typeof payload !== 'object') return;
-      setIncomingInvoice(payload);
-    },
     walletNfcInvoiceResult: () => {
       void load();
     },

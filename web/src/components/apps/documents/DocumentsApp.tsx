@@ -174,11 +174,6 @@ export function DocumentsApp() {
     setShowDocPicker(true);
   });
 
-  useNuiEvent<{ document?: ScannedDoc; from?: string; shared_at?: string }>('receiveSharedDocument', (payload) => {
-    if (!payload?.document) return;
-    setReceivedDoc({ ...payload.document, from: payload.from, shared_at: payload.shared_at });
-  });
-
   // NFC route params
   createEffect(() => {
     const params = router.params() as {

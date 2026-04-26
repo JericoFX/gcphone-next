@@ -87,14 +87,9 @@ export function BankApp() {
   });
 
   useNuiActions<{
-    bankInvoiceReceived: BankInvoice;
     bankTransferReceived: BankInvoice;
     bankInvoiceResult: unknown;
   }>({
-    bankInvoiceReceived: (payload) => {
-      if (!payload || typeof payload !== 'object') return;
-      setIncomingInvoice(payload);
-    },
     bankTransferReceived: (payload) => {
       if (!payload || typeof payload !== 'object') return;
       setIncomingInvoice(payload);
