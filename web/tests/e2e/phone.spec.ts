@@ -55,6 +55,7 @@ async function openLockedPhone(page: Page) {
   await page.waitForTimeout(180);
   await page.evaluate(() => {
     window.localStorage.setItem('gcphone:desktopPage', '0');
+    window.localStorage.setItem('gcphone:swipeUnlock', '1');
     window.gcphoneMock?.showLocked();
   });
   await expect(page.getByRole('button', { name: /Desbloquear|Unlock/i }).first()).toBeVisible();
@@ -207,6 +208,7 @@ async function expectNotesDestination(page: Page) {
 
 test('requires the default PIN before entering home', async ({ page }) => {
   await openLockedPhone(page);
+  await expect(page.getByTestId('lock-swipe-unlock')).toHaveCount(0);
   await unlockWithPin(page);
 });
 

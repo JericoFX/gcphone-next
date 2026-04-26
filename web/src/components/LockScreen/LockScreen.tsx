@@ -71,11 +71,11 @@ export function LockScreen() {
   const [sosStatus, setSosStatus] = createSignal<'idle' | 'sending' | 'sent'>('idle');
   const [prefersReducedMotion, setPrefersReducedMotion] = createSignal(false);
   const language = () => phoneState.settings.language || 'es';
-  const swipeUnlockEnabled = () => phoneState.settings.swipeUnlock === true || !hasPinSet();
   const hasPinSet = () => {
     const lc = phoneState.settings.lockCode;
     return phoneState.setup?.hasPin === true || (!!lc && lc !== '0000');
   };
+  const swipeUnlockEnabled = () => phoneState.settings.screenLockEnabled !== false && !hasPinSet() && phoneState.settings.swipeUnlock === true;
 
   let timer: number | undefined;
   let swipePointerId: number | null = null;
@@ -640,9 +640,31 @@ export function LockScreen() {
         <button class={styles.sosBtn} onClick={() => setEmergencySheetOpen(true)}>SOS</button>
       </div>
       <Show when={!hasPinSet()}>
-        <button class={styles.tapUnlockBtn} onClick={() => { phoneActions.unlockDirect(); finalizeUnlock(); }}>
-          <span class={styles.tapUnlockLabel}>{t('lock.tap_to_unlock', language())}</span>
-        </button>
+        <Show
+          when={swipeUnlockEnabled()}
+          fallback={
+            <button class={styles.tapUnlockBtn} onClick={() => { phoneActions.unlockDirect(); finalizeUnlock(); }}>
+              <span class={styles.tapUnlockLabel}>{t('lock.tap_to_unlock', language())}</span>
+            </button>
+          }
+        >
+          <div
+            class={styles.swipeUnlockDock}
+            data-testid="lock-swipe-unlock"
+            onPointerDown={handleSwipeUnlockPointerDown}
+            onPointerMove={handleSwipeUnlockPointerMove}
+            onPointerUp={handleSwipeUnlockPointerEnd}
+            onPointerCancel={handleSwipeUnlockPointerEnd}
+          >
+            <div class={styles.swipeUnlockTrack}>
+              <span class={styles.swipeUnlockFill} style={{ height: `${swipeUnlockProgress()}%` }} />
+              <span class={styles.swipeUnlockHandle} style={{ transform: `translateY(${-Math.min(88, swipeUnlockProgress() * 0.88)}px)` }}>
+                <span class={styles.swipeUnlockArrow}>↑</span>
+              </span>
+            </div>
+            <span class={styles.swipeUnlockLabel}>{t('lock.swipe_up', language())}</span>
+          </div>
+        </Show>
       </Show>
     </div>
   );

@@ -12,10 +12,17 @@ export interface PhoneKeyHandlers {
   [key: string]: (() => void) | undefined;
 }
 
-export function usePhoneKeyHandler(handlers: PhoneKeyHandlers) {
+export interface PhoneKeyHandlerOptions {
+  routeId?: string | (() => string | undefined);
+}
+
+export function usePhoneKeyHandler(handlers: PhoneKeyHandlers, options?: PhoneKeyHandlerOptions) {
   const router = useRouter();
 
   const handleKeyEvent = (key: string) => {
+    const routeId = typeof options?.routeId === 'function' ? options.routeId() : options?.routeId;
+    if (routeId && router.currentRoute() !== routeId) return;
+
     const handler = handlers[key];
 
     if (handler) {
@@ -31,10 +38,13 @@ export function usePhoneKeyHandler(handlers: PhoneKeyHandlers) {
   useInternalEvent('phone:keyUp', handleKeyEvent);
 }
 
-export function useBackspaceKey(onBack?: () => void) {
+export function useBackspaceKey(onBack?: () => void, options?: PhoneKeyHandlerOptions) {
   const router = useRouter();
 
   const handleBackspaceKey = (key: string) => {
+    const routeId = typeof options?.routeId === 'function' ? options.routeId() : options?.routeId;
+    if (routeId && router.currentRoute() !== routeId) return;
+
     if (key === 'Backspace') {
       if (onBack) {
         onBack();

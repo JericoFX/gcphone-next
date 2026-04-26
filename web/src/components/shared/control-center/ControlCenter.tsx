@@ -425,7 +425,7 @@ export function ControlCenter() {
         id: 'control-nfc-status',
         appId: 'settings',
         title: 'NFC',
-        message: `${nfcOnLabel(language())} - Centro de control`,
+        message: `${nfcOnLabel(language())} - ${t('control.center', language())}`,
         priority: 'normal',
       });
       void syncNearbyPlayers();
@@ -435,7 +435,7 @@ export function ControlCenter() {
       id: 'control-nfc-status',
       appId: 'settings',
       title: 'NFC',
-      message: `${nfcOffLabel(language())} - Centro de control`,
+      message: `${nfcOffLabel(language())} - ${t('control.center', language())}`,
       priority: 'normal',
     });
   }
@@ -454,7 +454,7 @@ export function ControlCenter() {
         id: 'control-nfc-status',
         appId: 'settings',
         title: 'NFC',
-        message: `${nfcOffLabel(language())} - Centro de control`,
+        message: `${nfcOffLabel(language())} - ${t('control.center', language())}`,
         priority: 'normal',
       });
       return;
@@ -466,7 +466,7 @@ export function ControlCenter() {
         id: 'control-nfc-nearby',
         appId: 'settings',
         title: 'NFC',
-        message: `${nfcNoNearbyLabel(language())} - Centro de control`,
+        message: `${nfcNoNearbyLabel(language())} - ${t('control.center', language())}`,
         priority: 'normal',
       });
       return;
@@ -749,7 +749,7 @@ export function ControlCenter() {
 
             <div class={styles.summaryRow}>
               <article class={styles.summaryCard} data-testid="notification-center-total-summary">
-                <span>Total</span>
+                <span>{t('control.notifications_total', language())}</span>
                 <strong>{totalNotificationCount()}</strong>
                 <small>{appsCountLabel(groupedNotifications().length, language())}</small>
               </article>
@@ -772,7 +772,7 @@ export function ControlCenter() {
                 <div class={styles.empty}>
                   <div class={styles.emptyBadge}>{groupedByAppLabel(language())}</div>
                   <strong>{t('notifications.none_saved', language())}</strong>
-                  <span>Las notificaciones nuevas apareceran aqui con su app, su hora y accesos rapidos.</span>
+                  <span>{t('control.empty_notifications_desc', language())}</span>
                 </div>
               }>
                 <For each={groupedNotifications()}>
@@ -944,7 +944,7 @@ export function ControlCenter() {
                     classList={{ [styles.nfcToggleActive]: nfcEnabled() }}
                     data-testid="control-center-nfc-toggle"
                     onClick={toggleNfc}
-                    title={nfcEnabled() ? 'NFC activo' : nfcOffLabel(language())}
+                    title={nfcEnabled() ? nfcOnLabel(language()) : nfcOffLabel(language())}
                   >
                     NFC
                   </button>
@@ -952,8 +952,8 @@ export function ControlCenter() {
                     class={styles.refreshButton}
                     classList={{ [styles.refreshButtonActive]: nfcEnabled() }}
                     onClick={() => nfcEnabled() ? void syncNearbyPlayers() : toggleNfc()}
-                    title={nfcEnabled() ? 'Actualizar NFC' : nfcOffLabel(language())}
-                    aria-label={nfcEnabled() ? 'Actualizar NFC' : nfcOffLabel(language())}
+                    title={nfcEnabled() ? t('control.nfc_refresh', language()) : nfcOffLabel(language())}
+                    aria-label={nfcEnabled() ? t('control.nfc_refresh', language()) : nfcOffLabel(language())}
                   >
                     <img src="./img/icons_ios/ui-location.svg" alt="" draggable={false} />
                   </button>
@@ -966,8 +966,8 @@ export function ControlCenter() {
                   class={styles.nfcTarget}
                   disabled={!nfcEnabled() || nearbyPlayers().length <= 1}
                   onClick={cycleNfcTarget}
-                  title={nearbyPlayers().length > 1 ? 'Cambiar persona NFC' : undefined}
-                  aria-label={nearbyPlayers().length > 1 ? 'Cambiar persona NFC' : undefined}
+                  title={nearbyPlayers().length > 1 ? t('control.nfc_change_person', language()) : undefined}
+                  aria-label={nearbyPlayers().length > 1 ? t('control.nfc_change_person', language()) : undefined}
                 >
                   <span>{t('nfc.nearby_people', language())}</span>
                   <strong>

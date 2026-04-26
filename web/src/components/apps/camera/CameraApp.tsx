@@ -122,7 +122,7 @@ export function CameraApp() {
     Backspace: () => {
       void closeCamera();
     },
-  });
+  }, { routeId: 'camera' });
 
   onMount(async () => {
     const capabilities = await fetchNui<{

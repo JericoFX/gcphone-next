@@ -1315,11 +1315,14 @@
   .dot,
   .bottom-btn,
   .sos-btn,
+  .swipe-unlock-fill,
+  .swipe-unlock-handle,
   .tap-unlock-label {
     transition: none;
   }
 
   .error-dot,
+  .swipe-unlock-label,
   .tap-unlock-label {
     animation: none;
   }
