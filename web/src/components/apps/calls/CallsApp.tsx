@@ -18,7 +18,7 @@ import { LetterAvatar } from '../../shared/ui/LetterAvatar';
 import { AppFAB, AppScaffold, AppTabs } from '../../shared/layout';
 import { useNotifications } from '../../../store/notifications';
 import { t } from '../../../i18n';
-import { createOffer, handleSignal, getCallRemainingTime, allowPeer } from '../../../utils/peerManager';
+import { connectPeer, handlePeerSignal, getCallRemainingTime, registerPeerSession } from '../../../utils/peerManager';
 import { useLiveCamera } from '../../../hooks/useLiveCamera';
 import type { Call } from '../../../types';
 import type { TabItem } from '../../shared/layout';
@@ -353,7 +353,7 @@ export function CallsApp() {
       await callCam.enableMic();
 
       const channel = `call-${currentCall.id}`;
-      await fetchNui('webrtcRegisterSession', { sessionId: mySessionId, channel }, true);
+      await registerPeerSession(channel);
       await fetchNui('videoPeerReady', { callId: currentCall.id, sessionId: mySessionId }, true);
 
       setLocalVideoIdentity(mySessionId);
@@ -409,13 +409,12 @@ export function CallsApp() {
     if (!payload?.sessionId || !videoMode()) return;
     const currentCall = callInfo();
     if (!currentCall?.id) return;
-    allowPeer(payload.sessionId);
-    void createOffer(payload.sessionId, `call-${currentCall.id}`);
+    void connectPeer(payload.sessionId, `call-${currentCall.id}`);
   });
 
   useNuiEvent<{ type: string; data: string; fromPeerId: string; channel: string }>('webrtcSignal', (signal) => {
     if (!signal?.type || !signal?.fromPeerId) return;
-    void handleSignal(signal as Parameters<typeof handleSignal>[0]);
+    void handlePeerSignal(signal as Parameters<typeof handlePeerSignal>[0]);
   });
 
   useNuiEvent<any>('callRejected', () => {

@@ -20,6 +20,7 @@ let callTimeoutId: ReturnType<typeof setTimeout> | null = null;
 let callStartTime: number | null = null;
 let maxDuration: number = 0;
 let sessionId: string | null = null;
+let activeChannel: string | null = null;
 const allowedPeers = new Set<string>();
 
 let cachedIceServers: RTCIceServer[] | null = null;
@@ -64,6 +65,13 @@ export interface PeerHandlers {
   onRemoteDisconnected?: (peerId: string) => void;
   onCallTimeout?: () => void;
   onError?: (error: string) => void;
+}
+
+export interface PeerSignal {
+  type: 'offer' | 'answer' | 'candidate';
+  data: string;
+  fromPeerId: string;
+  channel: string;
 }
 
 let handlers: PeerHandlers = {};
@@ -168,6 +176,10 @@ export function getSessionId(): string | null {
   return sessionId;
 }
 
+export function getActiveChannel(): string | null {
+  return activeChannel;
+}
+
 export function getCallRemainingTime(): number {
   if (!callStartTime || maxDuration <= 0) return 0;
   const elapsed = Math.floor((Date.now() - callStartTime) / 1000);
@@ -178,6 +190,19 @@ export function allowPeer(remotePeerId: string) {
   if (remotePeerId && typeof remotePeerId === 'string') {
     allowedPeers.add(remotePeerId);
   }
+}
+
+export async function registerPeerSession(channel: string): Promise<string | null> {
+  if (!sessionId || !channel) return null;
+  activeChannel = channel;
+  await fetchNui('webrtcRegisterSession', { sessionId, channel }, true);
+  return sessionId;
+}
+
+export async function connectPeer(remotePeerId: string, signalingChannel = activeChannel || ''): Promise<void> {
+  if (!signalingChannel) return;
+  allowPeer(remotePeerId);
+  await createOffer(remotePeerId, signalingChannel);
 }
 
 // ── Create Offer (caller side) ──
@@ -202,15 +227,14 @@ export async function createOffer(remotePeerId: string, signalingChannel: string
 
 // ── Handle incoming signal from FiveM event ──
 
-export async function handleSignal(signal: {
-  type: 'offer' | 'answer' | 'candidate';
-  data: string;
-  fromPeerId: string;
-  channel: string;
-}): Promise<void> {
+export async function handleSignal(signal: PeerSignal): Promise<void> {
   if (!sessionId) return;
 
   const { type, data, fromPeerId, channel } = signal;
+  if (activeChannel && channel !== activeChannel) {
+    console.warn('[peerManager] Signal for inactive channel:', channel);
+    return;
+  }
   if (!fromPeerId || !allowedPeers.has(fromPeerId)) {
     console.warn('[peerManager] Signal from unauthorized peer:', fromPeerId);
     return;
@@ -247,6 +271,10 @@ export async function handleSignal(signal: {
     console.warn('[peerManager] Signal handling error from', fromPeerId, e);
     disconnectPeer(fromPeerId);
   }
+}
+
+export async function handlePeerSignal(signal: PeerSignal): Promise<void> {
+  await handleSignal(signal);
 }
 
 // ── Media Management ──
@@ -320,6 +348,7 @@ export function disconnectAll() {
   }
 
   sessionId = null;
+  activeChannel = null;
   callStartTime = null;
   maxDuration = 0;
   handlers = {};

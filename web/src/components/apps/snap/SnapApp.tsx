@@ -5,7 +5,7 @@ import { useInternalEvent } from '../../../utils/internalEvents';
 import { resolveMediaType, sanitizeMediaUrl, sanitizeText } from '../../../utils/sanitize';
 import { useNuiEvent } from '../../../utils/useNui';
 import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
-import { createOffer, handleSignal, allowPeer } from '../../../utils/peerManager';
+import { connectPeer, handlePeerSignal, registerPeerSession } from '../../../utils/peerManager';
 import { useLiveCamera } from '../../../hooks/useLiveCamera';
 import { startMockLiveFeed } from '../../../utils/liveMock';
 import {
@@ -389,13 +389,12 @@ export function SnapApp() {
     if (!payload?.sessionId || !activeLive()) return;
     const live = activeLive();
     if (!live) return;
-    allowPeer(payload.sessionId);
-    void createOffer(payload.sessionId, `snaplive-${live.id}`);
+    void connectPeer(payload.sessionId, `snaplive-${live.id}`);
   });
 
   useNuiEvent<{ type: string; data: string; fromPeerId: string; channel: string }>('webrtcSignal', (signal) => {
     if (!signal?.type || !signal?.fromPeerId) return;
-    void handleSignal(signal as Parameters<typeof handleSignal>[0]);
+    void handlePeerSignal(signal as Parameters<typeof handlePeerSignal>[0]);
   });
 
   useNuiEvent<number>('gcphone:snap:liveEnded', (liveId) => {
@@ -909,7 +908,7 @@ export function SnapApp() {
 
       const channel = `snaplive-${live.id}`;
       console.log('[snap:live] Registering session:', mySessionId, 'channel:', channel);
-      await fetchNui('webrtcRegisterSession', { sessionId: mySessionId, channel }, true);
+      await registerPeerSession(channel);
       console.log('[snap:live] Sending snapLivePeerReady, owner:', owner);
       await fetchNui('snapLivePeerReady', { liveId: live.id, sessionId: mySessionId, owner }, true);
       console.log('[snap:live] Peer ready sent, setting connected');

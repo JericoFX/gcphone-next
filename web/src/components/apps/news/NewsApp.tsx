@@ -26,7 +26,7 @@ import { useNotifications } from '../../../store/notifications';
 import { getStoredLanguage, t } from '../../../i18n';
 import type { NewsArticle, NewsScaleform, MockLiveMessage, LiveJoinResponse, NewsProfile, LiveReaction } from './NewsTypes';
 import { articleMediaUrl, isLiveArticle, articleAuthor, buildClockTime, NEWS_MOCK_USERS, NEWS_MOCK_LINES, LIVE_REACTIONS } from './NewsTypes';
-import { createOffer, handleSignal, allowPeer } from '../../../utils/peerManager';
+import { connectPeer, handlePeerSignal, registerPeerSession } from '../../../utils/peerManager';
 import { useLiveCamera } from '../../../hooks/useLiveCamera';
 import styles from './NewsApp.module.scss';
 
@@ -117,7 +117,7 @@ export function NewsApp() {
       }
 
       const channel = `newslive-${articleId}`;
-      await fetchNui('webrtcRegisterSession', { sessionId: mySessionId, channel }, true);
+      await registerPeerSession(channel);
       await fetchNui('newsLivePeerReady', { articleId, sessionId: mySessionId, broadcaster: isBroadcaster }, true);
     } catch (e) {
       console.warn('[news] Failed to connect peer:', e);
@@ -365,13 +365,12 @@ export function NewsApp() {
     if (!payload?.sessionId || !activeLive()) return;
     const article = activeLive();
     if (!article) return;
-    allowPeer(payload.sessionId);
-    void createOffer(payload.sessionId, `newslive-${article.id}`);
+    void connectPeer(payload.sessionId, `newslive-${article.id}`);
   });
 
   useNuiCustomEvent<{ type: string; data: string; fromPeerId: string; channel: string }>('webrtcSignal', (signal) => {
     if (!signal?.type || !signal?.fromPeerId) return;
-    void handleSignal(signal as Parameters<typeof handleSignal>[0]);
+    void handlePeerSignal(signal as Parameters<typeof handlePeerSignal>[0]);
   });
 
   useNuiCustomEvent<number>('gcphone:news:liveEnded', (articleId) => {
