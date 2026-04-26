@@ -121,6 +121,71 @@ function notificationCountLabel(count: number, lang: string): string {
   return (labels[lang] || labels.en)(count);
 }
 
+function unreadCountLabel(count: number, lang: string): string {
+  const labels: Record<string, (value: number) => string> = {
+    es: (value) => `${value} ${value === 1 ? 'nueva' : 'nuevas'}`,
+    en: (value) => `${value} ${value === 1 ? 'new' : 'new'}`,
+    fr: (value) => `${value} ${value === 1 ? 'nouvelle' : 'nouvelles'}`,
+    de: (value) => `${value} ${value === 1 ? 'neu' : 'neu'}`,
+    pt: (value) => `${value} ${value === 1 ? 'nova' : 'novas'}`,
+    ru: (value) => `${value} new`,
+    pl: (value) => `${value} ${value === 1 ? 'nowe' : 'nowe'}`,
+    it: (value) => `${value} ${value === 1 ? 'nuova' : 'nuove'}`,
+  };
+  return (labels[lang] || labels.en)(count);
+}
+
+function appsCountLabel(count: number, lang: string): string {
+  const labels: Record<string, (value: number) => string> = {
+    es: (value) => `${value} ${value === 1 ? 'app' : 'apps'}`,
+    en: (value) => `${value} ${value === 1 ? 'app' : 'apps'}`,
+    fr: (value) => `${value} ${value === 1 ? 'app' : 'apps'}`,
+    de: (value) => `${value} ${value === 1 ? 'App' : 'Apps'}`,
+    pt: (value) => `${value} ${value === 1 ? 'app' : 'apps'}`,
+    ru: (value) => `${value} apps`,
+    pl: (value) => `${value} ${value === 1 ? 'aplikacja' : 'aplikacje'}`,
+    it: (value) => `${value} ${value === 1 ? 'app' : 'app'}`,
+  };
+  return (labels[lang] || labels.en)(count);
+}
+
+function mutedSummaryHintLabel(lang: string): string {
+  const labels: Record<string, string> = {
+    es: 'Abrir Ajustes > Notificaciones',
+    en: 'Open Settings > Notifications',
+    fr: 'Ouvrir Reglages > Notifications',
+    de: 'Einstellungen > Mitteilungen offnen',
+    pt: 'Abrir Ajustes > Notificacoes',
+    ru: 'Open Settings > Notifications',
+    pl: 'Otworz Ustawienia > Powiadomienia',
+    it: 'Apri Impostazioni > Notifiche',
+  };
+  return labels[lang] || labels.en;
+}
+
+function groupedByAppLabel(lang: string): string {
+  const labels: Record<string, string> = {
+    es: 'Agrupadas por app',
+    en: 'Grouped by app',
+    fr: 'Groupees par app',
+    de: 'Nach App gruppiert',
+    pt: 'Agrupadas por app',
+    ru: 'Grouped by app',
+    pl: 'Pogrupowane wedlug aplikacji',
+    it: 'Raggruppate per app',
+  };
+  return labels[lang] || labels.en;
+}
+
+function notificationPreviewLabel(title: string, message: string, appTitle: string): string {
+  const trimmedTitle = title.trim();
+  const trimmedMessage = message.trim();
+  if (trimmedTitle && trimmedTitle !== appTitle) {
+    return trimmedMessage ? `${trimmedTitle}: ${trimmedMessage}` : trimmedTitle;
+  }
+  return trimmedMessage || trimmedTitle || appTitle;
+}
+
 function showLessLabel(lang: string): string {
   const labels: Record<string, string> = {
     es: 'Mostrar menos',
@@ -213,9 +278,12 @@ export function ControlCenter() {
       .slice(0, 3)
       .map((appId) => appName(appId, APP_BY_ID[appId]?.name || appId, language()))
   ));
-  const mutedSummaryLabel = createMemo(() => (
-    mutedAppsCount() > 0 ? mutedAppLabels().join(', ') : 'Ajustes de notificaciones'
-  ));
+  const mutedSummaryLabel = createMemo(() => {
+    if (mutedAppsCount() === 0) return mutedSummaryHintLabel(language());
+    const names = mutedAppLabels().join(', ');
+    const extra = mutedAppsCount() - mutedAppLabels().length;
+    return extra > 0 ? `${names} +${extra}` : names;
+  });
 
   const dayLabel = createMemo(() => {
     const now = new Date();
@@ -653,28 +721,28 @@ export function ControlCenter() {
               <article class={styles.summaryCard}>
                 <span>Total</span>
                 <strong>{totalNotificationCount()}</strong>
+                <small>{appsCountLabel(groupedNotifications().length, language())}</small>
               </article>
               <button
                 type="button"
                 class={`${styles.summaryCard} ${styles.summaryCardButton}`}
+                data-testid="notification-muted-summary"
                 onClick={openMutedNotificationSettings}
               >
-                <span>{t('control.muted', language())}</span>
-                <strong>{mutedAppsCount()}</strong>
-                <Show when={mutedAppsCount() > 0} fallback={<small>Abrir ajustes</small>}>
-                  <small>
-                    {mutedSummaryLabel()}
-                    <Show when={mutedAppsCount() > mutedAppLabels().length}> +{mutedAppsCount() - mutedAppLabels().length}</Show>
-                  </small>
-                </Show>
+                <div class={styles.summaryCardTop}>
+                  <span>{t('control.muted', language())}</span>
+                  <strong>{mutedAppsCount()}</strong>
+                </div>
+                <small>{mutedSummaryLabel()}</small>
               </button>
             </div>
 
             <div class={styles.notificationList}>
               <Show when={groupedNotifications().length > 0} fallback={
                 <div class={styles.empty}>
+                  <div class={styles.emptyBadge}>{groupedByAppLabel(language())}</div>
                   <strong>{t('notifications.none_saved', language())}</strong>
-                  <span>Las notificaciones nuevas apareceran agrupadas por app.</span>
+                  <span>Las notificaciones nuevas apareceran aqui con su app, su hora y accesos rapidos.</span>
                 </div>
               }>
                 <For each={groupedNotifications()}>
@@ -691,18 +759,25 @@ export function ControlCenter() {
                         <div class={styles.groupMeta}>
                           <div class={styles.groupNameRow}>
                             <span>{group.title}</span>
-                            <Show when={group.unreadCount > 0}>
-                              <b>{group.unreadCount}</b>
-                            </Show>
                             <Show when={group.muted}>
                               <em>{t('control.muted', language())}</em>
                             </Show>
                           </div>
-                          <small>
-                            {notificationCountLabel(group.items.length, language())}
-                            <Show when={group.latestAt > 0}> - {formatTime(group.latestAt)}</Show>
-                          </small>
+                          <div class={styles.groupSummaryRow}>
+                            <small class={styles.groupPreview}>
+                              {notificationPreviewLabel(group.items[0]?.title || '', group.items[0]?.message || '', group.title)}
+                            </small>
+                            <small class={styles.groupStats}>
+                              {group.unreadCount > 0
+                                ? unreadCountLabel(group.unreadCount, language())
+                                : notificationCountLabel(group.items.length, language())}
+                              <Show when={group.latestAt > 0}> - {formatTime(group.latestAt)}</Show>
+                            </small>
+                          </div>
                         </div>
+                        <Show when={group.unreadCount > 0}>
+                          <b class={styles.groupUnreadBadge}>{group.unreadCount}</b>
+                        </Show>
                       </div>
                       <div class={styles.groupActions}>
                         <button onClick={() => notificationsActions.markAppAsRead(group.appId)} disabled={group.unreadCount <= 0}>

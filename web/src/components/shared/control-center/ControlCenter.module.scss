@@ -770,14 +770,15 @@
 }
 
 .summary-card {
-  min-height: 48px;
+  min-height: 58px;
   border: 0;
   border-radius: var(--r-xl);
   background: var(--cc-tile);
   display: grid;
-  align-content: center;
+  align-content: space-between;
   justify-items: start;
-  padding: var(--s-2) var(--s-3);
+  gap: 4px;
+  padding: 10px 12px;
 
   span {
     font-size: 10px;
@@ -796,12 +797,23 @@
   small {
     max-width: 100%;
     color: var(--cc-text-muted);
-    font-size: 9px;
+    font-size: 10px;
     font-weight: 700;
-    line-height: 1.15;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    line-height: 1.25;
+    white-space: normal;
+  }
+}
+
+.summary-card-top {
+  width: 100%;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-2);
+
+  strong {
+    flex-shrink: 0;
+    text-align: right;
   }
 }
 
@@ -827,6 +839,10 @@
   &:active {
     transform: scale(0.97);
     background: var(--cc-tile-strong);
+  }
+
+  small {
+    max-width: calc(100% - 18px);
   }
 }
 
@@ -881,7 +897,7 @@
   min-width: 0;
   flex: 1;
   display: grid;
-  gap: 1px;
+  gap: 3px;
 
   span {
     font-size: var(--fs-caption1);
@@ -899,6 +915,28 @@
     color: var(--cc-text-muted);
     line-height: 1.1;
   }
+}
+
+.group-summary-row {
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.group-preview {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.group-stats {
+  flex-shrink: 0;
+  text-align: right;
+  white-space: nowrap;
 }
 
 .group-name-row {
@@ -936,6 +974,22 @@
     color: var(--cc-text-muted);
     text-transform: uppercase;
   }
+}
+
+.group-unread-badge {
+  flex-shrink: 0;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 7px;
+  border-radius: var(--r-pill);
+  display: inline-grid;
+  place-items: center;
+  background: var(--tint);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 1;
+  box-shadow: 0 3px 10px rgba(var(--tint-rgb), 0.32);
 }
 
 .group-actions {
@@ -1120,7 +1174,22 @@
   padding: var(--s-5) var(--s-4);
   display: grid;
   place-content: center;
-  gap: var(--s-1);
+  justify-items: center;
+  gap: 6px;
+
+  .empty-badge {
+    min-height: 22px;
+    padding: 0 10px;
+    border-radius: var(--r-pill);
+    display: inline-grid;
+    place-items: center;
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--cc-text-soft);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+  }
 
   strong {
     color: var(--cc-text-soft);

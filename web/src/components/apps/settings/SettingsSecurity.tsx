@@ -19,6 +19,12 @@ export function SettingsSecurity(props: SettingsSecurityProps) {
   const [status, setStatus] = createSignal<{ type: 'ok' | 'error'; text: string } | null>(null);
 
   const resetSecurityFlow = () => { setSecurityFlow('idle'); setPinCode(''); setPinConfirm(''); };
+  const beginPinSetup = () => {
+    resetSecurityFlow();
+    props.phoneActions.setScreenLockEnabled(true);
+    props.phoneActions.setSwipeUnlock(false);
+    setSecurityFlow('change-new');
+  };
 
   const getCurrentPin = () => securityFlow() === 'change-confirm' ? pinConfirm() : pinCode();
 
@@ -36,6 +42,7 @@ export function SettingsSecurity(props: SettingsSecurityProps) {
     }
     props.phoneActions.setLockCode(pinCode());
     props.phoneActions.setScreenLockEnabled(true);
+    props.phoneActions.setSwipeUnlock(false);
     setStatus({ type: 'ok', text: t('settings.pin_saved', props.language()) });
     setTimeout(() => { resetSecurityFlow(); setStatus(null); }, 2000);
   };
@@ -106,7 +113,12 @@ export function SettingsSecurity(props: SettingsSecurityProps) {
                 setSecurityFlow('disable-lock');
                 return;
               }
-              props.phoneActions.setScreenLockEnabled(true);
+              if (hasPinSet()) {
+                props.phoneActions.setScreenLockEnabled(true);
+                props.phoneActions.setSwipeUnlock(false);
+                return;
+              }
+              beginPinSetup();
             }}
           >
             <div class="ios18-switch__thumb" />
@@ -146,7 +158,7 @@ export function SettingsSecurity(props: SettingsSecurityProps) {
             if (hasPinSet()) {
               setSecurityFlow('change-verify');
             } else {
-              setSecurityFlow('change-new');
+              beginPinSetup();
             }
           }}
         >
@@ -169,6 +181,11 @@ export function SettingsSecurity(props: SettingsSecurityProps) {
         <Show when={securityFlow() !== 'idle'}>
           <div class={styles.pinContainer}>
             <div class={styles.pinTitle}>{securityTitle()}</div>
+            <Show when={securityFlow() === 'change-new' || securityFlow() === 'change-confirm'}>
+              <div class={styles.pinSubtitle}>
+                {t('settings.pin_enter', props.language()) || 'Enter a 4-digit PIN'}
+              </div>
+            </Show>
             <div class={styles.pinDots}>
               <For each={[0, 1, 2, 3]}>
                 {(i) => <div class={styles.pinDot} classList={{ [styles.filled]: getCurrentPin().length > i }} />}

@@ -1,10 +1,66 @@
-import { Show, createEffect, createMemo, createSignal, Switch, Match, For, onCleanup } from 'solid-js';
-import { useLiveActivity } from '../../../store/liveActivity';
+import { Motion, Presence } from '@motionone/solid';
+import { For, Match, Show, Switch, createEffect, createMemo, createSignal, onCleanup } from 'solid-js';
+import { useLiveActivity, type LiveActivity } from '../../../store/liveActivity';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { IslandMusic } from './IslandMusic';
 import { IslandRadio } from './IslandRadio';
 import { IslandCall } from './IslandCall';
 import styles from './DynamicIsland.module.scss';
+
+const MOTION_EASING = [0.32, 0.72, 0, 1];
+
+function isAssetIcon(icon?: string): boolean {
+  return typeof icon === 'string' && /^(?:\.\.\/|\.\/|\/|https?:\/\/)/.test(icon);
+}
+
+function getActivityKey(activity?: LiveActivity): string {
+  if (!activity) return 'none';
+
+  return [
+    activity.type,
+    activity.title,
+    activity.subtitle || '',
+    activity.icon || '',
+    activity.isPlaying ? '1' : '0',
+    typeof activity.volume === 'number' ? String(activity.volume) : '',
+  ].join(':');
+}
+
+function getToneClass(activity: LiveActivity | undefined): string {
+  if (!activity) return styles.dotMusic;
+  if (activity.type === 'call') return styles.dotCall;
+  if (activity.type === 'radio') return styles.dotRadio;
+  if (activity.type === 'recording') return styles.dotRecording;
+  if (activity.type === 'cityride') return styles.dotCityride;
+  if (activity.type === 'location') return styles.dotLocation;
+  if (activity.type === 'timer') return styles.dotTimer;
+  return styles.dotMusic;
+}
+
+function ActivityVisual(props: { activity?: LiveActivity; compact?: boolean; expanded?: boolean }) {
+  const icon = () => props.activity?.icon?.trim();
+  const iconIsAsset = () => isAssetIcon(icon());
+  const toneClass = () => getToneClass(props.activity);
+
+  return (
+    <span
+      class={styles.activityVisual}
+      classList={{
+        [styles.activityVisualCompact]: props.compact === true,
+        [styles.activityVisualExpanded]: props.expanded === true,
+      }}
+    >
+      <Show when={icon()} fallback={<span class={`${styles.activityPulseDot} ${toneClass()}`} />}>
+        <Show
+          when={iconIsAsset()}
+          fallback={<span class={styles.activityGlyph}>{icon()}</span>}
+        >
+          <img class={styles.activityIcon} src={icon()} alt="" />
+        </Show>
+      </Show>
+    </span>
+  );
+}
 
 export function DynamicIsland() {
   const { activities } = useLiveActivity();
@@ -12,56 +68,62 @@ export function DynamicIsland() {
   const [expanded, setExpanded] = createSignal(false);
   const [activeIndex, setActiveIndex] = createSignal(0);
   const [minimized, setMinimized] = createSignal(false);
+  let compactTimer: number | undefined;
   let minimizeTimer: number | undefined;
   let rotateTimer: number | undefined;
+  let previousSignature: string | undefined;
+  let previousKeys: string[] = [];
 
-  const currentActivity = () => {
+  const currentActivity = createMemo(() => {
     const list = activities();
-    const idx = activeIndex();
-    return list[idx] || list[0];
-  };
+    return list[activeIndex()] || list[0];
+  });
 
   const isHome = () => router.currentRoute() === 'home';
   const hasActivities = () => activities().length > 0;
   const multipleActivities = () => activities().length > 1;
   const activityCount = () => activities().length;
-  const activitySignature = createMemo(() => (
-    activities()
-      .map((activity) => `${activity.type}:${activity.title}:${activity.subtitle || ''}`)
-      .join('|')
+  const activityPosition = () => {
+    if (!currentActivity()) return 0;
+    return Math.min(activeIndex(), activities().length - 1) + 1;
+  };
+  const activityPositionLabel = () => `${activityPosition()}/${activityCount()}`;
+  const activitySignature = createMemo(() => activities().map((activity) => getActivityKey(activity)).join('|'));
+  const viewKey = createMemo(() => (
+    `${isHome() ? (expanded() ? 'expanded' : minimized() ? 'mini' : 'compact') : 'away'}:${getActivityKey(currentActivity())}:${activityPositionLabel()}`
   ));
   const shouldAutoMinimize = () => {
     const type = currentActivity()?.type;
     return type !== 'call' && type !== 'recording';
   };
-  const minimizeDelayMs = () => (shouldAutoMinimize() ? 3200 : 6500);
+  const compactDelayMs = () => (shouldAutoMinimize() ? 2800 : 5000);
+  const minimizeDelayMs = () => (shouldAutoMinimize() ? 2400 : 3600);
 
-  const dotColor = () => {
-    const act = currentActivity();
-    if (!act) return styles.dotMusic;
-    if (act.type === 'call') return styles.dotCall;
-    if (act.type === 'radio') return styles.dotRadio;
-    if (act.type === 'recording') return styles.dotRecording;
-    if (act.type === 'cityride') return styles.dotCityride;
-    if (act.type === 'location') return styles.dotLocation;
-    if (act.type === 'timer') return styles.dotTimer;
-    return styles.dotMusic;
+  const pickChangedActivity = (currentKeys: string[], nextKeys: string[]) => {
+    const newIndex = nextKeys.findIndex((key) => !currentKeys.includes(key));
+    if (newIndex >= 0) return newIndex;
+
+    const changedIndex = nextKeys.findIndex((key, index) => key !== currentKeys[index]);
+    if (changedIndex >= 0) return changedIndex;
+
+    return Math.min(activeIndex(), nextKeys.length - 1);
   };
 
-  const handlePillClick = (e: MouseEvent) => {
-    e.stopPropagation();
+  const handlePillClick = (event: MouseEvent) => {
+    event.stopPropagation();
+
     if (!isHome()) {
-      // Mini mode: tap navigates to home
       router.navigate('home');
       return;
     }
+
     if (expanded()) {
-      const act = currentActivity();
-      act?.onNavigate?.();
-    } else {
-      setMinimized(false);
-      setExpanded(true);
+      currentActivity()?.onNavigate?.();
+      return;
     }
+
+    setMinimized(false);
+    setExpanded(true);
   };
 
   const collapse = () => {
@@ -69,52 +131,102 @@ export function DynamicIsland() {
     setMinimized(false);
   };
 
-  const cycleActivity = (e: MouseEvent) => {
-    e.stopPropagation();
+  const cycleActivity = (event: MouseEvent) => {
+    event.stopPropagation();
     if (!multipleActivities()) return;
-    setActiveIndex((idx) => (idx + 1) % activities().length);
+    setActiveIndex((index) => (index + 1) % activities().length);
     setMinimized(false);
   };
 
   createEffect(() => {
-    activitySignature();
-    const expandedNow = expanded();
+    const signature = activitySignature();
+    const nextKeys = signature ? signature.split('|') : [];
     const homeNow = isHome();
-    if (activeIndex() >= activities().length) setActiveIndex(0);
-    setMinimized(false);
-    if (minimizeTimer) window.clearTimeout(minimizeTimer);
-    if (!hasActivities() || expandedNow || !homeNow) return;
-    minimizeTimer = window.setTimeout(() => {
-      if (!expanded() && isHome()) setMinimized(true);
-    }, minimizeDelayMs());
+
+    if (!nextKeys.length) {
+      previousSignature = undefined;
+      previousKeys = [];
+      setExpanded(false);
+      setMinimized(false);
+      setActiveIndex(0);
+      return;
+    }
+
+    if (activeIndex() >= nextKeys.length) setActiveIndex(0);
+
+    if (previousSignature && previousSignature !== signature) {
+      setActiveIndex(pickChangedActivity(previousKeys, nextKeys));
+      if (homeNow) {
+        setMinimized(false);
+        setExpanded(true);
+      }
+    }
+
+    previousSignature = signature;
+    previousKeys = nextKeys;
   });
 
   createEffect(() => {
     activitySignature();
-    const expandedNow = expanded();
     const homeNow = isHome();
+    const expandedNow = expanded();
+    const minimizedNow = minimized();
+
+    if (compactTimer) window.clearTimeout(compactTimer);
+    if (minimizeTimer) window.clearTimeout(minimizeTimer);
+
+    if (!hasActivities()) return;
+
+    if (!homeNow) {
+      setExpanded(false);
+      setMinimized(false);
+      return;
+    }
+
+    if (expandedNow) {
+      compactTimer = window.setTimeout(() => {
+        if (isHome() && expanded()) setExpanded(false);
+      }, compactDelayMs());
+      return;
+    }
+
+    if (!minimizedNow) {
+      minimizeTimer = window.setTimeout(() => {
+        if (isHome() && !expanded()) setMinimized(true);
+      }, minimizeDelayMs());
+    }
+  });
+
+  createEffect(() => {
+    activitySignature();
+    const homeNow = isHome();
+    const expandedNow = expanded();
+    const minimizedNow = minimized();
+
     if (rotateTimer) window.clearInterval(rotateTimer);
     if (!multipleActivities() || expandedNow || !homeNow) return;
+
     rotateTimer = window.setInterval(() => {
-      setActiveIndex((idx) => (idx + 1) % activities().length);
-    }, minimized() ? 2600 : 3400);
+      setActiveIndex((index) => (index + 1) % activities().length);
+    }, minimizedNow ? 2600 : 3800);
   });
 
   onCleanup(() => {
+    if (compactTimer) window.clearTimeout(compactTimer);
     if (minimizeTimer) window.clearTimeout(minimizeTimer);
     if (rotateTimer) window.clearInterval(rotateTimer);
   });
 
   return (
     <Show when={hasActivities()}>
-      {/* Overlay to close expanded (only on home) */}
       <Show when={expanded() && isHome()}>
-        <div class={styles.overlay} onClick={collapse} />
+        <div class={styles.overlay} data-testid="dynamic-island-overlay" onClick={collapse} />
       </Show>
 
       <div class={styles.islandSlot}>
-        <div
+        <Motion.div
           class={styles.island}
+          data-testid="dynamic-island"
           classList={{
             [styles.islandMini]: !isHome(),
             [styles.islandMiniWithCount]: !isHome() && multipleActivities(),
@@ -123,92 +235,140 @@ export function DynamicIsland() {
             [styles.islandExpanded]: isHome() && expanded(),
           }}
           onClick={handlePillClick}
-          title={multipleActivities() ? 'Toca el contador para alternar actividad' : currentActivity()?.title}
+          title={multipleActivities() ? `${currentActivity()?.title || ''} (${activityPositionLabel()})` : currentActivity()?.title}
+          animate={{ scale: expanded() ? 1 : 0.998, y: 0 }}
+          transition={{ duration: expanded() ? 0.28 : 0.22, easing: MOTION_EASING }}
         >
-        {/* Mini mode: wave bars only (inside apps) */}
-        <Show when={!isHome()}>
-          <span class={styles.miniWave} />
-          <span class={styles.miniWave} />
-          <span class={styles.miniWave} />
-          <Show when={multipleActivities()}>
-            <button class={styles.miniCount} onClick={cycleActivity} aria-label="Alternar actividad">
-              {activityCount()}
-            </button>
-          </Show>
-        </Show>
-
-        {/* Collapsed view (home, not expanded) */}
-        <Show when={isHome() && !expanded() && !minimized()}>
-          <span class={`${styles.dot} ${dotColor()}`} />
-          <span class={styles.pillTitle}>
-            {currentActivity()?.title || ''}
-          </span>
-          <Show when={multipleActivities()}>
-            <span class={styles.pillCount}>{activityCount()}</span>
-          </Show>
-        </Show>
-
-        {/* Auto-mini view (home, idle) */}
-        <Show when={isHome() && !expanded() && minimized()}>
-          <span class={`${styles.dot} ${dotColor()}`} />
-          <Show when={multipleActivities()}>
-            <button class={styles.miniCount} onClick={cycleActivity} aria-label="Alternar actividad">
-              {activityCount()}
-            </button>
-          </Show>
-        </Show>
-
-        {/* Expanded view (home, expanded) */}
-        <Show when={isHome() && expanded()}>
-          <Switch>
-            <Match when={currentActivity()?.type === 'music'}>
-              <IslandMusic activity={currentActivity()!} />
-            </Match>
-            <Match when={currentActivity()?.type === 'radio'}>
-              <IslandRadio activity={currentActivity()!} />
-            </Match>
-            <Match when={currentActivity()?.type === 'call'}>
-              <IslandCall activity={currentActivity()!} />
-            </Match>
-            <Match when={currentActivity()?.type === 'cityride' || currentActivity()?.type === 'timer' || currentActivity()?.type === 'recording' || currentActivity()?.type === 'location'}>
-              <div class={styles.expandedContent}>
-                <div class={styles.expandedHeader}>
-                  <span class={`${styles.dot} ${dotColor()}`} />
-                  <div style={{ flex: '1', 'min-width': '0' }}>
-                    <div class={styles.expandedTitle}>{currentActivity()!.title}</div>
-                    <div class={styles.expandedSubtitle}>{currentActivity()!.subtitle || ''}</div>
-                  </div>
-                </div>
-                <Show when={currentActivity()!.onStop}>
-                  <div class={styles.expandedControls}>
+          <Presence exitBeforeEnter>
+            <Motion.div
+              key={viewKey()}
+              class={styles.islandInner}
+              initial={{ opacity: 0, y: 6, scale: 0.985 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -5, scale: 0.985 }}
+              transition={{ duration: 0.22, easing: MOTION_EASING }}
+            >
+              <Show when={!isHome()}>
+                <div class={styles.miniContent}>
+                  <ActivityVisual activity={currentActivity()} compact />
+                  <Show when={multipleActivities()}>
                     <button
-                      class={`${styles.controlBtn} ${styles.controlBtnDanger}`}
-                      onClick={(e) => { e.stopPropagation(); currentActivity()!.onStop?.(); }}
+                      type="button"
+                      class={`${styles.activityCountButton} ${styles.activityCountButtonMini}`}
+                      data-testid="dynamic-island-activity-count"
+                      onClick={cycleActivity}
+                      aria-label="Alternar actividad"
                     >
-                      ⏹
+                      {activityPositionLabel()}
                     </button>
-                  </div>
-                </Show>
-              </div>
-            </Match>
-          </Switch>
+                  </Show>
+                </div>
+              </Show>
 
-          {/* Activity dots */}
-          <Show when={multipleActivities()}>
-            <div class={styles.activityDots}>
-              <For each={activities()}>
-                {(_, idx) => (
-                  <button
-                    class={styles.activityDot}
-                    classList={{ [styles.activityDotActive]: idx() === activeIndex() }}
-                    onClick={(e) => { e.stopPropagation(); setActiveIndex(idx()); }}
-                  />
-                )}
-              </For>
-            </div>
-          </Show>
-        </Show>
-        </div>
+              <Show when={isHome() && !expanded() && !minimized()}>
+                <div class={styles.compactContent}>
+                  <ActivityVisual activity={currentActivity()} compact />
+                  <div class={styles.compactText}>
+                    <span class={styles.pillTitle}>{currentActivity()?.title || ''}</span>
+                  </div>
+                  <Show when={multipleActivities()}>
+                    <button
+                      type="button"
+                      class={styles.activityCountButton}
+                      data-testid="dynamic-island-activity-count"
+                      onClick={cycleActivity}
+                      aria-label="Alternar actividad"
+                    >
+                      {activityPositionLabel()}
+                    </button>
+                  </Show>
+                </div>
+              </Show>
+
+              <Show when={isHome() && !expanded() && minimized()}>
+                <div class={styles.miniContent}>
+                  <ActivityVisual activity={currentActivity()} compact />
+                  <Show when={multipleActivities()}>
+                    <button
+                      type="button"
+                      class={`${styles.activityCountButton} ${styles.activityCountButtonMini}`}
+                      data-testid="dynamic-island-activity-count"
+                      onClick={cycleActivity}
+                      aria-label="Alternar actividad"
+                    >
+                      {activityPositionLabel()}
+                    </button>
+                  </Show>
+                </div>
+              </Show>
+
+              <Show when={isHome() && expanded()}>
+                <div class={styles.expandedShell}>
+                  <Switch>
+                    <Match when={currentActivity()?.type === 'music'}>
+                      <IslandMusic activity={currentActivity()!} />
+                    </Match>
+                    <Match when={currentActivity()?.type === 'radio'}>
+                      <IslandRadio activity={currentActivity()!} />
+                    </Match>
+                    <Match when={currentActivity()?.type === 'call'}>
+                      <IslandCall activity={currentActivity()!} />
+                    </Match>
+                    <Match when={currentActivity()?.type === 'cityride' || currentActivity()?.type === 'timer' || currentActivity()?.type === 'recording' || currentActivity()?.type === 'location'}>
+                      <div class={styles.expandedContent}>
+                        <div class={styles.expandedHeader}>
+                          <ActivityVisual activity={currentActivity()} expanded />
+                          <div class={styles.expandedText}>
+                            <div class={styles.expandedTitle}>{currentActivity()!.title}</div>
+                            <div class={styles.expandedSubtitle}>{currentActivity()!.subtitle || ''}</div>
+                          </div>
+                        </div>
+                        <Show when={currentActivity()!.onStop}>
+                          <div class={styles.expandedControls}>
+                            <button
+                              type="button"
+                              class={`${styles.controlBtn} ${styles.controlBtnDanger}`}
+                              onClick={(event) => { event.stopPropagation(); currentActivity()!.onStop?.(); }}
+                            >
+                              ⏹
+                            </button>
+                          </div>
+                        </Show>
+                      </div>
+                    </Match>
+                  </Switch>
+
+                  <Show when={multipleActivities()}>
+                    <div class={styles.activityPager}>
+                      <button
+                        type="button"
+                        class={styles.activityCountButton}
+                        data-testid="dynamic-island-activity-count"
+                        onClick={cycleActivity}
+                        aria-label="Alternar actividad"
+                      >
+                        {activityPositionLabel()}
+                      </button>
+                      <div class={styles.activityDots}>
+                        <For each={activities()}>
+                          {(_, index) => (
+                            <button
+                              type="button"
+                              class={styles.activityDot}
+                              classList={{ [styles.activityDotActive]: index() === activeIndex() }}
+                              onClick={(event) => { event.stopPropagation(); setActiveIndex(index()); setMinimized(false); }}
+                              aria-label={`Ver actividad ${index() + 1}`}
+                            />
+                          )}
+                        </For>
+                      </div>
+                    </div>
+                  </Show>
+                </div>
+              </Show>
+            </Motion.div>
+          </Presence>
+        </Motion.div>
       </div>
     </Show>
   );

@@ -36,7 +36,10 @@ async function openUnlockedPhone(page: Page) {
   await page.setViewportSize({ width: 1920, height: 1080 });
   await waitForMock(page);
   await page.waitForTimeout(180);
-  await page.evaluate(() => window.gcphoneMock?.showHome());
+  await page.evaluate(() => {
+    window.localStorage.setItem('gcphone:desktopPage', '0');
+    window.gcphoneMock?.showHome();
+  });
   await expectHomeVisible(page);
 }
 
@@ -45,11 +48,23 @@ async function openLockedPhone(page: Page) {
   await page.setViewportSize({ width: 1920, height: 1080 });
   await waitForMock(page);
   await page.waitForTimeout(180);
-  await page.evaluate(() => window.gcphoneMock?.showLocked());
-  await expect(page.getByText('Desbloquear Gcphone-Next')).toBeVisible();
+  await page.evaluate(() => {
+    window.localStorage.setItem('gcphone:desktopPage', '0');
+    window.gcphoneMock?.showLocked();
+  });
+  await expect(page.getByRole('button', { name: /Desbloquear|Unlock/i }).first()).toBeVisible();
+}
+
+async function ensurePinKeypadVisible(page: Page) {
+  const firstDigit = page.getByRole('button', { name: '1', exact: true });
+  if (await firstDigit.isVisible().catch(() => false)) return;
+
+  await page.getByRole('button', { name: /Desbloquear|Unlock/i }).first().click();
+  await expect(firstDigit).toBeVisible();
 }
 
 async function unlockWithPin(page: Page, pin = '1234') {
+  await ensurePinKeypadVisible(page);
   for (const digit of pin) {
     await page.getByRole('button', { name: digit, exact: true }).click();
   }
@@ -71,6 +86,31 @@ async function goHomeWithBackspace(page: Page) {
     await page.evaluate(() => window.gcphoneMock?.goHome?.());
   }
   await expectHomeVisible(page);
+}
+
+async function goHomeDirect(page: Page) {
+  await page.evaluate(() => window.gcphoneMock?.goHome?.());
+  await expectHomeVisible(page);
+}
+
+async function openHomeApp(page: Page, testId: string) {
+  await expectHomeVisible(page);
+
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    const app = page.getByTestId(testId);
+    if (await app.isVisible().catch(() => false)) {
+      await app.click();
+      return;
+    }
+
+    const nextPage = page.getByTestId('desktop-page-next');
+    if (await nextPage.isVisible().catch(() => false)) {
+      await nextPage.click();
+      await page.waitForTimeout(120);
+    }
+  }
+
+  throw new Error(`Home app not visible: ${testId}`);
 }
 
 async function emitGenericNfcPayload(page: Page, payload: {
@@ -107,6 +147,20 @@ async function emitGenericNfcPayload(page: Page, payload: {
       },
     }));
   }, payload);
+}
+
+async function startLocationActivity(page: Page) {
+  await openHomeApp(page, 'home-app-settings');
+  await page.getByRole('button', { name: /Sistema|System/i }).click();
+  await page.getByRole('switch').first().click();
+  await expect(page.getByRole('switch', { checked: true }).first()).toBeVisible();
+}
+
+async function startClockTimerActivity(page: Page) {
+  await openHomeApp(page, 'home-app-clock');
+  await page.getByRole('button', { name: /Timer/i }).click();
+  await page.getByRole('button', { name: /Iniciar|Start/i }).click();
+  await expect(page.getByRole('button', { name: /Detener|Stop/i })).toBeVisible();
 }
 
 test('requires the default PIN before entering home', async ({ page }) => {
@@ -168,6 +222,20 @@ test('supports drag gestures for top control surfaces', async ({ page }) => {
   await page.evaluate(() => window.gcphoneMock?.openNotificationCenter?.());
 
   await expect(page.getByTestId('notification-center-sheet')).toBeVisible();
+});
+
+test('opens muted notifications summary into settings notifications', async ({ page }) => {
+  await openUnlockedPhone(page);
+
+  await page.evaluate(() => window.gcphoneMock?.incomingNfc?.('note'));
+  await page.evaluate(() => window.gcphoneMock?.openNotificationCenter?.());
+  await expect(page.getByTestId('notification-center-sheet')).toBeVisible();
+
+  await page.getByRole('button', { name: /Silenciar|Mute/i }).first().click();
+  await page.getByTestId('notification-muted-summary').click();
+
+  await expect(page.getByRole('button', { name: /Marcar todas como leidas|Mark all as read/i })).toBeVisible();
+  await expect(page.getByText(/app silenciada|apps silenciadas/i)).toBeVisible();
 });
 
 test('keeps desktop page state across app lifecycle', async ({ page }) => {
@@ -272,4 +340,34 @@ test('opens generic NFC payload notifications for chirp, clips, radio, and servi
   await expect(page.getByTestId('notification-center-sheet')).toBeVisible();
   await page.getByRole('button', { name: /Payload Services/ }).first().click();
   await expect(page.getByRole('heading', { name: /Carlos Lopez/i })).toBeVisible();
+});
+
+test('keeps dynamic island stable with multiple activities and alternation', async ({ page }) => {
+  await openUnlockedPhone(page);
+
+  await startLocationActivity(page);
+  await goHomeDirect(page);
+
+  await startClockTimerActivity(page);
+  await goHomeDirect(page);
+
+  const activityCount = page.getByTestId('dynamic-island-activity-count').first();
+  await page.waitForTimeout(3400);
+  await expect(activityCount).toBeVisible();
+  await expect(activityCount).toContainText('/2');
+
+  const before = await activityCount.textContent();
+  await activityCount.click();
+  await expect.poll(async () => await activityCount.textContent()).not.toBe(before);
+});
+
+test('unlocks cleanly from the compact PIN sheet', async ({ page }) => {
+  await openLockedPhone(page);
+
+  await expect(page.getByRole('button', { name: /Desbloquear|Unlock/i }).first()).toBeVisible();
+  await page.getByRole('button', { name: /Desbloquear|Unlock/i }).first().click();
+
+  await unlockWithPin(page);
+  await expectHomeVisible(page);
+  await expect(page.getByTestId('dynamic-island')).toHaveCount(0);
 });

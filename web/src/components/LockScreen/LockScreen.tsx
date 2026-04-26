@@ -50,11 +50,13 @@ export function LockScreen() {
   const [notifications] = useNotifications();
   const [code, setCode] = createSignal('');
   const [error, setError] = createSignal(false);
+  const [isSubmitting, setIsSubmitting] = createSignal(false);
   const [attempts, setAttempts] = createSignal(0);
   const [currentTime, setCurrentTime] = createSignal(new Date());
   const [flashlightSupported, setFlashlightSupported] = createSignal(false);
   const [flashlightEnabled, setFlashlightEnabled] = createSignal(false);
   const [pendingDestination, setPendingDestination] = createSignal<PendingDestination | null>(null);
+  const [pinSheetExpanded, setPinSheetExpanded] = createSignal(false);
   const [activeWidget, setActiveWidget] = createSignal(0);
   const [musicState, setMusicState] = createSignal<MusicSessionState>(DEFAULT_MUSIC_STATE);
   const [swipeUnlockProgress, setSwipeUnlockProgress] = createSignal(0);
@@ -81,6 +83,11 @@ export function LockScreen() {
   ));
   const emergencyContacts = createMemo(() => phoneState.setup.emergencyContacts || []);
   const matchedEmergencyContact = createMemo(() => emergencyContacts().find((entry) => entry.number === emergencyDial().trim()));
+  const unlockTitle = createMemo(() => (
+    pendingDestination()?.route === 'camera'
+      ? t('lock.open_camera', language())
+      : t('lock.unlock_device', language())
+  ));
 
   const musicStatusLabel = createMemo(() => {
     const current = musicState();
@@ -137,32 +144,40 @@ export function LockScreen() {
     batch(() => {
       setCode('');
       setAttempts(0);
+      setError(false);
+      setIsSubmitting(false);
       setPendingDestination(null);
+      setPinSheetExpanded(false);
       setSwipeUnlockProgress(0);
     });
     if (destination?.route) {
       window.setTimeout(() => {
         emitInternalEvent('phone:openRoute', { route: destination.route, data: destination.data || {} });
-      }, 60);
+      }, 180);
     }
   };
 
   const submitUnlock = async () => {
+    if (isSubmitting() || code().length !== 4) return;
+    setIsSubmitting(true);
+
     if (await phoneActions.unlock(code())) {
       finalizeUnlock();
       return;
     }
 
     batch(() => {
+      setIsSubmitting(false);
       setError(true);
       setAttempts((prev) => prev + 1);
       setCode('');
+      setPinSheetExpanded(true);
     });
     window.setTimeout(() => setError(false), 520);
   };
 
   createEffect(() => {
-    if (code().length === 4) void submitUnlock();
+    if (code().length === 4 && pinSheetExpanded()) void submitUnlock();
   });
 
   createEffect(() => {
@@ -171,8 +186,19 @@ export function LockScreen() {
     }
   });
 
+  createEffect(() => {
+    if (!hasPinSet()) {
+      setPinSheetExpanded(false);
+      return;
+    }
+
+    if (pendingDestination() || error() || code().length > 0) {
+      setPinSheetExpanded(true);
+    }
+  });
+
   const handleKeyPress = (num: string) => {
-    if (code().length >= 4) return;
+    if (code().length >= 4 || isSubmitting()) return;
     setCode((prev) => prev + num);
   };
 
@@ -189,6 +215,7 @@ export function LockScreen() {
     setPendingDestination({ route, data });
     setError(false);
     setSwipeUnlockProgress(0);
+    setPinSheetExpanded(hasPinSet());
   };
 
   const openCameraQuickAction = () => {
@@ -239,11 +266,6 @@ export function LockScreen() {
     setEmergencyDial((current) => current.slice(0, -1));
   };
 
-  const clearEmergencyDial = () => {
-    setEmergencyStatus('');
-    setEmergencyDial('');
-  };
-
   const openImeiModal = async () => {
     await reportImeiViewed('lockscreen');
     setImeiModalOpen(true);
@@ -278,6 +300,16 @@ export function LockScreen() {
     if (!swipeUnlockEnabled()) return;
     phoneActions.unlockDirect();
     finalizeUnlock();
+  };
+
+  const collapsePinSheet = () => {
+    batch(() => {
+      setCode('');
+      setError(false);
+      setIsSubmitting(false);
+      setPendingDestination(null);
+      setPinSheetExpanded(false);
+    });
   };
 
   const resetSwipeGesture = () => {
@@ -361,41 +393,85 @@ export function LockScreen() {
       </div>
 
       <Show when={hasPinSet()}>
-      <div class={styles.unlockSheet}>
-        <div class={styles.sheetHandle} aria-hidden="true" />
-          <div class={styles.codeContainer}>
-            <span class={styles.unlockTitle}>{pendingDestination()?.route === 'camera' ? t('lock.open_camera', language()) : t('lock.unlock_device', language())}</span>
-            <div class={styles.dots}>
-              {[0, 1, 2, 3].map((i) => (
-                <div class={styles.dot} classList={{ [styles.filled]: i < code().length, [styles.errorDot]: error() }} />
-              ))}
-            </div>
-            <Show when={attempts() > 0}>
-              <span class={styles.errorMsg}>{t('lock.pin_incorrect', language(), { attempts: attempts() })}</span>
-            </Show>
-          </div>
-
-          <div class={styles.keypad}>
-            <Index each={keypadKeys}>
-              {(key) => (
-                <Show when={key() !== ''} fallback={<div class={styles.keySpacer} />}>
-                  <button class={styles.key} onClick={() => (key() === 'del' ? setCode((prev) => prev.slice(0, -1)) : handleKeyPress(key()))}>
-                    {key() === 'del' ? '⌫' : key()}
+        <Show
+          when={pinSheetExpanded()}
+          fallback={
+            <div class={styles.unlockSheetCollapsed}>
+              <div class={styles.collapsedContent}>
+                <span class={styles.collapsedLabel}>{unlockTitle()}</span>
+                <span class={styles.pendingHint}>
+                  {pendingDestination()
+                    ? t('lock.unlock', language())
+                    : t('settings.pin_lock', language()) || 'PIN'}
+                </span>
+              </div>
+              <div class={styles.collapsedActions}>
+                <button
+                  class={`${styles.expandKeypadBtn} ${styles.primaryAction}`}
+                  onClick={() => setPinSheetExpanded(true)}
+                >
+                  {t('lock.unlock', language())}
+                </button>
+                <Show when={pendingDestination()}>
+                  <button
+                    class={`${styles.expandKeypadBtn} ${styles.secondaryAction}`}
+                    onClick={collapsePinSheet}
+                  >
+                    {t('lock.cancel', language())}
                   </button>
                 </Show>
-              )}
-            </Index>
-          </div>
+              </div>
+            </div>
+          }
+        >
+          <div class={styles.unlockSheet}>
+            <button
+              class={styles.sheetHandle}
+              aria-label={t('lock.cancel', language())}
+              onClick={collapsePinSheet}
+            />
+            <div class={styles.codeContainer}>
+              <span class={styles.unlockTitle}>{unlockTitle()}</span>
+              <div class={styles.dots}>
+                {[0, 1, 2, 3].map((i) => (
+                  <div class={styles.dot} classList={{ [styles.filled]: i < code().length, [styles.errorDot]: error() }} />
+                ))}
+              </div>
+              <Show when={attempts() > 0}>
+                <span class={styles.errorMsg}>{t('lock.pin_incorrect', language(), { attempts: attempts() })}</span>
+              </Show>
+            </div>
 
-          <div class={styles.sheetActions}>
-              <button onClick={() => {
-                setPendingDestination(null);
-                setCode('');
-                setError(false);
-              }}>{t('lock.cancel', language())}</button>
-              <button onClick={() => void submitUnlock()}>{t('lock.unlock', language())}</button>
+            <div class={styles.keypad}>
+              <Index each={keypadKeys}>
+                {(key) => (
+                  <Show when={key() !== ''} fallback={<div class={styles.keySpacer} />}>
+                    <button
+                      class={styles.key}
+                      classList={{ [styles.keyDelete]: key() === 'del' }}
+                      aria-label={key() === 'del' ? t('action.cancel', language()) : key()}
+                      disabled={isSubmitting()}
+                      onClick={() => (key() === 'del' ? setCode((prev) => prev.slice(0, -1)) : handleKeyPress(key()))}
+                    >
+                      {key() === 'del' ? '⌫' : key()}
+                    </button>
+                  </Show>
+                )}
+              </Index>
+            </div>
+
+            <div class={styles.sheetActions}>
+              <button class={styles.secondaryAction} onClick={collapsePinSheet}>{t('lock.cancel', language())}</button>
+              <button
+                class={styles.primaryAction}
+                disabled={code().length !== 4 || isSubmitting()}
+                onClick={() => void submitUnlock()}
+              >
+                {t('lock.unlock', language())}
+              </button>
+            </div>
           </div>
-      </div>
+        </Show>
       </Show>
 
       <Show when={emergencySheetOpen()}>
