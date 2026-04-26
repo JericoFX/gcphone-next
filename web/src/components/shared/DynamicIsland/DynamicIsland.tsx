@@ -284,9 +284,11 @@ export function DynamicIsland(props: { locked?: boolean }) {
     const homeNow = isHome();
     const expandedNow = expanded();
     const minimizedNow = minimized();
+    const lockedNow = isLocked();
+    const reducedMotionNow = prefersReducedMotion();
 
     if (rotateTimer) window.clearInterval(rotateTimer);
-    if (!multipleActivities() || expandedNow || !homeNow) return;
+    if (!multipleActivities() || expandedNow || !homeNow || lockedNow || reducedMotionNow) return;
 
     rotateTimer = window.setInterval(() => {
       setActiveIndex((index) => (index + 1) % activities().length);

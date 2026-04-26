@@ -8,6 +8,7 @@ type MockPhoneApi = {
   openControlCenter?: () => void;
   openNotificationCenter?: () => void;
   incomingNfc?: (kind?: string) => void;
+  setNearbyPlayersAvailable?: (available?: boolean) => void;
   setLiveActivities?: () => void;
   clearLiveActivities?: () => void;
 };
@@ -285,9 +286,36 @@ test('supports drag gestures for top control surfaces', async ({ page }) => {
   await expect(page.getByText(/Buscando personas|Looking for nearby people|Mateo - 1.2m/i).first()).toBeVisible();
   await expect(page.getByText(/NFC activado|NFC desactivado/).first()).toBeVisible();
 
+  const brightnessSlider = page.getByTestId('control-center-brightness-slider');
+  const sliderBox = await brightnessSlider.boundingBox();
+  expect(sliderBox).not.toBeNull();
+  if (sliderBox) {
+    await page.mouse.move(sliderBox.x + sliderBox.width / 2, sliderBox.y + sliderBox.height * 0.75);
+    await page.mouse.down();
+    await page.mouse.move(sliderBox.x + sliderBox.width / 2, sliderBox.y + sliderBox.height * 0.25, { steps: 4 });
+    await page.mouse.up();
+  }
+  await expect(page.getByTestId('control-center-sheet')).toBeVisible();
+  await expectSheetClosed(page, 'notification-center-sheet');
+
   await page.evaluate(() => window.gcphoneMock?.openNotificationCenter?.());
 
   await expect(page.getByTestId('notification-center-sheet')).toBeVisible();
+});
+
+test('shows NFC no-nearby fallback without closing control center', async ({ page }) => {
+  await openUnlockedPhone(page);
+
+  await page.evaluate(() => window.gcphoneMock?.setNearbyPlayersAvailable?.(false));
+  await page.evaluate(() => window.gcphoneMock?.openControlCenter?.());
+  await expect(page.getByTestId('control-center-sheet')).toBeVisible();
+  await page.getByTestId('control-center-nfc-toggle').click();
+
+  await expect(page.getByTestId('control-center-sheet')).toBeVisible();
+  await expect(page.getByText(/No hay personas cerca|No people nearby/i).first()).toBeVisible();
+  await expect(page.getByTestId('control-center-sheet').getByRole('button', { name: /Wallet|Billetera/i })).toBeDisabled();
+
+  await page.evaluate(() => window.gcphoneMock?.setNearbyPlayersAvailable?.(true));
 });
 
 test('opens muted notifications summary into settings notifications', async ({ page }) => {
@@ -374,8 +402,14 @@ test('pays NFC invoice mock with cash', async ({ page }) => {
   await expect(page.getByTestId('wallet-nfc-invoice-modal')).toHaveCount(0);
 });
 
-test('opens incoming NFC mocks for contact, document, maps, and snap', async ({ page }) => {
+test('opens incoming NFC mocks for photo, contact, document, maps, and snap', async ({ page }) => {
   await openUnlockedPhone(page);
+
+  await openIncomingNfcFromNotification(page, 'photo', /Foto NFC/);
+  await expect(page.getByText('Foto recibida')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Ver', exact: true })).toBeVisible();
+
+  await goHomeDirect(page);
 
   await openIncomingNfcFromNotification(page, 'contact', /Contacto NFC/);
   await expect(page.getByText('Taller Norte')).toBeVisible();
@@ -508,6 +542,9 @@ test('supports dynamic island with three activity instances', async ({ page }) =
   await page.evaluate(() => window.gcphoneMock?.showLocked());
   await expect(page.getByRole('button', { name: /Desbloquear|Unlock/i }).first()).toBeVisible();
   await expect(island).toHaveAttribute('data-activity-count', '3');
+  const lockedActivityId = await island.getAttribute('data-active-activity-id');
+  await page.waitForTimeout(4200);
+  await expect(island).toHaveAttribute('data-active-activity-id', lockedActivityId || '');
 });
 
 test('honors reduced motion for lock and dynamic island overlays', async ({ page }) => {

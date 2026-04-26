@@ -777,6 +777,7 @@ let nextMailMessageId = 3;
 let nextWalletRequestId = 1;
 let nextMockNewsId = 4;
 let started = false;
+let mockNearbyPlayersEnabled = true;
 let mockLiveLocationActive = false;
 let mockLiveLocationInterval = 10;
 const mockNewsArticles: Array<Record<string, unknown>> = [
@@ -1460,6 +1461,7 @@ export function setupBrowserMock() {
 
   (window as Window & { gcphoneMock?: AnyRecord }).gcphoneMock = {
     reset: () => {
+      mockNearbyPlayersEnabled = true;
       resetMockPhoneData();
       emitMessage('hidePhone');
       setTimeout(() => showMockPhone(), 100);
@@ -1491,6 +1493,9 @@ export function setupBrowserMock() {
     },
     openNotificationCenter: () => {
       emitInternalEvent('phone:openNotificationCenter', {});
+    },
+    setNearbyPlayersAvailable: (available = true) => {
+      mockNearbyPlayersEnabled = available !== false;
     },
     boot: () => {
       bootMockPhone();
@@ -3160,6 +3165,7 @@ export async function handleBrowserNui<T = unknown>(eventName: string, data?: un
   }
 
   if (eventName === 'getNearbyPlayers') {
+    if (!mockNearbyPlayersEnabled) return [] as T;
     const maxDistance = Number(payload.maxDistance || 3);
     return [
       { serverId: 12, name: 'Mateo', distance: Math.min(maxDistance, 1.2) },

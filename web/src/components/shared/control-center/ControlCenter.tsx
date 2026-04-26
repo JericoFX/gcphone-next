@@ -810,7 +810,7 @@ export function ControlCenter() {
                           <b class={styles.groupUnreadBadge}>{group.unreadCount}</b>
                         </Show>
                       </div>
-                      <div class={styles.groupActions}>
+                      <div class={styles.groupActions} data-control-interactive="true">
                         <button
                           data-testid={`notification-center-group-read-${group.appId}`}
                           onClick={() => notificationsActions.markAppAsRead(group.appId)}
@@ -838,6 +838,7 @@ export function ControlCenter() {
                           return (
                             <Motion.div
                               class={styles.swipeTrack}
+                              data-control-interactive="true"
                               initial={{ opacity: 0, y: 8 }}
                               animate={{ opacity: 1, y: 0 }}
                               transition={{ duration: 0.18, delay: Math.min(itemIndex(), 4) * 0.025 }}
@@ -846,6 +847,7 @@ export function ControlCenter() {
                               <button
                                 class={styles.notificationItem}
                                 classList={{ [styles.notificationItemUnread]: group.unreadCount > 0 && Number(item.createdAt || 0) > (notifications.readAtByApp[group.appId] || 0) }}
+                                data-control-interactive="true"
                                 data-testid={`notification-center-item-${item.id}`}
                                 onPointerDown={swipe.onPointerDown}
                                 onPointerMove={swipe.onPointerMove}
@@ -942,7 +944,7 @@ export function ControlCenter() {
                     classList={{ [styles.nfcToggleActive]: nfcEnabled() }}
                     data-testid="control-center-nfc-toggle"
                     onClick={toggleNfc}
-                    title={nfcEnabled() ? 'NFC on' : nfcOffLabel(language())}
+                    title={nfcEnabled() ? 'NFC activo' : nfcOffLabel(language())}
                   >
                     NFC
                   </button>
@@ -951,6 +953,7 @@ export function ControlCenter() {
                     classList={{ [styles.refreshButtonActive]: nfcEnabled() }}
                     onClick={() => nfcEnabled() ? void syncNearbyPlayers() : toggleNfc()}
                     title={nfcEnabled() ? 'Actualizar NFC' : nfcOffLabel(language())}
+                    aria-label={nfcEnabled() ? 'Actualizar NFC' : nfcOffLabel(language())}
                   >
                     <img src="./img/icons_ios/ui-location.svg" alt="" draggable={false} />
                   </button>
@@ -964,6 +967,7 @@ export function ControlCenter() {
                   disabled={!nfcEnabled() || nearbyPlayers().length <= 1}
                   onClick={cycleNfcTarget}
                   title={nearbyPlayers().length > 1 ? 'Cambiar persona NFC' : undefined}
+                  aria-label={nearbyPlayers().length > 1 ? 'Cambiar persona NFC' : undefined}
                 >
                   <span>{t('nfc.nearby_people', language())}</span>
                   <strong>
@@ -980,18 +984,24 @@ export function ControlCenter() {
                 <div class={styles.nfcActionRow}>
                   <button
                     disabled={!nfcEnabled() || !selectedNfcTarget()}
+                    title={appName('wallet', 'Wallet', language())}
+                    aria-label={appName('wallet', 'Wallet', language())}
                     onClick={() => openNfcRoute('wallet')}
                   >
                     <img src="./img/icons_ios/wallet.svg" alt="" draggable={false} />
                   </button>
                   <button
                     disabled={!nfcEnabled() || !selectedNfcTarget()}
+                    title={appName('gallery', 'Gallery', language())}
+                    aria-label={appName('gallery', 'Gallery', language())}
                     onClick={() => openNfcRoute('gallery')}
                   >
                     <img src="./img/icons_ios/gallery.svg" alt="" draggable={false} />
                   </button>
                   <button
                     disabled={!nfcEnabled() || !selectedNfcTarget()}
+                    title={appName('documents', 'Documents', language())}
+                    aria-label={appName('documents', 'Documents', language())}
                     onClick={() => openNfcRoute('documents')}
                   >
                     <img src="./img/icons_ios/documents.svg" alt="" draggable={false} />
@@ -1018,6 +1028,8 @@ export function ControlCenter() {
                   <span class={styles.verticalSliderFill} />
                   <input
                     class={styles.verticalSliderInput}
+                    data-testid="control-center-brightness-slider"
+                    data-control-interactive="true"
                     type="range"
                     min="40"
                     max="120"
@@ -1048,6 +1060,8 @@ export function ControlCenter() {
                   <span class={styles.verticalSliderFill} />
                   <input
                     class={styles.verticalSliderInput}
+                    data-testid="control-center-volume-slider"
+                    data-control-interactive="true"
                     type="range"
                     min="0"
                     max="100"
