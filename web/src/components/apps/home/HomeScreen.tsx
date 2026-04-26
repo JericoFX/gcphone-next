@@ -180,6 +180,11 @@ export function HomeScreen() {
         >
           <Show when={desktopPage() === -1} fallback={
             <Motion.div
+              class={styles.pageStage}
+              classList={{
+                [styles.pageShiftNext]: pageTransition() === 'next',
+                [styles.pageShiftPrev]: pageTransition() === 'prev',
+              }}
               style={{ height: '100%' }}
               initial={false}
               animate={{ opacity: pageTransition() ? 0.92 : 1, x: pageMotionX(), scale: pageTransition() ? 0.992 : 1 }}
@@ -204,6 +209,11 @@ export function HomeScreen() {
             </Motion.div>
           }>
             <Motion.div
+              class={styles.pageStage}
+              classList={{
+                [styles.pageShiftNext]: pageTransition() === 'next',
+                [styles.pageShiftPrev]: pageTransition() === 'prev',
+              }}
               style={{ height: '100%' }}
               initial={false}
               animate={{ opacity: pageTransition() ? 0.92 : 1, x: pageMotionX(), scale: pageTransition() ? 0.992 : 1 }}

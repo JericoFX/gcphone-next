@@ -208,6 +208,11 @@ export function ControlCenter() {
 
   const totalNotificationCount = createMemo(() => notifications.history.length);
   const mutedAppsCount = createMemo(() => notifications.mutedApps.length);
+  const mutedAppLabels = createMemo(() => (
+    notifications.mutedApps
+      .slice(0, 3)
+      .map((appId) => appName(appId, APP_BY_ID[appId]?.name || appId, language()))
+  ));
 
   const dayLabel = createMemo(() => {
     const now = new Date();
@@ -645,6 +650,12 @@ export function ControlCenter() {
               >
                 <span>{t('control.muted', language())}</span>
                 <strong>{mutedAppsCount()}</strong>
+                <Show when={mutedAppsCount() > 0} fallback={<small>{t('control.notifications', language())}</small>}>
+                  <small>
+                    {mutedAppLabels().join(', ')}
+                    <Show when={mutedAppsCount() > mutedAppLabels().length}> +{mutedAppsCount() - mutedAppLabels().length}</Show>
+                  </small>
+                </Show>
               </button>
             </div>
 
@@ -654,6 +665,7 @@ export function ControlCenter() {
                   {(group, groupIndex) => (
                     <Motion.div
                       class={styles.notificationGroup}
+                      classList={{ [styles.notificationGroupMuted]: group.muted }}
                       initial={{ opacity: 0, y: -10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.2, delay: Math.min(groupIndex(), 5) * 0.025 }}
