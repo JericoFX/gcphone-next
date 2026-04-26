@@ -14,6 +14,7 @@ interface RadioListeningProps {
   livekitConnected: () => boolean;
   streamerMode: boolean;
   onLeave: () => void;
+  onShare: () => void;
   onVolumeChange: (v: number) => void;
 }
 
@@ -70,6 +71,10 @@ export function RadioListening(props: RadioListeningProps) {
           {t('radio.connecting', props.language()) || 'Conectando...'}
         </span>
       </Show>
+
+      <button class={styles.leaveBtn} onClick={props.onShare}>
+        {t('action.share', props.language()) || 'Compartir'}
+      </button>
 
       {/* 5. Salir button */}
       <button class={styles.leaveBtn} onClick={props.onLeave}>

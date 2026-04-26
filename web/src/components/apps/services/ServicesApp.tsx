@@ -15,6 +15,7 @@ import { SegmentedTabs } from '../../shared/ui/SegmentedTabs';
 import { FormSection, Modal, ModalActions, ModalButton } from '../../shared/ui/Modal';
 import { t } from '../../../i18n';
 import { ActionSheet } from '../../shared/ui/ActionSheet';
+import { ShareSheet, type SharePayload } from '../../shared/ui/ShareSheet';
 import styles from './ServicesApp.module.scss';
 
 interface ServiceWorker {
@@ -79,6 +80,7 @@ export function ServicesApp() {
   // UI State
   const [loading, setLoading] = createSignal(false);
   const [showRegister, setShowRegister] = createSignal(false);
+  const [sharePayload, setSharePayload] = createSignal<SharePayload | null>(null);
 
   // Rate
   const [rateScore, setRateScore] = createSignal(0);
@@ -219,6 +221,17 @@ export function ServicesApp() {
     const worker = selectedWorker();
     if (!worker?.phone_number) return;
     router.navigate('messages', { phoneNumber: worker.phone_number });
+  };
+
+  const shareWorker = (worker: ServiceWorker | null | undefined) => {
+    if (!worker) return;
+    setSharePayload({
+      appId: 'services',
+      route: 'services',
+      title: 'Service NFC',
+      message: `${worker.display_name || 'Alguien'} compartio un servicio`,
+      text: `SERVICE:${worker.id}:${worker.category}`,
+    });
   };
 
   const submitRating = async () => {
@@ -622,6 +635,12 @@ export function ServicesApp() {
                 </div>
               </Show>
 
+              <div class={styles.contactButtons}>
+                <button class={styles.contactBtn} onClick={() => shareWorker(selectedWorker())}>
+                  {t('action.share', language())}
+                </button>
+              </div>
+
               {/* Rate Section */}
               <div class={styles.rateSection}>
                 <h4>{t('services.rate', language())}</h4>
@@ -674,7 +693,21 @@ export function ServicesApp() {
                 ctxMenu.close();
               },
             },
+            {
+              label: t('action.share', language()),
+              onClick: () => {
+                shareWorker(ctxMenu.item());
+                ctxMenu.close();
+              },
+            },
           ]}
+        />
+
+        <ShareSheet
+          open={sharePayload() !== null}
+          payload={sharePayload() || { text: '' }}
+          destinations={['messages', 'nfc']}
+          onClose={() => setSharePayload(null)}
         />
       </div>
     </AppScaffold>

@@ -215,7 +215,7 @@ test('opens NFC invoice mock from notification into payment modal', async ({ pag
   await expect(page.getByRole('button', { name: 'Cash', exact: true })).toBeVisible();
 });
 
-test('opens generic NFC payload notifications for chirp and clips', async ({ page }) => {
+test('opens generic NFC payload notifications for chirp, clips, radio, and services', async ({ page }) => {
   await openUnlockedPhone(page);
 
   await emitGenericNfcPayload(page, {
@@ -237,10 +237,39 @@ test('opens generic NFC payload notifications for chirp and clips', async ({ pag
     route: 'clips',
     title: 'Payload Clips',
     message: 'Lucia compartio un clip',
-    text: 'CLIP:902',
+  text: 'CLIP:902',
   });
   await page.evaluate(() => window.gcphoneMock?.openNotificationCenter?.());
   await expect(page.getByTestId('notification-center-sheet')).toBeVisible();
   await page.getByRole('button', { name: /Payload Clips/ }).first().click();
-  await expect(page.getByText(/New Dominator tuning/i)).toBeVisible();
+  await expect(page.getByText(/Biblioteca/i)).toBeVisible();
+  await expect(page.getByRole('button', { name: '+' })).toBeVisible();
+
+  await goHomeWithBackspace(page);
+
+  await emitGenericNfcPayload(page, {
+    appId: 'radio',
+    route: 'radio',
+    title: 'Payload Radio',
+    message: 'Lucia compartio una estacion',
+    text: 'RADIO:1',
+  });
+  await page.evaluate(() => window.gcphoneMock?.openNotificationCenter?.());
+  await expect(page.getByTestId('notification-center-sheet')).toBeVisible();
+  await page.getByRole('button', { name: /Payload Radio/ }).first().click();
+  await expect(page.getByText(/Los Santos FM/i)).toBeVisible();
+
+  await goHomeWithBackspace(page);
+
+  await emitGenericNfcPayload(page, {
+    appId: 'services',
+    route: 'services',
+    title: 'Payload Services',
+    message: 'Lucia compartio un servicio',
+    text: 'SERVICE:1:mechanic',
+  });
+  await page.evaluate(() => window.gcphoneMock?.openNotificationCenter?.());
+  await expect(page.getByTestId('notification-center-sheet')).toBeVisible();
+  await page.getByRole('button', { name: /Payload Services/ }).first().click();
+  await expect(page.getByRole('heading', { name: /Carlos Lopez/i })).toBeVisible();
 });

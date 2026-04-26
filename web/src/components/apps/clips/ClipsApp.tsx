@@ -12,6 +12,7 @@ import { MediaLightbox } from '../../shared/ui/MediaLightbox';
 import { FormField, Modal, ModalActions, ModalButton } from '../../shared/ui/Modal';
 import { EmojiPickerButton } from '../../shared/ui/EmojiPicker';
 import { SocialOnboardingModal, type SocialOnboardingPayload } from '../../shared/ui/SocialOnboardingModal';
+import { ShareSheet, type SharePayload } from '../../shared/ui/ShareSheet';
 import { t } from '../../../i18n';
 import styles from './ClipsApp.module.scss';
 
@@ -114,6 +115,7 @@ export function ClipsApp() {
   const [storageReady, setStorageReady] = createSignal(false);
   const [storageProvider, setStorageProvider] = createSignal('');
   const [commentText, setCommentText] = createSignal('');
+  const [sharePayload, setSharePayload] = createSignal<SharePayload | null>(null);
 
   const clipById = createMemo(() => {
     const map = new Map<number, Clip>();
@@ -290,6 +292,17 @@ export function ClipsApp() {
   // ── CRUD ──
 
   const deleteClip = (clipId: number) => setDeleteClipId(clipId);
+
+  const shareClip = (clip: Clip) => {
+    setSharePayload({
+      appId: 'clips',
+      route: 'clips',
+      title: 'Clips NFC',
+      message: clip.caption || t('clips.shared_clip', language()) || 'Clip compartido',
+      text: `CLIP:${clip.id}`,
+      subject: clip.display_name || clip.username || 'Clips',
+    });
+  };
 
   const confirmDeleteClip = async () => {
     const clipId = deleteClipId();
@@ -541,6 +554,10 @@ export function ClipsApp() {
                     <span class={styles.sideCount}>{clip.comments_count || 0}</span>
                   </button>
 
+                  <button class={styles.sideBtn} onClick={(e) => { e.stopPropagation(); shareClip(clip); }}>
+                    <span class={styles.sideIcon}>{t('action.share', language())}</span>
+                  </button>
+
                   <Show when={clip.is_own}>
                     <button class={styles.sideBtn} onClick={(e) => { e.stopPropagation(); deleteClip(clip.id); }}>
                       <span class={styles.sideIcon}><img src="./img/icons_ios/ui-trash.svg" alt="" /></span>
@@ -727,6 +744,13 @@ export function ClipsApp() {
       />
 
       <MediaLightbox url={viewerUrl()} onClose={() => setViewerUrl(null)} />
+
+      <ShareSheet
+        open={sharePayload() !== null}
+        payload={sharePayload() || { text: '' }}
+        destinations={['messages', 'nfc']}
+        onClose={() => setSharePayload(null)}
+      />
     </div>
   );
 }

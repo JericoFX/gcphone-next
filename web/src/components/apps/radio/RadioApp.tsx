@@ -9,6 +9,7 @@ import { initSession, disconnectAll, enableMicrophone, setMicrophoneEnabled } fr
 import { useNuiEvent } from '../../../utils/useNui';
 import { isEnvBrowser } from '../../../utils/misc';
 import { AppScaffold } from '../../shared/layout';
+import { ShareSheet, type SharePayload } from '../../shared/ui/ShareSheet';
 import { t } from '../../../i18n';
 import { usePhone } from '../../../store/phone';
 import {
@@ -37,6 +38,7 @@ export function RadioApp() {
   const [stations, setStations] = createSignal<RadioStation[]>([]);
   const [loading, setLoading] = createSignal(true);
   const [error, setError] = createSignal<string | null>(null);
+  const [sharePayload, setSharePayload] = createSignal<SharePayload | null>(null);
 
   // Create form
   const [formName, setFormName] = createSignal('');
@@ -373,6 +375,16 @@ export function RadioApp() {
     });
   };
 
+  const openShareSheet = (station: RadioStation) => {
+    setSharePayload({
+      appId: 'radio',
+      route: 'radio',
+      title: 'Radio NFC',
+      message: `${station.hostName || 'Alguien'} compartio una estacion`,
+      text: `RADIO:${station.id}`,
+    });
+  };
+
   let lastNfcRouteKey = '';
   createEffect(() => {
     const params = router.params() as {
@@ -554,6 +566,7 @@ export function RadioApp() {
             error={error}
             language={language}
             onJoin={handleJoin}
+            onShare={openShareSheet}
             onCreate={() => setView('create')}
           />
         </Match>
@@ -620,10 +633,21 @@ export function RadioApp() {
             livekitConnected={livekitConnected}
             streamerMode={streamerMode()}
             onLeave={() => void handleLeave()}
+            onShare={() => {
+              const station = activeStation();
+              if (station) openShareSheet(station);
+            }}
             onVolumeChange={(v) => void handleMusicVolumeChange(v)}
           />
         </Match>
       </Switch>
+
+      <ShareSheet
+        open={sharePayload() !== null}
+        payload={sharePayload() || { text: '' }}
+        destinations={['messages', 'nfc']}
+        onClose={() => setSharePayload(null)}
+      />
     </AppScaffold>
   );
 }

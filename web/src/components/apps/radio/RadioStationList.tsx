@@ -13,6 +13,7 @@ interface RadioStationListProps {
   error: () => string | null;
   language: () => string;
   onJoin: (stationId: number) => void;
+  onShare: (station: RadioStation) => void;
   onCreate: () => void;
 }
 
@@ -72,10 +73,18 @@ export function RadioStationList(props: RadioStationListProps) {
         <div style={{ display: 'flex', 'flex-direction': 'column', gap: 'var(--s-3)' }}>
           <For each={props.stations()}>
             {(station) => (
-              <button
+              <div
+                role="button"
+                tabindex={0}
                 class={styles.stationCard}
                 style={{ position: 'relative', cursor: 'pointer' }}
                 onClick={() => props.onJoin(station.id)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    props.onJoin(station.id);
+                  }
+                }}
               >
                 {/* Gradient left strip */}
                 <div
@@ -106,7 +115,31 @@ export function RadioStationList(props: RadioStationListProps) {
                   <span class={styles.pulseDot} />
                   {'EN VIVO'}
                 </div>
-              </button>
+
+                <button
+                  type="button"
+                  style={{
+                    position: 'absolute',
+                    right: '4.25rem',
+                    top: '0.9rem',
+                    'z-index': '2',
+                    border: 'none',
+                    background: 'rgba(255, 255, 255, 0.14)',
+                    color: 'white',
+                    padding: '0.35rem 0.65rem',
+                    'border-radius': '999px',
+                    'font-size': '0.72rem',
+                    'font-weight': '600',
+                    cursor: 'pointer',
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    props.onShare(station);
+                  }}
+                >
+                  {t('action.share', props.language()) || 'Compartir'}
+                </button>
+              </div>
             )}
           </For>
         </div>
