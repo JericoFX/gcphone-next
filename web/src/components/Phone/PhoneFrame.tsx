@@ -4,6 +4,7 @@ import {
   Show,
   createMemo,
   createSignal,
+  batch,
   lazy,
   Suspense,
   createUniqueId,
@@ -12,7 +13,6 @@ import {
   onMount,
 } from 'solid-js';
 import type { JSX } from 'solid-js';
-import { Motion } from '@motionone/solid';
 import { usePhone, usePhoneState } from '../../store/phone';
 import { HomeScreen } from '../apps/home/HomeScreen';
 import { AppPlaceholder } from '../shared/ui/AppPlaceholder';
@@ -222,29 +222,37 @@ export const PhoneFrame: ParentComponent<{ router?: boolean }> & { Router: () =>
 
   const navigate = (route: AppRoute, nextParams?: Record<string, unknown>) => {
     const appRoute = normalizeRoute(route);
-    setDirection('forward');
-    setHistory((stack) => [...stack, appRoute]);
-    setOpenApps((apps) =>
-      apps.includes(appRoute) ? apps : [...apps, appRoute],
-    );
-    setParams(nextParams || {});
+    batch(() => {
+      setDirection('forward');
+      setOpenApps((apps) =>
+        apps.includes(appRoute) ? apps : [...apps, appRoute],
+      );
+      setHistory((stack) => [...stack, appRoute]);
+      setParams(nextParams || {});
+    });
   };
 
   const goBack = () => {
-    setDirection('back');
-    setHistory((stack) => (stack.length > 1 ? stack.slice(0, -1) : stack));
+    batch(() => {
+      setDirection('back');
+      setHistory((stack) => (stack.length > 1 ? stack.slice(0, -1) : stack));
+    });
   };
 
   const closeApp = (route: AppRoute) => {
     const appRoute = normalizeRoute(route);
     if (appRoute === 'home') return;
 
-    emitInternalEvent('phone:appForceClose', { route: appRoute });
-
-    setOpenApps((apps) => apps.filter((item) => item !== appRoute));
-    setHistory((stack) => {
-      const filtered = stack.filter((item) => item !== appRoute);
-      return filtered.length > 0 ? filtered : ['home'];
+    batch(() => {
+      emitInternalEvent('phone:appForceClose', { route: appRoute });
+      setHistory((stack) => {
+        const filtered = stack.filter((item) => item !== appRoute);
+        return filtered.length > 0 ? filtered : ['home'];
+      });
+      setOpenApps((apps) => {
+        const filtered = apps.filter((item) => item !== appRoute);
+        return filtered.includes('home') ? filtered : ['home', ...filtered];
+      });
     });
   };
 
@@ -545,6 +553,9 @@ function Router() {
   const { currentRoute, direction, openApps } = useRouter();
   const routeLanguage = () => phoneState.settings.language || 'es';
   const [leavingRoute, setLeavingRoute] = createSignal<string | null>(null);
+  const ROUTE_WIDTH = 336;
+  const ROUTE_REVEAL_OFFSET = -74;
+  const ROUTE_BACK_OFFSET = -60;
   let lastRoute = currentRoute();
   let leavingRouteTimer: number | undefined;
 
@@ -585,33 +596,47 @@ function Router() {
     return <HomeScreen />;
   };
 
-  const routeMotion = (route: AppRoute) => {
+  const routeVisualState = (route: AppRoute) => {
     if (currentRoute() === route) {
       return { opacity: 1, x: 0, scale: 1 };
     }
 
     if (leavingRoute() === route) {
       return direction() === 'forward'
-        ? { opacity: 0.58, x: '-22%', scale: 0.94 }
-        : { opacity: 0, x: '100%', scale: 1 };
+        ? { opacity: 0.58, x: ROUTE_REVEAL_OFFSET, scale: 0.94 }
+        : { opacity: 0, x: ROUTE_WIDTH, scale: 1 };
     }
 
     return direction() === 'forward'
-      ? { opacity: 0, x: '100%', scale: 1 }
-      : { opacity: 0, x: '-18%', scale: 0.94 };
+      ? { opacity: 0, x: ROUTE_WIDTH, scale: 1 }
+      : { opacity: 0, x: ROUTE_BACK_OFFSET, scale: 0.94 };
   };
 
-  const routeInitial = (route: AppRoute) => (
-    route === 'home'
-      ? { opacity: 1, x: 0, scale: 1 }
-      : { opacity: 0.98, x: '100%', scale: 1 }
-  );
+  const routeStyle = (route: AppRoute) => {
+    const visual = routeVisualState(route);
+    return {
+      opacity: String(visual.opacity),
+      transform: `translate3d(${visual.x}px, 0, 0) scale(${visual.scale})`,
+    };
+  };
+
+  const displayedRoutes = createMemo(() => {
+    const routes = [...openApps()];
+    const active = currentRoute();
+    const leaving = leavingRoute();
+
+    if (!routes.includes('home')) routes.unshift('home');
+    if (active && !routes.includes(active)) routes.push(active);
+    if (leaving && !routes.includes(leaving)) routes.push(leaving);
+
+    return routes;
+  });
 
   return (
     <div class={styles.routerContainer}>
-      <For each={openApps()}>
+      <For each={displayedRoutes()}>
         {(route) => (
-          <Motion.div
+          <div
             class={styles.routeView}
             classList={{
               [styles.routeVisible]: currentRoute() === route || leavingRoute() === route,
@@ -626,12 +651,10 @@ function Router() {
                 leavingRoute() === route && direction() === 'back',
               [styles.routeTransparent]: route === 'camera',
             }}
-            initial={routeInitial(route)}
-            animate={routeMotion(route)}
-            transition={{ duration: direction() === 'forward' ? 0.32 : 0.28, easing: [0.32, 0.72, 0, 1] }}
+            style={routeStyle(route)}
           >
             {renderRoute(route)}
-          </Motion.div>
+          </div>
         )}
       </For>
     </div>

@@ -426,6 +426,9 @@
   overflow-x: hidden;
   visibility: hidden;
   pointer-events: none;
+  transition:
+    transform 300ms cubic-bezier(0.32, 0.72, 0, 1),
+    opacity 240ms ease;
 
   &.routeTransparent {
     background-color: transparent;
