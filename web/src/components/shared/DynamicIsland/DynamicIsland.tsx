@@ -105,17 +105,18 @@ export function DynamicIsland() {
         <div class={styles.overlay} onClick={collapse} />
       </Show>
 
-      <div
-        class={styles.island}
-        classList={{
-          [styles.islandMini]: !isHome(),
-          [styles.islandMiniWithCount]: !isHome() && multipleActivities(),
-          [styles.islandAutoMini]: isHome() && !expanded() && minimized(),
-          [styles.islandCollapsed]: isHome() && !expanded() && !minimized(),
-          [styles.islandExpanded]: isHome() && expanded(),
-        }}
-        onClick={handlePillClick}
-      >
+      <div class={styles.islandSlot}>
+        <div
+          class={styles.island}
+          classList={{
+            [styles.islandMini]: !isHome(),
+            [styles.islandMiniWithCount]: !isHome() && multipleActivities(),
+            [styles.islandAutoMini]: isHome() && !expanded() && minimized(),
+            [styles.islandCollapsed]: isHome() && !expanded() && !minimized(),
+            [styles.islandExpanded]: isHome() && expanded(),
+          }}
+          onClick={handlePillClick}
+        >
         {/* Mini mode: wave bars only (inside apps) */}
         <Show when={!isHome()}>
           <span class={styles.miniWave} />
@@ -195,6 +196,7 @@ export function DynamicIsland() {
             </div>
           </Show>
         </Show>
+        </div>
       </div>
     </Show>
   );
