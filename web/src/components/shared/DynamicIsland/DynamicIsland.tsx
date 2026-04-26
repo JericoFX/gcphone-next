@@ -1,4 +1,4 @@
-import { Show, createSignal, Switch, Match, For } from 'solid-js';
+import { Show, createEffect, createMemo, createSignal, Switch, Match, For, onCleanup } from 'solid-js';
 import { useLiveActivity } from '../../../store/liveActivity';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { IslandMusic } from './IslandMusic';
@@ -11,6 +11,8 @@ export function DynamicIsland() {
   const router = useRouter();
   const [expanded, setExpanded] = createSignal(false);
   const [activeIndex, setActiveIndex] = createSignal(0);
+  const [minimized, setMinimized] = createSignal(false);
+  let minimizeTimer: number | undefined;
 
   const currentActivity = () => {
     const list = activities();
@@ -21,6 +23,17 @@ export function DynamicIsland() {
   const isHome = () => router.currentRoute() === 'home';
   const hasActivities = () => activities().length > 0;
   const multipleActivities = () => activities().length > 1;
+  const activityCount = () => activities().length;
+  const activitySignature = createMemo(() => (
+    activities()
+      .map((activity) => `${activity.type}:${activity.title}:${activity.subtitle || ''}`)
+      .join('|')
+  ));
+  const shouldAutoMinimize = () => {
+    const type = currentActivity()?.type;
+    return type !== 'call' && type !== 'recording';
+  };
+  const minimizeDelayMs = () => (shouldAutoMinimize() ? 5000 : 9000);
 
   const dotColor = () => {
     const act = currentActivity();
@@ -45,11 +58,32 @@ export function DynamicIsland() {
       const act = currentActivity();
       act?.onNavigate?.();
     } else {
+      setMinimized(false);
       setExpanded(true);
     }
   };
 
-  const collapse = () => setExpanded(false);
+  const collapse = () => {
+    setExpanded(false);
+    setMinimized(false);
+  };
+
+  createEffect(() => {
+    activitySignature();
+    const expandedNow = expanded();
+    const homeNow = isHome();
+    if (activeIndex() >= activities().length) setActiveIndex(0);
+    setMinimized(false);
+    if (minimizeTimer) window.clearTimeout(minimizeTimer);
+    if (!hasActivities() || expandedNow || !homeNow) return;
+    minimizeTimer = window.setTimeout(() => {
+      if (!expanded() && isHome()) setMinimized(true);
+    }, minimizeDelayMs());
+  });
+
+  onCleanup(() => {
+    if (minimizeTimer) window.clearTimeout(minimizeTimer);
+  });
 
   return (
     <Show when={hasActivities()}>
@@ -62,7 +96,9 @@ export function DynamicIsland() {
         class={styles.island}
         classList={{
           [styles.islandMini]: !isHome(),
-          [styles.islandCollapsed]: isHome() && !expanded(),
+          [styles.islandMiniWithCount]: !isHome() && multipleActivities(),
+          [styles.islandAutoMini]: isHome() && !expanded() && minimized(),
+          [styles.islandCollapsed]: isHome() && !expanded() && !minimized(),
           [styles.islandExpanded]: isHome() && expanded(),
         }}
         onClick={handlePillClick}
@@ -72,14 +108,28 @@ export function DynamicIsland() {
           <span class={styles.miniWave} />
           <span class={styles.miniWave} />
           <span class={styles.miniWave} />
+          <Show when={multipleActivities()}>
+            <span class={styles.miniCount}>{activityCount()}</span>
+          </Show>
         </Show>
 
         {/* Collapsed view (home, not expanded) */}
-        <Show when={isHome() && !expanded()}>
+        <Show when={isHome() && !expanded() && !minimized()}>
           <span class={`${styles.dot} ${dotColor()}`} />
           <span class={styles.pillTitle}>
             {currentActivity()?.title || ''}
           </span>
+          <Show when={multipleActivities()}>
+            <span class={styles.pillCount}>{activityCount()}</span>
+          </Show>
+        </Show>
+
+        {/* Auto-mini view (home, idle) */}
+        <Show when={isHome() && !expanded() && minimized()}>
+          <span class={`${styles.dot} ${dotColor()}`} />
+          <Show when={multipleActivities()}>
+            <span class={styles.miniCount}>{activityCount()}</span>
+          </Show>
         </Show>
 
         {/* Expanded view (home, expanded) */}

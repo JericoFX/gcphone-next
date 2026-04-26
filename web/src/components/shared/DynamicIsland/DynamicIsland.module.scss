@@ -25,6 +25,18 @@
   padding: 0 12px;
 }
 
+.islandAutoMini {
+  min-width: 48px;
+  max-width: 64px;
+  height: 24px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 0 8px;
+}
+
 /* Mini mode: tiny pill when inside an app */
 .islandMini {
   min-width: 40px;
@@ -37,6 +49,12 @@
   gap: 3px;
   padding: 0;
   animation: islandBounceIn 400ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.islandMiniWithCount {
+  min-width: 54px;
+  max-width: 54px;
+  gap: 4px;
 }
 
 .miniWave {
@@ -92,6 +110,32 @@
   text-overflow: ellipsis;
   flex: 1;
   color: #fff;
+}
+
+.pillCount,
+.miniCount {
+  flex-shrink: 0;
+  border-radius: 999px;
+  display: inline-grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.pillCount {
+  min-width: 17px;
+  height: 17px;
+  padding: 0 5px;
+  font-size: 10px;
+}
+
+.miniCount {
+  min-width: 15px;
+  height: 15px;
+  padding: 0 4px;
+  font-size: 9px;
 }
 
 .pillSubtitle {
