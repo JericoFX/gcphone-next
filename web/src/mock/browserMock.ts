@@ -1183,6 +1183,121 @@ const emitHiddenMockNotification = (payload?: Partial<Record<string, unknown>>) 
   }, 120);
 };
 
+type MockNfcKind = 'photo' | 'contact' | 'note' | 'maps' | 'chirp' | 'snap' | 'document' | 'radio' | 'services';
+
+const buildIncomingNfcNotification = (kind: MockNfcKind = 'photo') => {
+  const requestId = Date.now() + Math.floor(Math.random() * 1000);
+  const from = 'Lucia Mock';
+
+  const generic = (appId: string, title: string, message: string, text: string) => ({
+    id: `mock-nfc-${kind}-${requestId}`,
+    appId,
+    title,
+    message,
+    route: appId,
+    priority: 'normal',
+    data: {
+      nfcAction: 'received_payload',
+      requestId,
+      from,
+      nfcPayload: { appId, route: appId, title, message, text },
+    },
+  });
+
+  if (kind === 'photo') {
+    return {
+      id: `mock-nfc-photo-${requestId}`,
+      appId: 'gallery',
+      title: 'Foto NFC',
+      message: `${from} te envio una foto`,
+      route: 'gallery',
+      priority: 'normal',
+      data: {
+        nfcAction: 'received_photo',
+        requestId,
+        sharedPhoto: { url: './img/background/neon.jpg', from, type: 'image', shared_at: nowIso() },
+      },
+    };
+  }
+
+  if (kind === 'contact') {
+    return {
+      id: `mock-nfc-contact-${requestId}`,
+      appId: 'contacts',
+      title: 'Contacto NFC',
+      message: `${from} quiere compartir un contacto`,
+      route: 'contacts',
+      priority: 'normal',
+      data: {
+        nfcAction: 'received_contact',
+        requestId,
+        contactRequest: {
+          fromPlayer: from,
+          fromServerId: 12,
+          contact: { display: 'Taller Norte', number: '555-7711', avatar: './img/icons_ios/services.svg' },
+        },
+      },
+    };
+  }
+
+  if (kind === 'note') {
+    return generic('notes', 'Nota NFC', 'Codigo de acceso compartido', 'Puerta lateral: 2048. No compartir fuera del equipo.');
+  }
+
+  if (kind === 'maps') {
+    return {
+      id: `mock-nfc-maps-${requestId}`,
+      appId: 'maps',
+      title: 'Coordenadas NFC',
+      message: 'LOC:-268.42,-956.31',
+      route: 'maps',
+      priority: 'normal',
+      data: {
+        nfcAction: 'received_location',
+        requestId,
+        from,
+        x: -268.42,
+        y: -956.31,
+        z: 32.22,
+        nfcPayload: { appId: 'maps', route: 'maps', text: 'LOC:-268.42,-956.31', x: -268.42, y: -956.31, z: 32.22 },
+      },
+    };
+  }
+
+  if (kind === 'document') {
+    return {
+      id: `mock-nfc-document-${requestId}`,
+      appId: 'documents',
+      title: 'Documento NFC',
+      message: `${from} te mostro una licencia`,
+      route: 'documents',
+      priority: 'normal',
+      data: {
+        nfcAction: 'received_document',
+        requestId,
+        receivedDocument: {
+          from,
+          shared_at: nowIso(),
+          document: {
+            doc_type: 'driver_license',
+            title: 'Licencia de conducir',
+            holder_name: from,
+            holder_number: '555-7711',
+            expires_at: '2027-04-26',
+            verification_code: 'MOCK-NFC-2048',
+            scanned_at: nowIso(),
+          },
+        },
+      },
+    };
+  }
+
+  if (kind === 'chirp') return generic('chirp', 'Chirp NFC', 'Te compartieron un chirp', 'CHIRP:1');
+  if (kind === 'snap') return generic('snap', 'Snap NFC', 'Te compartieron un snap', 'SNAP:1');
+  if (kind === 'radio') return generic('radio', 'Radio NFC', 'Te compartieron una radio', 'RADIO:LS-UNDERGROUND');
+  return generic('services', 'Servicio NFC', 'Te compartieron un servicio', 'SERVICE:mechanic');
+};
+
 const chirpCloneTweets = (tab: MockChirpTab) =>
   mockChirpTweetsByTab[tab].map((tweet) => ({ ...tweet }));
 
@@ -1298,6 +1413,14 @@ export function setupBrowserMock() {
           display: 'Mecanico',
           number: '555-4444',
         },
+      });
+    },
+    incomingNfc: (kind: MockNfcKind = 'photo') => {
+      emitPhoneNotification(buildIncomingNfcNotification(kind));
+    },
+    incomingNfcBurst: () => {
+      (['photo', 'contact', 'note', 'maps'] as MockNfcKind[]).forEach((kind, index) => {
+        window.setTimeout(() => emitPhoneNotification(buildIncomingNfcNotification(kind)), index * 520);
       });
     },
     hiddenNotification: () => {
@@ -2865,6 +2988,10 @@ export async function handleBrowserNui<T = unknown>(eventName: string, data?: un
   }
 
   if (eventName === 'acceptContactRequest' || eventName === 'acceptFriendRequest' || eventName === 'rejectFriendRequest') {
+    return { success: true } as T;
+  }
+
+  if (eventName === 'shareNfcPayload' || eventName === 'galleryShareNfc') {
     return { success: true } as T;
   }
 

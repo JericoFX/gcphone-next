@@ -6,6 +6,8 @@ interface DebugEvent<T = unknown> {
   data: T;
 }
 
+type MockNfcKind = 'photo' | 'contact' | 'note' | 'maps' | 'chirp' | 'snap' | 'document' | 'radio' | 'services';
+
 export function debugData<P>(events: DebugEvent<P>[], timer = 1000): void {
   if (isEnvBrowser()) {
     for (const event of events) {
@@ -86,6 +88,180 @@ export function mockNotification() {
       route: 'messages',
     });
   }, 100);
+}
+
+const nfcRequestId = () => Date.now() + Math.floor(Math.random() * 1000);
+
+function buildMockNfcNotification(kind: MockNfcKind) {
+  const requestId = nfcRequestId();
+  const from = 'Lucia Mock';
+
+  if (kind === 'photo') {
+    return {
+      id: `mock-nfc-photo-${requestId}`,
+      appId: 'gallery',
+      title: 'Foto NFC',
+      message: `${from} te envio una foto`,
+      route: 'gallery',
+      priority: 'normal',
+      data: {
+        nfcAction: 'received_photo',
+        requestId,
+        sharedPhoto: {
+          url: './img/background/neon.jpg',
+          from,
+          type: 'image',
+          shared_at: new Date().toISOString(),
+        },
+      },
+    };
+  }
+
+  if (kind === 'contact') {
+    return {
+      id: `mock-nfc-contact-${requestId}`,
+      appId: 'contacts',
+      title: 'Contacto NFC',
+      message: `${from} quiere compartir un contacto`,
+      route: 'contacts',
+      priority: 'normal',
+      data: {
+        nfcAction: 'received_contact',
+        requestId,
+        contactRequest: {
+          fromPlayer: from,
+          fromServerId: 12,
+          contact: {
+            display: 'Taller Norte',
+            number: '555-7711',
+            avatar: './img/icons_ios/services.svg',
+          },
+        },
+      },
+    };
+  }
+
+  if (kind === 'note') {
+    return {
+      id: `mock-nfc-note-${requestId}`,
+      appId: 'notes',
+      title: 'Nota NFC',
+      message: 'Codigo de acceso compartido',
+      route: 'notes',
+      priority: 'normal',
+      data: {
+        nfcAction: 'received_payload',
+        requestId,
+        from,
+        nfcPayload: {
+          appId: 'notes',
+          route: 'notes',
+          title: 'Nota NFC',
+          subject: 'Codigo de acceso',
+          text: 'Puerta lateral: 2048. No compartir fuera del equipo.',
+        },
+      },
+    };
+  }
+
+  if (kind === 'maps') {
+    return {
+      id: `mock-nfc-maps-${requestId}`,
+      appId: 'maps',
+      title: 'Coordenadas NFC',
+      message: 'LOC:-268.42,-956.31',
+      route: 'maps',
+      priority: 'normal',
+      data: {
+        nfcAction: 'received_location',
+        requestId,
+        from,
+        x: -268.42,
+        y: -956.31,
+        z: 32.22,
+        nfcPayload: {
+          appId: 'maps',
+          route: 'maps',
+          text: 'LOC:-268.42,-956.31',
+          x: -268.42,
+          y: -956.31,
+          z: 32.22,
+        },
+      },
+    };
+  }
+
+  if (kind === 'document') {
+    return {
+      id: `mock-nfc-document-${requestId}`,
+      appId: 'documents',
+      title: 'Documento NFC',
+      message: `${from} te mostro una licencia`,
+      route: 'documents',
+      priority: 'normal',
+      data: {
+        nfcAction: 'received_document',
+        requestId,
+        receivedDocument: {
+          from,
+          shared_at: new Date().toISOString(),
+          document: {
+            doc_type: 'driver_license',
+            title: 'Licencia de conducir',
+            holder_name: from,
+            holder_number: '555-7711',
+            expires_at: '2027-04-26',
+            verification_code: 'MOCK-NFC-2048',
+            scanned_at: new Date().toISOString(),
+          },
+        },
+      },
+    };
+  }
+
+  const socialRoutes: Record<Exclude<MockNfcKind, 'photo' | 'contact' | 'note' | 'maps' | 'document'>, { appId: string; title: string; message: string; text: string }> = {
+    chirp: { appId: 'chirp', title: 'Chirp NFC', message: 'Te compartieron un chirp', text: 'CHIRP:1' },
+    snap: { appId: 'snap', title: 'Snap NFC', message: 'Te compartieron un snap', text: 'SNAP:1' },
+    radio: { appId: 'radio', title: 'Radio NFC', message: 'Te compartieron una radio', text: 'RADIO:LS-UNDERGROUND' },
+    services: { appId: 'services', title: 'Servicio NFC', message: 'Te compartieron un servicio', text: 'SERVICE:mechanic' },
+  };
+  const item = socialRoutes[kind];
+
+  return {
+    id: `mock-nfc-${kind}-${requestId}`,
+    appId: item.appId,
+    title: item.title,
+    message: item.message,
+    route: item.appId,
+    priority: 'normal',
+    data: {
+      nfcAction: 'received_payload',
+      requestId,
+      from,
+      nfcPayload: {
+        appId: item.appId,
+        route: item.appId,
+        title: item.title,
+        message: item.message,
+        text: item.text,
+      },
+    },
+  };
+}
+
+export function mockNfcIncoming(kind: MockNfcKind = 'photo') {
+  if (!isEnvBrowser()) return;
+  setTimeout(() => {
+    emitInternalEvent('phone:notification', buildMockNfcNotification(kind));
+  }, 100);
+}
+
+export function mockNfcIncomingBurst() {
+  if (!isEnvBrowser()) return;
+  const kinds: MockNfcKind[] = ['photo', 'contact', 'note', 'maps'];
+  kinds.forEach((kind, index) => {
+    setTimeout(() => emitInternalEvent('phone:notification', buildMockNfcNotification(kind)), 140 + index * 520);
+  });
 }
 
 export function mockContacts() {

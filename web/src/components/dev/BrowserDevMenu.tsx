@@ -1,5 +1,5 @@
 import { Show, createSignal, onCleanup, onMount } from 'solid-js';
-import { mockContacts, mockMessages, mockPhoneInit, mockPhoneSetup, mockShowPhone, mockHidePhone, mockNotification, mockAirDrop, mockTyping, mockSDKInput, mockSDKConfirm, mockSDKSelect, mockSDKBar, mockSDKMechanic, mockSDKPermission } from '../../utils/debugData';
+import { mockContacts, mockMessages, mockPhoneInit, mockPhoneSetup, mockShowPhone, mockHidePhone, mockNotification, mockAirDrop, mockTyping, mockNfcIncoming, mockNfcIncomingBurst, mockSDKInput, mockSDKConfirm, mockSDKSelect, mockSDKBar, mockSDKMechanic, mockSDKPermission } from '../../utils/debugData';
 import { isEnvBrowser } from '../../utils/misc';
 
 const panelStyle = {
@@ -18,6 +18,8 @@ const panelStyle = {
   display: 'flex',
   flexDirection: 'column',
   gap: '8px',
+  maxHeight: 'calc(100vh - 24px)',
+  overflowY: 'auto',
 } as const;
 
 const buttonStyle = {
@@ -60,6 +62,17 @@ export function BrowserDevMenu() {
         <button style={buttonStyle} onClick={() => mockMessages()}>Mock messages</button>
         <button style={buttonStyle} onClick={() => mockAirDrop()}>Mock AirDrop</button>
         <button style={buttonStyle} onClick={() => mockTyping()}>Mock Typing</button>
+        <strong style={{ 'margin-top': '8px' }}>NFC Incoming</strong>
+        <button style={buttonStyle} onClick={() => mockNfcIncoming('photo')}>NFC: photo</button>
+        <button style={buttonStyle} onClick={() => mockNfcIncoming('contact')}>NFC: contact</button>
+        <button style={buttonStyle} onClick={() => mockNfcIncoming('note')}>NFC: note</button>
+        <button style={buttonStyle} onClick={() => mockNfcIncoming('maps')}>NFC: maps</button>
+        <button style={buttonStyle} onClick={() => mockNfcIncoming('document')}>NFC: document</button>
+        <button style={buttonStyle} onClick={() => mockNfcIncoming('chirp')}>NFC: chirp</button>
+        <button style={buttonStyle} onClick={() => mockNfcIncoming('snap')}>NFC: snap</button>
+        <button style={buttonStyle} onClick={() => mockNfcIncoming('radio')}>NFC: radio</button>
+        <button style={buttonStyle} onClick={() => mockNfcIncoming('services')}>NFC: services</button>
+        <button style={buttonStyle} onClick={() => mockNfcIncomingBurst()}>NFC: burst</button>
         <strong style={{ 'margin-top': '8px' }}>SDK Modals</strong>
         <button style={buttonStyle} onClick={() => mockSDKInput()}>SDK: Input (Bank)</button>
         <button style={buttonStyle} onClick={() => mockSDKConfirm()}>SDK: Confirm (Sell)</button>
