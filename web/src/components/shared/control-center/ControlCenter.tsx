@@ -9,6 +9,9 @@ import type { FocusModeId } from '../../../store/notifications';
 import type { NearbyPlayerData } from '../../../types/nui';
 import styles from './ControlCenter.module.scss';
 
+const TOP_PULL_OPEN_DISTANCE = 112;
+const TOP_PULL_OPEN_PROGRESS = 0.56;
+
 const FOCUS_MODE_ICONS: Record<FocusModeId, string> = {
   off: './img/icons_ios/ui-moon.svg',
   personal: './img/icons_ios/ui-moon.svg',
@@ -490,13 +493,13 @@ export function ControlCenter() {
     if (!topDragEnabled()) return;
     if (!dragSurface() || topDragPointerId !== event.pointerId) return;
     const deltaY = Math.max(0, event.clientY - topDragStartY);
-    const progress = Math.min(1, deltaY / 96);
+    const progress = Math.min(1, deltaY / TOP_PULL_OPEN_DISTANCE);
     setDragProgress(progress);
   };
 
   const handleTopDragEnd = (event: PointerEvent) => {
     if (!dragSurface() || topDragPointerId !== event.pointerId) return;
-    if (dragProgress() >= 0.34) {
+    if (dragProgress() >= TOP_PULL_OPEN_PROGRESS) {
       if (dragSurface() === 'notifications') notificationsActions.setNotificationCenterOpen(true);
       if (dragSurface() === 'control') notificationsActions.setControlCenterOpen(true);
     }
@@ -590,8 +593,8 @@ export function ControlCenter() {
                           const swipe = createSwipeHandlers(item.id);
                           return (
                             <div class={styles.swipeTrack}>
-                              <div class={`${styles.swipeBg} ${styles.swipeBgRight}`} data-swipe-bg-right>{t('control.delete', language())}</div>
-                              <div class={`${styles.swipeBg} ${styles.swipeBgLeft}`} data-swipe-bg-left>{t('control.delete', language())}</div>
+                              <div class={`${styles.swipeBg} ${styles.swipeBgRight}`} data-swipe-bg-right aria-hidden="true">{t('control.delete', language())}</div>
+                              <div class={`${styles.swipeBg} ${styles.swipeBgLeft}`} data-swipe-bg-left aria-hidden="true">{t('control.delete', language())}</div>
                               <button
                                 class={styles.notificationItem}
                                 onPointerDown={swipe.onPointerDown}

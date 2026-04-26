@@ -5,7 +5,7 @@
   top: 0;
   left: 0;
   right: 0;
-  height: 34px;
+  height: 20px;
   display: grid;
   grid-template-columns: 1fr 1fr;
   z-index: 56;
@@ -802,35 +802,38 @@
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: var(--s-3);
+  gap: var(--s-4);
   padding: 0 2px;
 }
 
 .notification-group {
   display: grid;
-  gap: var(--s-1);
+  gap: var(--s-2);
+  width: 100%;
 }
 
 .group-title {
   display: flex;
   align-items: center;
   gap: var(--s-2);
-  padding: 0 var(--s-1);
+  min-height: 26px;
+  padding: 0 2px;
 
   img {
-    width: 18px;
-    height: 18px;
-    border-radius: 4px;
+    width: 20px;
+    height: 20px;
+    border-radius: 6px;
     flex-shrink: 0;
     filter: brightness(0) invert(1);
-    opacity: 0.7;
+    opacity: 0.78;
   }
 
   span {
     font-size: var(--fs-caption2);
-    font-weight: 700;
+    font-weight: 800;
     color: var(--cc-text-muted);
     letter-spacing: 0.04em;
+    text-transform: uppercase;
   }
 }
 
@@ -838,12 +841,12 @@
   margin-left: auto;
   border: none;
   border-radius: var(--r-pill);
-  min-height: 22px;
-  padding: 0 var(--s-3);
-  background: rgba(255, 255, 255, 0.1);
+  min-height: 24px;
+  padding: 0 10px;
+  background: rgba(255, 255, 255, 0.14);
   color: var(--cc-text-soft);
   font-size: var(--fs-caption2);
-  font-weight: 700;
+  font-weight: 800;
   cursor: pointer;
 
   &:active {
@@ -855,6 +858,7 @@
   position: relative;
   overflow: hidden;
   border-radius: var(--r-xl);
+  width: 100%;
 }
 
 .swipe-bg {
@@ -886,21 +890,29 @@
 
 .notification-item {
   position: relative;
-  border: none;
+  width: 100%;
+  min-height: 64px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--r-xl);
-  background: var(--cc-tile);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.08)),
+    rgba(255, 255, 255, 0.1);
   color: var(--cc-text);
   text-align: left;
-  padding: var(--s-3);
+  padding: 10px 12px;
   display: grid;
-  gap: 2px;
+  gap: 4px;
   cursor: pointer;
-  transition: transform 180ms ease;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  transition:
+    background 160ms ease,
+    transform 180ms ease;
   touch-action: pan-y;
   will-change: transform;
 
   &:active {
     transform: scale(0.985);
+    background: rgba(255, 255, 255, 0.16);
   }
 
   strong {
@@ -923,6 +935,8 @@
     font-size: var(--fs-caption1);
     color: var(--cc-text-soft);
     line-height: var(--lh-normal);
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 }
 
