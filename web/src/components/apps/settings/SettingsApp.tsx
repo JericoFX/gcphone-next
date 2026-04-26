@@ -154,6 +154,7 @@ export function SettingsApp() {
   };
 
   const screenLockEnabled = () => phoneState.settings.screenLockEnabled !== false;
+  const notificationFocus = () => router.params().focus === 'muted' ? 'muted' : 'all';
 
   const getTitle = () => {
     switch (section()) {
@@ -212,7 +213,13 @@ export function SettingsApp() {
           <SettingsSecurity language={language} phoneActions={phoneActions} phoneState={phoneState} screenLockEnabled={screenLockEnabled} />
         </Match>
         <Match when={section() === 'notifications'}>
-          <SettingsNotifications language={language} phoneState={phoneState} notificationsActions={notificationsActions} />
+          <SettingsNotifications
+            language={language}
+            phoneState={phoneState}
+            notifications={notifications}
+            notificationsActions={notificationsActions}
+            focus={notificationFocus()}
+          />
         </Match>
         <Match when={section() === 'appsandpermissions'}>
           <SettingsAppsPermissions language={language} onBack={() => setSection('main')} />

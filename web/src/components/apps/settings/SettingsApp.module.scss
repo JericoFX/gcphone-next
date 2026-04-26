@@ -522,6 +522,14 @@
   &:last-child { border-bottom: none; }
 }
 
+.appRowMuted {
+  background: rgba(var(--text-rgb), 0.035);
+}
+
+.emptyMutedRow {
+  min-height: 58px;
+}
+
 .appIcon {
   width: 32px;
   height: 32px;

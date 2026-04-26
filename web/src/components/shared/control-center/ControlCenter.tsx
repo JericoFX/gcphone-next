@@ -414,7 +414,7 @@ export function ControlCenter() {
     notificationsActions.setNotificationCenterOpen(false);
     emitInternalEvent('phone:openRoute', {
       route: 'settings',
-      data: { section: 'notifications' },
+      data: { section: 'notifications', focus: 'muted' },
     });
   };
 
