@@ -58,10 +58,17 @@ export function SettingsApp() {
   const [autoReplyMessage, setAutoReplyMessage] = createSignal('');
   const [statusToast, setStatusToast] = createSignal('');
   const language = () => phoneState.settings.language || 'es';
+  let lastRouteSyncKey = '';
 
   createEffect(() => {
     const routeSection = router.params().section;
+    const routeFocus = typeof router.params().focus === 'string' ? router.params().focus : '';
+    const routeRequestId = router.params().requestId;
+    const routeSyncKey = `${String(routeSection || '')}:${routeFocus}:${String(routeRequestId || '')}`;
+    if (routeSyncKey === lastRouteSyncKey) return;
+
     if (isSettingsSection(routeSection) && routeSection !== section()) {
+      lastRouteSyncKey = routeSyncKey;
       setSection(routeSection);
     }
   });

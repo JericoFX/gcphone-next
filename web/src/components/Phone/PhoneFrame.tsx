@@ -193,7 +193,7 @@ export const PhoneFrame: ParentComponent<{ router?: boolean }> & { Router: () =>
   props,
 ) => {
   const [phoneState] = usePhone();
-  const [notifications] = useNotifications();
+  const [notifications, notificationsActions] = useNotifications();
   const browserMode = isEnvBrowser();
 
   const [history, setHistory] = createSignal<AppRoute[]>(['home']);
@@ -263,6 +263,15 @@ export const PhoneFrame: ParentComponent<{ router?: boolean }> & { Router: () =>
       .reverse();
   });
 
+  const openSystemRoute = (route: AppRoute, nextParams?: Record<string, unknown>) => {
+    batch(() => {
+      setMultitaskOpen(false);
+      notificationsActions.setControlCenterOpen(false);
+      notificationsActions.setNotificationCenterOpen(false);
+    });
+    navigate(route, nextParams);
+  };
+
   const router: RouterContextValue = {
     currentRoute,
     direction,
@@ -278,7 +287,7 @@ export const PhoneFrame: ParentComponent<{ router?: boolean }> & { Router: () =>
     'phone:openRoute',
     (detail) => {
       if (!detail?.route) return;
-      navigate(detail.route, detail.data || {});
+      openSystemRoute(detail.route as AppRoute, detail.data || {});
     },
   );
 
@@ -380,7 +389,7 @@ export const PhoneFrame: ParentComponent<{ router?: boolean }> & { Router: () =>
           <ControlCenter />
           <div class={styles.bannerWrap}>
             <PhoneNotificationBanner
-              onOpenRoute={(route, data) => router.navigate(route, data)}
+              onOpenRoute={(route, data) => openSystemRoute(route as AppRoute, data)}
             />
           </div>
           <Show when={phoneState.accessMode === 'foreign-readonly'}>

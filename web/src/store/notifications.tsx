@@ -301,16 +301,32 @@ export const NotificationsProvider: ParentComponent = (props) => {
       setState('brightness', next);
     },
     toggleControlCenter: () => {
-      setState('controlCenterOpen', (prev) => !prev);
+      const next = !state.controlCenterOpen;
+      batch(() => {
+        setState('controlCenterOpen', next);
+        if (next) setState('notificationCenterOpen', false);
+      });
     },
     setControlCenterOpen: (value) => {
-      setState('controlCenterOpen', !!value);
+      const next = !!value;
+      batch(() => {
+        setState('controlCenterOpen', next);
+        if (next) setState('notificationCenterOpen', false);
+      });
     },
     toggleNotificationCenter: () => {
-      setState('notificationCenterOpen', (prev) => !prev);
+      const next = !state.notificationCenterOpen;
+      batch(() => {
+        setState('notificationCenterOpen', next);
+        if (next) setState('controlCenterOpen', false);
+      });
     },
     setNotificationCenterOpen: (value) => {
-      setState('notificationCenterOpen', !!value);
+      const next = !!value;
+      batch(() => {
+        setState('notificationCenterOpen', next);
+        if (next) setState('controlCenterOpen', false);
+      });
     },
     toggleNotificationCompactMode: () => {
       setState('notificationCompactMode', (prev) => !prev);

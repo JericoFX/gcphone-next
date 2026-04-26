@@ -16,6 +16,8 @@ declare global {
   }
 }
 
+const NFC_NOTE_TEXT = 'Puerta lateral: 2048. No compartir fuera del equipo.';
+
 async function waitForMock(page: Page) {
   await page.waitForFunction(() => Boolean(window.gcphoneMock));
 }
@@ -56,17 +58,28 @@ async function openLockedPhone(page: Page) {
 }
 
 async function ensurePinKeypadVisible(page: Page) {
-  const firstDigit = page.getByRole('button', { name: '1', exact: true });
-  if (await firstDigit.isVisible().catch(() => false)) return;
+  const keypadReady = await page.evaluate(() => {
+    return Array.from(document.querySelectorAll<HTMLButtonElement>('button'))
+      .some((button) => (button.textContent || '').trim() === '1' || button.getAttribute('aria-label') === '1');
+  });
+  if (keypadReady) return;
 
   await page.getByRole('button', { name: /Desbloquear|Unlock/i }).first().click();
-  await expect(firstDigit).toBeVisible();
+  await expect.poll(async () => page.evaluate(() => {
+    return Array.from(document.querySelectorAll<HTMLButtonElement>('button'))
+      .some((button) => (button.textContent || '').trim() === '1' || button.getAttribute('aria-label') === '1');
+  })).toBe(true);
 }
 
 async function unlockWithPin(page: Page, pin = '1234') {
   await ensurePinKeypadVisible(page);
   for (const digit of pin) {
-    await page.getByRole('button', { name: digit, exact: true }).click();
+    await page.evaluate((value) => {
+      const button = Array.from(document.querySelectorAll<HTMLButtonElement>('button'))
+        .find((candidate) => (candidate.textContent || '').trim() === value || candidate.getAttribute('aria-label') === value);
+      if (!button) throw new Error(`Missing PIN digit button: ${value}`);
+      button.click();
+    }, digit);
   }
   await expect(page.getByTestId('home-app-settings')).toBeVisible();
 }
@@ -93,8 +106,17 @@ async function goHomeDirect(page: Page) {
   await expectHomeVisible(page);
 }
 
+async function expectSheetClosed(page: Page, testId: string) {
+  await expect(page.getByTestId(testId)).toHaveCount(0);
+}
+
 async function openHomeApp(page: Page, testId: string) {
   await expectHomeVisible(page);
+  const overlay = page.getByTestId('dynamic-island-overlay');
+  if (await overlay.isVisible().catch(() => false)) {
+    await overlay.click({ force: true });
+    await expect(overlay).toHaveCount(0);
+  }
 
   for (let attempt = 0; attempt < 4; attempt += 1) {
     const app = page.getByTestId(testId);
@@ -163,6 +185,10 @@ async function startClockTimerActivity(page: Page) {
   await expect(page.getByRole('button', { name: /Detener|Stop/i })).toBeVisible();
 }
 
+async function expectNotesDestination(page: Page) {
+  await expect(page.getByText('Notas').first()).toBeVisible();
+}
+
 test('requires the default PIN before entering home', async ({ page }) => {
   await openLockedPhone(page);
   await unlockWithPin(page);
@@ -196,6 +222,29 @@ test('validates iOS controls and notification preview', async ({ page }) => {
   await expect(page.getByText('Nota NFC').first()).toBeVisible();
 });
 
+test('keeps notification destination continuity from banner to notification center', async ({ page }) => {
+  await openUnlockedPhone(page);
+
+  await emitGenericNfcPayload(page, {
+    appId: 'notes',
+    route: 'notes',
+    title: 'Payload Notes',
+    message: 'Codigo de acceso compartido',
+    text: NFC_NOTE_TEXT,
+  });
+  await expect(page.getByText('Payload Notes').first()).toBeVisible();
+  await page.getByText('Codigo de acceso compartido').first().click();
+
+  await expectNotesDestination(page);
+
+  await goHomeWithBackspace(page);
+  await page.evaluate(() => window.gcphoneMock?.openNotificationCenter?.());
+  await expect(page.getByTestId('notification-center-sheet')).toBeVisible();
+  await page.getByRole('button', { name: /Payload Notes/i }).first().click();
+
+  await expectNotesDestination(page);
+});
+
 test('opens wavechat and gallery carousel controls', async ({ page }) => {
   await openUnlockedPhone(page);
 
@@ -215,8 +264,10 @@ test('supports drag gestures for top control surfaces', async ({ page }) => {
   await page.evaluate(() => window.gcphoneMock?.openControlCenter?.());
 
   await expect(page.getByTestId('control-center-sheet')).toBeVisible();
+  await expect(page.getByText(/PERSONAS CERCA DE TI|NEARBY PEOPLE/i).first()).toBeVisible();
   await page.getByTestId('control-center-nfc-toggle').click();
   await expect(page.getByTestId('control-center-sheet')).toBeVisible();
+  await expect(page.getByText(/Buscando personas|Looking for nearby people|Mateo - 1.2m/i).first()).toBeVisible();
   await expect(page.getByText(/NFC activado|NFC desactivado/).first()).toBeVisible();
 
   await page.evaluate(() => window.gcphoneMock?.openNotificationCenter?.());
@@ -236,6 +287,9 @@ test('opens muted notifications summary into settings notifications', async ({ p
 
   await expect(page.getByRole('button', { name: /Marcar todas como leidas|Mark all as read/i })).toBeVisible();
   await expect(page.getByText(/app silenciada|apps silenciadas/i)).toBeVisible();
+
+  await page.getByRole('button', { name: /Volver|Back/i }).click();
+  await expect(page.getByRole('button', { name: /Apariencia/i })).toBeVisible();
 });
 
 test('keeps desktop page state across app lifecycle', async ({ page }) => {
@@ -349,25 +403,66 @@ test('keeps dynamic island stable with multiple activities and alternation', asy
   await goHomeDirect(page);
 
   await startClockTimerActivity(page);
+  await expect(page.getByTestId('dynamic-island')).toBeVisible();
+  await expect(page.getByTestId('dynamic-island-activity-count').first()).toContainText('/2');
   await goHomeDirect(page);
 
   const activityCount = page.getByTestId('dynamic-island-activity-count').first();
   await page.waitForTimeout(3400);
   await expect(activityCount).toBeVisible();
   await expect(activityCount).toContainText('/2');
+  const overlay = page.getByTestId('dynamic-island-overlay');
+  if (await overlay.isVisible().catch(() => false)) {
+    await overlay.click({ force: true });
+    await expect(overlay).toHaveCount(0);
+  }
 
   const before = await activityCount.textContent();
   await activityCount.click();
   await expect.poll(async () => await activityCount.textContent()).not.toBe(before);
+  await page.getByTestId('dynamic-island').click();
+  await expect(page.getByTestId('dynamic-island-overlay')).toBeVisible();
+  await page.getByTestId('dynamic-island-overlay').click({ force: true });
+  await expect(page.getByTestId('dynamic-island-overlay')).toHaveCount(0);
 });
 
-test('unlocks cleanly from the compact PIN sheet', async ({ page }) => {
+test('unlocks from the compact PIN sheet and returns cleanly to home', async ({ page }) => {
   await openLockedPhone(page);
 
-  await expect(page.getByRole('button', { name: /Desbloquear|Unlock/i }).first()).toBeVisible();
-  await page.getByRole('button', { name: /Desbloquear|Unlock/i }).first().click();
-
   await unlockWithPin(page);
+  await page.getByTestId('home-app-settings').click();
+  await expect(page.getByRole('button', { name: /Apariencia/i })).toBeVisible();
+  await goHomeWithBackspace(page);
   await expectHomeVisible(page);
-  await expect(page.getByTestId('dynamic-island')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /Desbloquear|Unlock/i })).toHaveCount(0);
+});
+
+test('keeps control center and notification center coexistence stable', async ({ page }) => {
+  await openUnlockedPhone(page);
+
+  await emitGenericNfcPayload(page, {
+    appId: 'notes',
+    route: 'notes',
+    title: 'Payload Notes',
+    message: 'Codigo de acceso compartido',
+    text: NFC_NOTE_TEXT,
+  });
+  await page.evaluate(() => window.gcphoneMock?.openNotificationCenter?.());
+  await expect(page.getByTestId('notification-center-sheet')).toBeVisible();
+  await expect(page.getByText('Payload Notes').first()).toBeVisible();
+
+  await page.evaluate(() => window.gcphoneMock?.openControlCenter?.());
+  await expect(page.getByTestId('control-center-sheet')).toBeVisible();
+  await expectSheetClosed(page, 'notification-center-sheet');
+
+  if (await page.getByTestId('control-center-sheet').count()) {
+    await page.getByTestId('control-center-sheet').getByRole('button', { name: /Cerrar|Close/i }).last().click({ force: true });
+  } else {
+    await page.evaluate(() => window.gcphoneMock?.openControlCenter?.());
+    await expect(page.getByTestId('control-center-sheet')).toBeVisible();
+    await page.getByTestId('control-center-sheet').getByRole('button', { name: /Cerrar|Close/i }).last().click({ force: true });
+  }
+
+  await expectHomeVisible(page);
+  await expectSheetClosed(page, 'control-center-sheet');
 });

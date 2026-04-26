@@ -9,6 +9,16 @@ import styles from './DynamicIsland.module.scss';
 
 const MOTION_EASING = [0.32, 0.72, 0, 1];
 
+const ACTIVITY_TYPE_LABELS: Record<LiveActivity['type'], string> = {
+  music: 'Music',
+  radio: 'Radio',
+  call: 'Call',
+  cityride: 'CityRide',
+  timer: 'Timer',
+  recording: 'Recording',
+  location: 'Location',
+};
+
 function isAssetIcon(icon?: string): boolean {
   return typeof icon === 'string' && /^(?:\.\.\/|\.\/|\/|https?:\/\/)/.test(icon);
 }
@@ -37,6 +47,11 @@ function getToneClass(activity: LiveActivity | undefined): string {
   return styles.dotMusic;
 }
 
+function getActivityTypeLabel(activity?: LiveActivity): string {
+  if (!activity) return '';
+  return ACTIVITY_TYPE_LABELS[activity.type];
+}
+
 function ActivityVisual(props: { activity?: LiveActivity; compact?: boolean; expanded?: boolean }) {
   const icon = () => props.activity?.icon?.trim();
   const iconIsAsset = () => isAssetIcon(icon());
@@ -62,6 +77,25 @@ function ActivityVisual(props: { activity?: LiveActivity; compact?: boolean; exp
   );
 }
 
+function ActivityStack(props: { primary?: LiveActivity; secondary?: LiveActivity; compact?: boolean; expanded?: boolean }) {
+  return (
+    <span
+      class={styles.activityStack}
+      classList={{
+        [styles.activityStackCompact]: props.compact === true,
+        [styles.activityStackExpanded]: props.expanded === true,
+      }}
+    >
+      <ActivityVisual activity={props.primary} compact={props.compact} expanded={props.expanded} />
+      <Show when={props.secondary}>
+        <span class={styles.activityStackSecondary}>
+          <ActivityVisual activity={props.secondary} compact={props.compact} expanded={props.expanded} />
+        </span>
+      </Show>
+    </span>
+  );
+}
+
 export function DynamicIsland() {
   const { activities } = useLiveActivity();
   const router = useRouter();
@@ -78,6 +112,11 @@ export function DynamicIsland() {
     const list = activities();
     return list[activeIndex()] || list[0];
   });
+  const nextActivity = createMemo(() => {
+    const list = activities();
+    if (list.length < 2) return undefined;
+    return list[(activeIndex() + 1) % list.length];
+  });
 
   const isHome = () => router.currentRoute() === 'home';
   const hasActivities = () => activities().length > 0;
@@ -89,6 +128,8 @@ export function DynamicIsland() {
   };
   const activityPositionLabel = () => `${activityPosition()}/${activityCount()}`;
   const activitySignature = createMemo(() => activities().map((activity) => getActivityKey(activity)).join('|'));
+  const activeTypeLabel = createMemo(() => getActivityTypeLabel(currentActivity()));
+  const nextTypeLabel = createMemo(() => getActivityTypeLabel(nextActivity()));
   const viewKey = createMemo(() => (
     `${isHome() ? (expanded() ? 'expanded' : minimized() ? 'mini' : 'compact') : 'away'}:${getActivityKey(currentActivity())}:${activityPositionLabel()}`
   ));
@@ -138,6 +179,12 @@ export function DynamicIsland() {
     setMinimized(false);
   };
 
+  const focusActivity = (event: MouseEvent, index: number) => {
+    event.stopPropagation();
+    setActiveIndex(index);
+    setMinimized(false);
+  };
+
   createEffect(() => {
     const signature = activitySignature();
     const nextKeys = signature ? signature.split('|') : [];
@@ -154,7 +201,13 @@ export function DynamicIsland() {
 
     if (activeIndex() >= nextKeys.length) setActiveIndex(0);
 
-    if (previousSignature && previousSignature !== signature) {
+    if (!previousSignature) {
+      setActiveIndex(0);
+      if (homeNow) {
+        setMinimized(false);
+        setExpanded(true);
+      }
+    } else if (previousSignature !== signature) {
       setActiveIndex(pickChangedActivity(previousKeys, nextKeys));
       if (homeNow) {
         setMinimized(false);
@@ -231,7 +284,9 @@ export function DynamicIsland() {
             [styles.islandMini]: !isHome(),
             [styles.islandMiniWithCount]: !isHome() && multipleActivities(),
             [styles.islandAutoMini]: isHome() && !expanded() && minimized(),
+            [styles.islandAutoMiniWithCount]: isHome() && !expanded() && minimized() && multipleActivities(),
             [styles.islandCollapsed]: isHome() && !expanded() && !minimized(),
+            [styles.islandCollapsedMulti]: isHome() && !expanded() && !minimized() && multipleActivities(),
             [styles.islandExpanded]: isHome() && expanded(),
           }}
           onClick={handlePillClick}
@@ -250,36 +305,41 @@ export function DynamicIsland() {
             >
               <Show when={!isHome()}>
                 <div class={styles.miniContent}>
-                  <ActivityVisual activity={currentActivity()} compact />
+                  <ActivityStack primary={currentActivity()} secondary={nextActivity()} compact />
                   <Show when={multipleActivities()}>
                     <button
                       type="button"
-                      class={`${styles.activityCountButton} ${styles.activityCountButtonMini}`}
+                      class={`${styles.activityPeekButton} ${styles.activityPeekButtonMini}`}
                       data-testid="dynamic-island-activity-count"
                       onClick={cycleActivity}
                       aria-label="Alternar actividad"
                     >
-                      {activityPositionLabel()}
+                      <span class={styles.activityPeekCount}>{activityPositionLabel()}</span>
                     </button>
                   </Show>
                 </div>
               </Show>
 
               <Show when={isHome() && !expanded() && !minimized()}>
-                <div class={styles.compactContent}>
-                  <ActivityVisual activity={currentActivity()} compact />
+                <div class={styles.compactContent} classList={{ [styles.compactContentMulti]: multipleActivities() }}>
+                  <ActivityStack primary={currentActivity()} secondary={nextActivity()} compact />
                   <div class={styles.compactText}>
+                    <Show when={multipleActivities()}>
+                      <span class={styles.pillEyebrow}>{activeTypeLabel()}</span>
+                    </Show>
                     <span class={styles.pillTitle}>{currentActivity()?.title || ''}</span>
                   </div>
                   <Show when={multipleActivities()}>
                     <button
                       type="button"
-                      class={styles.activityCountButton}
+                      class={styles.activityPeekButton}
                       data-testid="dynamic-island-activity-count"
                       onClick={cycleActivity}
                       aria-label="Alternar actividad"
                     >
-                      {activityPositionLabel()}
+                      <ActivityVisual activity={nextActivity()} compact />
+                      <span class={styles.activityPeekLabel}>{nextTypeLabel()}</span>
+                      <span class={styles.activityPeekCount}>{activityPositionLabel()}</span>
                     </button>
                   </Show>
                 </div>
@@ -287,16 +347,16 @@ export function DynamicIsland() {
 
               <Show when={isHome() && !expanded() && minimized()}>
                 <div class={styles.miniContent}>
-                  <ActivityVisual activity={currentActivity()} compact />
+                  <ActivityStack primary={currentActivity()} secondary={nextActivity()} compact />
                   <Show when={multipleActivities()}>
                     <button
                       type="button"
-                      class={`${styles.activityCountButton} ${styles.activityCountButtonMini}`}
+                      class={`${styles.activityPeekButton} ${styles.activityPeekButtonMini}`}
                       data-testid="dynamic-island-activity-count"
                       onClick={cycleActivity}
                       aria-label="Alternar actividad"
                     >
-                      {activityPositionLabel()}
+                      <span class={styles.activityPeekCount}>{activityPositionLabel()}</span>
                     </button>
                   </Show>
                 </div>
@@ -340,24 +400,28 @@ export function DynamicIsland() {
 
                   <Show when={multipleActivities()}>
                     <div class={styles.activityPager}>
-                      <button
+                      <Motion.button
                         type="button"
-                        class={styles.activityCountButton}
+                        class={styles.activityPeekButton}
                         data-testid="dynamic-island-activity-count"
                         onClick={cycleActivity}
                         aria-label="Alternar actividad"
+                        animate={{ x: 0, opacity: 1 }}
+                        transition={{ duration: 0.18, easing: MOTION_EASING }}
                       >
-                        {activityPositionLabel()}
-                      </button>
+                        <ActivityVisual activity={nextActivity()} compact />
+                        <span class={styles.activityPeekLabel}>{nextTypeLabel()}</span>
+                        <span class={styles.activityPeekCount}>{activityPositionLabel()}</span>
+                      </Motion.button>
                       <div class={styles.activityDots}>
                         <For each={activities()}>
-                          {(_, index) => (
+                          {(activity, index) => (
                             <button
                               type="button"
                               class={styles.activityDot}
                               classList={{ [styles.activityDotActive]: index() === activeIndex() }}
-                              onClick={(event) => { event.stopPropagation(); setActiveIndex(index()); setMinimized(false); }}
-                              aria-label={`Ver actividad ${index() + 1}`}
+                              onClick={(event) => focusActivity(event, index())}
+                              aria-label={`Ver actividad ${index() + 1}: ${getActivityTypeLabel(activity)}`}
                             />
                           )}
                         </For>

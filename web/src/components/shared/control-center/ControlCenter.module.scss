@@ -25,10 +25,11 @@
 /* ── iOS 18 dark glass base ── */
 
 .overlay {
-  --cc-bg: rgba(28, 28, 30, 0.92);
-  --cc-tile: rgba(255, 255, 255, 0.12);
-  --cc-tile-hover: rgba(255, 255, 255, 0.18);
-  --cc-border: rgba(255, 255, 255, 0.08);
+  --cc-bg: rgba(22, 24, 29, 0.86);
+  --cc-tile: rgba(255, 255, 255, 0.14);
+  --cc-tile-strong: rgba(255, 255, 255, 0.2);
+  --cc-tile-hover: rgba(255, 255, 255, 0.22);
+  --cc-border: rgba(255, 255, 255, 0.13);
   --cc-text: rgba(255, 255, 255, 0.95);
   --cc-text-soft: rgba(255, 255, 255, 0.7);
   --cc-text-muted: rgba(255, 255, 255, 0.45);
@@ -42,12 +43,27 @@
   position: absolute;
   inset: 0;
   z-index: 90;
+  overflow: hidden;
   background:
-    radial-gradient(120% 85% at 50% -15%, rgba(120, 165, 255, 0.16), transparent 52%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent 34%),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035), transparent 50%, rgba(255, 255, 255, 0.025)),
     var(--cc-bg);
 }
 
+.overlay::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.075;
+  background-image:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.12), transparent 48%, rgba(255, 255, 255, 0.045)),
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 220 220' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.72' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' opacity='0.42' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  background-size: 100% 100%, 140px 140px;
+}
+
 .sheet {
+  position: relative;
   width: 100%;
   height: 100%;
   padding: var(--s-4);
@@ -57,6 +73,13 @@
   touch-action: pan-y;
   overflow-y: auto;
   overflow-x: hidden;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.02) 48%, rgba(255, 255, 255, 0.045)),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.045), transparent 46%, rgba(255, 255, 255, 0.035)),
+    rgba(255, 255, 255, 0.035);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.09),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.035);
 }
 
 .control-sheet {
@@ -117,7 +140,9 @@
   min-height: 64px;
   border: none;
   border-radius: var(--r-xl);
-  background: var(--cc-tile);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.16), transparent 58%),
+    var(--cc-tile);
   color: var(--cc-text);
   cursor: pointer;
   transition:
@@ -330,9 +355,11 @@
   border: 1px solid var(--cc-border);
   border-radius: var(--r-xl);
   background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.08)),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.08)),
     var(--cc-tile);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.13),
+    0 12px 26px rgba(0, 0, 0, 0.08);
   min-width: 0;
   overflow: hidden;
 }
@@ -342,8 +369,8 @@
   grid-row: span 2;
   padding: 9px;
   display: grid;
-  grid-template-rows: auto 1fr auto auto;
-  gap: 5px;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  gap: 7px;
 }
 
 .nfc-header {
@@ -437,11 +464,11 @@
   position: relative;
   align-self: center;
   justify-self: center;
-  width: 58px;
-  height: 58px;
+  width: 46px;
+  height: 46px;
   border-radius: 50%;
   background:
-    radial-gradient(circle, rgba(255, 255, 255, 0.36) 0 8px, transparent 9px),
+    radial-gradient(circle, rgba(255, 255, 255, 0.36) 0 7px, transparent 8px),
     radial-gradient(circle, rgba(0, 122, 255, 0.38), rgba(0, 122, 255, 0.1) 58%, transparent 64%);
   box-shadow:
     inset 0 0 0 1px rgba(255, 255, 255, 0.18),
@@ -451,7 +478,7 @@
 .nfc-radar-pulse,
 .nfc-radar-dot {
   position: absolute;
-  inset: 6px;
+  inset: 5px;
   border-radius: 50%;
   border: 1px solid rgba(255, 255, 255, 0.34);
 }
@@ -461,7 +488,7 @@
 }
 
 .nfc-radar-dot {
-  inset: 24px;
+  inset: 18px;
   background: #fff;
   border: 0;
   box-shadow: 0 0 16px rgba(0, 122, 255, 0.9);
@@ -469,17 +496,24 @@
 
 .nfc-target {
   position: relative;
+  width: 100%;
   border: 0;
   padding: 0;
   background: transparent;
   display: grid;
-  gap: 2px;
+  justify-items: start;
+  align-content: start;
+  align-self: start;
+  gap: 3px;
   min-width: 0;
+  min-height: 42px;
   text-align: left;
   cursor: pointer;
+  opacity: 1;
 
   &:disabled {
     cursor: default;
+    opacity: 1;
   }
 
   span {
@@ -487,21 +521,24 @@
     font-weight: 700;
     color: var(--cc-text-muted);
     text-transform: uppercase;
+    line-height: 1.15;
   }
 
   strong {
     color: var(--cc-text);
     font-size: 11px;
     font-weight: 800;
-    white-space: nowrap;
+    line-height: 1.2;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
     overflow: hidden;
-    text-overflow: ellipsis;
   }
 
   small {
     position: absolute;
     right: 0;
-    bottom: 1px;
+    bottom: 0;
     padding-left: var(--s-1);
     background: linear-gradient(to right, transparent, rgba(34, 34, 36, 0.9) 40%);
     color: var(--cc-text-muted);
@@ -773,7 +810,9 @@
   min-height: 58px;
   border: 0;
   border-radius: var(--r-xl);
-  background: var(--cc-tile);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.18), transparent 56%),
+    var(--cc-tile);
   display: grid;
   align-content: space-between;
   justify-items: start;
@@ -863,10 +902,12 @@
   padding: 9px;
   border-radius: 19px;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.095), rgba(255, 255, 255, 0.055)),
-    rgba(20, 22, 26, 0.22);
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.07)),
+    rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 12px 24px rgba(0, 0, 0, 0.08);
 }
 
 .notification-group-muted {
@@ -1086,8 +1127,8 @@
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 16px;
   background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.08)),
-    rgba(255, 255, 255, 0.1);
+    linear-gradient(145deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.08)),
+    rgba(255, 255, 255, 0.12);
   color: var(--cc-text);
   text-align: left;
   padding: 10px 12px 11px;

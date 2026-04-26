@@ -93,6 +93,20 @@ function nfcOnLabel(lang: string): string {
   return labels[lang] || labels.en;
 }
 
+function nfcSearchingLabel(lang: string): string {
+  const labels: Record<string, string> = {
+    es: 'Buscando personas...',
+    en: 'Looking for nearby people...',
+    fr: 'Recherche de personnes...',
+    de: 'Suche nach Personen...',
+    pt: 'Buscando pessoas...',
+    ru: 'Looking for nearby people...',
+    pl: 'Szukanie osob...',
+    it: 'Ricerca persone...',
+  };
+  return labels[lang] || labels.en;
+}
+
 function streamerControlLabel(lang: string): string {
   const labels: Record<string, string> = {
     es: 'Streamer',
@@ -221,6 +235,7 @@ export function ControlCenter() {
   const [flashlightMaxLumens, setFlashlightMaxLumens] = createSignal(2200);
   const [flashlightKelvin, setFlashlightKelvin] = createSignal(5200);
   const [nfcEnabled, setNfcEnabled] = createSignal(getInitialNfcEnabled());
+  const [nfcRefreshing, setNfcRefreshing] = createSignal(false);
   const [nearbyPlayers, setNearbyPlayers] = createSignal<NearbyPlayerData[]>([]);
   const [nfcTargetServerId, setNfcTargetServerId] = createSignal<number | null>(null);
   const [expandedNotificationApps, setExpandedNotificationApps] = createSignal<string[]>([]);
@@ -378,20 +393,22 @@ export function ControlCenter() {
 
   async function syncNearbyPlayers() {
     if (!nfcEnabled()) {
-      setNearbyPlayers([]);
-      setNfcTargetServerId(null);
+      setNfcRefreshing(false);
       return;
     }
+    setNfcRefreshing(true);
+    const previousSelectedId = nfcTargetServerId();
     const players = await fetchKnownNui('getNearbyPlayers', { maxDistance: 3.0 }, []);
     setNearbyPlayers(players);
     if (players.length === 0) {
       setNfcTargetServerId(null);
+      setNfcRefreshing(false);
       return;
     }
-    const selectedId = nfcTargetServerId();
-    if (!selectedId || !players.some((player) => player.serverId === selectedId)) {
+    if (!previousSelectedId || !players.some((player) => player.serverId === previousSelectedId)) {
       setNfcTargetServerId(players[0].serverId);
     }
+    setNfcRefreshing(false);
   }
 
   function toggleNfc() {
@@ -403,6 +420,7 @@ export function ControlCenter() {
       // localStorage is best-effort in browser preview and NUI.
     }
     if (nextEnabled) {
+      setNfcRefreshing(true);
       notificationsActions.receive({
         id: 'control-nfc-status',
         appId: 'settings',
@@ -413,8 +431,6 @@ export function ControlCenter() {
       void syncNearbyPlayers();
       return;
     }
-    setNearbyPlayers([]);
-    setNfcTargetServerId(null);
     notificationsActions.receive({
       id: 'control-nfc-status',
       appId: 'settings',
@@ -485,7 +501,7 @@ export function ControlCenter() {
     notificationsActions.setNotificationCenterOpen(false);
     emitInternalEvent('phone:openRoute', {
       route: 'settings',
-      data: { section: 'notifications', focus: 'muted' },
+      data: { section: 'notifications', focus: 'muted', requestId: Date.now() },
     });
   };
 
@@ -885,7 +901,7 @@ export function ControlCenter() {
                 onPointerUp={stopControlPointer}
                 onPointerCancel={stopControlPointer}
                 onClick={stopControlClick}
-                initial={{ opacity: 0, y: 10, scale: 0.97 }}
+                initial={false}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 transition={{ duration: 0.2 }}
               >
@@ -921,7 +937,7 @@ export function ControlCenter() {
                   <span>{t('nfc.nearby_people', language())}</span>
                   <strong>
                     <Show when={nfcEnabled()} fallback={nfcOffLabel(language())}>
-                      <Show when={selectedNfcTarget()} fallback={nfcNoNearbyLabel(language())}>
+                      <Show when={selectedNfcTarget()} fallback={nfcRefreshing() ? nfcSearchingLabel(language()) : nfcNoNearbyLabel(language())}>
                       {(target) => `${target().name} - ${target().distance.toFixed(1)}m`}
                       </Show>
                     </Show>

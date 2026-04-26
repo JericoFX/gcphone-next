@@ -1,4 +1,5 @@
-import { For, Index, Show, batch, createEffect, createMemo, createSignal, onCleanup, onMount } from 'solid-js';
+import { For, Show, batch, createEffect, createMemo, createSignal, onCleanup, onMount } from 'solid-js';
+import { Motion, Presence } from '@motionone/solid';
 import { usePhone } from '../../store/phone';
 import { useNotifications } from '../../store/notifications';
 import { fetchNui } from '../../utils/fetchNui';
@@ -88,6 +89,18 @@ export function LockScreen() {
       ? t('lock.open_camera', language())
       : t('lock.unlock_device', language())
   ));
+  const unlockSubtitle = createMemo(() => {
+    const destination = pendingDestination();
+    if (destination?.route === 'camera') return t('lock.unlock', language());
+    if (destination) return t('settings.pin_lock', language()) || 'PIN required';
+    return t('settings.pin_lock', language()) || 'Enter PIN';
+  });
+  const pendingDestinationLabel = createMemo(() => {
+    const destination = pendingDestination();
+    if (!destination) return '';
+    if (destination.route === 'camera') return t('lock.open_camera', language());
+    return t('lock.unlock', language());
+  });
 
   const musicStatusLabel = createMemo(() => {
     const current = musicState();
@@ -343,7 +356,20 @@ export function LockScreen() {
 
   const formatClockTime = (date: Date) => formatTime(date, language(), { hour: '2-digit', minute: '2-digit' });
   const formatClockDate = (date: Date) => formatDate(date, language(), { weekday: 'long', day: 'numeric', month: 'long' });
-  const keypadKeys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', 'del'];
+  const keypadKeys = [
+    { value: '1', letters: '' },
+    { value: '2', letters: 'ABC' },
+    { value: '3', letters: 'DEF' },
+    { value: '4', letters: 'GHI' },
+    { value: '5', letters: 'JKL' },
+    { value: '6', letters: 'MNO' },
+    { value: '7', letters: 'PQRS' },
+    { value: '8', letters: 'TUV' },
+    { value: '9', letters: 'WXYZ' },
+    { value: '', letters: '' },
+    { value: '0', letters: '' },
+    { value: 'del', letters: '' },
+  ];
   const totalCarouselItems = () => 3;
 
   return (
@@ -367,9 +393,12 @@ export function LockScreen() {
         </div>
       </Show>
 
-      <div class={styles.contentArea}>
+      <div
+        class={styles.contentArea}
+        classList={{ [styles.contentAreaCompact]: pinSheetExpanded() }}
+      >
         <LockScreenWidgets
-          compact={false}
+          compact={pinSheetExpanded()}
           hasNotifications={visibleNotifications().length > 0}
           activeWidget={activeWidget()}
           visibleNotifications={visibleNotifications()}
@@ -393,20 +422,34 @@ export function LockScreen() {
       </div>
 
       <Show when={hasPinSet()}>
-        <Show
-          when={pinSheetExpanded()}
-          fallback={
-            <div class={styles.unlockSheetCollapsed}>
+        <div
+          class={styles.unlockMotionSlot}
+          classList={{
+            [styles.unlockMotionSlotCollapsed]: !pinSheetExpanded(),
+            [styles.unlockMotionSlotExpanded]: pinSheetExpanded(),
+          }}
+        >
+          <Presence exitBeforeEnter>
+            <Show
+              when={pinSheetExpanded()}
+              fallback={
+                <Motion.div
+                  class={styles.unlockSheetCollapsed}
+                  initial={{ opacity: 0, y: 12, scale: 0.96 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 12, scale: 0.96 }}
+                  transition={{ duration: 0.2, easing: [0.32, 0.72, 0, 1] }}
+                >
               <div class={styles.collapsedContent}>
                 <span class={styles.collapsedLabel}>{unlockTitle()}</span>
-                <span class={styles.pendingHint}>
-                  {pendingDestination()
-                    ? t('lock.unlock', language())
-                    : t('settings.pin_lock', language()) || 'PIN'}
-                </span>
+                <span class={styles.pendingHint}>{unlockSubtitle()}</span>
+                <Show when={pendingDestinationLabel()}>
+                  <span class={styles.pendingChip}>{pendingDestinationLabel()}</span>
+                </Show>
               </div>
               <div class={styles.collapsedActions}>
                 <button
+                  type="button"
                   class={`${styles.expandKeypadBtn} ${styles.primaryAction}`}
                   onClick={() => setPinSheetExpanded(true)}
                 >
@@ -414,6 +457,7 @@ export function LockScreen() {
                 </button>
                 <Show when={pendingDestination()}>
                   <button
+                    type="button"
                     class={`${styles.expandKeypadBtn} ${styles.secondaryAction}`}
                     onClick={collapsePinSheet}
                   >
@@ -421,21 +465,32 @@ export function LockScreen() {
                   </button>
                 </Show>
               </div>
-            </div>
-          }
-        >
-          <div class={styles.unlockSheet}>
+                </Motion.div>
+              }
+            >
+              <Motion.div
+                class={styles.unlockSheet}
+                initial={{ opacity: 0, y: 22, scale: 0.94 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 18, scale: 0.96 }}
+                transition={{ duration: 0.22, easing: [0.22, 1, 0.36, 1] }}
+              >
             <button
+              type="button"
               class={styles.sheetHandle}
               aria-label={t('lock.cancel', language())}
               onClick={collapsePinSheet}
             />
             <div class={styles.codeContainer}>
               <span class={styles.unlockTitle}>{unlockTitle()}</span>
+              <span class={styles.unlockSubtitle}>{unlockSubtitle()}</span>
+              <Show when={pendingDestinationLabel()}>
+                <span class={styles.pendingChip}>{pendingDestinationLabel()}</span>
+              </Show>
               <div class={styles.dots}>
-                {[0, 1, 2, 3].map((i) => (
-                  <div class={styles.dot} classList={{ [styles.filled]: i < code().length, [styles.errorDot]: error() }} />
-                ))}
+                <For each={[0, 1, 2, 3]}>
+                  {(i) => <div class={styles.dot} classList={{ [styles.filled]: i < code().length, [styles.errorDot]: error() }} />}
+                </For>
               </div>
               <Show when={attempts() > 0}>
                 <span class={styles.errorMsg}>{t('lock.pin_incorrect', language(), { attempts: attempts() })}</span>
@@ -443,26 +498,40 @@ export function LockScreen() {
             </div>
 
             <div class={styles.keypad}>
-              <Index each={keypadKeys}>
+              <For each={keypadKeys}>
                 {(key) => (
-                  <Show when={key() !== ''} fallback={<div class={styles.keySpacer} />}>
+                  <Show when={key.value !== ''} fallback={<div class={styles.keySpacer} />}>
                     <button
+                      type="button"
                       class={styles.key}
-                      classList={{ [styles.keyDelete]: key() === 'del' }}
-                      aria-label={key() === 'del' ? t('action.cancel', language()) : key()}
+                      classList={{ [styles.keyDelete]: key.value === 'del' }}
+                      aria-label={key.value === 'del' ? t('action.cancel', language()) : key.value}
                       disabled={isSubmitting()}
-                      onClick={() => (key() === 'del' ? setCode((prev) => prev.slice(0, -1)) : handleKeyPress(key()))}
+                      onClick={() => (key.value === 'del' ? setCode((prev) => prev.slice(0, -1)) : handleKeyPress(key.value))}
                     >
-                      {key() === 'del' ? '⌫' : key()}
+                      <Show
+                        when={key.value === 'del'}
+                        fallback={
+                          <span class={styles.keyContent}>
+                            <span class={styles.keyNumber}>{key.value}</span>
+                            <Show when={key.letters}>
+                              <span class={styles.keyLetters}>{key.letters}</span>
+                            </Show>
+                          </span>
+                        }
+                      >
+                        <span class={styles.keyDeleteLabel}>DEL</span>
+                      </Show>
                     </button>
                   </Show>
                 )}
-              </Index>
+              </For>
             </div>
 
             <div class={styles.sheetActions}>
-              <button class={styles.secondaryAction} onClick={collapsePinSheet}>{t('lock.cancel', language())}</button>
+              <button type="button" class={styles.secondaryAction} onClick={collapsePinSheet}>{t('lock.cancel', language())}</button>
               <button
+                type="button"
                 class={styles.primaryAction}
                 disabled={code().length !== 4 || isSubmitting()}
                 onClick={() => void submitUnlock()}
@@ -470,8 +539,10 @@ export function LockScreen() {
                 {t('lock.unlock', language())}
               </button>
             </div>
-          </div>
-        </Show>
+              </Motion.div>
+            </Show>
+          </Presence>
+        </div>
       </Show>
 
       <Show when={emergencySheetOpen()}>

@@ -60,6 +60,11 @@
   padding: 0 6px;
 }
 
+.islandAutoMiniWithCount {
+  min-width: 84px;
+  max-width: 84px;
+}
+
 .islandMini {
   min-width: 52px;
   max-width: 52px;
@@ -69,8 +74,8 @@
 }
 
 .islandMiniWithCount {
-  min-width: 82px;
-  max-width: 82px;
+  min-width: 84px;
+  max-width: 84px;
 }
 
 .islandExpanded {
@@ -89,6 +94,10 @@
   gap: 8px;
 }
 
+.compactContentMulti {
+  gap: 6px;
+}
+
 .miniContent {
   width: 100%;
   height: 100%;
@@ -101,7 +110,9 @@
 .compactText {
   min-width: 0;
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
 }
 
 .activityVisual {
@@ -126,6 +137,44 @@
   width: 26px;
   height: 26px;
   border-radius: 13px;
+}
+
+.activityStack {
+  position: relative;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.activityStackCompact {
+  width: 18px;
+  height: 18px;
+}
+
+.activityStackExpanded {
+  width: 26px;
+  height: 26px;
+}
+
+.activityStack .activityVisual {
+  position: absolute;
+  inset: 0;
+}
+
+.activityStackSecondary {
+  position: absolute;
+  inset: auto -7px -1px auto;
+  transform: scale(0.74);
+  transform-origin: center;
+}
+
+.activityStackCompact .activityStackSecondary {
+  inset: auto -6px -1px auto;
+}
+
+.activityStackExpanded .activityStackSecondary {
+  inset: auto -9px -2px auto;
+  transform: scale(0.8);
 }
 
 .activityIcon {
@@ -180,10 +229,29 @@
   text-overflow: ellipsis;
 }
 
+.pillEyebrow {
+  max-width: 100%;
+  font-size: 8px;
+  line-height: 1;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.56);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .pillSubtitle {
   font-size: 9px;
   color: rgba(255, 255, 255, 0.62);
   font-weight: 500;
+}
+
+.islandCollapsedMulti {
+  min-width: 168px;
+  max-width: 242px;
+  padding-right: 6px;
 }
 
 .activityCountButton {
@@ -215,6 +283,56 @@
   height: 16px;
   padding: 0 5px;
   font-size: 8px;
+}
+
+.activityPeekButton {
+  min-width: 0;
+  max-width: 88px;
+  height: 20px;
+  padding: 0 4px 0 3px;
+  display: inline-grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+  align-items: center;
+  gap: 4px;
+  border: 0;
+  border-radius: 999px;
+  appearance: none;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  cursor: pointer;
+  transition: background-color 140ms ease, transform 140ms ease;
+
+  &:active {
+    background: rgba(255, 255, 255, 0.22);
+    transform: scale(0.97);
+  }
+}
+
+.activityPeekButtonMini {
+  max-width: 36px;
+  height: 16px;
+  padding: 0 5px;
+  gap: 0;
+}
+
+.activityPeekLabel {
+  min-width: 0;
+  max-width: 38px;
+  font-size: 8px;
+  font-weight: 700;
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.72);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.activityPeekCount {
+  font-size: 8px;
+  font-weight: 800;
+  line-height: 1;
+  color: #fff;
 }
 
 .expandedShell {
@@ -360,7 +478,7 @@
   margin-top: auto;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .activityDots {
