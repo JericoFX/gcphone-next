@@ -20,7 +20,8 @@
   position: relative;
   width: 100%;
   height: 100%;
-  padding: calc(var(--safe-t) + var(--s-1)) var(--s-3) calc(var(--safe-b) + var(--s-2));
+  padding: calc(var(--safe-t) + var(--s-1)) var(--s-3)
+    calc(var(--safe-b) + var(--s-2));
   display: flex;
   flex-direction: column;
   gap: var(--s-2);
@@ -175,9 +176,6 @@
 
 .primary-panel {
   min-height: 146px;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.12),
-    0 8px 18px rgba(0, 0, 0, 0.16);
 }
 
 .widget-viewport > section {
@@ -202,7 +200,7 @@
   position: relative;
   border: 1px solid var(--ls-glass-border);
   background: var(--ls-material);
-  box-shadow: var(--ls-shadow);
+  box-shadow: var(--shadow-1);
 }
 
 .widget-panel,
@@ -238,7 +236,11 @@
   inset: 0;
   border-radius: inherit;
   pointer-events: none;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.12), transparent 25%);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.12),
+    transparent 25%
+  );
   opacity: 0.5;
 }
 
@@ -359,8 +361,9 @@
   color: var(--ls-text-primary);
   background: var(--ls-glass);
   border: 1px solid var(--ls-glass-border);
-  transition: background 180ms ease,
-              transform 120ms ease;
+  transition:
+    background 180ms ease,
+    transform 120ms ease;
 
   &:active {
     background: var(--ls-glass-strong);
@@ -383,8 +386,9 @@
   color: var(--ls-text-primary);
   background: var(--ls-glass);
   border: 1px solid var(--ls-glass-border);
-  transition: background 180ms ease,
-              transform 120ms ease;
+  transition:
+    background 180ms ease,
+    transform 120ms ease;
 
   &:active {
     background: var(--ls-glass-strong);
@@ -442,7 +446,11 @@
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0.9));
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.6),
+    rgba(255, 255, 255, 0.9)
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -460,13 +468,18 @@
   height: 7px;
   border-radius: var(--r-pill);
   background: rgba(255, 255, 255, 0.24);
-  transition: width 180ms ease,
-              background 180ms ease;
+  transition:
+    width 180ms ease,
+    background 180ms ease;
 }
 
 .dot-btn-active {
   width: 18px;
-  background: linear-gradient(90deg, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0.95));
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.85),
+    rgba(255, 255, 255, 0.95)
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -559,8 +572,13 @@
   padding: var(--s-3) var(--s-3) var(--s-3);
   display: grid;
   gap: var(--s-2);
-  background: rgba(0, 0, 0, 0.55);
-  border-color: rgba(255, 255, 255, 0.1);
+  background:
+    linear-gradient(180deg, rgba(44, 48, 58, 0.62), rgba(24, 27, 34, 0.48)),
+    rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.18);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 18px 44px rgba(0, 0, 0, 0.28);
 }
 
 // Grabber handle
@@ -622,9 +640,10 @@
   border-radius: 50%;
   border: 1.5px solid rgba(255, 255, 255, 0.5);
   background: transparent;
-  transition: background 180ms ease,
-              border-color 180ms ease,
-              transform 120ms ease;
+  transition:
+    background 180ms ease,
+    border-color 180ms ease,
+    transform 120ms ease;
 }
 
 .filled {
@@ -640,11 +659,22 @@
 }
 
 @keyframes dot-shake {
-  0%, 100% { transform: translateX(0); }
-  20% { transform: translateX(-3px); }
-  40% { transform: translateX(3px); }
-  60% { transform: translateX(-2px); }
-  80% { transform: translateX(2px); }
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-3px);
+  }
+  40% {
+    transform: translateX(3px);
+  }
+  60% {
+    transform: translateX(-2px);
+  }
+  80% {
+    transform: translateX(2px);
+  }
 }
 
 .error-msg {
@@ -671,13 +701,19 @@
 
 .key {
   border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.06)),
+    rgba(255, 255, 255, 0.08);
   color: var(--ls-text-primary);
   font-size: 26px;
   font-weight: 300;
-  transition: background 120ms ease,
-              transform 120ms ease;
+  transition:
+    background 120ms ease,
+    transform 120ms ease;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.09),
+    0 8px 18px rgba(0, 0, 0, 0.14);
 }
 
 .key:active {
@@ -699,9 +735,13 @@
 }
 
 .sheet-actions button:last-child {
-  color: rgba(0, 0, 0, 0.85);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(230, 240, 255, 0.9));
-  border-color: rgba(255, 255, 255, 0.3);
+  color: rgba(13, 24, 38, 0.9);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.96),
+    rgba(222, 236, 255, 0.88)
+  );
+  border-color: rgba(255, 255, 255, 0.4);
 }
 
 // ---------------------------------------------------------------------------
@@ -778,8 +818,15 @@
 }
 
 @keyframes swipe-pulse {
-  0%, 100% { opacity: 0.5; transform: translateY(0); }
-  50% { opacity: 1; transform: translateY(-3px); }
+  0%,
+  100% {
+    opacity: 0.5;
+    transform: translateY(0);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -797,9 +844,10 @@
   justify-content: center;
   background: var(--ls-glass);
   border: 1px solid var(--ls-glass-border);
-  transition: background 180ms ease,
-              transform 120ms ease,
-              box-shadow 180ms ease;
+  transition:
+    background 180ms ease,
+    transform 120ms ease,
+    box-shadow 180ms ease;
 
   &:active {
     background: var(--ls-glass-highlight);
@@ -837,9 +885,10 @@
   background: rgba(var(--danger-rgb), 0.2);
   border: 1px solid rgba(var(--danger-rgb), 0.35);
   box-shadow: var(--shadow-1);
-  transition: background 180ms ease,
-              transform 120ms ease,
-              box-shadow 180ms ease;
+  transition:
+    background 180ms ease,
+    transform 120ms ease,
+    box-shadow 180ms ease;
 }
 
 .sos-btn:active {
@@ -941,8 +990,9 @@
   color: var(--ls-text-soft);
   background: var(--ls-glass-strong);
   border: 1px solid var(--ls-glass-border);
-  transition: background 180ms ease,
-              transform 120ms ease;
+  transition:
+    background 180ms ease,
+    transform 120ms ease;
 
   &:active {
     transform: scale(0.97);
@@ -976,8 +1026,9 @@
   border: 1px solid var(--ls-glass-border);
   color: var(--ls-text-primary);
   font-size: 24px;
-  transition: background 120ms ease,
-              transform 120ms ease;
+  transition:
+    background 120ms ease,
+    transform 120ms ease;
 
   &:active {
     background: rgba(255, 255, 255, 0.28);
@@ -1047,6 +1098,11 @@
 }
 
 @keyframes tap-unlock-glow {
-  0%, 100% { opacity: 0.6; }
-  50% { opacity: 1; }
+  0%,
+  100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
 }
