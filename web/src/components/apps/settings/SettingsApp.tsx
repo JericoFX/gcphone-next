@@ -1,4 +1,4 @@
-import { Show, createSignal, onCleanup, onMount, Switch, Match } from 'solid-js';
+import { Show, createEffect, createSignal, onCleanup, onMount, Switch, Match } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { usePhone } from '../../../store/phone';
 import { useNotifications } from '../../../store/notifications';
@@ -21,6 +21,19 @@ import { SettingsAbout } from './SettingsAbout';
 import styles from './SettingsApp.module.scss';
 
 type SettingsSection = 'main' | 'appearance' | 'sound' | 'security' | 'notifications' | 'appsandpermissions' | 'system' | 'about';
+
+function isSettingsSection(value: unknown): value is SettingsSection {
+  return (
+    value === 'main' ||
+    value === 'appearance' ||
+    value === 'sound' ||
+    value === 'security' ||
+    value === 'notifications' ||
+    value === 'appsandpermissions' ||
+    value === 'system' ||
+    value === 'about'
+  );
+}
 
 export function SettingsApp() {
   const router = useRouter();
@@ -45,6 +58,13 @@ export function SettingsApp() {
   const [autoReplyMessage, setAutoReplyMessage] = createSignal('');
   const [statusToast, setStatusToast] = createSignal('');
   const language = () => phoneState.settings.language || 'es';
+
+  createEffect(() => {
+    const routeSection = router.params().section;
+    if (isSettingsSection(routeSection) && routeSection !== section()) {
+      setSection(routeSection);
+    }
+  });
 
   const showToast = (msg: string) => {
     setStatusToast(msg);

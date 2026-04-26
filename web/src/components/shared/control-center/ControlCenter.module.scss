@@ -771,6 +771,7 @@
 
 .summary-card {
   min-height: 48px;
+  border: 0;
   border-radius: var(--r-xl);
   background: var(--cc-tile);
   display: grid;
@@ -790,6 +791,18 @@
     font-size: var(--fs-footnote);
     font-weight: 700;
     color: var(--cc-text);
+  }
+}
+
+.summary-card-button {
+  cursor: pointer;
+  color: inherit;
+  text-align: left;
+  transition: transform 140ms ease, background 140ms ease;
+
+  &:active {
+    transform: scale(0.97);
+    background: var(--cc-tile-strong);
   }
 }
 

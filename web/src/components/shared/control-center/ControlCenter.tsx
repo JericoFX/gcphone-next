@@ -405,6 +405,14 @@ export function ControlCenter() {
     ));
   };
 
+  const openMutedNotificationSettings = () => {
+    notificationsActions.setNotificationCenterOpen(false);
+    emitInternalEvent('phone:openRoute', {
+      route: 'settings',
+      data: { section: 'notifications' },
+    });
+  };
+
   const visibleItemsForGroup = (appId: string, items: Array<{ id: string; title: string; message: string; route?: string; data?: Record<string, unknown>; createdAt?: number }>) => {
     return expandedNotificationApps().includes(appId) ? items : items.slice(0, 2);
   };
@@ -630,10 +638,14 @@ export function ControlCenter() {
                 <span>Total</span>
                 <strong>{totalNotificationCount()}</strong>
               </article>
-              <article class={styles.summaryCard}>
+              <button
+                type="button"
+                class={`${styles.summaryCard} ${styles.summaryCardButton}`}
+                onClick={openMutedNotificationSettings}
+              >
                 <span>{t('control.muted', language())}</span>
                 <strong>{mutedAppsCount()}</strong>
-              </article>
+              </button>
             </div>
 
             <div class={styles.notificationList}>
