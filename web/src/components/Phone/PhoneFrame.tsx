@@ -12,7 +12,6 @@ import {
   onMount,
 } from 'solid-js';
 import type { JSX } from 'solid-js';
-import { Motion } from '@motionone/solid';
 import { usePhone, usePhoneState } from '../../store/phone';
 import { HomeScreen } from '../apps/home/HomeScreen';
 import { AppPlaceholder } from '../shared/ui/AppPlaceholder';
@@ -545,14 +544,12 @@ function Router() {
   const { currentRoute, direction, openApps } = useRouter();
   const routeLanguage = () => phoneState.settings.language || 'es';
   const [leavingRoute, setLeavingRoute] = createSignal<string | null>(null);
-  const [previousRoute, setPreviousRoute] = createSignal<string | null>(null);
   let lastRoute = currentRoute();
   let leavingRouteTimer: number | undefined;
 
   createEffect(() => {
     const current = currentRoute();
     if (current !== lastRoute) {
-      setPreviousRoute(lastRoute);
       setLeavingRoute(lastRoute);
       lastRoute = current;
       if (leavingRouteTimer) clearTimeout(leavingRouteTimer);
@@ -563,20 +560,6 @@ function Router() {
   onCleanup(() => {
     if (leavingRouteTimer) clearTimeout(leavingRouteTimer);
   });
-
-  const routeInitial = (route: AppRoute) => {
-    if (currentRoute() !== route) return { opacity: 0, x: 0, y: 0, scale: 1 };
-    if (direction() === 'back') return { opacity: 0.64, x: '-16%', y: 0, scale: 0.94 };
-    if (previousRoute() === 'home' && route !== 'home') return { opacity: 0, x: 0, y: 26, scale: 0.9 };
-    return { opacity: 0.82, x: '100%', y: 0, scale: 1 };
-  };
-
-  const routeAnimate = (route: AppRoute) => {
-    if (currentRoute() === route) return { opacity: 1, x: 0, y: 0, scale: 1 };
-    if (leavingRoute() !== route) return { opacity: 0, x: 0, y: 0, scale: 1 };
-    if (direction() === 'back') return { opacity: 0.86, x: '100%', y: 0, scale: 1 };
-    return { opacity: 0.48, x: '-18%', y: 0, scale: 0.94 };
-  };
 
   const renderRoute = (route: AppRoute) => {
     if (route === 'home') return <HomeScreen />;
@@ -605,19 +588,24 @@ function Router() {
     <div class={styles.routerContainer}>
       <For each={openApps()}>
         {(route) => (
-          <Motion.div
+          <div
             class={styles.routeView}
             classList={{
               [styles.routeVisible]: currentRoute() === route || leavingRoute() === route,
               [styles.routeHidden]: currentRoute() !== route && leavingRoute() !== route,
+              [styles.routeForward]:
+                currentRoute() === route && direction() === 'forward',
+              [styles.routeBack]:
+                currentRoute() === route && direction() === 'back',
+              [styles.routeLeaveForward]:
+                leavingRoute() === route && direction() === 'forward',
+              [styles.routeLeaveBack]:
+                leavingRoute() === route && direction() === 'back',
               [styles.routeTransparent]: route === 'camera',
             }}
-            initial={routeInitial(route)}
-            animate={routeAnimate(route)}
-            transition={{ duration: previousRoute() === 'home' && route !== 'home' ? 0.34 : 0.3, easing: [0.32, 0.72, 0, 1] }}
           >
             {renderRoute(route)}
-          </Motion.div>
+          </div>
         )}
       </For>
     </div>
