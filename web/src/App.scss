@@ -8,6 +8,21 @@
   z-index: 1000;
 }
 
+.phone-system-stage {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  pointer-events: none;
+  transform-origin: 50% 58%;
+  will-change: opacity, transform;
+}
+
+.phone-system-stage > * {
+  pointer-events: auto;
+}
+
 .notification-preview-shell {
   position: absolute;
   right: 0;

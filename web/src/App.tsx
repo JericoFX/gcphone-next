@@ -1,4 +1,5 @@
 import { Show, onMount, onCleanup, createSignal, createMemo, createEffect } from 'solid-js';
+import { Motion, Presence } from '@motionone/solid';
 import { PhoneProvider, ContactsProvider, MessagesProvider, NotificationsProvider, useNotifications, usePhone } from './store';
 import { PhoneFrame } from './components/Phone/PhoneFrame';
 import { LockScreen } from './components/LockScreen/LockScreen';
@@ -149,25 +150,41 @@ function PhoneContent() {
   return (
     <div class="gcphone-app" classList={{ [themeClass()]: true }}>
       <Show when={phoneState.visible}>
-        <Show when={phoneState.locked} fallback={
-          <PhoneFrame router={!phoneState.requiresSetup}>
-            <Show when={phoneState.requiresSetup} fallback={
-              <>
-                <ContactRequestNotification />
-                <IncomingShareModal />
-                <PhoneSDKModal />
-                <PermissionModal />
-                <CarPlayOverlay />
-              </>
+        <PhoneFrame router={!phoneState.locked && !phoneState.requiresSetup}>
+          <Presence exitBeforeEnter>
+            <Show when={phoneState.locked} fallback={
+              <Motion.div
+                class="phone-system-stage"
+                initial={{ opacity: 0, y: 18, scale: 1.018 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -14, scale: 0.986 }}
+                transition={{ duration: 0.28, easing: [0.32, 0.72, 0, 1] }}
+              >
+                <Show when={phoneState.requiresSetup} fallback={
+                  <>
+                    <ContactRequestNotification />
+                    <IncomingShareModal />
+                    <PhoneSDKModal />
+                    <PermissionModal />
+                    <CarPlayOverlay />
+                  </>
+                }>
+                  <PhoneSetup />
+                </Show>
+              </Motion.div>
             }>
-              <PhoneSetup />
+              <Motion.div
+                class="phone-system-stage"
+                initial={{ opacity: 1, y: 0, scale: 1 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -34, scale: 1.04 }}
+                transition={{ duration: 0.24, easing: [0.4, 0, 0.2, 1] }}
+              >
+                <LockScreen />
+              </Motion.div>
             </Show>
-          </PhoneFrame>
-        }>
-          <PhoneFrame>
-            <LockScreen />
-          </PhoneFrame>
-        </Show>
+          </Presence>
+        </PhoneFrame>
       </Show>
 
       <Show when={!phoneState.visible && notifications.current}>

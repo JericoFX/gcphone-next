@@ -1,4 +1,5 @@
 import { createMemo, createSignal, For, Show, createEffect, onCleanup } from 'solid-js';
+import { Motion } from '@motionone/solid';
 import { usePhone } from '../../../store/phone';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { APP_BY_ID } from '../../../config/apps';
@@ -23,6 +24,7 @@ export function HomeScreen() {
   const [editing, setEditing] = createSignal(false);
   const [touchStartX, setTouchStartX] = createSignal<number | null>(null);
   const [pageTransition, setPageTransition] = createSignal<'next' | 'prev' | null>(null);
+  const [pageMotionX, setPageMotionX] = createSignal(0);
   const [openFolder, setOpenFolder] = createSignal<Folder | null>(null);
   const [folderOrigin, setFolderOrigin] = createSignal<{ x: number; y: number; width: number; height: number } | null>(null);
   let homeRootRef: HTMLDivElement | undefined;
@@ -68,8 +70,12 @@ export function HomeScreen() {
     if (clamped === desktopPage()) return;
     const direction = clamped > desktopPage() ? 'next' : 'prev';
     setPageTransition(null);
+    setPageMotionX(direction === 'next' ? 42 : -42);
     setDesktopPage(clamped);
-    requestAnimationFrame(() => setPageTransition(direction));
+    requestAnimationFrame(() => {
+      setPageTransition(direction);
+      setPageMotionX(0);
+    });
     if (pageTransitionTimer) clearTimeout(pageTransitionTimer);
     pageTransitionTimer = window.setTimeout(() => setPageTransition(null), 340);
   };
@@ -173,12 +179,11 @@ export function HomeScreen() {
           onTouchEnd={handleSwipe}
         >
           <Show when={desktopPage() === -1} fallback={
-            <div
-              classList={{
-                [styles.pageShiftNext]: pageTransition() === 'next',
-                [styles.pageShiftPrev]: pageTransition() === 'prev',
-              }}
+            <Motion.div
               style={{ height: '100%' }}
+              initial={false}
+              animate={{ opacity: pageTransition() ? 0.92 : 1, x: pageMotionX(), scale: pageTransition() ? 0.992 : 1 }}
+              transition={{ duration: 0.26, easing: [0.32, 0.72, 0, 1] }}
             >
               <AppGrid
                 items={() => visibleItems()}
@@ -196,9 +201,16 @@ export function HomeScreen() {
                 }}
                 onFolderCreated={() => {}}
               />
-            </div>
+            </Motion.div>
           }>
-            <WidgetPage editing={editing()} language={language} currentTime={currentTime} musicNowPlaying={musicNowPlaying} radioStation={radioStation} bankBalance={bankBalance} />
+            <Motion.div
+              style={{ height: '100%' }}
+              initial={false}
+              animate={{ opacity: pageTransition() ? 0.92 : 1, x: pageMotionX(), scale: pageTransition() ? 0.992 : 1 }}
+              transition={{ duration: 0.26, easing: [0.32, 0.72, 0, 1] }}
+            >
+              <WidgetPage editing={editing()} language={language} currentTime={currentTime} musicNowPlaying={musicNowPlaying} radioStation={radioStation} bankBalance={bankBalance} />
+            </Motion.div>
           </Show>
         </div>
 
