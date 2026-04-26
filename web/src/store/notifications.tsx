@@ -58,6 +58,7 @@ export interface NotificationsActions {
   setControlTilePreset: (value: 'compact') => void;
   applyControlTileOrderPreset: (value: 'default' | 'commute' | 'focus') => void;
   markAppAsRead: (appId: string) => void;
+  removeAppHistory: (appId: string) => void;
   getUnreadCount: (appId: string) => number;
   toggleMuteApp: (appId: string) => void;
   isAppMuted: (appId: string) => boolean;
@@ -342,6 +343,19 @@ export const NotificationsProvider: ParentComponent = (props) => {
         setState('readAtByApp', pruned);
       } else {
         setState('readAtByApp', key, Date.now());
+      }
+    },
+    removeAppHistory: (appId: string) => {
+      const key = sanitizeText(appId, 24);
+      if (!key) return;
+      setState('history', (current) => current.filter((item) => item.appId !== key));
+      const nextQueue = state.queue.filter((item) => item.appId !== key);
+      setState('queue', nextQueue);
+      if (state.current?.appId === key) {
+        const [head, ...rest] = nextQueue;
+        setState('queue', rest);
+        setState('current', head || null);
+        setTimerVersion((v) => v + 1);
       }
     },
     getUnreadCount: (appId: string) => {

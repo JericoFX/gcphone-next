@@ -1,4 +1,5 @@
 import { For, Show, createEffect, createMemo, createSignal, onMount, onCleanup } from 'solid-js';
+import { Motion, Presence } from '@motionone/solid';
 import { fetchKnownNui } from '../../../utils/fetchNui';
 import { useNotifications } from '../../../store/notifications';
 import { usePhone } from '../../../store/phone';
@@ -120,6 +121,20 @@ function notificationCountLabel(count: number, lang: string): string {
   return (labels[lang] || labels.en)(count);
 }
 
+function showLessLabel(lang: string): string {
+  const labels: Record<string, string> = {
+    es: 'Mostrar menos',
+    en: 'Show less',
+    fr: 'Afficher moins',
+    de: 'Weniger zeigen',
+    pt: 'Mostrar menos',
+    ru: 'Show less',
+    pl: 'Pokaz mniej',
+    it: 'Mostra meno',
+  };
+  return labels[lang] || labels.en;
+}
+
 function getInitialNfcEnabled(): boolean {
   try {
     return window.localStorage.getItem('gcphone:nfc-enabled') === '1';
@@ -143,6 +158,7 @@ export function ControlCenter() {
   const [nfcEnabled, setNfcEnabled] = createSignal(getInitialNfcEnabled());
   const [nearbyPlayers, setNearbyPlayers] = createSignal<NearbyPlayerData[]>([]);
   const [nfcTargetServerId, setNfcTargetServerId] = createSignal<number | null>(null);
+  const [expandedNotificationApps, setExpandedNotificationApps] = createSignal<string[]>([]);
 
   let sheetGestureStartX = 0;
   let sheetGestureStartY = 0;
@@ -174,12 +190,20 @@ export function ControlCenter() {
       list.push({ id: item.id, title: item.title, message: item.message, route: item.route, data: item.data, createdAt: item.createdAt });
       groups.set(key, list);
     }
-    return Array.from(groups.entries()).map(([appId, items]) => ({
-      appId,
-      items,
-      icon: APP_BY_ID[appId]?.icon || './img/icons_ios/settings.svg',
-      title: appName(appId, APP_BY_ID[appId]?.name || appId, language()),
-    }));
+    return Array.from(groups.entries())
+      .map(([appId, items]) => {
+        const latestAt = Math.max(...items.map((item) => Number(item.createdAt) || 0));
+        return {
+          appId,
+          items,
+          latestAt,
+          unreadCount: notificationsActions.getUnreadCount(appId),
+          muted: notificationsActions.isAppMuted(appId),
+          icon: APP_BY_ID[appId]?.icon || './img/icons_ios/settings.svg',
+          title: appName(appId, APP_BY_ID[appId]?.name || appId, language()),
+        };
+      })
+      .sort((a, b) => b.latestAt - a.latestAt);
   });
 
   const totalNotificationCount = createMemo(() => notifications.history.length);
@@ -373,8 +397,16 @@ export function ControlCenter() {
     });
   }
 
-  const visibleItemsForGroup = (items: Array<{ id: string; title: string; message: string; route?: string; data?: Record<string, unknown>; createdAt?: number }>) => {
-    return items.slice(0, 2);
+  const toggleNotificationGroup = (appId: string) => {
+    setExpandedNotificationApps((current) => (
+      current.includes(appId)
+        ? current.filter((entry) => entry !== appId)
+        : [...current, appId]
+    ));
+  };
+
+  const visibleItemsForGroup = (appId: string, items: Array<{ id: string; title: string; message: string; route?: string; data?: Record<string, unknown>; createdAt?: number }>) => {
+    return expandedNotificationApps().includes(appId) ? items : items.slice(0, 2);
   };
 
   const SWIPE_THRESHOLD = 80;
@@ -566,13 +598,26 @@ export function ControlCenter() {
       </Show>
 
       {/* ── Notification Center ── */}
-      <Show when={notifications.notificationCenterOpen}>
-        <div class={styles.overlay} data-testid="notification-center-sheet" onClick={() => notificationsActions.setNotificationCenterOpen(false)}>
-          <div
+      <Presence>
+        <Show when={notifications.notificationCenterOpen}>
+          <Motion.div
+            class={styles.overlay}
+            data-testid="notification-center-sheet"
+            onClick={() => notificationsActions.setNotificationCenterOpen(false)}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.16 }}
+          >
+          <Motion.div
             class={`${styles.sheet} ${styles.notificationSheet}`}
             onClick={(event) => event.stopPropagation()}
             onPointerDown={handleSheetPointerDown}
             onPointerUp={(e) => handleSheetPointerUp(e, 'notifications')}
+            initial={{ y: -28, opacity: 0.92, scale: 0.98 }}
+            animate={{ y: 0, opacity: 1, scale: 1 }}
+            exit={{ y: -24, opacity: 0, scale: 0.98 }}
+            transition={{ duration: 0.26, easing: [0.32, 0.72, 0, 1] }}
           >
             <div class={styles.sheetHeader}>
               <div class={styles.grabber} />
@@ -594,29 +639,56 @@ export function ControlCenter() {
             <div class={styles.notificationList}>
               <Show when={groupedNotifications().length > 0} fallback={<div class={styles.empty}>{t('notifications.none_saved', language())}</div>}>
                 <For each={groupedNotifications()}>
-                  {(group) => (
-                    <div class={styles.notificationGroup}>
+                  {(group, groupIndex) => (
+                    <Motion.div
+                      class={styles.notificationGroup}
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.2, delay: Math.min(groupIndex(), 5) * 0.025 }}
+                    >
                       <div class={styles.groupTitle}>
                         <img src={group.icon} alt="" />
                         <div class={styles.groupMeta}>
-                          <span>{group.title}</span>
-                          <small>{notificationCountLabel(group.items.length, language())}</small>
+                          <div class={styles.groupNameRow}>
+                            <span>{group.title}</span>
+                            <Show when={group.unreadCount > 0}>
+                              <b>{group.unreadCount}</b>
+                            </Show>
+                            <Show when={group.muted}>
+                              <em>{t('control.muted', language())}</em>
+                            </Show>
+                          </div>
+                          <small>
+                            {notificationCountLabel(group.items.length, language())}
+                            <Show when={group.latestAt > 0}> · {formatTime(group.latestAt)}</Show>
+                          </small>
                         </div>
-                        <button
-                          class={styles.muteAppBtn}
-                          onClick={() => notificationsActions.toggleMuteApp(group.appId)}
-                        >
-                          {notificationsActions.isAppMuted(group.appId) ? t('notifications.enable', language()) : t('notifications.mute', language())}
+                      </div>
+                      <div class={styles.groupActions}>
+                        <button onClick={() => notificationsActions.markAppAsRead(group.appId)} disabled={group.unreadCount <= 0}>
+                          {t('notifications.read_all', language())}
+                        </button>
+                        <button onClick={() => notificationsActions.toggleMuteApp(group.appId)}>
+                          {group.muted ? t('notifications.enable', language()) : t('notifications.mute', language())}
+                        </button>
+                        <button class={styles.groupActionDanger} onClick={() => notificationsActions.removeAppHistory(group.appId)}>
+                          {t('control.clear', language())}
                         </button>
                       </div>
-                      <For each={visibleItemsForGroup(group.items)}>
-                        {(item) => {
+                      <For each={visibleItemsForGroup(group.appId, group.items)}>
+                        {(item, itemIndex) => {
                           const swipe = createSwipeHandlers(item.id);
                           return (
-                            <div class={styles.swipeTrack}>
+                            <Motion.div
+                              class={styles.swipeTrack}
+                              initial={{ opacity: 0, y: 8 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ duration: 0.18, delay: Math.min(itemIndex(), 4) * 0.025 }}
+                            >
                               <div class={styles.swipeBg} data-swipe-bg aria-hidden="true">{t('control.delete', language())}</div>
                               <button
                                 class={styles.notificationItem}
+                                classList={{ [styles.notificationItemUnread]: group.unreadCount > 0 && Number(item.createdAt || 0) > (notifications.readAtByApp[group.appId] || 0) }}
                                 onPointerDown={swipe.onPointerDown}
                                 onPointerMove={swipe.onPointerMove}
                                 onPointerUp={swipe.onPointerUp}
@@ -636,14 +708,18 @@ export function ControlCenter() {
                                 </strong>
                                 <span>{item.message}</span>
                               </button>
-                            </div>
+                            </Motion.div>
                           );
                         }}
                       </For>
                       <Show when={group.items.length > 2}>
-                        <div class={styles.moreCount}>{t('control.more_count', language(), { n: group.items.length - 2 })}</div>
+                        <button class={styles.moreCount} onClick={() => toggleNotificationGroup(group.appId)}>
+                          {expandedNotificationApps().includes(group.appId)
+                            ? showLessLabel(language())
+                            : t('control.more_count', language(), { n: group.items.length - 2 })}
+                        </button>
                       </Show>
-                    </div>
+                    </Motion.div>
                   )}
                 </For>
               </Show>
@@ -653,9 +729,10 @@ export function ControlCenter() {
               <button class={styles.clearBtn} onClick={() => notificationsActions.clear()}>{t('control.clear', language())}</button>
               <button class={styles.closeBtn} onClick={() => notificationsActions.setNotificationCenterOpen(false)}>{t('control.close', language())}</button>
             </div>
-          </div>
-        </div>
-      </Show>
+          </Motion.div>
+          </Motion.div>
+        </Show>
+      </Presence>
 
       {/* ── Control Center ── */}
       <Show when={notifications.controlCenterOpen}>
