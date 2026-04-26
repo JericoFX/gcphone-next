@@ -451,6 +451,15 @@
   padding: var(--s-2) 0;
 }
 
+.invoiceKicker,
+.invoiceMethodLabel {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--tint);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
 .invoiceFrom {
   font-size: var(--fs-footnote);
   font-weight: 700;
@@ -474,6 +483,12 @@
   grid-template-columns: 1fr 1fr 1fr;
   gap: var(--s-2);
   padding: 0 var(--s-1);
+}
+
+.invoiceMethodLabel {
+  display: block;
+  margin: 0 var(--s-1) var(--s-2);
+  color: var(--text-3);
 }
 
 .invoiceAction {

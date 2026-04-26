@@ -1183,7 +1183,7 @@ const emitHiddenMockNotification = (payload?: Partial<Record<string, unknown>>) 
   }, 120);
 };
 
-type MockNfcKind = 'photo' | 'contact' | 'note' | 'maps' | 'chirp' | 'snap' | 'document' | 'radio' | 'services';
+type MockNfcKind = 'photo' | 'contact' | 'note' | 'maps' | 'chirp' | 'snap' | 'document' | 'invoice' | 'radio' | 'services';
 
 const buildIncomingNfcNotification = (kind: MockNfcKind = 'photo') => {
   const requestId = Date.now() + Math.floor(Math.random() * 1000);
@@ -1287,6 +1287,29 @@ const buildIncomingNfcNotification = (kind: MockNfcKind = 'photo') => {
             verification_code: 'MOCK-NFC-2048',
             scanned_at: nowIso(),
           },
+        },
+      },
+    };
+  }
+
+  if (kind === 'invoice') {
+    return {
+      id: `mock-nfc-invoice-${requestId}`,
+      appId: 'wallet',
+      title: 'Cobro NFC',
+      message: `${from} te envio una factura`,
+      route: 'wallet',
+      priority: 'high',
+      data: {
+        nfcAction: 'incoming_invoice',
+        requestId,
+        invoice: {
+          invoiceId: `mock-invoice-${requestId}`,
+          fromName: from,
+          amount: 450,
+          title: 'Servicio mecanico',
+          channel: 'nfc',
+          expiresAt: Date.now() + 60000,
         },
       },
     };
@@ -2891,6 +2914,18 @@ export async function handleBrowserNui<T = unknown>(eventName: string, data?: un
     }
     row.status = accept ? 'accepted' : 'declined';
     return { success: true, status: row.status, balance: state.balance } as T;
+  }
+
+  if (eventName === 'walletRespondInvoice') {
+    const accept = payload.accept === true;
+    const amount = accept ? 450 : 0;
+    if (accept) state.balance = Math.max(0, state.balance - amount);
+    return {
+      success: true,
+      status: accept ? 'paid' : 'rejected',
+      paymentMethod: payload.paymentMethod === 'cash' ? 'cash' : 'bank',
+      balance: state.balance,
+    } as T;
   }
 
   if (eventName === 'securityGetBlockedNumbers') {

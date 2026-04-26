@@ -584,6 +584,7 @@ export function WalletApp() {
           size="sm"
         >
           <div class={styles.invoiceModalBody}>
+            <div class={styles.invoiceKicker}>{incomingInvoice()?.channel === 'nfc' ? 'Pagar factura NFC' : 'Pagar factura'}</div>
             <div class={styles.invoiceFrom}>{incomingInvoice()?.fromName}</div>
             <div class={styles.invoiceAmount}>{formatMoney(incomingInvoice()?.amount || 0)}</div>
             <div class={styles.invoiceTitle}>{incomingInvoice()?.title}</div>
@@ -595,6 +596,7 @@ export function WalletApp() {
               <ModalButton label={t('wallet.pay_bank_btn', language())} tone="primary" onClick={() => void respondInvoice(true, 'bank')} />
             </ModalActions>
           }>
+            <div class={styles.invoiceMethodLabel}>Metodo de pago</div>
             <div class={styles.invoiceActionsRow3}>
               <button class={styles.invoiceAction} onClick={() => void respondInvoice(false)}>{t('wallet.reject', language())}</button>
               <button class={styles.invoiceAction} onClick={() => void respondInvoice(true, 'cash')}>{t('wallet.pay_cash_btn', language())}</button>

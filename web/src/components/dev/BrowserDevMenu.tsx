@@ -68,6 +68,7 @@ export function BrowserDevMenu() {
         <button style={buttonStyle} onClick={() => mockNfcIncoming('note')}>NFC: note</button>
         <button style={buttonStyle} onClick={() => mockNfcIncoming('maps')}>NFC: maps</button>
         <button style={buttonStyle} onClick={() => mockNfcIncoming('document')}>NFC: document</button>
+        <button style={buttonStyle} onClick={() => mockNfcIncoming('invoice')}>NFC: invoice</button>
         <button style={buttonStyle} onClick={() => mockNfcIncoming('chirp')}>NFC: chirp</button>
         <button style={buttonStyle} onClick={() => mockNfcIncoming('snap')}>NFC: snap</button>
         <button style={buttonStyle} onClick={() => mockNfcIncoming('radio')}>NFC: radio</button>

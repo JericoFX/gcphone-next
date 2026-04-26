@@ -6,7 +6,7 @@ interface DebugEvent<T = unknown> {
   data: T;
 }
 
-type MockNfcKind = 'photo' | 'contact' | 'note' | 'maps' | 'chirp' | 'snap' | 'document' | 'radio' | 'services';
+type MockNfcKind = 'photo' | 'contact' | 'note' | 'maps' | 'chirp' | 'snap' | 'document' | 'invoice' | 'radio' | 'services';
 
 export function debugData<P>(events: DebugEvent<P>[], timer = 1000): void {
   if (isEnvBrowser()) {
@@ -219,7 +219,30 @@ function buildMockNfcNotification(kind: MockNfcKind) {
     };
   }
 
-  const socialRoutes: Record<Exclude<MockNfcKind, 'photo' | 'contact' | 'note' | 'maps' | 'document'>, { appId: string; title: string; message: string; text: string }> = {
+  if (kind === 'invoice') {
+    return {
+      id: `mock-nfc-invoice-${requestId}`,
+      appId: 'wallet',
+      title: 'Cobro NFC',
+      message: `${from} te envio una factura`,
+      route: 'wallet',
+      priority: 'high',
+      data: {
+        nfcAction: 'incoming_invoice',
+        requestId,
+        invoice: {
+          invoiceId: `mock-invoice-${requestId}`,
+          fromName: from,
+          amount: 450,
+          title: 'Servicio mecanico',
+          channel: 'nfc',
+          expiresAt: Date.now() + 60000,
+        },
+      },
+    };
+  }
+
+  const socialRoutes: Record<Exclude<MockNfcKind, 'photo' | 'contact' | 'note' | 'maps' | 'document' | 'invoice'>, { appId: string; title: string; message: string; text: string }> = {
     chirp: { appId: 'chirp', title: 'Chirp NFC', message: 'Te compartieron un chirp', text: 'CHIRP:1' },
     snap: { appId: 'snap', title: 'Snap NFC', message: 'Te compartieron un snap', text: 'SNAP:1' },
     radio: { appId: 'radio', title: 'Radio NFC', message: 'Te compartieron una radio', text: 'RADIO:LS-UNDERGROUND' },
