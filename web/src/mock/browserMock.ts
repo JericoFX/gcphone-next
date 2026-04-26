@@ -2042,6 +2042,10 @@ export async function handleBrowserNui<T = unknown>(eventName: string, data?: un
     return true as T;
   }
 
+  if (eventName === 'playNativeNotification') {
+    return { success: true, played: true } as T;
+  }
+
   if (eventName === 'setMessageTone') {
     state.messageTone = String(payload.tone || state.messageTone);
     return true as T;
@@ -2301,6 +2305,10 @@ export async function handleBrowserNui<T = unknown>(eventName: string, data?: un
 
   if (eventName === 'chirpGetAccount') {
     return { id: 1, username: 'mockuser', display_name: 'Mock User' } as T;
+  }
+
+  if (eventName === 'clipsGetAccount') {
+    return { id: 1, username: 'clipper', display_name: 'Clip User' } as T;
   }
 
   if (eventName === 'chirpGetTweets') {

@@ -521,6 +521,7 @@ export function ControlCenter() {
     let startX = 0;
     let currentX = 0;
     let swiping = false;
+    let suppressClick = false;
     let itemEl: HTMLElement | null = null;
     let trackEl: HTMLElement | null = null;
 
@@ -530,6 +531,7 @@ export function ControlCenter() {
       startX = e.clientX;
       currentX = startX;
       swiping = true;
+      suppressClick = false;
       itemEl.setPointerCapture(e.pointerId);
       itemEl.style.transition = 'none';
     };
@@ -538,6 +540,7 @@ export function ControlCenter() {
       if (!swiping || !itemEl) return;
       currentX = e.clientX;
       const deltaX = currentX - startX;
+      if (Math.abs(deltaX) > 10) suppressClick = true;
       itemEl.style.transform = `translate3d(${deltaX}px, 0, 0)`;
 
       if (trackEl) {
@@ -575,7 +578,18 @@ export function ControlCenter() {
       }
     };
 
-    return { onPointerDown, onPointerMove, onPointerUp, onPointerCancel: onPointerUp };
+    const onClick = (event: MouseEvent, action: () => void) => {
+      if (suppressClick) {
+        suppressClick = false;
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
+
+      action();
+    };
+
+    return { onPointerDown, onPointerMove, onPointerUp, onPointerCancel: onPointerUp, onClick };
   };
 
   const formatTime = (unix?: number) => {
@@ -824,11 +838,11 @@ export function ControlCenter() {
                                 onPointerMove={swipe.onPointerMove}
                                 onPointerUp={swipe.onPointerUp}
                                 onPointerCancel={swipe.onPointerCancel}
-                                onClick={() => {
+                                onClick={(event) => swipe.onClick(event, () => {
                                   notificationsActions.markAppAsRead(group.appId);
                                   notificationsActions.setNotificationCenterOpen(false);
                                   openRoute(item.route, item.data);
-                                }}
+                                })}
                               >
                                 <span class={styles.itemMeta}>
                                   <span>{item.title}</span>

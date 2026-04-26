@@ -29,6 +29,9 @@ const DEFAULT_MUSIC_STATE: MusicSessionState = {
   distance: 15,
 };
 
+const NO_MOTION_STATE = { opacity: 1, y: 0, scale: 1 };
+const NO_MOTION_TRANSITION = { duration: 0.01 };
+
 function readStoredMusicSession(): MusicSessionState {
   try {
     const raw = window.localStorage.getItem('gcphone:musicSession');
@@ -66,6 +69,7 @@ export function LockScreen() {
   const [emergencyStatus, setEmergencyStatus] = createSignal('');
   const [imeiModalOpen, setImeiModalOpen] = createSignal(false);
   const [sosStatus, setSosStatus] = createSignal<'idle' | 'sending' | 'sent'>('idle');
+  const [prefersReducedMotion, setPrefersReducedMotion] = createSignal(false);
   const language = () => phoneState.settings.language || 'es';
   const swipeUnlockEnabled = () => phoneState.settings.swipeUnlock === true || !hasPinSet();
   const hasPinSet = () => {
@@ -101,6 +105,12 @@ export function LockScreen() {
     if (destination.route === 'camera') return t('lock.open_camera', language());
     return t('lock.unlock', language());
   });
+  const collapsedPinInitial = createMemo(() => (prefersReducedMotion() ? NO_MOTION_STATE : { opacity: 0, y: 12, scale: 0.96 }));
+  const collapsedPinExit = createMemo(() => (prefersReducedMotion() ? NO_MOTION_STATE : { opacity: 0, y: 12, scale: 0.96 }));
+  const collapsedPinTransition = createMemo(() => (prefersReducedMotion() ? NO_MOTION_TRANSITION : { duration: 0.2, easing: [0.32, 0.72, 0, 1] }));
+  const expandedPinInitial = createMemo(() => (prefersReducedMotion() ? NO_MOTION_STATE : { opacity: 0, y: 22, scale: 0.94 }));
+  const expandedPinExit = createMemo(() => (prefersReducedMotion() ? NO_MOTION_STATE : { opacity: 0, y: 18, scale: 0.96 }));
+  const expandedPinTransition = createMemo(() => (prefersReducedMotion() ? NO_MOTION_TRANSITION : { duration: 0.22, easing: [0.22, 1, 0.36, 1] }));
 
   const musicStatusLabel = createMemo(() => {
     const current = musicState();
@@ -130,6 +140,12 @@ export function LockScreen() {
   };
 
   onMount(() => {
+    const media = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const syncReducedMotion = () => setPrefersReducedMotion(media.matches);
+    syncReducedMotion();
+    media.addEventListener('change', syncReducedMotion);
+    onCleanup(() => media.removeEventListener('change', syncReducedMotion));
+
     if (timer) clearInterval(timer);
     timer = window.setInterval(() => setCurrentTime(new Date()), 1000);
     setMusicState(readStoredMusicSession());
@@ -435,10 +451,10 @@ export function LockScreen() {
               fallback={
                 <Motion.div
                   class={styles.unlockSheetCollapsed}
-                  initial={{ opacity: 0, y: 12, scale: 0.96 }}
+                  initial={collapsedPinInitial()}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: 12, scale: 0.96 }}
-                  transition={{ duration: 0.2, easing: [0.32, 0.72, 0, 1] }}
+                  exit={collapsedPinExit()}
+                  transition={collapsedPinTransition()}
                 >
               <div class={styles.collapsedContent}>
                 <span class={styles.collapsedLabel}>{unlockTitle()}</span>
@@ -470,10 +486,10 @@ export function LockScreen() {
             >
               <Motion.div
                 class={styles.unlockSheet}
-                initial={{ opacity: 0, y: 22, scale: 0.94 }}
+                initial={expandedPinInitial()}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 18, scale: 0.96 }}
-                transition={{ duration: 0.22, easing: [0.22, 1, 0.36, 1] }}
+                exit={expandedPinExit()}
+                transition={expandedPinTransition()}
               >
             <button
               type="button"
@@ -505,7 +521,7 @@ export function LockScreen() {
                       type="button"
                       class={styles.key}
                       classList={{ [styles.keyDelete]: key.value === 'del' }}
-                      aria-label={key.value === 'del' ? t('action.cancel', language()) : key.value}
+                      aria-label={key.value === 'del' ? t('action.delete', language()) : key.value}
                       disabled={isSubmitting()}
                       onClick={() => (key.value === 'del' ? setCode((prev) => prev.slice(0, -1)) : handleKeyPress(key.value))}
                     >

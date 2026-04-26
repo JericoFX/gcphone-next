@@ -1,5 +1,5 @@
 import { Motion, Presence } from '@motionone/solid';
-import { For, Match, Show, Switch, createEffect, createMemo, createSignal, onCleanup } from 'solid-js';
+import { For, Match, Show, Switch, createEffect, createMemo, createSignal, onCleanup, onMount } from 'solid-js';
 import { useLiveActivity, type LiveActivity } from '../../../store/liveActivity';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { IslandMusic } from './IslandMusic';
@@ -8,6 +8,8 @@ import { IslandCall } from './IslandCall';
 import styles from './DynamicIsland.module.scss';
 
 const MOTION_EASING = [0.32, 0.72, 0, 1];
+const NO_MOTION_STATE = { opacity: 1, y: 0, scale: 1 };
+const NO_MOTION_TRANSITION = { duration: 0.01 };
 
 const ACTIVITY_TYPE_LABELS: Record<LiveActivity['type'], string> = {
   music: 'Music',
@@ -102,6 +104,7 @@ export function DynamicIsland() {
   const [expanded, setExpanded] = createSignal(false);
   const [activeIndex, setActiveIndex] = createSignal(0);
   const [minimized, setMinimized] = createSignal(false);
+  const [prefersReducedMotion, setPrefersReducedMotion] = createSignal(false);
   let compactTimer: number | undefined;
   let minimizeTimer: number | undefined;
   let rotateTimer: number | undefined;
@@ -122,6 +125,14 @@ export function DynamicIsland() {
   const hasActivities = () => activities().length > 0;
   const multipleActivities = () => activities().length > 1;
   const activityCount = () => activities().length;
+  const islandTransition = createMemo(() => (
+    prefersReducedMotion()
+      ? NO_MOTION_TRANSITION
+      : { duration: expanded() ? 0.28 : 0.22, easing: MOTION_EASING }
+  ));
+  const islandInnerInitial = createMemo(() => (prefersReducedMotion() ? NO_MOTION_STATE : { opacity: 0, y: 6, scale: 0.985 }));
+  const islandInnerExit = createMemo(() => (prefersReducedMotion() ? NO_MOTION_STATE : { opacity: 0, y: -5, scale: 0.985 }));
+  const islandInnerTransition = createMemo(() => (prefersReducedMotion() ? NO_MOTION_TRANSITION : { duration: 0.22, easing: MOTION_EASING }));
   const activityPosition = () => {
     if (!currentActivity()) return 0;
     return Math.min(activeIndex(), activities().length - 1) + 1;
@@ -184,6 +195,14 @@ export function DynamicIsland() {
     setActiveIndex(index);
     setMinimized(false);
   };
+
+  onMount(() => {
+    const media = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const syncReducedMotion = () => setPrefersReducedMotion(media.matches);
+    syncReducedMotion();
+    media.addEventListener('change', syncReducedMotion);
+    onCleanup(() => media.removeEventListener('change', syncReducedMotion));
+  });
 
   createEffect(() => {
     const signature = activitySignature();
@@ -292,16 +311,16 @@ export function DynamicIsland() {
           onClick={handlePillClick}
           title={multipleActivities() ? `${currentActivity()?.title || ''} (${activityPositionLabel()})` : currentActivity()?.title}
           animate={{ scale: expanded() ? 1 : 0.998, y: 0 }}
-          transition={{ duration: expanded() ? 0.28 : 0.22, easing: MOTION_EASING }}
+          transition={islandTransition()}
         >
           <Presence exitBeforeEnter>
             <Motion.div
               key={viewKey()}
               class={styles.islandInner}
-              initial={{ opacity: 0, y: 6, scale: 0.985 }}
+              initial={islandInnerInitial()}
               animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -5, scale: 0.985 }}
-              transition={{ duration: 0.22, easing: MOTION_EASING }}
+              exit={islandInnerExit()}
+              transition={islandInnerTransition()}
             >
               <Show when={!isHome()}>
                 <div class={styles.miniContent}>

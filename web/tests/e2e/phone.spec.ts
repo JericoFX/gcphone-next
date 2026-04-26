@@ -171,6 +171,14 @@ async function emitGenericNfcPayload(page: Page, payload: {
   }, payload);
 }
 
+async function openIncomingNfcFromNotification(page: Page, kind: string, title: RegExp) {
+  await page.evaluate((nfcKind) => window.gcphoneMock?.incomingNfc?.(nfcKind), kind);
+  await page.evaluate(() => window.gcphoneMock?.openNotificationCenter?.());
+  const center = page.getByTestId('notification-center-sheet');
+  await expect(center).toBeVisible();
+  await center.getByRole('button', { name: title }).first().click();
+}
+
 async function startLocationActivity(page: Page) {
   await openHomeApp(page, 'home-app-settings');
   await page.getByRole('button', { name: /Sistema|System/i }).click();
@@ -210,7 +218,7 @@ test('validates iOS controls and notification preview', async ({ page }) => {
   await page.getByTestId('home-app-settings').click();
   await expect(page.getByRole('button', { name: 'Apariencia' })).toBeVisible();
 
-  await goHomeWithBackspace(page);
+  await goHomeDirect(page);
 
   await page.evaluate(() => window.gcphoneMock?.openControlCenter?.());
   await expect(page.getByTestId('control-center-sheet')).toBeVisible();
@@ -237,7 +245,7 @@ test('keeps notification destination continuity from banner to notification cent
 
   await expectNotesDestination(page);
 
-  await goHomeWithBackspace(page);
+  await goHomeDirect(page);
   await page.evaluate(() => window.gcphoneMock?.openNotificationCenter?.());
   await expect(page.getByTestId('notification-center-sheet')).toBeVisible();
   await page.getByRole('button', { name: /Payload Notes/i }).first().click();
@@ -252,7 +260,7 @@ test('opens wavechat and gallery carousel controls', async ({ page }) => {
   await page.getByTestId('home-app-wavechat').click();
   await expect(page.getByRole('button', { name: 'Chats' })).toBeVisible();
 
-  await goHomeWithBackspace(page);
+  await goHomeDirect(page);
 
   await page.getByTestId('home-app-gallery').evaluate((el: HTMLElement) => el.click());
   await expect(page.locator('img[alt="Photo"]').first()).toBeVisible();
@@ -327,14 +335,40 @@ test('opens app, returns home, and closes app from recents without blank screen'
 test('opens NFC invoice mock from notification into payment modal', async ({ page }) => {
   await openUnlockedPhone(page);
 
-  await page.evaluate(() => window.gcphoneMock?.incomingNfc?.('invoice'));
-  await page.evaluate(() => window.gcphoneMock?.openNotificationCenter?.());
-  await expect(page.getByTestId('notification-center-sheet')).toBeVisible();
-  await page.getByRole('button', { name: /Cobro NFC Ahora Wallet/ }).click();
+  await openIncomingNfcFromNotification(page, 'invoice', /Cobro NFC Ahora Wallet/);
 
   await expect(page.getByText('Cobro NFC recibido')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Banco', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Cash', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Banco', exact: true }).click();
+  await expect(page.getByText('Cobro NFC recibido')).toHaveCount(0);
+});
+
+test('opens incoming NFC mocks for contact, document, maps, and snap', async ({ page }) => {
+  await openUnlockedPhone(page);
+
+  await openIncomingNfcFromNotification(page, 'contact', /Contacto NFC/);
+  await expect(page.getByText('Taller Norte')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Guardar' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Descartar' })).toBeVisible();
+
+  await goHomeDirect(page);
+
+  await openIncomingNfcFromNotification(page, 'document', /Documento NFC/);
+  await expect(page.getByText('Licencia de conducir')).toBeVisible();
+  await expect(page.getByText('MOCK-NFC-2048')).toBeVisible();
+
+  await goHomeDirect(page);
+
+  await openIncomingNfcFromNotification(page, 'snap', /Snap NFC/);
+  await expect(page.getByText('Snap').first()).toBeVisible();
+  await expect(page.getByRole('button', { name: /Feed/i })).toBeVisible();
+
+  await goHomeDirect(page);
+
+  await openIncomingNfcFromNotification(page, 'maps', /Coordenadas NFC/);
+  await expect(page.getByText(/Punto compartido|Shared point/i)).toBeVisible();
+  await expect(page.getByText(/-268\.42000, -956\.31000/)).toBeVisible();
 });
 
 test('opens generic NFC payload notifications for chirp, clips, radio, and services', async ({ page }) => {
@@ -359,7 +393,7 @@ test('opens generic NFC payload notifications for chirp, clips, radio, and servi
     route: 'clips',
     title: 'Payload Clips',
     message: 'Lucia compartio un clip',
-  text: 'CLIP:902',
+    text: 'CLIP:902',
   });
   await page.evaluate(() => window.gcphoneMock?.openNotificationCenter?.());
   await expect(page.getByTestId('notification-center-sheet')).toBeVisible();
