@@ -9,6 +9,7 @@ export interface ModalProps extends ParentProps {
   onClose: () => void;
   size?: 'sm' | 'md' | 'lg';
   class?: string;
+  testId?: string;
 }
 
 export const Modal: ParentComponent<ModalProps> = (props) => {
@@ -17,7 +18,7 @@ export const Modal: ParentComponent<ModalProps> = (props) => {
     class: undefined as string | undefined,
   }, props);
 
-  const [local] = splitProps(merged, ['open', 'title', 'onClose', 'size', 'class', 'children']);
+  const [local] = splitProps(merged, ['open', 'title', 'onClose', 'size', 'class', 'testId', 'children']);
 
   return (
     <Presence>
@@ -37,6 +38,7 @@ export const Modal: ParentComponent<ModalProps> = (props) => {
               [styles.lg]: local.size === 'lg',
               [local.class || '']: !!local.class,
             }}
+            data-testid={local.testId}
             onClick={(e: MouseEvent) => e.stopPropagation()}
             initial={{ opacity: 0, scale: 0.92, y: 16 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}

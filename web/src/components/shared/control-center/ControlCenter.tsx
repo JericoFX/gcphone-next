@@ -748,7 +748,7 @@ export function ControlCenter() {
             </div>
 
             <div class={styles.summaryRow}>
-              <article class={styles.summaryCard}>
+              <article class={styles.summaryCard} data-testid="notification-center-total-summary">
                 <span>Total</span>
                 <strong>{totalNotificationCount()}</strong>
                 <small>{appsCountLabel(groupedNotifications().length, language())}</small>
@@ -780,6 +780,7 @@ export function ControlCenter() {
                     <Motion.div
                       class={styles.notificationGroup}
                       classList={{ [styles.notificationGroupMuted]: group.muted }}
+                      data-testid={`notification-center-group-${group.appId}`}
                       initial={{ opacity: 0, y: -10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.2, delay: Math.min(groupIndex(), 5) * 0.025 }}
@@ -810,13 +811,24 @@ export function ControlCenter() {
                         </Show>
                       </div>
                       <div class={styles.groupActions}>
-                        <button onClick={() => notificationsActions.markAppAsRead(group.appId)} disabled={group.unreadCount <= 0}>
+                        <button
+                          data-testid={`notification-center-group-read-${group.appId}`}
+                          onClick={() => notificationsActions.markAppAsRead(group.appId)}
+                          disabled={group.unreadCount <= 0}
+                        >
                           {t('notifications.read_all', language())}
                         </button>
-                        <button onClick={() => notificationsActions.toggleMuteApp(group.appId)}>
+                        <button
+                          data-testid={`notification-center-group-mute-${group.appId}`}
+                          onClick={() => notificationsActions.toggleMuteApp(group.appId)}
+                        >
                           {group.muted ? t('notifications.enable', language()) : t('notifications.mute', language())}
                         </button>
-                        <button class={styles.groupActionDanger} onClick={() => notificationsActions.removeAppHistory(group.appId)}>
+                        <button
+                          class={styles.groupActionDanger}
+                          data-testid={`notification-center-group-clear-${group.appId}`}
+                          onClick={() => notificationsActions.removeAppHistory(group.appId)}
+                        >
                           {t('control.clear', language())}
                         </button>
                       </div>
@@ -834,6 +846,7 @@ export function ControlCenter() {
                               <button
                                 class={styles.notificationItem}
                                 classList={{ [styles.notificationItemUnread]: group.unreadCount > 0 && Number(item.createdAt || 0) > (notifications.readAtByApp[group.appId] || 0) }}
+                                data-testid={`notification-center-item-${item.id}`}
                                 onPointerDown={swipe.onPointerDown}
                                 onPointerMove={swipe.onPointerMove}
                                 onPointerUp={swipe.onPointerUp}
@@ -858,7 +871,11 @@ export function ControlCenter() {
                         }}
                       </For>
                       <Show when={group.items.length > 2}>
-                        <button class={styles.moreCount} onClick={() => toggleNotificationGroup(group.appId)}>
+                        <button
+                          class={styles.moreCount}
+                          data-testid={`notification-center-more-${group.appId}`}
+                          onClick={() => toggleNotificationGroup(group.appId)}
+                        >
                           {expandedNotificationApps().includes(group.appId)
                             ? showLessLabel(language())
                             : t('control.more_count', language(), { n: group.items.length - 2 })}
@@ -871,8 +888,8 @@ export function ControlCenter() {
             </div>
 
             <div class={styles.sheetFooter}>
-              <button class={styles.clearBtn} onClick={() => notificationsActions.clear()}>{t('control.clear', language())}</button>
-              <button class={styles.closeBtn} onClick={() => notificationsActions.setNotificationCenterOpen(false)}>{t('control.close', language())}</button>
+              <button class={styles.clearBtn} data-testid="notification-center-clear" onClick={() => notificationsActions.clear()}>{t('control.clear', language())}</button>
+              <button class={styles.closeBtn} data-testid="notification-center-close" onClick={() => notificationsActions.setNotificationCenterOpen(false)}>{t('control.close', language())}</button>
             </div>
           </Motion.div>
           </Motion.div>

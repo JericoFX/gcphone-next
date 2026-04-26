@@ -1316,3 +1316,20 @@
     opacity: 1;
   }
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .unlock-motion-slot,
+  .unlock-sheet,
+  .unlock-sheet-collapsed,
+  .dot,
+  .bottom-btn,
+  .sos-btn,
+  .tap-unlock-label {
+    transition: none;
+  }
+
+  .error-dot,
+  .tap-unlock-label {
+    animation: none;
+  }
+}

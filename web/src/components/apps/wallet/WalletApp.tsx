@@ -582,6 +582,7 @@ export function WalletApp() {
           title={incomingInvoice()?.channel === 'nfc' ? t('wallet.nfc_invoice_received', language()) : t('wallet.invoice_received', language())}
           onClose={() => setIncomingInvoice(null)}
           size="sm"
+          testId="wallet-nfc-invoice-modal"
         >
           <div class={styles.invoiceModalBody}>
             <div class={styles.invoiceKicker}>{incomingInvoice()?.channel === 'nfc' ? 'Pagar factura NFC' : 'Pagar factura'}</div>
@@ -598,9 +599,9 @@ export function WalletApp() {
           }>
             <div class={styles.invoiceMethodLabel}>Metodo de pago</div>
             <div class={styles.invoiceActionsRow3}>
-              <button class={styles.invoiceAction} onClick={() => void respondInvoice(false)}>{t('wallet.reject', language())}</button>
-              <button class={styles.invoiceAction} onClick={() => void respondInvoice(true, 'cash')}>Cash</button>
-              <button class={`${styles.invoiceAction} ${styles.invoiceActionPrimary}`} onClick={() => void respondInvoice(true, 'bank')}>Banco</button>
+              <button class={styles.invoiceAction} data-testid="wallet-nfc-invoice-reject" onClick={() => void respondInvoice(false)}>{t('wallet.reject', language())}</button>
+              <button class={styles.invoiceAction} data-testid="wallet-nfc-invoice-pay-cash" onClick={() => void respondInvoice(true, 'cash')}>Cash</button>
+              <button class={`${styles.invoiceAction} ${styles.invoiceActionPrimary}`} data-testid="wallet-nfc-invoice-pay-bank" onClick={() => void respondInvoice(true, 'bank')}>Banco</button>
             </div>
           </Show>
         </Modal>

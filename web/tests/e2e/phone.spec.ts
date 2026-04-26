@@ -66,7 +66,12 @@ async function ensurePinKeypadVisible(page: Page) {
   });
   if (keypadReady) return;
 
-  await page.getByRole('button', { name: /Desbloquear|Unlock/i }).first().click();
+  const expandButton = page.getByTestId('lock-pin-expand');
+  if (await expandButton.count()) {
+    await expandButton.evaluate((element) => (element as HTMLButtonElement).click());
+  } else {
+    await page.getByRole('button', { name: /Desbloquear|Unlock/i }).first().click();
+  }
   await expect.poll(async () => page.evaluate(() => {
     return Array.from(document.querySelectorAll<HTMLButtonElement>('button'))
       .some((button) => (button.textContent || '').trim() === '1' || button.getAttribute('aria-label') === '1');
@@ -351,11 +356,11 @@ test('opens NFC invoice mock from notification into payment modal', async ({ pag
 
   await openIncomingNfcFromNotification(page, 'invoice', /Cobro NFC Ahora Wallet/);
 
-  await expect(page.getByText('Cobro NFC recibido')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Banco', exact: true })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Cash', exact: true })).toBeVisible();
-  await page.getByRole('button', { name: 'Banco', exact: true }).click();
-  await expect(page.getByText('Cobro NFC recibido')).toHaveCount(0);
+  await expect(page.getByTestId('wallet-nfc-invoice-modal')).toBeVisible();
+  await expect(page.getByTestId('wallet-nfc-invoice-pay-bank')).toBeVisible();
+  await expect(page.getByTestId('wallet-nfc-invoice-pay-cash')).toBeVisible();
+  await page.getByTestId('wallet-nfc-invoice-pay-bank').click();
+  await expect(page.getByTestId('wallet-nfc-invoice-modal')).toHaveCount(0);
 });
 
 test('pays NFC invoice mock with cash', async ({ page }) => {
@@ -363,10 +368,10 @@ test('pays NFC invoice mock with cash', async ({ page }) => {
 
   await openIncomingNfcFromNotification(page, 'invoice', /Cobro NFC Ahora Wallet/);
 
-  await expect(page.getByText('Cobro NFC recibido')).toBeVisible();
+  await expect(page.getByTestId('wallet-nfc-invoice-modal')).toBeVisible();
   await expect(page.getByText('Servicio mecanico')).toBeVisible();
-  await page.getByRole('button', { name: 'Cash', exact: true }).click();
-  await expect(page.getByText('Cobro NFC recibido')).toHaveCount(0);
+  await page.getByTestId('wallet-nfc-invoice-pay-cash').click();
+  await expect(page.getByTestId('wallet-nfc-invoice-modal')).toHaveCount(0);
 });
 
 test('opens incoming NFC mocks for contact, document, maps, and snap', async ({ page }) => {
@@ -503,6 +508,44 @@ test('supports dynamic island with three activity instances', async ({ page }) =
   await page.evaluate(() => window.gcphoneMock?.showLocked());
   await expect(page.getByRole('button', { name: /Desbloquear|Unlock/i }).first()).toBeVisible();
   await expect(island).toHaveAttribute('data-activity-count', '3');
+});
+
+test('honors reduced motion for lock and dynamic island overlays', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await openUnlockedPhone(page);
+  await page.evaluate(() => window.gcphoneMock?.setLiveActivities?.());
+
+  const island = page.getByTestId('dynamic-island');
+  await expect(island).toHaveAttribute('data-activity-count', '3');
+  await island.click();
+  await expect(page.getByTestId('dynamic-island-overlay')).toBeVisible();
+
+  const longIslandAnimations = await island.evaluate((element) => (
+    element.getAnimations({ subtree: true })
+      .map((animation) => Number(animation.effect?.getTiming().duration) || 0)
+      .filter((duration) => duration > 80)
+      .length
+  ));
+  expect(longIslandAnimations).toBe(0);
+
+  await openLockedPhone(page);
+  await expect(page.getByText(/Bloqueo por PIN|PIN lock/i)).toBeVisible();
+
+  const lockSlot = page.getByTestId('lock-pin-motion-slot');
+  const lockSheet = page.getByTestId('lock-pin-sheet-collapsed');
+  await expect(lockSlot).toBeVisible();
+  await expect(lockSheet).toBeVisible();
+
+  const longLockAnimations = await lockSheet.evaluate((element) => (
+    element.getAnimations({ subtree: true })
+      .map((animation) => Number(animation.effect?.getTiming().duration) || 0)
+      .filter((duration) => duration > 80)
+      .length
+  ));
+  expect(longLockAnimations).toBe(0);
+
+  await expect.poll(async () => lockSlot.evaluate((element) => getComputedStyle(element).transitionDuration)).toBe('0s');
+  await expect.poll(async () => lockSheet.evaluate((element) => getComputedStyle(element).animationName)).toBe('none');
 });
 
 test('unlocks from the compact PIN sheet and returns cleanly to home', async ({ page }) => {

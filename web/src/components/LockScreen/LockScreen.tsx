@@ -440,6 +440,7 @@ export function LockScreen() {
       <Show when={hasPinSet()}>
         <div
           class={styles.unlockMotionSlot}
+          data-testid="lock-pin-motion-slot"
           classList={{
             [styles.unlockMotionSlotCollapsed]: !pinSheetExpanded(),
             [styles.unlockMotionSlotExpanded]: pinSheetExpanded(),
@@ -451,6 +452,7 @@ export function LockScreen() {
               fallback={
                 <Motion.div
                   class={styles.unlockSheetCollapsed}
+                  data-testid="lock-pin-sheet-collapsed"
                   initial={collapsedPinInitial()}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={collapsedPinExit()}
@@ -467,6 +469,7 @@ export function LockScreen() {
                 <button
                   type="button"
                   class={`${styles.expandKeypadBtn} ${styles.primaryAction}`}
+                  data-testid="lock-pin-expand"
                   onClick={() => setPinSheetExpanded(true)}
                 >
                   {t('lock.unlock', language())}
@@ -486,6 +489,7 @@ export function LockScreen() {
             >
               <Motion.div
                 class={styles.unlockSheet}
+                data-testid="lock-pin-sheet-expanded"
                 initial={expandedPinInitial()}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={expandedPinExit()}
