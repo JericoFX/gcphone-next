@@ -331,6 +331,10 @@ export function MessagesApp() {
   const handleForward = (msg: any) => {
     const mediaUrl = sanitizeMediaUrl(msg.mediaUrl || msg.media_url) || undefined;
     setForwardPayload({
+      appId: mediaUrl ? 'gallery' : 'notes',
+      route: mediaUrl ? 'gallery' : 'notes',
+      title: 'Mensaje NFC',
+      message: mediaUrl ? 'Te compartieron un archivo' : 'Te compartieron un mensaje',
       text: msg.message_type === 'audio' ? '' : sanitizeText(msg.message || '', 800),
       mediaUrl,
     });
@@ -474,7 +478,7 @@ export function MessagesApp() {
       <ShareSheet
         open={forwardPayload() !== null}
         payload={forwardPayload() || { text: '' }}
-        destinations={['messages', 'wavechat', 'mail']}
+        destinations={['messages', 'wavechat', 'mail', 'nfc']}
         onClose={() => setForwardPayload(null)}
       />
 

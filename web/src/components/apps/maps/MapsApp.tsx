@@ -2,6 +2,7 @@ import { For, Show, createEffect, createMemo, createSignal, onMount } from 'soli
 import { useRouter } from '../../Phone/PhoneFrame';
 import { fetchNui } from '../../../utils/fetchNui';
 import { ActionSheet } from '../../shared/ui/ActionSheet';
+import { NfcShareSheet } from '../../shared/ui/NfcShareSheet';
 import { AppScaffold } from '../../shared/layout';
 import { sanitizeText } from '../../../utils/sanitize';
 import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
@@ -50,7 +51,7 @@ export function MapsApp() {
   const [coordsX, setCoordsX] = createSignal('');
   const [coordsY, setCoordsY] = createSignal('');
 
-  const [shareApp, setShareApp] = createSignal<'messages' | 'chirp' | 'wavechat' | 'mail'>('messages');
+  const [shareApp, setShareApp] = createSignal<'messages' | 'chirp' | 'wavechat' | 'mail' | 'nfc'>('messages');
   const [shareNumber, setShareNumber] = createSignal('');
   const [shareGroupId, setShareGroupId] = createSignal('');
   const [shareError, setShareError] = createSignal('');
@@ -63,6 +64,8 @@ export function MapsApp() {
 
   const [showFabMenu, setShowFabMenu] = createSignal(false);
   const [showShareSheet, setShowShareSheet] = createSignal(false);
+  const [showNfcShareSheet, setShowNfcShareSheet] = createSignal(false);
+  const [nfcSharing, setNfcSharing] = createSignal(false);
   const [showManualGpsSheet, setShowManualGpsSheet] = createSignal(false);
   const [showLocationsSheet, setShowLocationsSheet] = createSignal(false);
   const [showMarkerSheet, setShowMarkerSheet] = createSignal(false);
@@ -231,6 +234,12 @@ export function MapsApp() {
       return;
     }
 
+    if (shareApp() === 'nfc') {
+      setShowShareSheet(false);
+      setShowNfcShareSheet(true);
+      return;
+    }
+
     if (shareApp() === 'messages') {
       const number = sanitizeText(shareNumber(), 20);
       if (!number) {
@@ -284,6 +293,32 @@ export function MapsApp() {
 
     setShowShareSheet(false);
     setStatus(t('maps.shared_success', language()));
+  };
+
+  const shareSelectedCoordsNfc = async (targetServerId: number) => {
+    const marker = selectedMarker();
+    if (!marker) {
+      setShowNfcShareSheet(false);
+      return;
+    }
+
+    setNfcSharing(true);
+    const result = await fetchNui<{ success?: boolean; error?: string }>('shareNfcPayload', {
+      targetServerId,
+      payload: {
+        appId: 'maps',
+        route: 'maps',
+        title: 'Coordenadas NFC',
+        message: `LOC:${marker.x.toFixed(2)},${marker.y.toFixed(2)}`,
+        text: `LOC:${marker.x.toFixed(2)},${marker.y.toFixed(2)}`,
+        nfcAction: 'received_location',
+        x: marker.x,
+        y: marker.y,
+      },
+    }, { success: false });
+    setNfcSharing(false);
+    setShowNfcShareSheet(false);
+    setStatus(result?.success ? t('maps.shared_success', language()) : (result?.error || t('maps.error.share_failed', language())));
   };
 
   const copyCoords = async () => {
@@ -419,11 +454,12 @@ export function MapsApp() {
           <div class={styles.sheetOverlay} onClick={() => setShowShareSheet(false)}>
             <div class={styles.sheet} onClick={(e) => e.stopPropagation()}>
               <h3>{t('maps.share_location', language())}</h3>
-              <select class="ios-select" value={shareApp()} onChange={(e) => setShareApp(e.currentTarget.value as 'messages' | 'chirp' | 'wavechat' | 'mail')}>
+              <select class="ios-select" value={shareApp()} onChange={(e) => setShareApp(e.currentTarget.value as 'messages' | 'chirp' | 'wavechat' | 'mail' | 'nfc')}>
                 <option value="messages">{t('app.messages', language())}</option>
                 <option value="chirp">Chirp</option>
                 <option value="wavechat">{t('maps.wavechat_group', language())}</option>
                 <option value="mail">Mail</option>
+                <option value="nfc">NFC</option>
               </select>
 
               <Show when={shareApp() === 'messages'}>
@@ -513,6 +549,15 @@ export function MapsApp() {
               },
             },
           ]}
+        />
+
+        <NfcShareSheet
+          open={showNfcShareSheet()}
+          onClose={() => setShowNfcShareSheet(false)}
+          onSelect={(id) => void shareSelectedCoordsNfc(id)}
+          title="Compartir coordenadas"
+          maxDistance={3.0}
+          disabled={nfcSharing()}
         />
       </div>
     </AppScaffold>

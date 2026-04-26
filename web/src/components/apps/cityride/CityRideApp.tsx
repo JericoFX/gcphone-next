@@ -575,7 +575,15 @@ export function CityRideApp() {
             const dist = props.ride.distance || 0;
             const eta = Math.max(1, Math.round(dist / 80));
             const msg = `CityRide ETA: ~${eta} min (${dist.toFixed(0)}m) LOC:${props.ride.dest?.x?.toFixed(1) || 0},${props.ride.dest?.y?.toFixed(1) || 0}`;
-            setEtaShare({ text: msg });
+            setEtaShare({
+              appId: 'maps',
+              route: 'maps',
+              title: 'CityRide NFC',
+              message: `ETA ~${eta} min hacia el destino`,
+              text: msg,
+              x: props.ride.dest?.x,
+              y: props.ride.dest?.y,
+            });
           }} type="button">
             ETA
           </button>
@@ -978,7 +986,7 @@ export function CityRideApp() {
       <ShareSheet
         open={etaShare() !== null}
         payload={etaShare() || { text: '' }}
-        destinations={['messages', 'wavechat']}
+        destinations={['messages', 'wavechat', 'nfc']}
         onClose={() => setEtaShare(null)}
       />
     </AppScaffold>

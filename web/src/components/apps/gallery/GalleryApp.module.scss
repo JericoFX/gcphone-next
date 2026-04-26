@@ -177,39 +177,90 @@
   font-weight: 700;
 }
 
-.nfc-save-bar {
-  position: fixed;
-  bottom: calc(var(--s-6) + var(--phone-bottom-ui-gap, 0px));
-  left: var(--s-4);
-  right: var(--s-4);
-  display: flex;
-  gap: var(--s-2);
-  z-index: 110;
+.nfc-received-card {
+  display: grid;
+  grid-template-columns: 58px 1fr;
+  gap: 10px;
+  align-items: center;
+  padding: 10px;
+  border-radius: 16px;
+  background: var(--surface);
+  border: 1px solid rgba(var(--tint-rgb), 0.22);
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
 }
 
-.nfc-save-btn {
-  flex: 1;
-  min-height: 42px;
+.nfc-received-thumb {
+  width: 58px;
+  height: 58px;
   border: none;
-  border-radius: var(--r-pill);
-  background: var(--tint);
-  color: #fff;
-  font-size: var(--fs-footnote);
-  font-weight: 700;
-  cursor: pointer;
-  box-shadow: 0 8px 20px rgba(var(--tint-rgb), 0.3);
+  border-radius: 14px;
+  overflow: hidden;
+  padding: 0;
+  background: var(--surface-2);
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
 }
 
-.nfc-dismiss-btn {
-  min-height: 42px;
-  padding: 0 var(--s-4);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  border-radius: var(--r-pill);
-  background: rgba(0, 0, 0, 0.5);
-  color: #fff;
-  font-size: var(--fs-footnote);
-  font-weight: 600;
-  cursor: pointer;
+.nfc-received-info {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+
+  strong {
+    font-size: 14px;
+    color: var(--text);
+  }
+
+  span:last-child {
+    font-size: 12px;
+    color: var(--text-3);
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.nfc-received-eyebrow {
+  width: max-content;
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: var(--tint-subtle);
+  color: var(--tint);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.nfc-received-actions {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+
+  button {
+    min-height: 34px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface-2);
+    color: var(--text);
+    font-size: 12px;
+    font-weight: 750;
+  }
+
+  .primary {
+    border-color: var(--tint);
+    background: var(--tint);
+    color: #fff;
+  }
+
+  .ghost {
+    color: var(--text-3);
+  }
 }
 
 /* Albums */

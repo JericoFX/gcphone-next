@@ -754,7 +754,16 @@ export function ChirpApp() {
             void openTweetDetail(tweet);
           }}
           onDelete={deleteTweet}
-          onShare={(e, tw) => { e.stopPropagation(); setSharePayload({ text: `CHIRP:${tw.id}` }); }}
+          onShare={(e, tw) => {
+            e.stopPropagation();
+            setSharePayload({
+              appId: 'chirp',
+              route: 'chirp',
+              title: 'Chirp NFC',
+              message: `${tw.display_name || 'Alguien'} compartio un chirp`,
+              text: `CHIRP:${tw.id}`,
+            });
+          }}
         />
       </article>
     );
@@ -936,7 +945,16 @@ export function ChirpApp() {
                 tweet={tweet}
                 onComment={(e) => e.stopPropagation()}
                 onDelete={deleteTweet}
-                onShare={(e, tw) => { e.stopPropagation(); setSharePayload({ text: `CHIRP:${tw.id}` }); }}
+                onShare={(e, tw) => {
+                  e.stopPropagation();
+                  setSharePayload({
+                    appId: 'chirp',
+                    route: 'chirp',
+                    title: 'Chirp NFC',
+                    message: `${tw.display_name || 'Alguien'} compartio un chirp`,
+                    text: `CHIRP:${tw.id}`,
+                  });
+                }}
               />
             </div>
           </div>
@@ -1140,7 +1158,7 @@ export function ChirpApp() {
       <ShareSheet
         open={sharePayload() !== null}
         payload={sharePayload() || { text: '' }}
-        destinations={['messages']}
+        destinations={['messages', 'nfc']}
         onClose={() => setSharePayload(null)}
       />
     </AppScaffold>

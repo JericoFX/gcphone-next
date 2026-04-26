@@ -63,6 +63,26 @@ local function IsWithinPlayerDistance(sourceA, sourceB, maxDistance)
     return distance <= maxDistance, distance
 end
 
+local AllowedNfcPayloadRoutes = {
+    chirp = true,
+    snap = true,
+    clips = true,
+    notes = true,
+    maps = true,
+    radio = true,
+    services = true,
+    gallery = true,
+    contacts = true,
+    documents = true,
+    wallet = true,
+}
+
+local function SanitizePayloadRoute(value, fallback)
+    local route = Utils.SafeString(value, 32)
+    if route and AllowedNfcPayloadRoutes[route] then return route end
+    return fallback
+end
+
 lib.callback.register('gcphone:proximity:shareContact', function(source, data)
     local identifier = Bridge.GetIdentifier(source)
     if not identifier then return false, 'Invalid source' end
@@ -206,6 +226,55 @@ lib.callback.register('gcphone:proximity:shareLocation', function(source, data)
     })
 
     return true
+end)
+
+lib.callback.register('gcphone:proximity:sharePayloadNfc', function(source, data)
+    if type(data) ~= 'table' then return { success = false, error = 'INVALID_DATA' } end
+    local identifier = Bridge.GetIdentifier(source)
+    if not identifier then return { success = false, error = 'INVALID_SOURCE' } end
+
+    local targetSource = tonumber(data.targetServerId)
+    local payload = type(data.payload) == 'table' and data.payload or nil
+    if not targetSource or not payload then
+        return { success = false, error = 'INVALID_DATA' }
+    end
+
+    local targetIdentifier = Bridge.GetIdentifier(targetSource)
+    if not targetIdentifier then return { success = false, error = 'TARGET_OFFLINE' } end
+
+    local nearby = IsWithinPlayerDistance(source, targetSource, tonumber(Config.Proximity and Config.Proximity.ShareContactDistance) or 3.0)
+    if not nearby then return { success = false, error = 'TOO_FAR' } end
+
+    if Utils.HitRateLimit(source, 'proximity_share_nfc_payload', 2000, 2) then
+        return { success = false, error = 'RATE_LIMITED' }
+    end
+
+    local route = SanitizePayloadRoute(payload.route or payload.appId, 'notes')
+    local appId = SanitizePayloadRoute(payload.appId or route, route)
+    local safePayload = {
+        appId = appId,
+        route = route,
+        title = Utils.SafeText(payload.title, 80) or 'NFC',
+        message = Utils.SafeText(payload.message, 140) or 'Contenido compartido',
+        text = Utils.SafeText(payload.text, 1000),
+        subject = Utils.SafeText(payload.subject, 120),
+        mediaUrl = Utils.SanitizeMediaUrl(payload.mediaUrl, {'.png','.jpg','.jpeg','.webp','.gif','.mp4','.webm','.mov'}, 500),
+        attachmentType = Utils.SafeString(payload.attachmentType, 24),
+        attachmentName = Utils.SafeText(payload.attachmentName, 80),
+        nfcAction = Utils.SafeString(payload.nfcAction, 40) or 'received_payload',
+        priority = payload.priority == 'high' and 'high' or 'normal',
+        x = tonumber(payload.x),
+        y = tonumber(payload.y),
+        z = tonumber(payload.z),
+    }
+
+    TriggerClientEvent('gcphone:receiveNfcPayload', targetSource, {
+        from = Bridge.GetName(source) or 'Alguien',
+        fromServerId = source,
+        payload = safePayload,
+    })
+
+    return { success = true }
 end)
 
 lib.callback.register('gcphone:proximity:getSharedLocations', function(source)

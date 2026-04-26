@@ -275,6 +275,7 @@ export interface NuiRequestMap {
   galleryDeleteAlbum: { albumId: number | string };
   galleryMoveToAlbum: { photoId: number | string; albumId: number | null };
   galleryShareNfc: { photoId: number | string; targetServerId: number };
+  shareNfcPayload: { targetServerId: number; payload: Record<string, unknown> };
   phoneVerifyPin: { pin: string };
   phoneGetSetupState: undefined;
   phoneCompleteSetup: PhoneSetupPayload;
@@ -348,6 +349,7 @@ export interface NuiResponseMap {
   galleryDeleteAlbum: NuiSuccessResponse;
   galleryMoveToAlbum: NuiSuccessResponse;
   galleryShareNfc: NuiSuccessResponse;
+  shareNfcPayload: NuiSuccessResponse;
   phoneVerifyPin: NuiSuccessResponse & { unlocked?: boolean };
   phoneGetSetupState: NuiSuccessResponse & { requiresSetup?: boolean; setup?: PhoneSetupState };
   phoneCompleteSetup: NuiSuccessResponse & { requiresSetup?: boolean; setup?: PhoneSetupState };

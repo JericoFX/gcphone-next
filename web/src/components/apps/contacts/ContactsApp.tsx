@@ -19,6 +19,7 @@ import { ScreenState } from '../../shared/ui/ScreenState';
 import { LetterAvatar } from '../../shared/ui/LetterAvatar';
 import { SkeletonList } from '../../shared/ui/SkeletonList';
 import { t } from '../../../i18n';
+import type { ContactRequest } from '../../../types';
 import styles from './ContactsApp.module.scss';
 
 interface Contact {
@@ -60,6 +61,8 @@ export function ContactsApp() {
   /* ── Share state ── */
   const [shareContact, setShareContact] = createSignal<Contact | null>(null);
   const [shareChannel, setShareChannel] = createSignal<'messages' | 'wavechat' | null>(null);
+  const [receivedContactRequest, setReceivedContactRequest] = createSignal<ContactRequest | null>(null);
+  const [lastNfcRouteKey, setLastNfcRouteKey] = createSignal('');
 
   const language = () => phoneState.settings.language || 'es';
   const isReadOnly = createMemo(() => phoneState.accessMode === 'foreign-readonly');
@@ -137,6 +140,19 @@ export function ContactsApp() {
       setFormAvatar(sanitizeMediaUrl(media) || '');
       setShowEditModal(true);
     }
+  });
+
+  createEffect(() => {
+    const params = router.params() as {
+      nfcAction?: string;
+      requestId?: number;
+      contactRequest?: ContactRequest;
+    };
+    const key = `${params?.requestId || 0}:${params?.nfcAction || 'none'}`;
+    if (params?.nfcAction !== 'received_contact' || !params.contactRequest || key === lastNfcRouteKey()) return;
+    setLastNfcRouteKey(key);
+    setReceivedContactRequest(params.contactRequest);
+    setProfileContact(null);
   });
 
   /* ── Keyboard navigation ── */
@@ -276,6 +292,23 @@ export function ContactsApp() {
     await sendSharedContact(typeof input === 'string' ? input : '');
   };
 
+  const acceptReceivedContact = async () => {
+    const request = receivedContactRequest();
+    if (!request) return;
+
+    const result = await fetchNui<{ success?: boolean }>('acceptContactRequest', {
+      fromServerId: request.fromServerId,
+      display: request.contact.display,
+      number: request.contact.number,
+      avatar: request.contact.avatar,
+    }, { success: false });
+
+    if (result?.success) {
+      setReceivedContactRequest(null);
+      await contactsActions.fetch();
+    }
+  };
+
   /* ── Avatar picker actions ── */
 
   const pickFromCamera = () => {
@@ -334,6 +367,35 @@ export function ContactsApp() {
             placeholder={t('contacts.search', language())}
           />
         </div>
+
+        <Show when={receivedContactRequest()}>
+          {(request) => (
+            <Motion.div
+              class={styles.nfcReceivedCard}
+              initial={{ opacity: 0, y: -8, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ duration: 0.22, easing: [0.32, 0.72, 0, 1] }}
+            >
+              <LetterAvatar
+                label={request().contact.display}
+                color={generateColorForString(request().contact.number)}
+                imageUrl={request().contact.avatar || undefined}
+                gradient={!request().contact.avatar}
+                size={44}
+              />
+              <div class={styles.nfcReceivedInfo}>
+                <span class={styles.nfcReceivedEyebrow}>NFC</span>
+                <strong>{request().contact.display}</strong>
+                <span>{request().fromPlayer || 'Alguien'} quiere compartir este contacto</span>
+                <small>{formatPhoneNumber(request().contact.number, phoneState.framework || 'unknown')}</small>
+              </div>
+              <div class={styles.nfcReceivedActions}>
+                <button class={styles.primary} onClick={() => void acceptReceivedContact()}>Guardar</button>
+                <button class={styles.ghost} onClick={() => setReceivedContactRequest(null)}>Descartar</button>
+              </div>
+            </Motion.div>
+          )}
+        </Show>
 
         {/* Segmented tabs */}
         <div class={styles.segmented}>

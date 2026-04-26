@@ -1263,7 +1263,13 @@ export function SnapApp() {
             onViewMedia={(url) => setViewerUrl(url)}
             onToggleLike={toggleLike}
             onDeletePost={deletePost}
-            onSharePost={(postId) => setSharePayload({ text: `SNAP:${postId}` })}
+            onSharePost={(postId) => setSharePayload({
+              appId: 'snap',
+              route: 'snap',
+              title: 'Snap NFC',
+              message: 'Te compartieron un snap',
+              text: `SNAP:${postId}`,
+            })}
           />
         </Show>
 
@@ -1417,7 +1423,7 @@ export function SnapApp() {
       <ShareSheet
         open={sharePayload() !== null}
         payload={sharePayload() || { text: '' }}
-        destinations={['messages']}
+        destinations={['messages', 'nfc']}
         onClose={() => setSharePayload(null)}
       />
     </AppScaffold>

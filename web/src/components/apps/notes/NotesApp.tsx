@@ -1,4 +1,4 @@
-import { For, Show, createSignal } from 'solid-js';
+import { For, Show, createEffect, createSignal } from 'solid-js';
 import { useRouter } from '../../Phone/PhoneFrame';
 import { fetchNui } from '../../../utils/fetchNui';
 import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';
@@ -90,13 +90,35 @@ export function NotesApp() {
   };
 
   const [sharePayload, setSharePayload] = createSignal<SharePayload | null>(null);
+  const [lastNfcRouteKey, setLastNfcRouteKey] = createSignal('');
 
   const shareNote = (note: Pick<NoteItem, 'title' | 'content'>) => {
     setSharePayload({
+      appId: 'notes',
+      route: 'notes',
+      title: 'Nota NFC',
+      message: note.title || t('notes.shared_note', language()) || 'Nota compartida',
       text: note.content || '',
       subject: note.title || t('notes.shared_note', language()) || 'Nota compartida',
     });
   };
+
+  createEffect(() => {
+    const params = router.params() as {
+      nfcAction?: string;
+      requestId?: number;
+      nfcPayload?: SharePayload;
+      from?: string;
+    };
+    const key = `${params?.requestId || 0}:${params?.nfcAction || 'none'}`;
+    if (!params?.nfcPayload || key === lastNfcRouteKey()) return;
+    setLastNfcRouteKey(key);
+    setActive(null);
+    setTitle(params.nfcPayload.subject || 'Nota NFC');
+    setContent(params.nfcPayload.text || '');
+    setColor(NOTE_COLORS[0]);
+    setIsComposerOpen(true);
+  });
 
   const notePreview = (note: Pick<NoteItem, 'content'>) => {
     const text = (note.content || '').trim();
@@ -214,7 +236,7 @@ export function NotesApp() {
       <ShareSheet
         open={sharePayload() !== null}
         payload={sharePayload() || { text: '' }}
-        destinations={['messages', 'wavechat', 'mail']}
+        destinations={['messages', 'wavechat', 'mail', 'nfc']}
         onClose={() => setSharePayload(null)}
       />
     </AppScaffold>

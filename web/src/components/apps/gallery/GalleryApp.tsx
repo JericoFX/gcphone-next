@@ -30,6 +30,13 @@ const GALLERY_ICONS = {
   options: './img/icons_ios/ui-more.svg',
 } as const;
 
+type ReceivedNfcPhoto = {
+  url: string;
+  from?: string;
+  type?: string;
+  shared_at?: string;
+};
+
 function PlainIconButton(props: {
   class?: string;
   onClick: () => void;
@@ -58,7 +65,8 @@ export function GalleryApp() {
   const [showShareSheet, setShowShareSheet] = createSignal(false);
   const [shareChatApp, setShareChatApp] = createSignal<'messages' | 'wavechat' | null>(null);
   const [, notificationsActions] = useNotifications();
-  const [receivedPhotoUrl, setReceivedPhotoUrl] = createSignal<string | null>(null);
+  const [receivedPhoto, setReceivedPhoto] = createSignal<ReceivedNfcPhoto | null>(null);
+  const [previewPhotoUrl, setPreviewPhotoUrl] = createSignal<string | null>(null);
   const [lastNfcRouteKey, setLastNfcRouteKey] = createSignal('');
 
   // Albums
@@ -278,7 +286,8 @@ export function GalleryApp() {
 
   const saveReceivedPhoto = async (url: string) => {
     await fetchNui('storeMediaUrl', { url, type: 'image' }, { success: false });
-    setReceivedPhotoUrl(null);
+    setReceivedPhoto(null);
+    setPreviewPhotoUrl(null);
     void loadPhotos();
     notificationsActions.receive({
       appId: 'gallery',
@@ -293,7 +302,7 @@ export function GalleryApp() {
       nfcAction?: string;
       targetServerId?: number;
       requestId?: number;
-      sharedPhoto?: { url?: string; from?: string };
+      sharedPhoto?: ReceivedNfcPhoto;
     };
 
     const key = `${params?.requestId || 0}:${params?.nfcAction || 'none'}`;
@@ -305,7 +314,11 @@ export function GalleryApp() {
     }
 
     if (params?.nfcAction === 'received_photo' && params.sharedPhoto?.url) {
-      setReceivedPhotoUrl(params.sharedPhoto.url);
+      const url = sanitizeMediaUrl(params.sharedPhoto.url);
+      if (url) {
+        setReceivedPhoto({ ...params.sharedPhoto, url });
+        setSelectedPhoto(null);
+      }
     }
   });
 
@@ -329,6 +342,30 @@ export function GalleryApp() {
       <div class={styles.page}>
         <Show when={isReadOnly()}>
           <InlineNotice title={t('contacts.readonly_title', language())} message={t('gallery.readonly_message', language(), { name: phoneState.accessOwnerName || t('common.other_person', language()) })} />
+        </Show>
+        <Show when={receivedPhoto()}>
+          {(photo) => (
+            <Motion.div
+              class={styles.nfcReceivedCard}
+              initial={{ opacity: 0, y: -8, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ duration: 0.22, easing: [0.32, 0.72, 0, 1] }}
+            >
+              <button class={styles.nfcReceivedThumb} onClick={() => setPreviewPhotoUrl(photo().url)}>
+                <img src={photo().url} alt="" draggable={false} />
+              </button>
+              <div class={styles.nfcReceivedInfo}>
+                <span class={styles.nfcReceivedEyebrow}>NFC</span>
+                <strong>Foto recibida</strong>
+                <span>{photo().from || 'Alguien'} te compartio una foto</span>
+              </div>
+              <div class={styles.nfcReceivedActions}>
+                <button onClick={() => setPreviewPhotoUrl(photo().url)}>Ver</button>
+                <button class={styles.primary} onClick={() => void saveReceivedPhoto(photo().url)}>Guardar</button>
+                <button class={styles.ghost} onClick={() => setReceivedPhoto(null)}>Descartar</button>
+              </div>
+            </Motion.div>
+          )}
         </Show>
         <div class={styles.toolbar}>
           <SearchInput
@@ -462,19 +499,11 @@ export function GalleryApp() {
         disabled={nfcShare.sharing()}
       />
 
-      <Show when={receivedPhotoUrl()}>
+      <Show when={previewPhotoUrl()}>
         <MediaLightbox
-          url={receivedPhotoUrl()}
-          onClose={() => setReceivedPhotoUrl(null)}
+          url={previewPhotoUrl()}
+          onClose={() => setPreviewPhotoUrl(null)}
         />
-        <div class={styles.nfcSaveBar}>
-          <button class={styles.nfcSaveBtn} onClick={() => void saveReceivedPhoto(receivedPhotoUrl()!)}>
-            Guardar en galeria
-          </button>
-          <button class={styles.nfcDismissBtn} onClick={() => setReceivedPhotoUrl(null)}>
-            Cerrar
-          </button>
-        </div>
       </Show>
 
       {/* Move to album */}

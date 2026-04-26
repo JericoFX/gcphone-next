@@ -209,10 +209,29 @@ RegisterNUICallback('getNearbyPlayers', function(data, cb)
     cb(payload)
 end)
 
+RegisterNUICallback('shareNfcPayload', function(data, cb)
+    lib.callback('gcphone:proximity:sharePayloadNfc', false, function(result)
+        cb(result or { success = false })
+    end, data)
+end)
+
 RegisterNetEvent('gcphone:receiveContactRequest', function(data)
     SendNUIMessage({
         action = 'receiveContactRequest',
         data = data
+    })
+
+    SendNUIMessage({
+        action = 'phone:notification',
+        data = {
+            id = ('nfc-contact-%s'):format(GetGameTimer()),
+            appId = 'contacts',
+            title = 'Contacto NFC',
+            message = ((data and data.fromPlayer) or 'Alguien') .. ' quiere compartir un contacto',
+            priority = 'normal',
+            route = 'contacts',
+            data = { nfcAction = 'received_contact', contactRequest = data, requestId = GetGameTimer() }
+        }
     })
 end)
 
@@ -220,6 +239,26 @@ RegisterNetEvent('gcphone:receiveSharedLocation', function(data)
     SendNUIMessage({
         action = 'receiveSharedLocation',
         data = data
+    })
+
+    SendNUIMessage({
+        action = 'phone:notification',
+        data = {
+            id = ('nfc-location-%s'):format(GetGameTimer()),
+            appId = 'maps',
+            title = 'Ubicacion NFC',
+            message = ((data and data.from) or 'Alguien') .. ' te compartio una ubicacion',
+            priority = 'normal',
+            route = 'maps',
+            data = {
+                x = data and data.x,
+                y = data and data.y,
+                z = data and data.z,
+                from = data and data.from,
+                nfcAction = 'received_location',
+                requestId = GetGameTimer()
+            }
+        }
     })
     
     lib.notify({ 
@@ -254,11 +293,57 @@ RegisterNetEvent('gcphone:receiveSharedPost', function(data)
         action = 'receiveSharedPost',
         data = data
     })
+
+    local postType = data and data.postType or 'chirp'
+    local route = postType
+    if postType == 'clip' then route = 'clips' end
+
+    SendNUIMessage({
+        action = 'phone:notification',
+        data = {
+            id = ('nfc-post-%s'):format(GetGameTimer()),
+            appId = route,
+            title = 'Contenido NFC',
+            message = ((data and data.from) or 'Alguien') .. ' te compartio contenido',
+            priority = 'normal',
+            route = route,
+            data = { nfcAction = 'received_post', sharedPost = data, requestId = GetGameTimer() }
+        }
+    })
     
     lib.notify({ 
         title = 'Publicacion compartida',
         description = data.from .. ' te ha compartido una publicacion',
         type = 'info'
+    })
+end)
+
+RegisterNetEvent('gcphone:receiveNfcPayload', function(data)
+    local payload = data and data.payload or {}
+    local appId = payload.appId or 'notes'
+    local route = payload.route or appId
+    local title = payload.title or 'NFC'
+    local message = payload.message or (((data and data.from) or 'Alguien') .. ' te compartio contenido')
+
+    SendNUIMessage({
+        action = 'phone:notification',
+        data = {
+            id = ('nfc-payload-%s'):format(GetGameTimer()),
+            appId = appId,
+            title = title,
+            message = message,
+            priority = payload.priority or 'normal',
+            route = route,
+            data = {
+                nfcAction = payload.nfcAction or 'received_payload',
+                nfcPayload = payload,
+                from = data and data.from,
+                x = payload.x,
+                y = payload.y,
+                z = payload.z,
+                requestId = GetGameTimer()
+            }
+        }
     })
 end)
 
