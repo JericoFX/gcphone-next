@@ -290,9 +290,10 @@ export function ControlCenter() {
     }
     if (nextEnabled) {
       notificationsActions.receive({
+        id: 'control-nfc-status',
         appId: 'settings',
         title: 'NFC',
-        message: nfcOnLabel(language()),
+        message: `${nfcOnLabel(language())} - Centro de control`,
         priority: 'normal',
       });
       void syncNearbyPlayers();
@@ -301,9 +302,10 @@ export function ControlCenter() {
     setNearbyPlayers([]);
     setNfcTargetServerId(null);
     notificationsActions.receive({
+      id: 'control-nfc-status',
       appId: 'settings',
       title: 'NFC',
-      message: nfcOffLabel(language()),
+      message: `${nfcOffLabel(language())} - Centro de control`,
       priority: 'normal',
     });
   }
@@ -319,9 +321,10 @@ export function ControlCenter() {
   function openNfcRoute(route: 'wallet' | 'gallery' | 'documents') {
     if (!nfcEnabled()) {
       notificationsActions.receive({
+        id: 'control-nfc-status',
         appId: 'settings',
         title: 'NFC',
-        message: nfcOffLabel(language()),
+        message: `${nfcOffLabel(language())} - Centro de control`,
         priority: 'normal',
       });
       return;
@@ -330,9 +333,10 @@ export function ControlCenter() {
     const target = selectedNfcTarget();
     if (!target) {
       notificationsActions.receive({
+        id: 'control-nfc-nearby',
         appId: 'settings',
         title: 'NFC',
-        message: nfcNoNearbyLabel(language()),
+        message: `${nfcNoNearbyLabel(language())} - Centro de control`,
         priority: 'normal',
       });
       return;
@@ -581,6 +585,9 @@ export function ControlCenter() {
                       <div class={styles.groupTitle}>
                         <img src={group.icon} alt="" />
                         <span>{group.title}</span>
+                        <Show when={group.items.length > 1}>
+                          <small>{group.items.length}</small>
+                        </Show>
                         <button
                           class={styles.muteAppBtn}
                           onClick={() => notificationsActions.toggleMuteApp(group.appId)}

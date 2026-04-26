@@ -835,6 +835,19 @@
     letter-spacing: 0.04em;
     text-transform: uppercase;
   }
+
+  small {
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    border-radius: var(--r-pill);
+    display: inline-grid;
+    place-items: center;
+    background: rgba(255, 255, 255, 0.14);
+    color: var(--cc-text-soft);
+    font-size: var(--fs-caption2);
+    font-weight: 800;
+  }
 }
 
 .muteAppBtn {
