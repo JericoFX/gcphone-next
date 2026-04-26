@@ -12,6 +12,7 @@ import {
   onMount,
 } from 'solid-js';
 import type { JSX } from 'solid-js';
+import { Motion } from '@motionone/solid';
 import { usePhone, usePhoneState } from '../../store/phone';
 import { HomeScreen } from '../apps/home/HomeScreen';
 import { AppPlaceholder } from '../shared/ui/AppPlaceholder';
@@ -584,11 +585,33 @@ function Router() {
     return <HomeScreen />;
   };
 
+  const routeMotion = (route: AppRoute) => {
+    if (currentRoute() === route) {
+      return { opacity: 1, x: 0, scale: 1 };
+    }
+
+    if (leavingRoute() === route) {
+      return direction() === 'forward'
+        ? { opacity: 0.58, x: '-22%', scale: 0.94 }
+        : { opacity: 0, x: '100%', scale: 1 };
+    }
+
+    return direction() === 'forward'
+      ? { opacity: 0, x: '100%', scale: 1 }
+      : { opacity: 0, x: '-18%', scale: 0.94 };
+  };
+
+  const routeInitial = (route: AppRoute) => (
+    route === 'home'
+      ? { opacity: 1, x: 0, scale: 1 }
+      : { opacity: 0.98, x: '100%', scale: 1 }
+  );
+
   return (
     <div class={styles.routerContainer}>
       <For each={openApps()}>
         {(route) => (
-          <div
+          <Motion.div
             class={styles.routeView}
             classList={{
               [styles.routeVisible]: currentRoute() === route || leavingRoute() === route,
@@ -603,9 +626,12 @@ function Router() {
                 leavingRoute() === route && direction() === 'back',
               [styles.routeTransparent]: route === 'camera',
             }}
+            initial={routeInitial(route)}
+            animate={routeMotion(route)}
+            transition={{ duration: direction() === 'forward' ? 0.32 : 0.28, easing: [0.32, 0.72, 0, 1] }}
           >
             {renderRoute(route)}
-          </div>
+          </Motion.div>
         )}
       </For>
     </div>

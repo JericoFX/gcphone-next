@@ -188,41 +188,11 @@
   }
 }
 
-/* ── Page transition animations ── */
+/* ── Page transition stage ── */
 
 .page-stage {
   height: 100%;
   will-change: transform, opacity;
-}
-
-.page-shift-next {
-  animation: desktop-slide-in-right 300ms cubic-bezier(0.32, 0, 0.24, 1);
-}
-
-.page-shift-prev {
-  animation: desktop-slide-in-left 300ms cubic-bezier(0.32, 1, 0.24, 1);
-}
-
-@keyframes desktop-slide-in-right {
-  from {
-    opacity: 0.3;
-    transform: translateX(24px) scale(0.97);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0) scale(1);
-  }
-}
-
-@keyframes desktop-slide-in-left {
-  from {
-    opacity: 0.3;
-    transform: translateX(-24px) scale(0.97);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0) scale(1);
-  }
 }
 
 /* ── Search overlay ── */

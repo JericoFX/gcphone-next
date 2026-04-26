@@ -448,50 +448,22 @@
 
 .routeForward {
   z-index: 3;
-  animation: iosSlideInRight 320ms cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
-  will-change: transform;
+  will-change: transform, opacity;
 }
 
 .routeBack {
   z-index: 3;
-  animation: iosScaleIn 280ms cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
-  will-change: transform;
+  will-change: transform, opacity;
 }
 
 .routeLeaveForward {
   z-index: 2;
   pointer-events: none;
-  animation: iosScaleOut 320ms cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
-  will-change: transform;
+  will-change: transform, opacity;
 }
 
 .routeLeaveBack {
   z-index: 2;
   pointer-events: none;
-  animation: iosSlideOutRight 280ms cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
-  will-change: transform;
-}
-
-// New app slides in from the right
-@keyframes iosSlideInRight {
-  from { transform: translateX(100%); }
-  to   { transform: translateX(0); }
-}
-
-// Previous app scales down and shifts left (behind the new one)
-@keyframes iosScaleOut {
-  from { transform: translateX(0) scale(1); opacity: 1; }
-  to   { transform: translateX(-30%) scale(0.92); opacity: 0.6; }
-}
-
-// Going back: previous app scales up from behind
-@keyframes iosScaleIn {
-  from { transform: translateX(-30%) scale(0.92); opacity: 0.6; }
-  to   { transform: translateX(0) scale(1); opacity: 1; }
-}
-
-// Going back: current app slides out to the right
-@keyframes iosSlideOutRight {
-  from { transform: translateX(0); }
-  to   { transform: translateX(100%); }
+  will-change: transform, opacity;
 }

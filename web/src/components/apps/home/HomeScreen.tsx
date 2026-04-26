@@ -181,14 +181,10 @@ export function HomeScreen() {
           <Show when={desktopPage() === -1} fallback={
             <Motion.div
               class={styles.pageStage}
-              classList={{
-                [styles.pageShiftNext]: pageTransition() === 'next',
-                [styles.pageShiftPrev]: pageTransition() === 'prev',
-              }}
               style={{ height: '100%' }}
               initial={false}
-              animate={{ opacity: pageTransition() ? 0.92 : 1, x: pageMotionX(), scale: pageTransition() ? 0.992 : 1 }}
-              transition={{ duration: 0.26, easing: [0.32, 0.72, 0, 1] }}
+              animate={{ opacity: pageTransition() ? 0.9 : 1, x: pageMotionX(), scale: pageTransition() ? 0.988 : 1 }}
+              transition={{ duration: 0.3, easing: [0.32, 0.72, 0, 1] }}
             >
               <AppGrid
                 items={() => visibleItems()}
@@ -210,14 +206,10 @@ export function HomeScreen() {
           }>
             <Motion.div
               class={styles.pageStage}
-              classList={{
-                [styles.pageShiftNext]: pageTransition() === 'next',
-                [styles.pageShiftPrev]: pageTransition() === 'prev',
-              }}
               style={{ height: '100%' }}
               initial={false}
-              animate={{ opacity: pageTransition() ? 0.92 : 1, x: pageMotionX(), scale: pageTransition() ? 0.992 : 1 }}
-              transition={{ duration: 0.26, easing: [0.32, 0.72, 0, 1] }}
+              animate={{ opacity: pageTransition() ? 0.9 : 1, x: pageMotionX(), scale: pageTransition() ? 0.988 : 1 }}
+              transition={{ duration: 0.3, easing: [0.32, 0.72, 0, 1] }}
             >
               <WidgetPage editing={editing()} language={language} currentTime={currentTime} musicNowPlaying={musicNowPlaying} radioStation={radioStation} bankBalance={bankBalance} />
             </Motion.div>
