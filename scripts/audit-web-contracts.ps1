@@ -29,15 +29,17 @@ function MatchValues($text, $pattern) {
 Write-Host '==> Web app registry audit'
 
 $appsConfig = ReadText $configPath
-$registeredApps = @(MatchValues $appsConfig "\{\s*id:\s*'([^']+)'")
+$registeredApps = @(MatchValues $appsConfig "(?m)^\s*\{\s*id:\s*'([^']+)'")
 if ($registeredApps.Count -eq 0) { Fail 'No app ids found in web/src/config/apps.ts' }
+$appIconPaths = [regex]::Matches($appsConfig, "(?m)^\s*\{\s*id:\s*'([^']+)'.*?icon:\s*'([^']+)'") |
+  ForEach-Object { [pscustomobject]@{ Id = $_.Groups[1].Value; Icon = $_.Groups[2].Value } }
 
 $phoneFrame = ReadText $phoneFramePath
 $lazyApps = @(MatchValues $phoneFrame "(?m)^\s*([a-z0-9]+):\s*lazy\(")
 
 $appFolders = Get-ChildItem -LiteralPath $appsDir -Directory |
   Where-Object {
-    $_.Name -notin @('home', '_template', 'utils') -and
+    $_.Name -notin @('home', '_template', 'utils', 'notifications') -and
     @(Get-ChildItem -LiteralPath $_.FullName -Recurse -File -ErrorAction SilentlyContinue).Count -gt 0
   } |
   ForEach-Object { $_.Name }
@@ -51,6 +53,20 @@ if ($missingFolder) { Fail "Registered apps missing component folder: $($missing
 if ($orphanFolders) { Fail "Unregistered app folders found: $($orphanFolders -join ', ')" }
 
 Write-Host "Apps registered: $($registeredApps.Count)"
+
+Write-Host '==> App icon asset audit'
+
+$missingIcons = @()
+foreach ($entry in $appIconPaths) {
+  $relativeIcon = $entry.Icon -replace '^\./', ''
+  $publicIcon = Join-Path (Join-Path $root 'web\public') $relativeIcon
+  if (-not (Test-Path $publicIcon)) {
+    $missingIcons += "$($entry.Id): $($entry.Icon)"
+  }
+}
+
+if ($missingIcons) { Fail "Registered app icons missing from web/public: $($missingIcons -join ', ')" }
+Write-Host "App icons checked: $($appIconPaths.Count)"
 
 Write-Host '==> Locale app-name audit'
 

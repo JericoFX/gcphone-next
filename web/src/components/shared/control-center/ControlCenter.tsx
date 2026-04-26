@@ -75,6 +75,20 @@ function nfcOffLabel(lang: string): string {
   return labels[lang] || labels.en;
 }
 
+function nfcOnLabel(lang: string): string {
+  const labels: Record<string, string> = {
+    es: 'NFC activado',
+    en: 'NFC on',
+    fr: 'NFC active',
+    de: 'NFC an',
+    pt: 'NFC ativado',
+    ru: 'NFC on',
+    pl: 'NFC wlaczony',
+    it: 'NFC attivo',
+  };
+  return labels[lang] || labels.en;
+}
+
 function streamerControlLabel(lang: string): string {
   const labels: Record<string, string> = {
     es: 'Streamer',
@@ -272,11 +286,23 @@ export function ControlCenter() {
       // localStorage is best-effort in browser preview and NUI.
     }
     if (nextEnabled) {
+      notificationsActions.receive({
+        appId: 'settings',
+        title: 'NFC',
+        message: nfcOnLabel(language()),
+        priority: 'normal',
+      });
       void syncNearbyPlayers();
       return;
     }
     setNearbyPlayers([]);
     setNfcTargetServerId(null);
+    notificationsActions.receive({
+      appId: 'settings',
+      title: 'NFC',
+      message: nfcOffLabel(language()),
+      priority: 'normal',
+    });
   }
 
   function cycleNfcTarget() {
@@ -655,7 +681,7 @@ export function ControlCenter() {
                   <strong>
                     <Show when={nfcEnabled()} fallback={nfcOffLabel(language())}>
                       <Show when={selectedNfcTarget()} fallback={nfcNoNearbyLabel(language())}>
-                      {(target) => `${target().name} · ${target().distance.toFixed(1)}m`}
+                      {(target) => `${target().name} - ${target().distance.toFixed(1)}m`}
                       </Show>
                     </Show>
                   </strong>
@@ -670,7 +696,7 @@ export function ControlCenter() {
                         <button
                           classList={{ [styles.nfcPersonActive]: player.serverId === selectedNfcTarget()?.serverId }}
                           onClick={() => setNfcTargetServerId(player.serverId)}
-                          title={`${player.name} · ${player.distance.toFixed(1)}m`}
+                          title={`${player.name} - ${player.distance.toFixed(1)}m`}
                         />
                       )}
                     </For>

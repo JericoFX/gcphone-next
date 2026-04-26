@@ -2,10 +2,8 @@ import {
   For,
   ParentComponent,
   Show,
-  createContext,
   createMemo,
   createSignal,
-  useContext,
   lazy,
   Suspense,
   createUniqueId,
@@ -27,9 +25,8 @@ import { isEnvBrowser } from '../../utils/misc';
 import { useWindowEvent } from '../../hooks';
 import { useInternalEvent, emitInternalEvent } from '../../utils/internalEvents';
 import { LiveActivityProvider } from '../../store/liveActivity';
+import { RouterContext, useRouter, type AppRoute, type RouterContextValue } from './PhoneRouterContext';
 import styles from './PhoneFrame.module.scss';
-
-type AppRoute = string;
 
 const PHONE_CASE_COLORS: Record<string, { body: string; border: string; inner: string }> = {
   default:  { body: '#1C1C1E', border: '#0E1420', inner: '#3A465A' },
@@ -54,24 +51,7 @@ function normalizeRoute(route: string): string {
   return route;
 }
 
-interface RouterContextValue {
-  currentRoute: () => AppRoute;
-  direction: () => 'forward' | 'back';
-  params: () => Record<string, unknown>;
-  navigate: (route: AppRoute, params?: Record<string, unknown>) => void;
-  goBack: () => void;
-  history: () => AppRoute[];
-  openApps: () => AppRoute[];
-  closeApp: (route: AppRoute) => void;
-}
-
-const RouterContext = createContext<RouterContextValue>();
-
-export function useRouter() {
-  const context = useContext(RouterContext);
-  if (!context) throw new Error('useRouter must be used within PhoneFrame');
-  return context;
-}
+export { useRouter } from './PhoneRouterContext';
 
 const lazyApps = {
   calls: lazy(() =>
@@ -208,7 +188,7 @@ function PhoneCaseSvg(props: { caseId?: string }) {
   );
 }
 
-export const PhoneFrame: ParentComponent & { Router: () => JSX.Element } = (
+export const PhoneFrame: ParentComponent<{ router?: boolean }> & { Router: () => JSX.Element } = (
   props,
 ) => {
   const [phoneState] = usePhone();
@@ -385,6 +365,9 @@ export const PhoneFrame: ParentComponent & { Router: () => JSX.Element } = (
       >
         <RouterContext.Provider value={router}>
           <LiveActivityProvider>
+          <Show when={props.router}>
+            <Router />
+          </Show>
           <ControlCenter />
           <div class={styles.bannerWrap}>
             <PhoneNotificationBanner
