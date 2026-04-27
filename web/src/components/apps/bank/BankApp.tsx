@@ -71,7 +71,7 @@ export function BankApp() {
       }
       router.goBack();
     },
-  });
+  }, { routeId: 'bank' });
 
   createEffect(() => {
     const params = router.params() as { nfcAction?: string; requestId?: number; invoice?: BankInvoice } | undefined;

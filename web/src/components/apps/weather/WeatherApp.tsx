@@ -62,7 +62,7 @@ export function WeatherApp() {
     setLoading(false);
   };
 
-  usePhoneKeyHandler({ Backspace: () => router.goBack() });
+  usePhoneKeyHandler({ Backspace: () => router.goBack() }, { routeId: 'weather' });
 
   onMount(() => {
     void loadWeather();

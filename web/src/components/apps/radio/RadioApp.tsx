@@ -544,7 +544,7 @@ export function RadioApp() {
 
   usePhoneKeyHandler({
     Backspace: handleBack,
-  });
+  }, { routeId: 'radio' });
 
   useInternalEvent<{ route: string }>('phone:appForceClose', (detail) => {
     if (detail?.route === 'radio') {

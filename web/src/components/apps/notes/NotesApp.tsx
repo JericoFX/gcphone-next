@@ -39,7 +39,7 @@ export function NotesApp() {
       if (isComposerOpen()) { closeComposer(); return; }
       router.goBack();
     },
-  });
+  }, { routeId: 'notes' });
 
   const openComposer = (note?: NoteItem) => {
     if (note) {

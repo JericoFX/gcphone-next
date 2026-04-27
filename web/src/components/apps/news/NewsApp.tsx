@@ -338,7 +338,7 @@ export function NewsApp() {
       }
       router.goBack();
     },
-  });
+  }, { routeId: 'news' });
 
   useNuiCustomEvent<NewsArticle | null>('gcphone:news:newArticle', (article) => {
     void load();

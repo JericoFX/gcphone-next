@@ -170,7 +170,7 @@ export function ServicesApp() {
       if (showRegister()) { setShowRegister(false); return; }
       router.goBack();
     },
-  });
+  }, { routeId: 'services' });
 
   const openWorker = async (worker: ServiceWorker) => {
     const info = await fetchNui<ServiceWorker | null>('servicesGetWorkerInfo', worker.id, null);

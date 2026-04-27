@@ -657,7 +657,7 @@ export function SnapApp() {
       }
       router.goBack();
     },
-  });
+  }, { routeId: 'snap' });
 
   const toggleLike = async (e: Event, postId: number) => {
     e.stopPropagation();

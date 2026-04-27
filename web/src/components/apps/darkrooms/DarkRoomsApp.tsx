@@ -372,7 +372,7 @@ export function DarkRoomsApp() {
       }
       router.goBack();
     },
-  });
+  }, { routeId: 'darkrooms' });
 
   onMount(() => {
     void loadRooms();

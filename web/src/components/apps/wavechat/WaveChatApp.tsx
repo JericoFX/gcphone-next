@@ -299,7 +299,7 @@ export function WaveChatApp() {
       }
       router.goBack();
     },
-  });
+  }, { routeId: 'wavechat' });
 
   onMount(() => {
     void loadCallHistory();

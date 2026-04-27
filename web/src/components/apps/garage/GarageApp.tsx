@@ -76,7 +76,7 @@ export function GarageApp() {
       }
       router.goBack();
     },
-  });
+  }, { routeId: 'garage' });
 
   const filteredVehicles = () => {
     let list = vehicles();

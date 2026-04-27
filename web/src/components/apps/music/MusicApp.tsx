@@ -174,7 +174,7 @@ export function MusicApp() {
     Backspace: () => {
       router.goBack();
     },
-  });
+  }, { routeId: 'music' });
 
   useInternalEvent<{ route: string }>('phone:appForceClose', (detail) => {
     if (detail?.route === 'music') {

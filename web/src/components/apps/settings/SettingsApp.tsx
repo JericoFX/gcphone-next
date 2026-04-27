@@ -83,7 +83,7 @@ export function SettingsApp() {
       if (section() !== 'main') setSection('main');
       else router.goBack();
     },
-  });
+  }, { routeId: 'settings' });
 
   onMount(async () => {
     const persisted = window.localStorage.getItem('gcphone:liveLocationInterval');

@@ -48,7 +48,7 @@ export function DirectorioApp() {
     Backspace: () => {
       router.goBack();
     },
-  });
+  }, { routeId: 'directorio' });
 
   const grouped = createMemo(() => {
     const items = shortcuts();

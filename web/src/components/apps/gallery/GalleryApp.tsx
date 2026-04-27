@@ -191,7 +191,7 @@ export function GalleryApp() {
       }
       router.goBack();
     },
-  });
+  }, { routeId: 'gallery' });
   
   const takePhoto = async () => {
     if (isReadOnly()) return;

@@ -118,7 +118,7 @@ export function MatchMyLoveApp() {
       }
       router.goBack();
     },
-  });
+  }, { routeId: 'matchmylove' });
 
   onMount(async () => {
     const p = await fetchNui<Profile | null>('matchmyloveGetProfile', undefined, null);

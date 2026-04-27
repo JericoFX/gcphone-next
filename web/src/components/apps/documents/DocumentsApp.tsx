@@ -216,7 +216,7 @@ export function DocumentsApp() {
       }
       router.goBack();
     },
-  });
+  }, { routeId: 'documents' });
 
   // -- CRUD operations --
   const deleteDocument = async (id: number) => {

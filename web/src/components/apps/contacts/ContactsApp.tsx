@@ -173,7 +173,7 @@ export function ContactsApp() {
         router.goBack();
       }
     },
-  });
+  }, { routeId: 'contacts' });
 
   /* ── NFC Share ── */
 

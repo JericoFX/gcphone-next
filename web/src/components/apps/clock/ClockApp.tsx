@@ -27,7 +27,7 @@ export function ClockApp() {
   let timerHandle: number | undefined;
   let stopwatchHandle: number | undefined;
 
-  usePhoneKeyHandler({ Backspace: () => router.goBack() });
+  usePhoneKeyHandler({ Backspace: () => router.goBack() }, { routeId: 'clock' });
 
   const pollGameTime = async () => {
     const data = await fetchNui<{ hour?: number; minute?: number; second?: number }>('getGameTime', {}, { hour: 12, minute: 0, second: 0 });

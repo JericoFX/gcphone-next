@@ -225,7 +225,7 @@ export function ClipsApp() {
       if (showProfileModal()) { setShowProfileModal(false); return; }
       router.goBack();
     },
-  });
+  }, { routeId: 'clips' });
 
   // ── Interactions ──
 

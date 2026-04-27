@@ -310,7 +310,7 @@ export function WalletApp() {
       }
       router.goBack();
     },
-  });
+  }, { routeId: 'wallet' });
 
   createEffect(() => {
     const params = router.params() as { nfcAction?: string; targetServerId?: number; requestId?: number; invoice?: InvoicePayload } | undefined;

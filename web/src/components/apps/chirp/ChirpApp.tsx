@@ -275,7 +275,7 @@ export function ChirpApp() {
       }
       router.goBack();
     },
-  });
+  }, { routeId: 'chirp' });
 
   const openTweetDetail = async (tweet: ChirpTweet) => {
     setSelectedTweet(normalizeTweet(tweet));

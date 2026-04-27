@@ -186,7 +186,7 @@ export function MessagesApp() {
       }
       router.goBack();
     },
-  });
+  }, { routeId: 'messages' });
   
   const openConversation = (number: string, display?: string) => {
     setSelectedConversation(number);

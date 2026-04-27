@@ -173,7 +173,7 @@ export function YellowPagesApp() {
       }
       router.goBack();
     },
-  });
+  }, { routeId: 'yellowpages' });
 
   const getCategoryIcon = (catId: string) => CATEGORY_ICON_MAP[catId] || './img/icons_ios/ui-list.svg';
 

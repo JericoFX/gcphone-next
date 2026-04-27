@@ -258,7 +258,7 @@ export function CityRideApp() {
       }
       router.goBack();
     },
-  });
+  }, { routeId: 'cityride' });
 
   // ── Passenger Actions ──
 

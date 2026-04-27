@@ -94,7 +94,7 @@ export function MapsApp() {
     Backspace: () => {
       router.goBack();
     },
-  });
+  }, { routeId: 'maps' });
 
   const loadContactsAndGroups = async () => {
     const list = await fetchNui<ContactItem[]>('getContacts', undefined, []);

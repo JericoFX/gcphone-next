@@ -181,7 +181,7 @@ export function CallsApp() {
       }
       router.goBack();
     },
-  });
+  }, { routeId: 'calls' });
 
   useInternalEvent<{ route: string }>('phone:appForceClose', (detail) => {
     if (detail?.route === 'calls') {
