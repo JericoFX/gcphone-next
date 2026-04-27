@@ -166,6 +166,8 @@ export function ServicesApp() {
 
   usePhoneKeyHandler({
     Backspace: () => {
+      if (ctxMenu.isOpen()) { ctxMenu.close(); return; }
+      if (sharePayload()) { setSharePayload(null); return; }
       if (selectedWorker()) { setSelectedWorker(null); return; }
       if (showRegister()) { setShowRegister(false); return; }
       router.goBack();

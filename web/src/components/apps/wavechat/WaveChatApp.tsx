@@ -292,9 +292,33 @@ export function WaveChatApp() {
       }
     },
     Backspace: () => {
+      if (viewerUrl()) {
+        setViewerUrl(null);
+        return;
+      }
+      if (showGifPicker()) {
+        setShowGifPicker(false);
+        return;
+      }
+      if (ctxMenu.isOpen()) {
+        ctxMenu.close();
+        return;
+      }
+      if (showAttachSheet()) {
+        setShowAttachSheet(false);
+        return;
+      }
+      if (showCreateGroupModal()) {
+        closeCreateGroupModal();
+        return;
+      }
       if (selectedConversation()) {
         setSelectedConversation(null);
         setRouteConversationName('');
+        return;
+      }
+      if (selectedGroupId() !== null) {
+        setSelectedGroupId(null);
         return;
       }
       router.goBack();

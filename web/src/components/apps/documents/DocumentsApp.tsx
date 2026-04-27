@@ -202,6 +202,19 @@ export function DocumentsApp() {
   // -- Key handler --
   usePhoneKeyHandler({
     Backspace: () => {
+      if (nfcShare.isOpen()) {
+        nfcShare.close();
+        return;
+      }
+      if (showDocPicker()) {
+        setShowDocPicker(false);
+        setDocPickerTarget(null);
+        return;
+      }
+      if (receivedDoc()) {
+        setReceivedDoc(null);
+        return;
+      }
       if (wizardOpen()) {
         if (wizardStep() > 1) {
           setWizardStep((s) => s - 1);

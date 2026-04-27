@@ -276,6 +276,26 @@ test('opens wavechat and gallery carousel controls', async ({ page }) => {
   await expect(page.locator('img[alt="Photo"]').first()).toBeVisible();
 });
 
+test('Backspace closes gallery overlays before leaving the viewer', async ({ page }) => {
+  await openUnlockedPhone(page);
+
+  await page.getByTestId('home-app-gallery').evaluate((el: HTMLElement) => el.click());
+  await page.locator('img[alt="Photo"]').first().click();
+  await expect(page.getByRole('button', { name: /Opciones|Options/i })).toBeVisible();
+
+  await page.getByRole('button', { name: /Opciones|Options/i }).click();
+  await expect(page.getByRole('button', { name: /Compartir|Share/i }).first()).toBeVisible();
+  await page.waitForTimeout(80);
+
+  await page.evaluate(() => window.gcphoneMock?.keyUp?.('Backspace'));
+  await expect(page.getByRole('button', { name: /Compartir|Share/i })).toHaveCount(0, { timeout: 8000 });
+  await expect(page.getByRole('button', { name: /Opciones|Options/i })).toBeVisible();
+
+  await page.evaluate(() => window.gcphoneMock?.keyUp?.('Backspace'));
+  await expect(page.getByRole('button', { name: /Opciones|Options/i })).toHaveCount(0);
+  await expect(page.locator('img[alt="Photo"]').first()).toBeVisible();
+});
+
 test('supports drag gestures for top control surfaces', async ({ page }) => {
   await openUnlockedPhone(page);
 

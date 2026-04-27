@@ -185,6 +185,38 @@ export function GalleryApp() {
       }
     },
     Backspace: () => {
+      if (previewPhotoUrl()) {
+        setPreviewPhotoUrl(null);
+        return;
+      }
+      if (nfcShare.isOpen()) {
+        nfcShare.close();
+        return;
+      }
+      if (shareChatApp()) {
+        setShareChatApp(null);
+        return;
+      }
+      if (showShareSheet()) {
+        setShowShareSheet(false);
+        return;
+      }
+      if (showMoveToAlbum()) {
+        setShowMoveToAlbum(false);
+        return;
+      }
+      if (showActions()) {
+        setShowActions(false);
+        return;
+      }
+      if (showAlbumCreate()) {
+        setShowAlbumCreate(false);
+        return;
+      }
+      if (receivedPhoto()) {
+        setReceivedPhoto(null);
+        return;
+      }
       if (selectedPhoto()) {
         setSelectedPhoto(null);
         return;

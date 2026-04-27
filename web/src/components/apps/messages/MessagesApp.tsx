@@ -179,6 +179,18 @@ export function MessagesApp() {
       }
     },
     Backspace: () => {
+      if (viewerUrl()) {
+        setViewerUrl(null);
+        return;
+      }
+      if (forwardPayload()) {
+        setForwardPayload(null);
+        return;
+      }
+      if (ctxMenu.isOpen()) {
+        ctxMenu.close();
+        return;
+      }
       if (selectedConversation()) {
         setSelectedConversation(null);
         setRouteConversationName('');

@@ -167,11 +167,32 @@ export function ContactsApp() {
       }
     },
     Backspace: () => {
+      if (nfcShare.isOpen()) {
+        nfcShare.close();
+        return;
+      }
+      if (showAvatarSheet()) {
+        setShowAvatarSheet(false);
+        return;
+      }
+      if (shareContact()) {
+        setShareContact(null);
+        setShareChannel(null);
+        return;
+      }
+      if (showEditModal()) {
+        setShowEditModal(false);
+        return;
+      }
+      if (receivedContactRequest()) {
+        setReceivedContactRequest(null);
+        return;
+      }
       if (profileContact()) {
         setProfileContact(null);
-      } else {
-        router.goBack();
+        return;
       }
+      router.goBack();
     },
   }, { routeId: 'contacts' });
 

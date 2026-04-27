@@ -232,6 +232,18 @@ export function ChirpApp() {
 
   usePhoneKeyHandler({
     Backspace: () => {
+      if (viewerUrl()) {
+        setViewerUrl(null);
+        return;
+      }
+      if (sharePayload()) {
+        setSharePayload(null);
+        return;
+      }
+      if (ctxMenu.isOpen()) {
+        ctxMenu.close();
+        return;
+      }
       if (showAttachUrlModal()) {
         setShowAttachUrlModal(false);
         return;
@@ -265,6 +277,10 @@ export function ChirpApp() {
       }
       if (showOnboarding()) {
         setShowOnboarding(false);
+        return;
+      }
+      if (showComments()) {
+        setShowComments(false);
         return;
       }
       if (viewMode() === 'detail') {

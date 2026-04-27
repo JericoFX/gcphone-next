@@ -324,6 +324,14 @@ export function NewsApp() {
         setViewerUrl(null);
         return;
       }
+      if (showProfileModal()) {
+        setShowProfileModal(false);
+        return;
+      }
+      if (showOnboarding()) {
+        setShowOnboarding(false);
+        return;
+      }
       if (showCompose()) {
         setShowCompose(false);
         return;
@@ -334,6 +342,12 @@ export function NewsApp() {
       }
       if (activeLive()) {
         closeLiveViewer();
+        return;
+      }
+      if (selectedArticle()) {
+        setSelectedArticle(null);
+        setExpandedArticle(null);
+        setArticleComments([]);
         return;
       }
       router.goBack();

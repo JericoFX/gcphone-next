@@ -158,17 +158,25 @@ export function YellowPagesApp() {
 
   usePhoneKeyHandler({
     Backspace: () => {
+      if (viewerUrl()) {
+        setViewerUrl(null);
+        return;
+      }
+      if (ctxMenu.isOpen()) {
+        ctxMenu.close();
+        return;
+      }
       if (showContactModal()) {
         setShowContactModal(false);
+        return;
+      }
+      if (showComposer()) {
+        setShowComposer(false);
         return;
       }
       if (selectedListing()) {
         setSelectedListing(null);
         setSellerInfo(null);
-        return;
-      }
-      if (showComposer()) {
-        setShowComposer(false);
         return;
       }
       router.goBack();

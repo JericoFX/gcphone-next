@@ -362,6 +362,22 @@ export function DarkRoomsApp() {
 
   usePhoneKeyHandler({
     Backspace: () => {
+      if (viewerUrl()) {
+        setViewerUrl(null);
+        return;
+      }
+      if (showCreateRoom()) {
+        setShowCreateRoom(false);
+        return;
+      }
+      if (joinPasswordMode()) {
+        setJoinPasswordMode(null);
+        return;
+      }
+      if (showCreatePost()) {
+        setShowCreatePost(false);
+        return;
+      }
       if (currentView() === 'post') {
         backToRoom();
         return;
