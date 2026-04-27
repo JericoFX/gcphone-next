@@ -1773,45 +1773,8 @@ CREATE TABLE IF NOT EXISTS `phone_wavechat_dm_messages` (
     INDEX `idx_wdm_created_at` (`created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- Trigger: cap each conversation pair at 50 messages (oldest removed on INSERT)
 DROP TRIGGER IF EXISTS `trg_wavechat_dm_cap`;
-DELIMITER //
-CREATE TRIGGER `trg_wavechat_dm_cap` AFTER INSERT ON `phone_wavechat_dm_messages`
-FOR EACH ROW
-BEGIN
-    DECLARE msg_count INT;
-
-    SELECT COUNT(*) INTO msg_count
-    FROM `phone_wavechat_dm_messages`
-    WHERE (sender = NEW.sender AND receiver = NEW.receiver)
-       OR (sender = NEW.receiver AND receiver = NEW.sender);
-
-    IF msg_count > 50 THEN
-        DELETE FROM `phone_wavechat_dm_messages`
-        WHERE id IN (
-            SELECT id FROM (
-                SELECT id
-                FROM `phone_wavechat_dm_messages`
-                WHERE (sender = NEW.sender AND receiver = NEW.receiver)
-                   OR (sender = NEW.receiver AND receiver = NEW.sender)
-                ORDER BY created_at ASC
-                LIMIT 18446744073709551615 OFFSET 50
-            ) AS overflow
-        );
-    END IF;
-END//
-DELIMITER ;
-
--- Trigger: remove messages older than 14 days on each INSERT
 DROP TRIGGER IF EXISTS `trg_wavechat_dm_expire`;
-DELIMITER //
-CREATE TRIGGER `trg_wavechat_dm_expire` AFTER INSERT ON `phone_wavechat_dm_messages`
-FOR EACH ROW
-BEGIN
-    DELETE FROM `phone_wavechat_dm_messages`
-    WHERE created_at < DATE_SUB(NOW(), INTERVAL 14 DAY);
-END//
-DELIMITER ;
 
 -- Daily fallback sweep for expired messages (catches idle conversations)
 DROP EVENT IF EXISTS `evt_wavechat_dm_cleanup`;

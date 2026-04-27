@@ -99,8 +99,10 @@ RegisterNUICallback('cityrideGetAvailableDriverCount', function(_, cb)
 end)
 
 RegisterNUICallback('cityrideSetWaypoint', function(data, cb)
-    if type(data) == 'table' and data.x and data.y then
-        SetNewWaypoint(tonumber(data.x) + 0.0, tonumber(data.y) + 0.0)
+    local x = type(data) == 'table' and tonumber(data.x) or nil
+    local y = type(data) == 'table' and tonumber(data.y) or nil
+    if x and y then
+        SetNewWaypoint(x, y)
         cb({ success = true })
     else
         cb({ success = false })

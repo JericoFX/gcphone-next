@@ -55,7 +55,10 @@ local function GiveVehicleKeys(vehicle, plate)
 end
 
 local function SetGpsWaypoint(x, y)
-    SetNewWaypoint(x + 0.0, y + 0.0)
+    local safeX = tonumber(x)
+    local safeY = tonumber(y)
+    if not safeX or not safeY then return end
+    SetNewWaypoint(safeX, safeY)
 end
 
 RegisterNetEvent('gcphone:garage:spawnVehicle', function(vehicle)
@@ -130,9 +133,8 @@ RegisterNetEvent('gcphone:garage:spawnVehicle', function(vehicle)
 end)
 
 RegisterNetEvent('gcphone:garage:setWaypoint', function(data)
-    if type(data) == 'table' and data.x and data.y then
-        SetNewWaypoint(tonumber(data.x) + 0.0, tonumber(data.y) + 0.0)
-    end
+    if type(data) ~= 'table' then return end
+    SetGpsWaypoint(data.x, data.y)
 end)
 
 return {}

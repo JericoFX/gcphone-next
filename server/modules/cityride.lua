@@ -53,10 +53,10 @@ end
 
 local function TransferRidePayment(passengerIdentifier, driverIdentifier, amount)
     local passengerWallet = MySQL.single.await(
-        'SELECT id, balance FROM phone_wallets WHERE identifier = ? LIMIT 1',
+        'SELECT id FROM phone_wallets WHERE identifier = ? LIMIT 1',
         { passengerIdentifier }
     )
-    if not passengerWallet or tonumber(passengerWallet.balance) < amount then
+    if not passengerWallet then
         return false, 'INSUFFICIENT_FUNDS'
     end
 
@@ -72,24 +72,39 @@ local function TransferRidePayment(passengerIdentifier, driverIdentifier, amount
         driverWallet = { id = driverId, balance = 0 }
     end
 
-    MySQL.transaction.await({
-        {
-            query = 'UPDATE phone_wallets SET balance = balance - ? WHERE id = ?',
-            values = { amount, passengerWallet.id }
-        },
-        {
-            query = 'UPDATE phone_wallets SET balance = balance + ? WHERE id = ?',
-            values = { amount, driverWallet.id }
-        },
-        {
-            query = 'INSERT INTO phone_wallet_transactions (identifier, amount, type, title, target_phone) VALUES (?, ?, ?, ?, ?)',
-            values = { passengerIdentifier, amount, 'out', 'CityRide', '' }
-        },
-        {
-            query = 'INSERT INTO phone_wallet_transactions (identifier, amount, type, title, target_phone) VALUES (?, ?, ?, ?, ?)',
-            values = { driverIdentifier, amount, 'in', 'CityRide', '' }
-        },
-    })
+    local debited = MySQL.update.await(
+        'UPDATE phone_wallets SET balance = balance - ? WHERE id = ? AND balance >= ?',
+        { amount, passengerWallet.id, amount }
+    )
+    if not debited or debited < 1 then
+        return false, 'INSUFFICIENT_FUNDS'
+    end
+
+    local credited = false
+    local ok, err = pcall(function()
+        MySQL.update.await(
+            'UPDATE phone_wallets SET balance = balance + ? WHERE id = ?',
+            { amount, driverWallet.id }
+        )
+        credited = true
+        MySQL.insert.await(
+            'INSERT INTO phone_wallet_transactions (identifier, amount, type, title, target_phone) VALUES (?, ?, ?, ?, ?)',
+            { passengerIdentifier, amount, 'out', 'CityRide', '' }
+        )
+        MySQL.insert.await(
+            'INSERT INTO phone_wallet_transactions (identifier, amount, type, title, target_phone) VALUES (?, ?, ?, ?, ?)',
+            { driverIdentifier, amount, 'in', 'CityRide', '' }
+        )
+    end)
+
+    if not ok then
+        MySQL.update.await('UPDATE phone_wallets SET balance = balance + ? WHERE id = ?', { amount, passengerWallet.id })
+        if credited then
+            MySQL.update.await('UPDATE phone_wallets SET balance = balance - ? WHERE id = ?', { amount, driverWallet.id })
+        end
+        warn(('[gcphone-next] cityride payment rollback (%s -> %s): %s'):format(passengerIdentifier, driverIdentifier, tostring(err)))
+        return false, 'PAYMENT_FAILED'
+    end
 
     return true
 end
@@ -429,8 +444,12 @@ lib.callback.register('gcphone:cityride:completeRide', function(source, data)
     if ride.driverIdentifier ~= identifier then return { success = false, error = 'NOT_AUTHORIZED' } end
     if not CanTransition(ride.status, 'completed') then return { success = false, error = 'INVALID_TRANSITION' } end
 
+    local previousStatus = ride.status
+    ride.status = 'payment_pending'
+
     local payOk, payErr = TransferRidePayment(ride.passengerIdentifier, ride.driverIdentifier, ride.price)
     if not payOk then
+        ride.status = previousStatus
         return { success = false, error = payErr or 'PAYMENT_FAILED' }
     end
 

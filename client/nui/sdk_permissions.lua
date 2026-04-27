@@ -1,7 +1,7 @@
 local Nui = require 'client.nui_helpers'
 
 local function dataOrEmpty(data)
-    return data or {}
+    return type(data) == 'table' and data or {}
 end
 
 RegisterNUICallback('sdkGetAllAppPermissions', function(_, cb)

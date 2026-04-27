@@ -6,33 +6,18 @@ local currentUrl = nil
 
 AddEventHandler('gcphone:music:playFromNUI', function(data)
     TriggerServerEvent('gcphone:music:play', data)
-
-    if type(data) == 'table' then
-        currentUrl = type(data.url) == 'string' and data.url or currentUrl
-    end
-    isPlaying = true
-    isPaused = false
 end)
 
 AddEventHandler('gcphone:music:pauseFromNUI', function()
     TriggerServerEvent('gcphone:music:pause')
-    if isPlaying then
-        isPaused = true
-    end
 end)
 
 AddEventHandler('gcphone:music:resumeFromNUI', function()
     TriggerServerEvent('gcphone:music:resume')
-    if isPlaying then
-        isPaused = false
-    end
 end)
 
 AddEventHandler('gcphone:music:stopFromNUI', function()
     TriggerServerEvent('gcphone:music:stop')
-    isPlaying = false
-    isPaused = false
-    currentUrl = nil
 end)
 
 AddEventHandler('gcphone:music:setVolumeFromNUI', function(payload)
@@ -52,6 +37,10 @@ RegisterNetEvent('gcphone:music:setState', function(state)
 
     if type(state.url) == 'string' and state.url ~= '' then
         currentUrl = state.url
+    end
+
+    if state.isPlaying == false then
+        currentUrl = nil
     end
 
     SendNUIMessage({

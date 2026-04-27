@@ -274,6 +274,7 @@ Config.LiveLocation = {
     Enabled = true,
     UpdateIntervalSeconds = 10,
     MaxDurationMinutes = 15,
+    MaxRecipients = 12,
 }
 
 Config.Camera = {

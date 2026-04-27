@@ -91,31 +91,41 @@ end
 
 local function ExecuteWalletTransfer(senderIdentifier, receiverIdentifier, targetPhone, amount, title)
     local senderWallet = EnsureWallet(senderIdentifier)
-    local senderBalance = tonumber(senderWallet.balance) or 0
-    if senderBalance < amount then
+    local receiverWallet = EnsureWallet(receiverIdentifier)
+
+    local debited = MySQL.update.await(
+        'UPDATE phone_wallets SET balance = balance - ? WHERE id = ? AND balance >= ?',
+        { amount, senderWallet.id, amount }
+    )
+    if not debited or debited < 1 then
         return false, { error = 'INSUFFICIENT_FUNDS' }
     end
 
-    local receiverWallet = EnsureWallet(receiverIdentifier)
+    local credited = false
+    local ok, err = pcall(function()
+        MySQL.update.await(
+            'UPDATE phone_wallets SET balance = balance + ? WHERE id = ?',
+            { amount, receiverWallet.id }
+        )
+        credited = true
+        MySQL.insert.await(
+            'INSERT INTO phone_wallet_transactions (identifier, amount, type, title, target_phone) VALUES (?, ?, ?, ?, ?)',
+            { senderIdentifier, amount, 'out', title, targetPhone }
+        )
+        MySQL.insert.await(
+            'INSERT INTO phone_wallet_transactions (identifier, amount, type, title, target_phone) VALUES (?, ?, ?, ?, ?)',
+            { receiverIdentifier, amount, 'in', title, targetPhone }
+        )
+    end)
 
-    MySQL.transaction.await({
-        {
-            query = 'UPDATE phone_wallets SET balance = balance - ? WHERE id = ?',
-            values = { amount, senderWallet.id }
-        },
-        {
-            query = 'UPDATE phone_wallets SET balance = balance + ? WHERE id = ?',
-            values = { amount, receiverWallet.id }
-        },
-        {
-            query = 'INSERT INTO phone_wallet_transactions (identifier, amount, type, title, target_phone) VALUES (?, ?, ?, ?, ?)',
-            values = { senderIdentifier, amount, 'out', title, targetPhone }
-        },
-        {
-            query = 'INSERT INTO phone_wallet_transactions (identifier, amount, type, title, target_phone) VALUES (?, ?, ?, ?, ?)',
-            values = { receiverIdentifier, amount, 'in', title, targetPhone }
-        },
-    })
+    if not ok then
+        MySQL.update.await('UPDATE phone_wallets SET balance = balance + ? WHERE id = ?', { amount, senderWallet.id })
+        if credited then
+            MySQL.update.await('UPDATE phone_wallets SET balance = balance - ? WHERE id = ?', { amount, receiverWallet.id })
+        end
+        warn(('[gcphone-next] wallet transfer rollback (%s -> %s): %s'):format(senderIdentifier, receiverIdentifier, tostring(err)))
+        return false, { error = 'TRANSFER_FAILED' }
+    end
 
     local updated = MySQL.scalar.await('SELECT balance FROM phone_wallets WHERE id = ? LIMIT 1', { senderWallet.id })
     return true, {
@@ -267,6 +277,7 @@ lib.callback.register('gcphone:wallet:getState', function(source)
 end)
 
 lib.callback.register('gcphone:wallet:addCard', function(source, data)
+    if Phone.IsPhoneReadOnly(source) then return { success = false, error = 'READ_ONLY' } end
     local identifier = RequirePlayerIdentifier(source)
     if not identifier then return { success = false, error = 'INVALID_SOURCE' } end
 
@@ -287,6 +298,7 @@ lib.callback.register('gcphone:wallet:addCard', function(source, data)
 end)
 
 lib.callback.register('gcphone:wallet:removeCard', function(source, data)
+    if Phone.IsPhoneReadOnly(source) then return { success = false, error = 'READ_ONLY' } end
     local identifier = RequirePlayerIdentifier(source)
     if not identifier then return { success = false, error = 'INVALID_SOURCE' } end
     local cardId = tonumber(type(data) == 'table' and data.cardId or nil)
@@ -667,6 +679,7 @@ exports('ProximityTransfer', function(source, targetSource, amount, title, metho
 end)
 
 local function CreateInvoice(source, data)
+    if Phone.IsPhoneReadOnly(source) then return { success = false, error = 'READ_ONLY' } end
     local fromIdentifier = RequirePlayerIdentifier(source)
     if not fromIdentifier then return { success = false, error = 'INVALID_SOURCE' } end
     if type(data) ~= 'table' then return { success = false, error = 'INVALID_DATA' } end
@@ -724,6 +737,7 @@ local function CreateInvoice(source, data)
 end
 
 local function RespondInvoice(source, data)
+    if Phone.IsPhoneReadOnly(source) then return { success = false, error = 'READ_ONLY' } end
     local toIdentifier = RequirePlayerIdentifier(source)
     if not toIdentifier then return { success = false, error = 'INVALID_SOURCE' } end
     if type(data) ~= 'table' then return { success = false, error = 'INVALID_DATA' } end

@@ -3,7 +3,7 @@ game 'gta5'
 
 author 'JericoFX'
 description 'Modern FiveM Phone - SolidJS + ox_lib + oxmysql'
-version '3.1.13'
+version '3.1.14'
 
 lua54 'yes'
 node_version '22'
@@ -40,6 +40,7 @@ files {
     'client/nui/darkrooms.lua',
     'client/nui/radio.lua',
     'client/nui/cityride.lua',
+    'client/nui/sdk_permissions.lua',
     'client/native_audio.lua',
     'client/flashlight.lua',
     'client/camera_walk.lua',
@@ -54,6 +55,7 @@ files {
     'client/music.lua',
     'client/txadmin.lua',
     'client/garage.lua',
+    'client/cityride.lua',
     'client/mugshot.lua',
 }
 

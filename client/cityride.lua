@@ -1,3 +1,11 @@
+local function SetWaypointSafe(coords)
+    if type(coords) ~= 'table' then return end
+    local x = tonumber(coords.x)
+    local y = tonumber(coords.y)
+    if not x or not y then return end
+    SetNewWaypoint(x, y)
+end
+
 RegisterNetEvent('gcphone:cityride:newRequest', function(rideData)
     SendNUIMessage({
         action = 'cityRideNewRequest',
@@ -11,7 +19,7 @@ RegisterNetEvent('gcphone:cityride:rideAccepted', function(rideData)
         data = rideData
     })
     if rideData and rideData.pickup then
-        SetNewWaypoint(rideData.pickup.x + 0.0, rideData.pickup.y + 0.0)
+        SetWaypointSafe(rideData.pickup)
     end
 end)
 
@@ -21,7 +29,7 @@ RegisterNetEvent('gcphone:cityride:rideUpdate', function(rideData)
         data = rideData
     })
     if rideData and rideData.status == 'in_progress' and rideData.dest then
-        SetNewWaypoint(rideData.dest.x + 0.0, rideData.dest.y + 0.0)
+        SetWaypointSafe(rideData.dest)
     end
 end)
 
@@ -40,9 +48,7 @@ RegisterNetEvent('gcphone:cityride:rideCompleted', function(rideData)
 end)
 
 RegisterNetEvent('gcphone:cityride:setWaypoint', function(coords)
-    if coords and coords.x and coords.y then
-        SetNewWaypoint(coords.x + 0.0, coords.y + 0.0)
-    end
+    SetWaypointSafe(coords)
 end)
 
 return {}

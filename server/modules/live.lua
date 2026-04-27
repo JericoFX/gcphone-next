@@ -18,13 +18,23 @@ local function GenerateMessageId()
     return string.format('%x-%x-%x', os.time(), math.random(1000, 9999), math.random(1000, 9999))
 end
 
+local function NormalizeClipId(clipId)
+    if type(clipId) ~= 'string' and type(clipId) ~= 'number' then return nil end
+    local value = tostring(clipId)
+    if value == '' or #value > 64 then return nil end
+    return value
+end
+
+local function CanUseLive(source)
+    return Bridge.GetIdentifier(source) ~= nil and Bridge.IsPlayerActionAllowed(source) == true
+end
+
 -- Create live room
 RegisterNetEvent('gcphone:live:create')
 AddEventHandler('gcphone:live:create', function(clipId, avatar)
     local source = source
-    if type(clipId) ~= 'string' and type(clipId) ~= 'number' then return end
-    clipId = tostring(clipId)
-    if #clipId > 64 then return end
+    clipId = NormalizeClipId(clipId)
+    if not clipId then return end
     if Utils.HitRateLimit(source, 'live_create', 5000, 2) then return end
     local identifier = Bridge.GetIdentifier(source)
 
@@ -62,8 +72,8 @@ end)
 RegisterNetEvent('gcphone:live:join')
 AddEventHandler('gcphone:live:join', function(clipId)
     local source = source
-    if type(clipId) ~= 'string' and type(clipId) ~= 'number' then return end
-    clipId = tostring(clipId)
+    clipId = NormalizeClipId(clipId)
+    if not clipId or not CanUseLive(source) then return end
     if Utils.HitRateLimit(source, 'live_join', 2000, 3) then return end
     local live = ActiveLives[clipId]
 
@@ -97,6 +107,8 @@ end)
 RegisterNetEvent('gcphone:live:leave')
 AddEventHandler('gcphone:live:leave', function(clipId)
     local source = source
+    clipId = NormalizeClipId(clipId)
+    if not clipId then return end
     local live = ActiveLives[clipId]
 
     if not live then return end
@@ -108,6 +120,8 @@ end)
 RegisterNetEvent('gcphone:live:message')
 AddEventHandler('gcphone:live:message', function(clipId, content)
     local source = source
+    clipId = NormalizeClipId(clipId)
+    if not clipId or not CanUseLive(source) then return end
     if Utils.HitRateLimit(source, 'live_message', 1000, 5) then return end
     local live = ActiveLives[clipId]
 
@@ -146,15 +160,17 @@ AddEventHandler('gcphone:live:message', function(clipId, content)
     for userSource, _ in pairs(live.users) do
         TriggerClientEvent('gcphone:live:message', userSource, message)
     end
-    TriggerClientEvent('gcphone:live:message', live.owner, message)
+    if not live.users[live.owner] then
+        TriggerClientEvent('gcphone:live:message', live.owner, message)
+    end
 end)
 
 -- Send reaction
 RegisterNetEvent('gcphone:live:reaction')
 AddEventHandler('gcphone:live:reaction', function(clipId, reaction)
     local source = source
-    if type(clipId) ~= 'string' and type(clipId) ~= 'number' then return end
-    clipId = tostring(clipId)
+    clipId = NormalizeClipId(clipId)
+    if not clipId or not CanUseLive(source) then return end
     if type(reaction) ~= 'string' or #reaction > 16 then return end
     if Utils.HitRateLimit(source, 'live_reaction', 500, 8) then return end
     local live = ActiveLives[clipId]
@@ -183,13 +199,17 @@ AddEventHandler('gcphone:live:reaction', function(clipId, reaction)
     for userSource, _ in pairs(live.users) do
         TriggerClientEvent('gcphone:live:reaction', userSource, reactionData)
     end
-    TriggerClientEvent('gcphone:live:reaction', live.owner, reactionData)
+    if not live.users[live.owner] then
+        TriggerClientEvent('gcphone:live:reaction', live.owner, reactionData)
+    end
 end)
 
 -- Delete message (owner only)
 RegisterNetEvent('gcphone:live:deleteMessage')
 AddEventHandler('gcphone:live:deleteMessage', function(clipId, messageId)
     local source = source
+    clipId = NormalizeClipId(clipId)
+    if not clipId then return end
     local live = ActiveLives[clipId]
 
     if not live then return end
@@ -214,6 +234,8 @@ end)
 RegisterNetEvent('gcphone:live:mute')
 AddEventHandler('gcphone:live:mute', function(clipId, targetUsername)
     local source = source
+    clipId = NormalizeClipId(clipId)
+    if not clipId then return end
     local live = ActiveLives[clipId]
 
     if not live then return end
@@ -237,6 +259,8 @@ end)
 RegisterNetEvent('gcphone:live:unmute')
 AddEventHandler('gcphone:live:unmute', function(clipId, targetUsername)
     local source = source
+    clipId = NormalizeClipId(clipId)
+    if not clipId then return end
     local live = ActiveLives[clipId]
 
     if not live then return end
@@ -257,6 +281,8 @@ end)
 RegisterNetEvent('gcphone:live:end')
 AddEventHandler('gcphone:live:end', function(clipId)
     local source = source
+    clipId = NormalizeClipId(clipId)
+    if not clipId then return end
     local live = ActiveLives[clipId]
 
     if not live then return end

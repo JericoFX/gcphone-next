@@ -10,14 +10,14 @@ CreateThread(function()
         if inVehicle and not wasInVehicle then
             wasInVehicle = true
             SendNUIMessage({
-                type = 'gcphone:carplay',
-                payload = { active = true }
+                action = 'gcphone:carplay',
+                data = { active = true }
             })
         elseif not inVehicle and wasInVehicle then
             wasInVehicle = false
             SendNUIMessage({
-                type = 'gcphone:carplay',
-                payload = { active = false }
+                action = 'gcphone:carplay',
+                data = { active = false }
             })
         end
 

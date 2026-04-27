@@ -197,6 +197,7 @@ local function PlayForSource(source, data)
         isPlaying = true,
         isPaused = false,
         title = ActiveMusicBySource[source].title,
+        url = streamUrl,
         videoId = videoId,
         volume = volume,
         distance = distance,

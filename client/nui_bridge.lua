@@ -396,15 +396,25 @@ RegisterNUICallback('newsGetLiveNews', function(_, cb)
 end)
 
 RegisterNUICallback('newsDeleteArticle', function(data, cb)
+    local articleId = tonumber(type(data) == 'table' and data.articleId or data)
+    if not articleId then
+        cb(cbSuccess(false, 'INVALID_PAYLOAD'))
+        return
+    end
     lib.callback('gcphone:news:deleteArticle', false, function(success)
         cb(cbSuccess(success))
-    end, tonumber(data.articleId))
+    end, articleId)
 end)
 
 RegisterNUICallback('newsViewArticle', function(data, cb)
+    local articleId = tonumber(type(data) == 'table' and data.articleId or data)
+    if not articleId then
+        cb(cbSuccess(false, 'INVALID_PAYLOAD'))
+        return
+    end
     lib.callback('gcphone:news:viewArticle', false, function(success)
         cb(cbSuccess(success))
-    end, tonumber(data.articleId))
+    end, articleId)
 end)
 
 RegisterNUICallback('newsStartLive', function(data, cb)
@@ -414,9 +424,14 @@ RegisterNUICallback('newsStartLive', function(data, cb)
 end)
 
 RegisterNUICallback('newsEndLive', function(data, cb)
+    local articleId = tonumber(type(data) == 'table' and data.articleId or data)
+    if not articleId then
+        cb(cbSuccess(false, 'INVALID_PAYLOAD'))
+        return
+    end
     lib.callback('gcphone:news:endLive', false, function(success)
         cb(cbSuccess(success))
-    end, tonumber(data.articleId))
+    end, articleId)
 end)
 
 RegisterNUICallback('newsGetScaleform', function(data, cb)
@@ -643,8 +658,10 @@ RegisterNUICallback('garageGetImpoundLocation', function(_, cb)
 end)
 
 RegisterNUICallback('garageSetGps', function(data, cb)
-    if type(data) == 'table' and data.x and data.y then
-        SetNewWaypoint(tonumber(data.x) + 0.0, tonumber(data.y) + 0.0)
+    local x = type(data) == 'table' and tonumber(data.x) or nil
+    local y = type(data) == 'table' and tonumber(data.y) or nil
+    if x and y then
+        SetNewWaypoint(x, y)
         cb(cbSuccess(true))
     else
         cb(cbSuccess(false))
@@ -895,8 +912,8 @@ RegisterNUICallback('servicesGetWorkerRatings', function(data, cb)
 end)
 
 RegisterNUICallback('setGPS', function(data, cb)
-    local x = tonumber(data.x)
-    local y = tonumber(data.y)
+    local x = type(data) == 'table' and tonumber(data.x) or nil
+    local y = type(data) == 'table' and tonumber(data.y) or nil
 
     if x and y then
         SetNewWaypoint(x, y)

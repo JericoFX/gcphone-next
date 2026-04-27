@@ -14,6 +14,21 @@ local function GetSourceByPhone(phone)
     return Bridge.GetSourceFromIdentifier(identifier)
 end
 
+local function CapConversationMessages(phoneA, phoneB)
+    MySQL.query.await([[
+        DELETE FROM phone_wavechat_dm_messages
+        WHERE id IN (
+            SELECT id FROM (
+                SELECT id
+                FROM phone_wavechat_dm_messages
+                WHERE (sender = ? AND receiver = ?) OR (sender = ? AND receiver = ?)
+                ORDER BY created_at DESC, id DESC
+                LIMIT 18446744073709551615 OFFSET 50
+            ) AS overflow
+        )
+    ]], { phoneA, phoneB, phoneB, phoneA })
+end
+
 -- Running MySQL.query.await at the top of the module races the oxmysql
 -- handshake the same way phone_drop.lua did before it was gated. Defer
 -- the defensive schema patch until MySQL.ready, and use ADD COLUMN IF
@@ -77,6 +92,8 @@ lib.callback.register('gcphone:wavechat:dm:send', function(source, data)
     if not messageId then
         return { success = false, error = 'DB_ERROR' }
     end
+
+    CapConversationMessages(myPhone, targetPhone)
 
     local messageObj = MySQL.single.await(
         'SELECT id, sender, receiver, message, media_url, message_type, audio_data, audio_duration, is_read, created_at FROM phone_wavechat_dm_messages WHERE id = ?',

@@ -1,6 +1,7 @@
 local PhoneState = require 'client.state'
 
 local PendingResults = {}
+local PendingRequests = {}
 local RequestIdCounter = 0
 
 local function NextRequestId()
@@ -76,16 +77,82 @@ local function WaitForResult(requestId, timeoutMs)
         end
         Wait(50)
     end
+    PendingRequests[requestId] = nil
     PendingResults[requestId] = nil
     return nil
 end
 
+local function SanitizeFormData(formData, elements)
+    if type(formData) ~= 'table' or type(elements) ~= 'table' then return {} end
+    local allowed = {}
+    for _, element in ipairs(elements) do
+        if type(element) == 'table' and type(element.id) == 'string' and element.id ~= '' then
+            allowed[element.id] = element
+        end
+    end
+
+    local result = {}
+    for key, value in pairs(formData) do
+        local element = allowed[key]
+        if element then
+            if element.type == 'checkbox' then
+                result[key] = value == true
+            elseif element.type == 'number' then
+                result[key] = tonumber(value)
+            elseif type(value) == 'string' then
+                result[key] = SanitizeString(value, tonumber(element.maxLength) or 500)
+            end
+        end
+    end
+    return result
+end
+
+local function SanitizeSDKResult(data, request)
+    local mode = request.mode
+    if data.cancelled == true then
+        return { cancelled = true }
+    end
+
+    if mode == 'confirm' then
+        return { confirmed = data.confirmed == true }
+    end
+
+    if mode == 'input' then
+        return {
+            formData = SanitizeFormData(data.formData, request.elements),
+        }
+    end
+
+    if mode == 'select' then
+        local selectedId = SanitizeString(data.selectedId, 32)
+        for _, item in ipairs(request.items or {}) do
+            if item.id == selectedId and item.disabled ~= true then
+                return { selectedId = selectedId }
+            end
+        end
+        return { cancelled = true }
+    end
+
+    local view = SanitizeString(data.view, 32)
+    local currentView = type(request.views) == 'table' and request.views[view ~= '' and view or request.startView] or nil
+    local elements = type(currentView) == 'table' and currentView.elements or {}
+
+    return {
+        view = view,
+        optionId = SanitizeString(data.optionId, 32),
+        selectedId = SanitizeString(data.selectedId, 32),
+        formData = type(data.formData) == 'table' and SanitizeFormData(data.formData, elements) or nil,
+        cancelled = data.cancelled == true,
+    }
+end
+
 local function OpenSDKModal(payload)
     if not PhoneState.isOpen then return nil, 'PHONE_CLOSED' end
+    PendingRequests[payload.requestId] = payload
 
     SendNUIMessage({
-        type = 'gcphone:sdk:open',
-        payload = payload,
+        action = 'gcphone:sdk:open',
+        data = payload,
     })
 
     return WaitForResult(payload.requestId, 60000)
@@ -96,7 +163,14 @@ RegisterNUICallback('phoneSDKResult', function(data, cb)
         cb({ ok = true })
         return
     end
-    PendingResults[data.requestId] = data
+    local requestId = tostring(data.requestId)
+    local request = PendingRequests[requestId]
+    if not request then
+        cb({ ok = true })
+        return
+    end
+    PendingRequests[requestId] = nil
+    PendingResults[requestId] = SanitizeSDKResult(data, request)
     cb({ ok = true })
 end)
 
@@ -193,8 +267,8 @@ end)
 RegisterNetEvent('gcphone:sdk:resourceStopped', function(resourceName)
     if type(resourceName) ~= 'string' then return end
     SendNUIMessage({
-        type = 'gcphone:sdk:resourceStopped',
-        payload = { resourceName = resourceName },
+        action = 'gcphone:sdk:resourceStopped',
+        data = { resourceName = resourceName },
     })
 end)
 
@@ -208,15 +282,15 @@ end)
 RegisterNetEvent('gcphone:sdk:startCall', function(number)
     if type(number) ~= 'string' or number == '' then return end
     SendNUIMessage({
-        type = 'gcphone:startCall',
-        payload = { number = number },
+        action = 'gcphone:startCall',
+        data = { number = number },
     })
 end)
 
 RegisterNetEvent('gcphone:sdk:forceClose', function(appId)
     SendNUIMessage({
-        type = 'gcphone:sdk:close',
-        payload = {},
+        action = 'gcphone:sdk:close',
+        data = {},
     })
 end)
 

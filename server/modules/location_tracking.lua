@@ -1,9 +1,15 @@
 -- Creado/Modificado por JericoFX
 
 local Bridge = require 'server.bridge'
+local Utils = require 'server.lib.utils'
 
 local ActiveLocationRecipients = {}
 local LastLocationUpdateAt = {}
+
+local function MaxLiveLocationRecipients()
+    local configured = Config.LiveLocation and Config.LiveLocation.MaxRecipients
+    return Utils.SafeNumber(configured, 1, 20) or 12
+end
 
 local function RebuildRecipientCache()
     local rows = MySQL.query.await(
@@ -21,7 +27,9 @@ local function RebuildRecipientCache()
                 ActiveLocationRecipients[senderPhone] = recipients
             end
 
-            recipients[#recipients + 1] = recipientPhone
+            if #recipients < MaxLiveLocationRecipients() then
+                recipients[#recipients + 1] = recipientPhone
+            end
         end
     end
 end
@@ -93,6 +101,10 @@ lib.callback.register('gcphone:liveLocation:start', function(source, data)
         return { success = false, error = 'INVALID_SOURCE' }
     end
 
+    if Utils.HitRateLimit(source, 'live_location_start', 5000, 2) then
+        return { success = false, error = 'RATE_LIMITED' }
+    end
+
     local senderPhone = Bridge.GetPhoneNumber(identifier)
     if not senderPhone then
         return { success = false, error = 'PHONE_NOT_FOUND' }
@@ -114,10 +126,15 @@ lib.callback.register('gcphone:liveLocation:start', function(source, data)
 
     local uniqueRecipients = {}
     local recipientList = {}
+    local maxRecipients = MaxLiveLocationRecipients()
     for _, recipientPhone in ipairs(recipients) do
-        if type(recipientPhone) == 'string' and recipientPhone ~= '' and recipientPhone ~= senderPhone and not uniqueRecipients[recipientPhone] then
-            uniqueRecipients[recipientPhone] = true
-            recipientList[#recipientList + 1] = recipientPhone
+        local safePhone = Utils.SafePhone(recipientPhone)
+        if safePhone and safePhone ~= senderPhone and not uniqueRecipients[safePhone] then
+            uniqueRecipients[safePhone] = true
+            recipientList[#recipientList + 1] = safePhone
+            if #recipientList >= maxRecipients then
+                break
+            end
         end
     end
 
@@ -160,6 +177,10 @@ lib.callback.register('gcphone:liveLocation:stop', function(source)
     local identifier = Bridge.GetIdentifier(source)
     if not identifier then
         return { success = false, error = 'INVALID_SOURCE' }
+    end
+
+    if Utils.HitRateLimit(source, 'live_location_stop', 2000, 3) then
+        return { success = false, error = 'RATE_LIMITED' }
     end
 
     local senderPhone = Bridge.GetPhoneNumber(identifier)

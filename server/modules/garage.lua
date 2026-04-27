@@ -594,15 +594,22 @@ lib.callback.register('gcphone:garage:payBail', function(source, data)
         return { success = false, error = 'INSUFFICIENT_FUNDS' }
     end
 
-    local removed = Bridge.RemoveMoney(source, bailAmount, 'bank', 'garage_bail')
-    if not removed then
-        return { success = false, error = 'PAYMENT_FAILED' }
-    end
-
-    MySQL.update.await(
-        'UPDATE phone_garage SET impounded = 0 WHERE identifier = ? AND plate = ?',
+    local claimed = MySQL.update.await(
+        'UPDATE phone_garage SET impounded = 0 WHERE identifier = ? AND plate = ? AND impounded = 1',
         { identifier, plate }
     )
+    if not claimed or claimed < 1 then
+        return { success = false, error = 'NOT_IMPOUNDED' }
+    end
+
+    local removed = Bridge.RemoveMoney(source, bailAmount, 'bank', 'garage_bail')
+    if not removed then
+        MySQL.update.await(
+            'UPDATE phone_garage SET impounded = 1 WHERE identifier = ? AND plate = ?',
+            { identifier, plate }
+        )
+        return { success = false, error = 'PAYMENT_FAILED' }
+    end
 
     return { success = true, paid = bailAmount }
 end)
