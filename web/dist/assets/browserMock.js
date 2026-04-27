@@ -1,0 +1,1 @@
+import{v as e}from"./app-core.js";export{e as handleBrowserNui};

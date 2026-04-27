@@ -1,0 +1,1 @@
+import{t as e}from"./app-clock.js";export{e as ClockApp};

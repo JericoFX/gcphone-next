@@ -1,5 +1,4 @@
 import { isEnvBrowser } from './misc';
-import { handleBrowserNui } from '../mock/browserMock';
 import type { NuiEventName, NuiRequestData, NuiResponseData } from '../types/nui';
 
 let nuiRequestToken = '';
@@ -28,6 +27,7 @@ export async function fetchNui<T = unknown>(
   mockData?: T
 ): Promise<T> {
   if (isEnvBrowser()) {
+    const { handleBrowserNui } = await import('../mock/browserMock');
     const mockResult = await handleBrowserNui<T>(eventName, data);
     if (mockResult !== undefined) {
       return mockResult;

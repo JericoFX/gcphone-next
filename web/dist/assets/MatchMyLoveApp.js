@@ -1,0 +1,1 @@
+import{t as e}from"./app-matchmylove.js";export{e as MatchMyLoveApp};

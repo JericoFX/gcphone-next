@@ -2,6 +2,12 @@ import { defineConfig } from 'vite';
 import solidPlugin from 'vite-plugin-solid';
 import { resolve } from 'path';
 
+function appChunkName(id: string) {
+  const match = id.replace(/\\/g, '/').match(/components\/apps\/([^/]+)/);
+  if (!match || match[1] === 'home') return null;
+  return `app-${match[1]}`;
+}
+
 export default defineConfig({
   plugins: [solidPlugin()],
   css: {
@@ -14,64 +20,65 @@ export default defineConfig({
     outDir: 'dist',
     emptyOutDir: true,
     chunkSizeWarningLimit: 800,
-    rollupOptions: {
+    rolldownOptions: {
       output: {
         entryFileNames: 'assets/[name].js',
         chunkFileNames: 'assets/[name].js',
         assetFileNames: 'assets/[name].[ext]',
-        manualChunks(id) {
-          const normalizedId = id.replace(/\\/g, '/');
-
-          if (
-            normalizedId.includes('MediaLightbox')
-            || normalizedId.includes('EmojiPicker')
-            || normalizedId.includes('MediaAttachmentPreview')
-            || normalizedId.includes('MediaActionButtons')
-            || normalizedId.includes('SocialOnboardingModal')
-            || normalizedId.includes('LiveFlashlightControl')
-          ) {
-            return 'shared-social';
-          }
-          if (normalizedId.includes('livekit-client')) {
-            return 'vendor-livekit';
-          }
-          if (normalizedId.includes('/leaflet/')) {
-            return 'vendor-leaflet';
-          }
-          if (normalizedId.includes('node_modules')) {
-            return 'vendor';
-          }
-          if (normalizedId.includes('solid-js')) {
-            return 'vendor';
-          }
-          if (
-            normalizedId.includes('/src/components/Phone/')
-            || normalizedId.includes('/src/store/')
-            || normalizedId.includes('/src/config/')
-            || normalizedId.includes('/src/i18n')
-            || normalizedId.includes('/src/utils/')
-            || normalizedId.includes('/src/types/')
-          ) {
-            return 'phone-core';
-          }
-          if (
-            normalizedId.includes('/src/')
-            && !normalizedId.includes('/src/components/apps/')
-          ) {
-            return 'app-core';
-          }
-          if (normalizedId.includes('components/shared') || normalizedId.includes('hooks/')) {
-            return 'shared';
-          }
-          if (normalizedId.includes('components/apps/')) {
-            const match = normalizedId.match(/components\/apps\/([^/]+)/);
-            if (match) {
-              if (match[1] === 'home') {
-                return undefined;
-              }
-              return `app-${match[1]}`;
-            }
-          }
+        codeSplitting: {
+          groups: [
+            {
+              name: 'vendor',
+              test: /node_modules/,
+              priority: 100,
+            },
+            {
+              name: 'shared-social',
+              test: (id) => {
+                const normalizedId = id.replace(/\\/g, '/');
+                return (
+                  normalizedId.includes('MediaLightbox')
+                  || normalizedId.includes('EmojiPicker')
+                  || normalizedId.includes('MediaAttachmentPreview')
+                  || normalizedId.includes('MediaActionButtons')
+                  || normalizedId.includes('SocialOnboardingModal')
+                  || normalizedId.includes('LiveFlashlightControl')
+                );
+              },
+              priority: 90,
+            },
+            {
+              name: 'phone-core',
+              test: (id) => {
+                const normalizedId = id.replace(/\\/g, '/');
+                return (
+                  normalizedId.includes('/src/components/Phone/')
+                  || normalizedId.includes('/src/store/')
+                  || normalizedId.includes('/src/config/')
+                  || normalizedId.includes('/src/i18n')
+                  || normalizedId.includes('/src/utils/')
+                  || normalizedId.includes('/src/types/')
+                );
+              },
+              priority: 80,
+            },
+            {
+              name: 'app-core',
+              test: (id) => {
+                const normalizedId = id.replace(/\\/g, '/');
+                return (
+                  normalizedId.includes('/src/')
+                  && !normalizedId.includes('/src/components/apps/')
+                );
+              },
+              priority: 70,
+            },
+            {
+              name: (id) => appChunkName(id),
+              test: (id) => id.replace(/\\/g, '/').includes('/src/components/apps/'),
+              priority: 10,
+            },
+          ],
         },
       },
     },

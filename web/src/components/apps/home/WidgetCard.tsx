@@ -1,5 +1,5 @@
 import { Show, type Accessor } from 'solid-js';
-import { useRouter } from '../../Phone/PhoneFrame';
+import { useRouter } from '../../Phone/PhoneRouterContext';
 import { formatDate as formatDateI18n, t } from '../../../i18n';
 import type { WidgetInstance } from '../../../types/home';
 import { WIDGET_DEFINITIONS } from '../../../types/home';

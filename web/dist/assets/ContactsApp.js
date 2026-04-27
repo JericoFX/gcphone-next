@@ -1,0 +1,1 @@
+import{t as e}from"./app-contacts.js";export{e as ContactsApp};

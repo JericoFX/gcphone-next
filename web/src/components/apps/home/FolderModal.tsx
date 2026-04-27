@@ -1,7 +1,7 @@
 import { createMemo, createSignal, For, Show, onMount } from 'solid-js';
 import { Motion, Presence } from '@motionone/solid';
 import { usePhone } from '../../../store/phone';
-import { useRouter } from '../../Phone/PhoneFrame';
+import { useRouter } from '../../Phone/PhoneRouterContext';
 import { useNotifications } from '../../../store/notifications';
 import { APP_BY_ID } from '../../../config/apps';
 import { appName, t } from '../../../i18n';

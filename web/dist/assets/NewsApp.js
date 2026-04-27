@@ -1,0 +1,1 @@
+import{t as e}from"./app-news.js";export{e as NewsApp};

@@ -1,0 +1,1 @@
+import{t as e}from"./app-documents.js";export{e as DocumentsApp};

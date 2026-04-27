@@ -1,7 +1,7 @@
 import { createMemo, createSignal, For, Show, createEffect, onCleanup } from 'solid-js';
 import { Motion } from '@motionone/solid';
 import { usePhone } from '../../../store/phone';
-import { useRouter } from '../../Phone/PhoneFrame';
+import { useRouter } from '../../Phone/PhoneRouterContext';
 import { APP_BY_ID } from '../../../config/apps';
 import { appName, formatDate as formatDateI18n, formatTime as formatTimeI18n, t } from '../../../i18n';
 import { timeAgo } from '../../../utils/misc';

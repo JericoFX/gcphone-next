@@ -1,6 +1,6 @@
 import { createSignal, For, Show } from 'solid-js';
 import { useContacts } from '../../../store/contacts';
-import { useRouter } from '../../Phone/PhoneFrame';
+import { useRouter } from '../../Phone/PhoneRouterContext';
 import { sanitizePhone, sanitizeText } from '../../../utils/sanitize';
 import { fetchKnownNui } from '../../../utils/fetchNui';
 import { useNotifications } from '../../../store/notifications';

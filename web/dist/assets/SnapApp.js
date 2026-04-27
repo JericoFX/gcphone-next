@@ -1,0 +1,1 @@
+import{t as e}from"./app-snap.js";export{e as SnapApp};

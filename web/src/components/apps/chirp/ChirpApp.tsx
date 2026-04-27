@@ -1,7 +1,7 @@
 import { For, Show, createEffect, createMemo, createSignal, onMount } from 'solid-js';
 import { Motion } from '@motionone/solid';
 import { useContextMenu } from '../../../hooks/useContextMenu';
-import { useRouter } from '../../Phone/PhoneFrame';
+import { useRouter } from '../../Phone/PhoneRouterContext';
 import { fetchNui } from '../../../utils/fetchNui';
 import { timeAgo } from '../../../utils/misc';
 import { resolveMediaType, sanitizeMediaUrl, sanitizeText } from '../../../utils/sanitize';

@@ -1,0 +1,1 @@
+import{t as e}from"./app-music.js";export{e as MusicApp};

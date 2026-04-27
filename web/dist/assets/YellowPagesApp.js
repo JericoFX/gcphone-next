@@ -1,0 +1,1 @@
+import{t as e}from"./app-yellowpages.js";export{e as YellowPagesApp};

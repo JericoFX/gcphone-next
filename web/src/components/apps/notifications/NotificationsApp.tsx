@@ -1,6 +1,6 @@
 import { For, Show, createSignal, createMemo, onMount, batch } from 'solid-js';
 import { AppScaffold } from '../../shared/layout/AppScaffold';
-import { useRouter } from '../../Phone/PhoneFrame';
+import { useRouter } from '../../Phone/PhoneRouterContext';
 import { fetchKnownNui } from '../../../utils/fetchNui';
 import { useNotifications } from '../../../store/notifications';
 import { SkeletonList } from '../../shared/ui/SkeletonList';

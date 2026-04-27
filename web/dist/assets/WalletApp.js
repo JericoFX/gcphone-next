@@ -1,0 +1,1 @@
+import{t as e}from"./app-wallet.js";export{e as WalletApp};

@@ -1,0 +1,1 @@
+import{t as e}from"./app-settings.js";export{e as SettingsApp};

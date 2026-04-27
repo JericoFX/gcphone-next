@@ -1,0 +1,1 @@
+import{t as e}from"./app-mail.js";export{e as MailApp};

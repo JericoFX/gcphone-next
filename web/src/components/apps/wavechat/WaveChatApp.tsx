@@ -1,5 +1,5 @@
 import { createMemo, createSelector, createSignal, For, Show, createEffect, onCleanup, onMount } from 'solid-js';
-import { useRouter } from '../../Phone/PhoneFrame';
+import { useRouter } from '../../Phone/PhoneRouterContext';
 import { sendWaveDM, sendWaveDMTyping, markWaveDMRead, getWaveDMConversations, deleteWaveDMConversation, getWaveDMHistory, sendWaveMessage, sendWaveTyping, connectWaveChat, disconnectWaveChat } from '../../../utils/chatBridge';
 import { useContacts } from '../../../store/contacts';
 import { usePhoneKeyHandler } from '../../../hooks/usePhoneKeyHandler';

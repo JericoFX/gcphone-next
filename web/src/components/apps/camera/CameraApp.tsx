@@ -6,7 +6,7 @@ import {
   onCleanup,
   onMount,
 } from 'solid-js';
-import { useRouter } from '../../Phone/PhoneFrame';
+import { useRouter } from '../../Phone/PhoneRouterContext';
 import { fetchNui } from '../../../utils/fetchNui';
 import { getStoredLanguage, t } from '../../../i18n';
 import { uiPrompt } from '../../../utils/uiDialog';

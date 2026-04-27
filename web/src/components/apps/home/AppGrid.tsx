@@ -1,7 +1,7 @@
 import { createMemo, For, Show } from 'solid-js';
 import { usePhone } from '../../../store/phone';
 import { useNotifications } from '../../../store/notifications';
-import { useRouter } from '../../Phone/PhoneFrame';
+import { useRouter } from '../../Phone/PhoneRouterContext';
 import { APP_BY_ID } from '../../../config/apps';
 import { AppIcon } from './AppIcon';
 import { FolderIcon } from './FolderIcon';
