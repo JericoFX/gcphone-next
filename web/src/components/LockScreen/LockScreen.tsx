@@ -1,5 +1,5 @@
 import { For, Show, batch, createEffect, createMemo, createSignal, onCleanup, onMount } from 'solid-js';
-import { Motion, Presence } from '@motionone/solid';
+import { Motion } from '@motionone/solid';
 import { usePhone } from '../../store/phone';
 import { useNotifications } from '../../store/notifications';
 import { fetchNui } from '../../utils/fetchNui';
@@ -106,10 +106,8 @@ export function LockScreen() {
     return t('lock.unlock', language());
   });
   const collapsedPinInitial = createMemo(() => (prefersReducedMotion() ? NO_MOTION_STATE : { opacity: 0, y: 12, scale: 0.96 }));
-  const collapsedPinExit = createMemo(() => (prefersReducedMotion() ? NO_MOTION_STATE : { opacity: 0, y: 12, scale: 0.96 }));
   const collapsedPinTransition = createMemo(() => (prefersReducedMotion() ? NO_MOTION_TRANSITION : { duration: 0.2, easing: [0.32, 0.72, 0, 1] }));
   const expandedPinInitial = createMemo(() => (prefersReducedMotion() ? NO_MOTION_STATE : { opacity: 0, y: 22, scale: 0.94 }));
-  const expandedPinExit = createMemo(() => (prefersReducedMotion() ? NO_MOTION_STATE : { opacity: 0, y: 18, scale: 0.96 }));
   const expandedPinTransition = createMemo(() => (prefersReducedMotion() ? NO_MOTION_TRANSITION : { duration: 0.22, easing: [0.22, 1, 0.36, 1] }));
 
   const musicStatusLabel = createMemo(() => {
@@ -446,18 +444,17 @@ export function LockScreen() {
             [styles.unlockMotionSlotExpanded]: pinSheetExpanded(),
           }}
         >
-          <Presence exitBeforeEnter>
-            <Show
-              when={pinSheetExpanded()}
-              fallback={
-                <Motion.div
-                  class={styles.unlockSheetCollapsed}
-                  data-testid="lock-pin-sheet-collapsed"
-                  initial={collapsedPinInitial()}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={collapsedPinExit()}
-                  transition={collapsedPinTransition()}
-                >
+          <Show
+            when={pinSheetExpanded()}
+            fallback={
+              <Motion.div
+                class={styles.unlockSheetCollapsed}
+                data-testid="lock-pin-sheet-collapsed"
+                initial={collapsedPinInitial()}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={collapsedPinTransition()}
+                onClick={() => setPinSheetExpanded(true)}
+              >
               <div class={styles.collapsedContent}>
                 <span class={styles.collapsedLabel}>{unlockTitle()}</span>
                 <span class={styles.pendingHint}>{unlockSubtitle()}</span>
@@ -470,7 +467,10 @@ export function LockScreen() {
                   type="button"
                   class={`${styles.expandKeypadBtn} ${styles.primaryAction}`}
                   data-testid="lock-pin-expand"
-                  onClick={() => setPinSheetExpanded(true)}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setPinSheetExpanded(true);
+                  }}
                 >
                   {t('lock.unlock', language())}
                 </button>
@@ -478,21 +478,23 @@ export function LockScreen() {
                   <button
                     type="button"
                     class={`${styles.expandKeypadBtn} ${styles.secondaryAction}`}
-                    onClick={collapsePinSheet}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      collapsePinSheet();
+                    }}
                   >
                     {t('lock.cancel', language())}
                   </button>
                 </Show>
               </div>
-                </Motion.div>
-              }
-            >
+              </Motion.div>
+            }
+          >
               <Motion.div
                 class={styles.unlockSheet}
                 data-testid="lock-pin-sheet-expanded"
                 initial={expandedPinInitial()}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={expandedPinExit()}
                 transition={expandedPinTransition()}
               >
             <button
@@ -560,8 +562,7 @@ export function LockScreen() {
               </button>
             </div>
               </Motion.div>
-            </Show>
-          </Presence>
+          </Show>
         </div>
       </Show>
 

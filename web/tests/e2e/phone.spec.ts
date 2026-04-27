@@ -70,7 +70,7 @@ async function ensurePinKeypadVisible(page: Page) {
 
   const expandButton = page.getByTestId('lock-pin-expand');
   if (await expandButton.count()) {
-    await expandButton.evaluate((element) => (element as HTMLButtonElement).click());
+    await expandButton.click();
   } else {
     await page.getByRole('button', { name: /Desbloquear|Unlock/i }).first().click();
   }
